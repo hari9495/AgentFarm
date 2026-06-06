@@ -68,7 +68,7 @@ function AgentListItem({ agent, selected, onClick }: { agent: Agent; selected: b
         >
             <span style={{
                 width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                background: selected ? 'rgba(0,102,204,0.12)' : '#f5f5f7',
+                background: selected ? 'rgba(0,102,204,0.12)' : 'var(--bg)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
             }}>{icon}</span>
             <div style={{ flex: 1, minWidth: 0 }}>

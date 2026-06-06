@@ -28,7 +28,7 @@ function StatCard({ label, value, icon: Icon, accent, sub }: { label: string; va
                 <div style={{ width: 32, height: 32, borderRadius: 8, background: accent + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Icon size={16} color={accent} />
                 </div>
-                <span style={{ fontSize: 12, color: '#64748b', fontWeight: 500 }}>{label}</span>
+                <span style={{ fontSize: 12, color: 'var(--ink-muted)', fontWeight: 500 }}>{label}</span>
             </div>
             <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--ink-soft)', lineHeight: 1 }}>{value}</div>
             {sub && <div style={{ fontSize: 11, color: 'var(--ink-muted)' }}>{sub}</div>}
@@ -40,7 +40,7 @@ function TierBar({ label, count, total, color }: { label: string; count: number;
     const pct = total > 0 ? Math.round((count / total) * 100) : 0;
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ width: 52, fontSize: 11, fontWeight: 600, color: '#64748b', flexShrink: 0 }}>{label}</span>
+            <span style={{ width: 52, fontSize: 11, fontWeight: 600, color: 'var(--ink-muted)', flexShrink: 0 }}>{label}</span>
             <div style={{ flex: 1, height: 8, background: 'var(--bg)', borderRadius: 99, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 99, transition: 'width 0.4s ease' }} />
             </div>
@@ -88,7 +88,7 @@ export default function SupportStatsPanel() {
                         <div style={{ fontSize: 12, color: 'var(--ink-muted)' }}>Resolution metrics across all tiers</div>
                     </div>
                 </div>
-                <button type="button" onClick={load} disabled={loading} title="Refresh" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', fontSize: 12, color: '#64748b', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.5 : 1 }}>
+                <button type="button" onClick={load} disabled={loading} title="Refresh" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', fontSize: 12, color: 'var(--ink-muted)', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.5 : 1 }}>
                     <RefreshCw size={12} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
                     Refresh
                 </button>
@@ -147,7 +147,7 @@ export default function SupportStatsPanel() {
                     </div>
                 )}
                 {!loading && tierTotal > 0 && (
-                    <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#64748b' }}>
+                    <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--ink-muted)' }}>
                         <CheckCircle2 size={12} color="#16a34a" />
                         <span>Tier 1 auto-fixes resolve <strong style={{ color: 'var(--ok)' }}>{autoFixPct}%</strong> of issues with no code changes or escalation required.</span>
                     </div>

@@ -25,10 +25,10 @@ type SummaryEntry = {
 
 const CHANNEL_COLORS: Record<string, { bg: string; color: string }> = {
     slack: { bg: '#4a154b', color: '#e8d5ff' },
-    email: { bg: '#1e3a5f', color: 'var(--info-bg)' },
-    teams: { bg: '#1a3a6b', color: '#a5c8ff' },
-    discord: { bg: '#1e1b4b', color: '#c7d2fe' },
-    sms: { bg: '#1c2d1e', color: '#bbf7d0' },
+    email: { bg: 'var(--info)', color: 'var(--info-bg)' },
+    teams: { bg: 'var(--info)', color: 'var(--info)' },
+    discord: { bg: 'var(--info)', color: 'var(--info)' },
+    sms: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
 };
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
@@ -39,7 +39,7 @@ const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
 };
 
 function channelStyle(channel: string): { bg: string; color: string } {
-    return CHANNEL_COLORS[channel.toLowerCase()] ?? { bg: '#27272a', color: 'var(--ink-muted)' };
+    return CHANNEL_COLORS[channel.toLowerCase()] ?? { bg: 'var(--bg-deep)', color: 'var(--ink-muted)' };
 }
 
 function statusBadge(status: string) {

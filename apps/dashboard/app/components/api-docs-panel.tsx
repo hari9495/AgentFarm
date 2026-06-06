@@ -264,10 +264,10 @@ const METHOD_COLORS: Record<HttpMethod, CSSProperties> = {
 
 const AUTH_COLORS: Record<AuthLevel, CSSProperties> = {
     'public':    { backgroundColor: 'var(--bg)', color: 'var(--ink-muted)' },
-    'session':   { backgroundColor: '#dbeafe', color: 'var(--info)' },
-    'viewer+':   { backgroundColor: '#d1fae5', color: 'var(--ok)' },
-    'operator+': { backgroundColor: '#fef3c7', color: 'var(--warn)' },
-    'admin+':    { backgroundColor: '#fee2e2', color: 'var(--danger)' },
+    'session':   { backgroundColor: 'var(--info-bg)', color: 'var(--info)' },
+    'viewer+':   { backgroundColor: 'var(--ok-bg)', color: 'var(--ok)' },
+    'operator+': { backgroundColor: 'var(--warn-bg)', color: 'var(--warn)' },
+    'admin+':    { backgroundColor: 'var(--danger-bg)', color: 'var(--danger)' },
 };
 
 export default function ApiDocsPanel() {
@@ -342,7 +342,7 @@ export default function ApiDocsPanel() {
                                         border: 'none',
                                         cursor: 'pointer',
                                         background: isActive ? 'var(--ink)' : 'transparent',
-                                        color: isActive ? '#ffffff' : 'var(--ink)',
+                                        color: isActive ? 'var(--card)' : 'var(--ink)',
                                         width: '100%',
                                     }}
                                 >
@@ -608,7 +608,7 @@ export default function ApiDocsPanel() {
                                 </button>
                                 <pre
                                     style={{
-                                        backgroundColor: '#1e1e2e',
+                                        backgroundColor: 'var(--bg-deep)',
                                         color: 'var(--ink)',
                                         fontFamily: 'monospace',
                                         padding: '1rem',

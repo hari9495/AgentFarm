@@ -92,7 +92,7 @@ export default function CampaignsPanel({ workspaceId }: { workspaceId: string })
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                     {(['pending_approval', 'active', 'paused', 'all'] as const).map(k => (
-                        <button key={k} type="button" onClick={() => setFilter(k)} style={{ padding: '5px 12px', border: `1px solid ${filter === k ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: filter === k ? 'rgba(0,102,204,0.07)' : 'var(--card)', color: filter === k ? 'var(--accent)' : '#64748b', fontSize: 12, fontWeight: filter === k ? 600 : 400, cursor: 'pointer' }}>
+                        <button key={k} type="button" onClick={() => setFilter(k)} style={{ padding: '5px 12px', border: `1px solid ${filter === k ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: filter === k ? 'rgba(0,102,204,0.07)' : 'var(--card)', color: filter === k ? 'var(--accent)' : 'var(--ink-muted)', fontSize: 12, fontWeight: filter === k ? 600 : 400, cursor: 'pointer' }}>
                             {k === 'all' ? 'All' : k.replace('_', ' ')}
                         </button>
                     ))}
@@ -116,7 +116,7 @@ export default function CampaignsPanel({ workspaceId }: { workspaceId: string })
                                 const st = STATUS_STYLE[c.status];
                                 const StIcon = st.icon;
                                 return (
-                                    <tr key={c.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : 'var(--card)' }}>
+                                    <tr key={c.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? 'var(--bg)' : 'var(--card)' }}>
                                         <td style={td}>
                                             <div style={{ fontWeight: 500 }}>{c.name}</div>
                                             <div style={{ fontSize: 11, color: 'var(--ink-muted)', marginTop: 2 }}>{c.targetAudience}</div>
@@ -137,7 +137,7 @@ export default function CampaignsPanel({ workspaceId }: { workspaceId: string })
                                                     <button type="button" onClick={() => act(c.id, 'approve')} style={{ padding: '4px 8px', border: '1px solid var(--ok-border)', borderRadius: 6, background: 'var(--ok-bg)', cursor: 'pointer', fontSize: 11, color: 'var(--ok)', fontWeight: 600 }}>Approve</button>
                                                     <button type="button" onClick={() => act(c.id, 'reject')} style={{ padding: '4px 8px', border: '1px solid var(--danger-border)', borderRadius: 6, background: 'var(--danger-bg)', cursor: 'pointer', fontSize: 11, color: 'var(--danger)', fontWeight: 600 }}>Reject</button>
                                                 </>}
-                                                {c.status === 'active' && <button type="button" onClick={() => act(c.id, 'pause')} style={{ padding: '4px 8px', border: '1px solid #fef08a', borderRadius: 6, background: '#fefce8', cursor: 'pointer', fontSize: 11, color: 'var(--warn)', fontWeight: 600 }}>Pause</button>}
+                                                {c.status === 'active' && <button type="button" onClick={() => act(c.id, 'pause')} style={{ padding: '4px 8px', border: '1px solid #fef08a', borderRadius: 6, background: 'var(--warn-bg)', cursor: 'pointer', fontSize: 11, color: 'var(--warn)', fontWeight: 600 }}>Pause</button>}
                                                 {c.status === 'paused' && <button type="button" onClick={() => act(c.id, 'resume')} style={{ padding: '4px 8px', border: '1px solid var(--info-border)', borderRadius: 6, background: 'var(--info-bg)', cursor: 'pointer', fontSize: 11, color: 'var(--info)', fontWeight: 600 }}>Resume</button>}
                                             </div>
                                         </td>

@@ -307,7 +307,7 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                                     }}
                                     style={{
                                         padding: '5px 10px',
-                                        background: diffBase === v.id ? '#1e3a5f' : 'var(--bg-deep)',
+                                        background: diffBase === v.id ? 'var(--info)' : 'var(--bg-deep)',
                                         border: diffBase === v.id ? '1px solid #3b82f6' : '1px solid #334155',
                                         borderRadius: '5px',
                                         color: diffBase === v.id ? 'var(--info)' : 'var(--ink-muted)',
@@ -328,7 +328,7 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                                         disabled={diffLoading}
                                         style={{
                                             padding: '5px 10px',
-                                            background: diffTarget === v.id ? '#1e3a5f' : 'var(--bg-deep)',
+                                            background: diffTarget === v.id ? 'var(--info)' : 'var(--bg-deep)',
                                             border: diffTarget === v.id ? '1px solid #3b82f6' : '1px solid #334155',
                                             borderRadius: '5px',
                                             color: diffTarget === v.id ? 'var(--info)' : 'var(--ink-muted)',
@@ -448,9 +448,9 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                                         .filter((l) => l.type !== 'unchanged')
                                         .map((line, idx) => {
                                             const isAdd = line.type === 'added';
-                                            const bg = isAdd ? '#052e16' : 'var(--danger)';
+                                            const bg = isAdd ? 'var(--ok-bg)' : 'var(--danger)';
                                             const prefix = isAdd ? '+' : '−';
-                                            const prefixColor = isAdd ? '#4ade80' : 'var(--danger)';
+                                            const prefixColor = isAdd ? 'var(--ok)' : 'var(--danger)';
                                             const truncate = (v: unknown): string => {
                                                 const s = JSON.stringify(v);
                                                 return s.length > 120 ? s.slice(0, 120) + '…' : s;

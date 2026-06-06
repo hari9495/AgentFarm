@@ -54,10 +54,10 @@ const STATUS_STYLE: Record<WakeRun['status'], { bg: string; color: string; icon:
 const SOURCE_BADGE: Record<WakeSource, { bg: string; color: string }> = {
     timer: { bg: 'var(--info-bg)', color: 'var(--info)' },
     assignment: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
-    on_demand: { bg: '#fdf4ff', color: 'var(--accent)' },
-    automation: { bg: '#fff7ed', color: '#c2410c' },
-    proactive_signal: { bg: '#fefce8', color: 'var(--warn)' },
-    agent_handoff: { bg: '#f0f9ff', color: 'var(--info)' },
+    on_demand: { bg: 'color-mix(in srgb, var(--accent) 8%, transparent)', color: 'var(--accent)' },
+    automation: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
+    proactive_signal: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
+    agent_handoff: { bg: 'var(--info-bg)', color: 'var(--info)' },
 };
 
 const cell: React.CSSProperties = { padding: '10px 12px', fontSize: 13, color: 'var(--ink-soft)', verticalAlign: 'middle' };
@@ -242,7 +242,7 @@ export default function WakeRunsPanel({ workspaceId }: { workspaceId: string }) 
                         </thead>
                         <tbody>
                             {runs.map((run, i) => (
-                                <tr key={run.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : 'var(--card)' }}>
+                                <tr key={run.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? 'var(--bg)' : 'var(--card)' }}>
                                     <td style={cell}><code style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 6px', borderRadius: 4 }}>{run.botId}</code></td>
                                     <td style={cell}><SourceBadge source={run.wakeSource} /></td>
                                     <td style={cell}><StatusBadge status={run.status} /></td>

@@ -29,12 +29,12 @@ type Summary = { active: number; paused: number; failed: number; other: number }
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const STATUS_CFG: Record<BotStatus, { label: string; color: string; bg: string; border: string; Icon: React.ElementType }> = {
-    active:                   { label: 'Active',        color: 'var(--ok)', bg: 'var(--ok-bg)', border: '#bbf7d0', Icon: CheckCircle2 },
+    active:                   { label: 'Active',        color: 'var(--ok)', bg: 'var(--ok-bg)', border: 'var(--ok)', Icon: CheckCircle2 },
     paused:                   { label: 'Paused',        color: 'var(--warn)', bg: 'var(--warn-bg)', border: 'var(--warn)', Icon: PauseCircle  },
-    failed:                   { label: 'Failed',        color: 'var(--danger)', bg: 'var(--danger-bg)', border: '#fecaca', Icon: XCircle      },
+    failed:                   { label: 'Failed',        color: 'var(--danger)', bg: 'var(--danger-bg)', border: 'var(--danger-bg)', Icon: XCircle      },
     bootstrapping:            { label: 'Bootstrapping', color: 'var(--info)', bg: 'var(--info-bg)', border: 'var(--info-bg)', Icon: RefreshCw    },
-    created:                  { label: 'Created',       color: '#64748b', bg: 'var(--bg)', border: 'var(--bg)', Icon: Clock        },
-    connector_setup_required: { label: 'Setup needed',  color: '#9333ea', bg: '#f3e8ff', border: '#e9d5ff', Icon: AlertCircle  },
+    created:                  { label: 'Created',       color: 'var(--ink-muted)', bg: 'var(--bg)', border: 'var(--bg)', Icon: Clock        },
+    connector_setup_required: { label: 'Setup needed',  color: 'var(--accent)', bg: 'color-mix(in srgb, var(--accent) 8%, transparent)', border: 'color-mix(in srgb, var(--accent) 12%, transparent)', Icon: AlertCircle  },
 };
 
 const OUTCOME_CFG = {

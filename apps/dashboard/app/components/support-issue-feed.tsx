@@ -52,15 +52,15 @@ export function setSelectedIssueId(id: string | null): void {
 
 const SEVERITY_COLORS: Record<SupportIssueSeverity, { bg: string; text: string }> = {
     critical: { bg: 'var(--danger-bg)', text: 'var(--danger)' },
-    high:     { bg: '#ffedd5', text: '#9a3412' },
-    medium:   { bg: 'var(--warn-bg)', text: '#854d0e' },
+    high:     { bg: 'var(--warn-bg)', text: 'var(--warn)' },
+    medium:   { bg: 'var(--warn-bg)', text: 'var(--warn)' },
     low:      { bg: 'var(--bg)', text: 'var(--ink-muted)' },
 };
 
 const STATUS_COLORS: Record<SupportIssueStatus, { bg: string; text: string; label: string }> = {
     open:       { bg: 'var(--bg)', text: 'var(--ink-muted)',  label: 'Open' },
     diagnosing: { bg: 'var(--info-bg)', text: 'var(--info)',  label: 'Diagnosing' },
-    fixing:     { bg: '#ede9fe', text: '#6d28d9',  label: 'Fixing' },
+    fixing:     { bg: 'color-mix(in srgb, var(--accent) 10%, transparent)', text: 'var(--accent)',  label: 'Fixing' },
     escalated:  { bg: 'var(--danger-bg)', text: 'var(--danger)',  label: 'Escalated' },
     resolved:   { bg: 'var(--ok-bg)', text: 'var(--ok)',  label: 'Resolved' },
 };

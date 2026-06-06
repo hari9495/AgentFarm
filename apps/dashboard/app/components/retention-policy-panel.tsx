@@ -29,9 +29,9 @@ type RetentionPolicy = {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const SCOPE_BADGE: Record<string, { bg: string; color: string }> = {
-    tenant: { bg: '#1e3a5f', color: 'var(--info-bg)' },
-    workspace: { bg: '#1a3a6b', color: '#a5c8ff' },
-    role: { bg: '#1e1b4b', color: '#c7d2fe' },
+    tenant: { bg: 'var(--info)', color: 'var(--info-bg)' },
+    workspace: { bg: 'var(--info)', color: 'var(--info)' },
+    role: { bg: 'var(--info)', color: 'var(--info)' },
 };
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
@@ -44,7 +44,7 @@ const ACTION_BADGE: Record<string, { bg: string; color: string }> = {
     never_delete: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
     archive: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
     delete: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
-    anonymize: { bg: '#f3e8ff', color: '#6b21a8' },
+    anonymize: { bg: 'color-mix(in srgb, var(--accent) 8%, transparent)', color: 'var(--accent)' },
 };
 
 function inlineBadge(label: string, map: Record<string, { bg: string; color: string }>) {

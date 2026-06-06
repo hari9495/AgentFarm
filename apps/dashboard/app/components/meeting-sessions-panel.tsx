@@ -54,10 +54,10 @@ const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
 };
 
 const PLATFORM_BADGE: Record<string, { bg: string; color: string }> = {
-    teams: { bg: '#1a3a6b', color: '#a5c8ff' },
-    zoom: { bg: '#1e3a5f', color: 'var(--info-bg)' },
-    google_meet: { bg: '#1c2d1e', color: '#bbf7d0' },
-    webex: { bg: '#1e1b4b', color: '#c7d2fe' },
+    teams: { bg: 'var(--info)', color: 'var(--info)' },
+    zoom: { bg: 'var(--info)', color: 'var(--info-bg)' },
+    google_meet: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    webex: { bg: 'var(--info)', color: 'var(--info)' },
 };
 
 function statusBadge(status: string) {
@@ -79,7 +79,7 @@ function statusBadge(status: string) {
 }
 
 function platformBadge(platform: string) {
-    const style = PLATFORM_BADGE[platform.toLowerCase()] ?? { bg: '#27272a', color: 'var(--ink-muted)' };
+    const style = PLATFORM_BADGE[platform.toLowerCase()] ?? { bg: 'var(--bg-deep)', color: 'var(--ink-muted)' };
     return (
         <span
             style={{
@@ -697,7 +697,7 @@ export default function MeetingSessionsPanel({ tenantId }: { tenantId: string })
                                                 ev.severity === 'warn' ? 'var(--warn)' :
                                                     ev.eventType === 'joined' ? 'var(--ok)' :
                                                         ev.eventType === 'left' ? 'var(--accent)' :
-                                                            '#64748b';
+                                                            'var(--ink-muted)';
 
                                         const iconMap: Record<string, string> = {
                                             joined: '▶',

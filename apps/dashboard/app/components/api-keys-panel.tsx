@@ -201,17 +201,17 @@ export default function ApiKeysPanel({ tenantId: _tenantId }: { tenantId: string
 
             {/* ── Raw key reveal ── */}
             {newRawKey && (
-                <div style={{ background: '#fefce8', border: '1px solid #fde047', borderRadius: 8, padding: '0.85rem 1rem', marginBottom: '1rem' }}>
+                <div style={{ background: 'var(--warn-bg)', border: '1px solid #fde047', borderRadius: 8, padding: '0.85rem 1rem', marginBottom: '1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '0.4rem' }}>
                         <AlertTriangle size={14} color="#92400e" />
-                        <span style={{ fontWeight: 700, fontSize: '0.83rem', color: '#78350f' }}>Copy now — this key will not be shown again.</span>
+                        <span style={{ fontWeight: 700, fontSize: '0.83rem', color: 'var(--warn)' }}>Copy now — this key will not be shown again.</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--card)', border: '1px solid #fde047', borderRadius: 6, padding: '0.4rem 0.7rem', marginBottom: '0.5rem' }}>
                         <code style={{ flex: 1, wordBreak: 'break-all', fontSize: '0.8rem', color: 'var(--ink-muted)', fontFamily: 'monospace' }}>{newRawKey}</code>
                         <CopyButton text={newRawKey} />
                     </div>
                     <button onClick={() => setNewRawKey(null)}
-                        style={{ padding: '0.3rem 0.75rem', fontSize: '0.78rem', border: '1px solid #fde047', borderRadius: 5, background: 'var(--card)', cursor: 'pointer', color: '#78350f', fontWeight: 600 }}>
+                        style={{ padding: '0.3rem 0.75rem', fontSize: '0.78rem', border: '1px solid #fde047', borderRadius: 5, background: 'var(--card)', cursor: 'pointer', color: 'var(--warn)', fontWeight: 600 }}>
                         I&apos;ve saved it
                     </button>
                 </div>
@@ -287,7 +287,7 @@ export default function ApiKeysPanel({ tenantId: _tenantId }: { tenantId: string
 
                                     {/* Status */}
                                     <td style={TD}>
-                                        <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: '0.72rem', fontWeight: 700, background: k.enabled ? '#dcfce7' : '#fee2e2', color: k.enabled ? 'var(--ok)' : 'var(--danger)' }}>
+                                        <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: '0.72rem', fontWeight: 700, background: k.enabled ? 'var(--ok-bg)' : 'var(--danger-bg)', color: k.enabled ? 'var(--ok)' : 'var(--danger)' }}>
                                             {k.enabled ? 'Active' : 'Disabled'}
                                         </span>
                                     </td>
@@ -317,7 +317,7 @@ export default function ApiKeysPanel({ tenantId: _tenantId }: { tenantId: string
                                             {/* Toggle enable/disable */}
                                             <button onClick={() => void handleToggle(k)} disabled={!!row}
                                                 title={k.enabled ? 'Disable' : 'Enable'}
-                                                style={{ padding: '3px 8px', fontSize: '0.72rem', fontWeight: 600, borderRadius: 4, cursor: row ? 'not-allowed' : 'pointer', border: `1px solid ${k.enabled ? '#fecaca' : '#bbf7d0'}`, background: 'var(--card)', color: k.enabled ? 'var(--danger)' : 'var(--ok)' }}>
+                                                style={{ padding: '3px 8px', fontSize: '0.72rem', fontWeight: 600, borderRadius: 4, cursor: row ? 'not-allowed' : 'pointer', border: `1px solid ${k.enabled ? 'var(--danger-bg)' : 'var(--ok)'}`, background: 'var(--card)', color: k.enabled ? 'var(--danger)' : 'var(--ok)' }}>
                                                 {row === 'toggle' ? '…' : k.enabled ? 'Disable' : 'Enable'}
                                             </button>
 

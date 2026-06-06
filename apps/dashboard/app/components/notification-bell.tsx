@@ -17,8 +17,8 @@ const STORAGE_KEY = 'af_read_notifications';
 const POLL_MS = 60_000;
 
 const SEV_COLORS: Record<string, { bg: string; dot: string }> = {
-    high:  { bg: 'rgba(196,22,28,0.07)',   dot: '#c4161c' },
-    warn:  { bg: 'rgba(180,83,9,0.07)',    dot: '#b45309' },
+    high:  { bg: 'rgba(196,22,28,0.07)',   dot: 'var(--danger)' },
+    warn:  { bg: 'rgba(180,83,9,0.07)',    dot: 'var(--warn)' },
     info:  { bg: 'rgba(0,82,204,0.06)',    dot: 'var(--accent)' },
 };
 
@@ -107,7 +107,7 @@ export function NotificationBell({ workspaceId }: { workspaceId?: string }) {
                 className="inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-slate-100"
                 style={{ position: 'relative', flexShrink: 0 }}
             >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: unreadCount > 0 ? 'var(--accent)' : '#64748b' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: unreadCount > 0 ? 'var(--accent)' : 'var(--ink-muted)' }}>
                     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                     <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                 </svg>
@@ -115,7 +115,7 @@ export function NotificationBell({ workspaceId }: { workspaceId?: string }) {
                     <span style={{
                         position: 'absolute', top: 2, right: 2,
                         width: 16, height: 16,
-                        background: '#c4161c', borderRadius: '50%',
+                        background: 'var(--danger)', borderRadius: '50%',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: 9, fontWeight: 800, color: 'var(--card)',
                         border: '1.5px solid #fff',

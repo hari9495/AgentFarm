@@ -760,7 +760,7 @@ export function WorkflowBuilderPanel({ workspaceId }: Props) {
                                             padding: '0.9rem 1rem',
                                             borderRadius: 6,
                                             border: '1px solid var(--line)',
-                                            background: item.warn ? '#fef9c3' : 'var(--surface)',
+                                            background: item.warn ? 'var(--warn-bg)' : 'var(--surface)',
                                             display: 'grid',
                                             gap: '0.2rem',
                                         }}
@@ -768,7 +768,7 @@ export function WorkflowBuilderPanel({ workspaceId }: Props) {
                                         <p style={{ margin: 0, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--ink-muted)' }}>
                                             {item.label}
                                         </p>
-                                        <p style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: item.warn ? '#854d0e' : 'var(--ink)' }}>
+                                        <p style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: item.warn ? 'var(--warn)' : 'var(--ink)' }}>
                                             {item.value}
                                         </p>
                                     </div>

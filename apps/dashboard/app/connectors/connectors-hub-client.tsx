@@ -62,7 +62,7 @@ function AdaptersTab({ workspaceId }: { workspaceId: string }) {
                     { title: 'Register new adapter', desc: 'Add a custom adapter endpoint to this workspace',            href: `/adapters?workspaceId=${workspaceId}&action=register` },
                 ].map(({ title, desc, href }, i, arr) => (
                     <Link key={href} href={href} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', textDecoration: 'none', borderBottom: i < arr.length - 1 ? '1px solid #f0f0f2' : 'none', transition: 'background 0.15s' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = '#f5f5f7')}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg)')}
                         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                         <div style={{ flex: 1 }}>
                             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{title}</div>
@@ -236,7 +236,7 @@ function McpTab() {
                     return (
                         <div key={server.id} style={{ background: 'var(--card)', border: `1px solid ${server.isActive ? 'rgba(26,122,74,0.25)' : 'var(--line)'}`, borderRadius: 14, padding: '14px 16px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                                <div style={{ width: 9, height: 9, borderRadius: '50%', background: server.isActive ? '#1a7a4a' : '#aeaeb2', flexShrink: 0, marginTop: 5 }} />
+                                <div style={{ width: 9, height: 9, borderRadius: '50%', background: server.isActive ? 'var(--ok)' : 'var(--ink-muted)', flexShrink: 0, marginTop: 5 }} />
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', marginBottom: 3 }}>{server.name}</div>
                                     <div style={{ fontSize: 12, fontFamily: 'ui-monospace, monospace', color: 'var(--accent)' }}>{server.url}</div>
@@ -330,7 +330,7 @@ export default function ConnectorsHubClient({
                     {(() => {
                         const connected = initialConnectors.filter(c => c.status === 'connected').length;
                         const total     = initialConnectors.length;
-                        const color     = connected === total ? '#1a7a4a' : connected > 0 ? 'var(--warn)' : 'var(--danger)';
+                        const color     = connected === total ? 'var(--ok)' : connected > 0 ? 'var(--warn)' : 'var(--danger)';
                         const bg        = connected === total ? 'rgba(26,122,74,0.07)' : connected > 0 ? 'rgba(180,83,9,0.07)' : 'rgba(196,22,28,0.07)';
                         const border    = connected === total ? 'rgba(26,122,74,0.2)' : connected > 0 ? 'rgba(180,83,9,0.2)' : 'rgba(196,22,28,0.2)';
                         return (
@@ -352,7 +352,7 @@ export default function ConnectorsHubClient({
                             display: 'flex', alignItems: 'center', gap: 6,
                             padding: '13px 14px', background: 'transparent', border: 'none',
                             borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
-                            cursor: 'pointer', color: active ? 'var(--accent)' : '#6e6e73',
+                            cursor: 'pointer', color: active ? 'var(--accent)' : 'var(--ink-muted)',
                             fontSize: 13, fontWeight: active ? 600 : 500,
                             transition: 'all 0.15s', marginBottom: -1, whiteSpace: 'nowrap',
                         }}>

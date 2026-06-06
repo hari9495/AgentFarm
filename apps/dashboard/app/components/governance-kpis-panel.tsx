@@ -56,9 +56,9 @@ type KPIData = {
 type StatusBadge = 'healthy' | 'watch' | 'degraded';
 
 function statusColor(s: StatusBadge) {
-    if (s === 'healthy') return { bg: 'var(--ok-bg)', text: 'var(--ok)', border: '#bbf7d0' };
-    if (s === 'watch') return { bg: '#fefce8', text: '#854d0e', border: 'var(--warn)' };
-    return { bg: 'var(--danger-bg)', text: 'var(--danger)', border: '#fecaca' };
+    if (s === 'healthy') return { bg: 'var(--ok-bg)', text: 'var(--ok)', border: 'var(--ok)' };
+    if (s === 'watch') return { bg: 'var(--warn-bg)', text: 'var(--warn)', border: 'var(--warn)' };
+    return { bg: 'var(--danger-bg)', text: 'var(--danger)', border: 'var(--danger-bg)' };
 }
 
 function KPICard({ title, value, unit, status, sub }: {
@@ -245,7 +245,7 @@ export function GovernanceKPIPanel({ workspaceId, language = 'en' }: Props) {
     if (!kpis) return null;
 
     const sla = n(kpis.sla_compliance_pct);
-    const slaColor = sla >= 98 ? '#1a7a4a' : sla >= 90 ? 'var(--warn)' : 'var(--danger)';
+    const slaColor = sla >= 98 ? 'var(--ok)' : sla >= 90 ? 'var(--warn)' : 'var(--danger)';
     const approvalRate = kpis.approvals
         ? n(kpis.approvals.total_approved) + n(kpis.approvals.total_rejected) > 0
             ? (n(kpis.approvals.total_approved) / (n(kpis.approvals.total_approved) + n(kpis.approvals.total_rejected))) * 100

@@ -83,19 +83,19 @@ function stepStatus(step: string, currentStep: string): 'completed' | 'active' |
 const pillColor: Record<string, string> = {
     completed: 'var(--ok)',
     active: 'var(--info)',
-    pending: '#78716c',
+    pending: 'var(--ink-muted)',
 };
 
 const pillBg: Record<string, string> = {
-    completed: '#dcfce7',
-    active: '#dbeafe',
-    pending: '#f5f5f4',
+    completed: 'var(--ok-bg)',
+    active: 'var(--info-bg)',
+    pending: 'var(--bg)',
 };
 
 const pillBorder: Record<string, string> = {
     completed: 'var(--ok)',
     active: 'var(--info)',
-    pending: '#d6d3d1',
+    pending: 'var(--line)',
 };
 
 export default async function ProvisioningPage({
@@ -184,7 +184,7 @@ export default async function ProvisioningPage({
                     <ul className="kv-list">
                         <li>
                             <span>Job ID</span>
-                            <code style={{ background: '#ece6dc', padding: '0.1rem 0.4rem', borderRadius: 4, fontSize: '0.82rem' }}>
+                            <code style={{ background: 'var(--bg)', padding: '0.1rem 0.4rem', borderRadius: 4, fontSize: '0.82rem' }}>
                                 {job.job_id}
                             </code>
                         </li>
@@ -332,7 +332,7 @@ export default async function ProvisioningPage({
                 )}
             </section>
 
-            <p style={{ marginTop: '1.2rem', fontSize: '0.82rem', color: '#a8a29e', textAlign: 'center' }}>
+            <p style={{ marginTop: '1.2rem', fontSize: '0.82rem', color: 'var(--ink-muted)', textAlign: 'center' }}>
                 <a href="/" style={{ color: 'var(--ink-muted)', textDecoration: 'underline' }}>
                     ← Back to Dashboard
                 </a>

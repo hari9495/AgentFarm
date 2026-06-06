@@ -53,7 +53,7 @@ const PLATFORM_MAP: Record<string, string> = {
 };
 
 const STATUS_COLOR: Record<string, string> = {
-    scheduled: '#64748b',
+    scheduled: 'var(--ink-muted)',
     join_requested: 'var(--warn)',
     joining: 'var(--warn)',
     joined: 'var(--ok)',
@@ -61,14 +61,14 @@ const STATUS_COLOR: Record<string, string> = {
     speaking: '#8b5cf6',
     paused: 'var(--warn)',
     escalation_required: 'var(--danger)',
-    completed: '#64748b',
+    completed: 'var(--ink-muted)',
     failed: 'var(--danger)',
 };
 
 const SOURCE_STYLE: Record<string, { color: string; label: string }> = {
     participant: { color: 'var(--info)', label: 'Participant' },
     agent: { color: '#8b5cf6', label: 'Agent' },
-    system: { color: '#64748b', label: 'System' },
+    system: { color: 'var(--ink-muted)', label: 'System' },
 };
 
 // ── Props ──────────────────────────────────────────────────────────────────────
@@ -326,12 +326,12 @@ export default function MeetingLivePanel({ gw }: MeetingLivePanelProps) {
                 <div style={{
                     display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap',
                     padding: '0.45rem 0.7rem', borderRadius: '6px',
-                    background: `${STATUS_COLOR[maSession.status] ?? '#64748b'}18`,
-                    border: `1px solid ${STATUS_COLOR[maSession.status] ?? '#64748b'}44`,
+                    background: `${STATUS_COLOR[maSession.status] ?? 'var(--ink-muted)'}18`,
+                    border: `1px solid ${STATUS_COLOR[maSession.status] ?? 'var(--ink-muted)'}44`,
                 }}>
                     <span style={{
                         fontWeight: 700, fontSize: '0.77rem', textTransform: 'uppercase',
-                        letterSpacing: '0.05em', color: STATUS_COLOR[maSession.status] ?? '#64748b',
+                        letterSpacing: '0.05em', color: STATUS_COLOR[maSession.status] ?? 'var(--ink-muted)',
                     }}>
                         {maSession.status.replace(/_/g, ' ')}
                     </span>

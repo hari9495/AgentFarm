@@ -120,12 +120,12 @@ export default function CommsDraftsPanel({ workspaceId }: { workspaceId: string 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                     {filters.map(({ key, label }) => (
-                        <button key={key} type="button" onClick={() => setFilter(key)} style={{ padding: '5px 12px', border: `1px solid ${filter === key ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: filter === key ? 'rgba(0,102,204,0.07)' : 'var(--card)', color: filter === key ? 'var(--accent)' : '#64748b', fontSize: 12, fontWeight: filter === key ? 600 : 400, cursor: 'pointer' }}>
+                        <button key={key} type="button" onClick={() => setFilter(key)} style={{ padding: '5px 12px', border: `1px solid ${filter === key ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: filter === key ? 'rgba(0,102,204,0.07)' : 'var(--card)', color: filter === key ? 'var(--accent)' : 'var(--ink-muted)', fontSize: 12, fontWeight: filter === key ? 600 : 400, cursor: 'pointer' }}>
                             {label}
                         </button>
                     ))}
                 </div>
-                <button type="button" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', fontSize: 12, color: '#64748b', cursor: 'pointer' }}>
+                <button type="button" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', fontSize: 12, color: 'var(--ink-muted)', cursor: 'pointer' }}>
                     <RefreshCw size={12} />Refresh
                 </button>
             </div>
@@ -152,10 +152,10 @@ export default function CommsDraftsPanel({ workspaceId }: { workspaceId: string 
                                 const StIcon = st.icon;
                                 const pr = PRIORITY_STYLE[d.priority] ?? PRIORITY_STYLE.normal;
                                 return (
-                                    <tr key={d.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : 'var(--card)' }}>
+                                    <tr key={d.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? 'var(--bg)' : 'var(--card)' }}>
                                         <td style={td}><span style={{ fontWeight: 500 }}>{d.subject}</span></td>
                                         <td style={td}><span style={{ fontSize: 12 }}>{TYPE_ICON[d.commsType]} {TYPE_LABEL[d.commsType]}</span></td>
-                                        <td style={{ ...td, color: '#64748b' }}>{d.recipientCount}</td>
+                                        <td style={{ ...td, color: 'var(--ink-muted)' }}>{d.recipientCount}</td>
                                         <td style={{ ...td, fontWeight: 600, color: pr.color, fontSize: 12 }}>{d.priority.toUpperCase()}</td>
                                         <td style={td}>
                                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, background: st.bg, color: st.color, fontSize: 11, fontWeight: 600 }}>

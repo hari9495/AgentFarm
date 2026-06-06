@@ -55,7 +55,7 @@ export function SuspensionWall({ tenantId, children }: Props) {
                         maxWidth: '480px',
                         width: '100%',
                         textAlign: 'center',
-                        color: '#111',
+                        color: 'var(--ink)',
                     }}
                 >
                     <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔒</div>
@@ -72,7 +72,7 @@ export function SuspensionWall({ tenantId, children }: Props) {
                             style={{
                                 display: 'inline-block',
                                 padding: '10px 20px',
-                                background: '#111',
+                                background: 'var(--ink)',
                                 color: 'var(--card)',
                                 borderRadius: '6px',
                                 textDecoration: 'none',
@@ -87,7 +87,7 @@ export function SuspensionWall({ tenantId, children }: Props) {
                                 display: 'inline-block',
                                 padding: '10px 20px',
                                 background: 'transparent',
-                                color: '#111',
+                                color: 'var(--ink)',
                                 border: '1px solid #111',
                                 borderRadius: '6px',
                                 textDecoration: 'none',

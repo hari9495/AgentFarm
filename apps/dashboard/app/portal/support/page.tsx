@@ -365,8 +365,8 @@ function PortalVoicePanel() {
                             <div style={{
                                 maxWidth: '80%', padding: '0.35rem 0.6rem', lineHeight: 1.45, fontSize: '0.83rem',
                                 borderRadius: isUser ? '10px 10px 2px 10px' : '10px 10px 10px 2px',
-                                background: isUser ? (t.kind === 'partial' ? 'var(--bg)' : 'var(--bg-deep)') : '#f0fdf4',
-                                color: isUser ? (t.kind === 'partial' ? '#64748b' : 'var(--bg)') : 'var(--ok)',
+                                background: isUser ? (t.kind === 'partial' ? 'var(--bg)' : 'var(--bg-deep)') : 'var(--ok-bg)',
+                                color: isUser ? (t.kind === 'partial' ? 'var(--ink-muted)' : 'var(--bg)') : 'var(--ok)',
                                 fontStyle: t.kind === 'partial' ? 'italic' : undefined,
                                 opacity: t.kind === 'partial' ? 0.75 : 1,
                             }}>
@@ -401,7 +401,7 @@ function PortalVoicePanel() {
                 {!callActive
                     ? <button type="button" className="primary-action" onClick={() => void beginCall()} style={{ flex: 1 }}>📞 Begin Call</button>
                     : <>
-                        <button type="button" onClick={() => setMuted((m) => !m)} style={{ flex: 1, padding: '0.35rem', fontSize: '0.82rem', border: '1px solid var(--line)', borderRadius: 4, background: muted ? '#fef2f2' : 'var(--bg)', color: muted ? 'var(--danger)' : 'var(--ink)', cursor: 'pointer' }}>
+                        <button type="button" onClick={() => setMuted((m) => !m)} style={{ flex: 1, padding: '0.35rem', fontSize: '0.82rem', border: '1px solid var(--line)', borderRadius: 4, background: muted ? 'var(--danger-bg)' : 'var(--bg)', color: muted ? 'var(--danger)' : 'var(--ink)', cursor: 'pointer' }}>
                             {muted ? '🔇 Unmute' : '🎤 Mute'}
                         </button>
                         <button type="button" onClick={endCall} style={{ flex: 1, padding: '0.35rem', fontSize: '0.82rem', border: '1px solid var(--danger-border)', borderRadius: 4, background: 'var(--danger-bg)', color: 'var(--danger)', cursor: 'pointer', fontWeight: 600 }}>

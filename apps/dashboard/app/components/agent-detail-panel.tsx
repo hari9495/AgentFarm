@@ -90,9 +90,9 @@ function ActionButton({
     loading?: boolean;
 }) {
     const colors = {
-        default: { bg: 'var(--bg-deep)', border: 'var(--bg-deep)', text: 'var(--ink-muted)', hover: '#263244' },
-        danger: { bg: '#3b0d0d', border: 'var(--danger)', text: 'var(--danger)', hover: '#4c1313' },
-        success: { bg: '#0d2b1f', border: 'var(--ok)', text: 'var(--ok)', hover: '#113526' },
+        default: { bg: 'var(--bg-deep)', border: 'var(--bg-deep)', text: 'var(--ink-muted)', hover: 'var(--bg-deep)' },
+        danger: { bg: 'var(--danger-bg)', border: 'var(--danger)', text: 'var(--danger)', hover: 'var(--danger-bg)' },
+        success: { bg: 'var(--ok-bg)', border: 'var(--ok)', text: 'var(--ok)', hover: 'var(--ok-bg)' },
     }[variant];
 
     return (
@@ -282,7 +282,7 @@ export default function AgentDetailPanel({ agent, onStatusChange }: AgentDetailP
                             background: 'transparent',
                             border: 'none',
                             borderBottom: activeTab === tab.key ? '2px solid #3b82f6' : '2px solid transparent',
-                            color: activeTab === tab.key ? 'var(--info)' : '#64748b',
+                            color: activeTab === tab.key ? 'var(--info)' : 'var(--ink-muted)',
                             fontSize: '13px',
                             fontWeight: activeTab === tab.key ? 600 : 400,
                             cursor: 'pointer',

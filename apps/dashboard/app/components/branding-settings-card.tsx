@@ -15,7 +15,7 @@ const PRESET_COLORS = [
     { label: 'Sky blue',    hex: 'var(--accent)' },
     { label: 'Indigo',      hex: 'var(--accent)' },
     { label: 'Emerald',     hex: 'var(--ok)' },
-    { label: 'Rose',        hex: '#e11d48' },
+    { label: 'Rose',        hex: 'var(--danger)' },
     { label: 'Amber',       hex: 'var(--warn)' },
     { label: 'Slate',       hex: 'var(--ink-muted)' },
 ];

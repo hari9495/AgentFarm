@@ -33,7 +33,7 @@ type Snapshot = {
 const SOURCE_BADGE: Record<string, { bg: string; color: string }> = {
     runtime_freeze: { bg: 'var(--info-bg)', color: 'var(--info)' },
     manual: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
-    migration: { bg: '#f3e8ff', color: 'var(--accent)' },
+    migration: { bg: 'color-mix(in srgb, var(--accent) 8%, transparent)', color: 'var(--accent)' },
 };
 
 function inlineBadge(label: string, map: Record<string, { bg: string; color: string }>) {

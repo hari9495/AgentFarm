@@ -61,7 +61,7 @@ const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
 const PR_STATE_BADGE: Record<string, { bg: string; color: string }> = {
     open: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
     closed: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
-    merged: { bg: '#f3e8ff', color: 'var(--accent)' },
+    merged: { bg: 'color-mix(in srgb, var(--accent) 8%, transparent)', color: 'var(--accent)' },
 };
 
 function inlineBadge(label: string, map: Record<string, { bg: string; color: string }>) {

@@ -58,7 +58,7 @@ const STATUS_BADGE: Record<string, string> = {
     idle: 'var(--ink-muted)',
     busy: 'var(--brand)',
     completed: 'var(--ok)',
-    timeout: '#854d0e',
+    timeout: 'var(--warn)',
     failed: 'var(--danger)',
     queued: 'var(--ink-soft)',
     running: 'var(--brand)',

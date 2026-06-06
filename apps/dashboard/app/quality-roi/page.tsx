@@ -177,7 +177,7 @@ export default function QualityRoiPage() {
                                 borderRadius: 8, background: 'var(--card)',
                             }}>
                                 <p style={{ margin: '0 0 0.2rem', fontSize: '0.72rem', color: 'var(--ink-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
-                                <p style={{ margin: 0, fontSize: '1.35rem', fontWeight: 700, color: highlight ?? '#111827' }}>{value}</p>
+                                <p style={{ margin: 0, fontSize: '1.35rem', fontWeight: 700, color: highlight ?? 'var(--ink)' }}>{value}</p>
                                 <p style={{ margin: '0.15rem 0 0', fontSize: '0.72rem', color: 'var(--ink-muted)' }}>{sub}</p>
                             </div>
                         ))}

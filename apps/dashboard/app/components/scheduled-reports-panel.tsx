@@ -22,7 +22,7 @@ type ScheduledReport = {
 const FREQ_BADGE: Record<string, { bg: string; color: string }> = {
     daily: { bg: 'var(--info-bg)', color: 'var(--info)' },
     weekly: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
-    monthly: { bg: '#f3e8ff', color: 'var(--accent)' },
+    monthly: { bg: 'color-mix(in srgb, var(--accent) 8%, transparent)', color: 'var(--accent)' },
 };
 
 export default function ScheduledReportsPanel({ tenantId: _tenantId }: ScheduledReportsPanelProps) {

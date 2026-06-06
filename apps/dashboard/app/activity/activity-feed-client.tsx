@@ -33,13 +33,13 @@ const STATUS_DOT: Record<FeedStatus, { color: string; bg: string; Icon: React.El
     failure: { color: 'var(--danger)', bg: 'var(--danger-bg)', Icon: XCircle },
     pending: { color: 'var(--info)', bg: 'var(--info-bg)', Icon: Clock },
     warning: { color: 'var(--warn)', bg: 'var(--warn-bg)', Icon: AlertTriangle },
-    info:    { color: '#64748b', bg: 'var(--bg)', Icon: Info },
+    info:    { color: 'var(--ink-muted)', bg: 'var(--bg)', Icon: Info },
 };
 
 const CATEGORY_CONFIG: Record<string, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
     runtime:      { label: 'Runtime',      color: 'var(--info)', bg: 'var(--info-bg)', Icon: Zap },
     approval:     { label: 'Approval',     color: 'var(--warn)', bg: 'var(--warn-bg)', Icon: ShieldCheck },
-    ci:           { label: 'CI',           color: 'var(--accent)', bg: '#f3e8ff', Icon: GitPullRequest },
+    ci:           { label: 'CI',           color: 'var(--accent)', bg: 'color-mix(in srgb, var(--accent) 8%, transparent)', Icon: GitPullRequest },
     connector:    { label: 'Connector',    color: 'var(--ok)', bg: 'var(--ok-bg)', Icon: Plug },
     provisioning: { label: 'Provisioning', color: 'var(--danger)', bg: 'var(--danger-bg)', Icon: Server },
     security:     { label: 'Security',     color: 'var(--danger)', bg: 'var(--danger-bg)', Icon: Lock },

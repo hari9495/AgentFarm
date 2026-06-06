@@ -112,10 +112,10 @@ export default async function AgentInsightsCard({ botId }: { botId: string }) {
         ? `${(data.successRate * 100).toFixed(1)}%`
         : '—';
 
-    const successColor = data.successRate === null ? '#57534e'
-        : data.successRate >= 0.9 ? '#1a7a4a'
-        : data.successRate >= 0.7 ? '#b45309'
-        : '#c4161c';
+    const successColor = data.successRate === null ? 'var(--ink-muted)'
+        : data.successRate >= 0.9 ? 'var(--ok)'
+        : data.successRate >= 0.7 ? 'var(--warn)'
+        : 'var(--danger)';
 
     return (
         <section className="card">
@@ -129,7 +129,7 @@ export default async function AgentInsightsCard({ botId }: { botId: string }) {
                     value={data.totalCostUsd < 0.01 ? '<$0.01' : `$${data.totalCostUsd.toFixed(2)}`}
                     color="var(--warn)"
                 />
-                <Kpi label="Failures" value={data.failedCount.toString()} color={data.failedCount > 0 ? '#c4161c' : '#1a7a4a'} />
+                <Kpi label="Failures" value={data.failedCount.toString()} color={data.failedCount > 0 ? 'var(--danger)' : 'var(--ok)'} />
                 <Kpi label="Pending approval" value={data.approvalQueuedCount.toString()} sub="in queue" />
             </div>
 
@@ -141,9 +141,9 @@ export default async function AgentInsightsCard({ botId }: { botId: string }) {
                         <span>{data.failedCount} failed · {data.approvalQueuedCount} queued</span>
                     </div>
                     <div style={{ height: 6, background: 'var(--bg)', borderRadius: 9999, overflow: 'hidden', display: 'flex' }}>
-                        <div style={{ height: '100%', width: `${((data.successCount / data.taskCount) * 100).toFixed(1)}%`, background: '#1a7a4a', transition: 'width 0.4s' }} />
-                        <div style={{ height: '100%', width: `${((data.approvalQueuedCount / data.taskCount) * 100).toFixed(1)}%`, background: '#b45309' }} />
-                        <div style={{ height: '100%', width: `${((data.failedCount / data.taskCount) * 100).toFixed(1)}%`, background: '#c4161c' }} />
+                        <div style={{ height: '100%', width: `${((data.successCount / data.taskCount) * 100).toFixed(1)}%`, background: 'var(--ok)', transition: 'width 0.4s' }} />
+                        <div style={{ height: '100%', width: `${((data.approvalQueuedCount / data.taskCount) * 100).toFixed(1)}%`, background: 'var(--warn)' }} />
+                        <div style={{ height: '100%', width: `${((data.failedCount / data.taskCount) * 100).toFixed(1)}%`, background: 'var(--danger)' }} />
                     </div>
                 </div>
             )}

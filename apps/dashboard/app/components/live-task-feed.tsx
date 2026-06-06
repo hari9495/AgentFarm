@@ -195,7 +195,7 @@ export function LiveTaskFeed({ workspaceId, maxEvents = 50 }: LiveTaskFeedProps)
                             <span style={{ color: 'var(--ink-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {evt.workspaceId}
                             </span>
-                            <span style={{ color: '#64748b', fontSize: 11, flexShrink: 0 }}>
+                            <span style={{ color: 'var(--ink-muted)', fontSize: 11, flexShrink: 0 }}>
                                 {new Date(evt.timestamp).toLocaleTimeString()}
                             </span>
                         </div>

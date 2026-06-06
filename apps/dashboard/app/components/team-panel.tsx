@@ -365,7 +365,7 @@ export default function TeamPanel() {
                                                                 fontSize: '0.75rem', fontWeight: 700,
                                                                 padding: '2px 6px', borderRadius: 4,
                                                                 border: '1px solid var(--line)',
-                                                                background: m.role === 'admin' ? '#fef9c3' : m.role === 'operator' ? '#dbeafe' : '#f1f5f9',
+                                                                background: m.role === 'admin' ? 'var(--warn-bg)' : m.role === 'operator' ? 'var(--info-bg)' : 'var(--bg)',
                                                                 color: m.role === 'admin' ? 'var(--warn)' : m.role === 'operator' ? 'var(--info)' : 'var(--ink-muted)',
                                                                 cursor: 'pointer',
                                                             }}

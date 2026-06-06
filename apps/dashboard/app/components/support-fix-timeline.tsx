@@ -34,7 +34,7 @@ function TierRow({ tier, label, reached, applied, detail }: TierRowProps) {
             <div style={{
                 width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: reached ? statusColor : '#f1f5f9',
+                background: reached ? statusColor : 'var(--bg)',
                 fontSize: 12, fontWeight: 700, color: reached ? 'var(--card)' : 'var(--ink-muted)',
             }}>
                 {tier}

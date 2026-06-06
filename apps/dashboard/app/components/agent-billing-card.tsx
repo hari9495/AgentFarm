@@ -27,11 +27,11 @@ function StatRow({ label, value, highlight }: { label: string; value: string; hi
             padding: '8px 0',
             borderBottom: '1px solid #1e293b',
         }}>
-            <span style={{ fontSize: '12px', color: '#64748b' }}>{label}</span>
+            <span style={{ fontSize: '12px', color: 'var(--ink-muted)' }}>{label}</span>
             <span style={{
                 fontSize: '13px',
                 fontWeight: highlight ? 700 : 500,
-                color: highlight ? '#38bdf8' : 'var(--bg)',
+                color: highlight ? 'var(--info)' : 'var(--bg)',
                 fontVariantNumeric: 'tabular-nums',
             }}>
                 {value}
@@ -60,7 +60,7 @@ export default function AgentBillingCard({ botId }: Props) {
 
     if (loading) {
         return (
-            <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Loading…</p>
+            <p style={{ margin: 0, fontSize: '12px', color: 'var(--ink-muted)' }}>Loading…</p>
         );
     }
 
@@ -88,7 +88,7 @@ export default function AgentBillingCard({ botId }: Props) {
                     display: 'inline-block',
                     marginTop: '14px',
                     fontSize: '11px',
-                    color: '#38bdf8',
+                    color: 'var(--info)',
                     textDecoration: 'none',
                 }}
             >

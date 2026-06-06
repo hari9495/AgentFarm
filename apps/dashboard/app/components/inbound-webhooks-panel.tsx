@@ -55,7 +55,7 @@ const EVENT_STATUS_BADGE: Record<string, { bg: string; color: string; border: st
 };
 
 function statusBadge(status: string) {
-    const s = EVENT_STATUS_BADGE[status] ?? { bg: '#f5f5f7', color: 'var(--ink-muted)', border: 'var(--line)' };
+    const s = EVENT_STATUS_BADGE[status] ?? { bg: 'var(--bg)', color: 'var(--ink-muted)', border: 'var(--line)' };
     return (
         <span style={{ padding: '2px 9px', borderRadius: 9999, fontSize: 11, fontWeight: 700, background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
             {status}
@@ -266,7 +266,7 @@ export default function InboundWebhooksPanel() {
                                 <code style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12, color: 'var(--ink)', background: 'var(--bg)', border: '1px solid var(--line)', padding: '6px 10px', borderRadius: 8, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {newSecret}
                                 </code>
-                                <button onClick={() => handleCopy(newSecret, 'secret')} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 9999, cursor: 'pointer', background: '#1a7a4a', color: 'var(--card)', border: 'none', fontWeight: 600 }}>
+                                <button onClick={() => handleCopy(newSecret, 'secret')} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 9999, cursor: 'pointer', background: 'var(--ok)', color: 'var(--card)', border: 'none', fontWeight: 600 }}>
                                     {copiedId === 'secret' ? '✓ Copied' : 'Copy Secret'}
                                 </button>
                                 <button onClick={() => { setNewSecret(null); setNewSourceId(null); }} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 9999, cursor: 'pointer', background: 'var(--bg)', border: '1px solid var(--line)', color: 'var(--ink-muted)' }}>
@@ -494,7 +494,7 @@ export default function InboundWebhooksPanel() {
                                                     </td>
                                                     <td style={{ padding: '0.5rem', color: 'var(--ink)' }}>{sourceName}</td>
                                                     <td style={{ padding: '0.5rem' }}>
-                                                        <code style={{ fontSize: '0.78rem', color: '#c7d2fe' }}>{ev.method}</code>
+                                                        <code style={{ fontSize: '0.78rem', color: 'var(--info)' }}>{ev.method}</code>
                                                     </td>
                                                     <td style={{ padding: '0.5rem' }}>{statusBadge(ev.status)}</td>
                                                     <td style={{ padding: '0.5rem', color: 'var(--ink-muted)', fontFamily: 'monospace', fontSize: '0.78rem' }}>

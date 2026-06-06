@@ -157,7 +157,7 @@ export function SkillSearchPanel({ workspaceId, botId }: Props) {
                         style={{
                             textAlign: 'left', padding: '0.75rem', border: '1px solid',
                             borderColor: selectedSkill?.id === skill.id ? 'var(--accent)' : 'var(--bg)',
-                            borderRadius: 8, background: selectedSkill?.id === skill.id ? '#eef2ff' : 'var(--card)',
+                            borderRadius: 8, background: selectedSkill?.id === skill.id ? 'var(--info-bg)' : 'var(--card)',
                             cursor: 'pointer', transition: 'border-color 0.15s',
                         }}
                     >
@@ -205,7 +205,7 @@ export function SkillSearchPanel({ workspaceId, botId }: Props) {
                     <button
                         onClick={() => void handleInvoke()}
                         disabled={invoking}
-                        style={{ marginTop: '0.5rem', padding: '0.4rem 1rem', background: invoking ? '#c7d2fe' : 'var(--accent)', color: 'var(--card)', border: 'none', borderRadius: 6, cursor: invoking ? 'wait' : 'pointer', fontSize: '0.85rem' }}
+                        style={{ marginTop: '0.5rem', padding: '0.4rem 1rem', background: invoking ? 'var(--info)' : 'var(--accent)', color: 'var(--card)', border: 'none', borderRadius: 6, cursor: invoking ? 'wait' : 'pointer', fontSize: '0.85rem' }}
                     >
                         {invoking ? 'Running…' : 'Run Skill'}
                     </button>
@@ -213,7 +213,7 @@ export function SkillSearchPanel({ workspaceId, botId }: Props) {
                     {invokeError && <p style={{ color: 'var(--danger)', fontSize: '0.82rem', marginTop: '0.5rem' }}>{invokeError}</p>}
 
                     {invokeResult && (
-                        <div style={{ marginTop: '0.6rem', padding: '0.6rem', background: invokeResult.ok ? '#f0fdf4' : '#fef2f2', borderRadius: 6, fontSize: '0.83rem' }}>
+                        <div style={{ marginTop: '0.6rem', padding: '0.6rem', background: invokeResult.ok ? 'var(--ok-bg)' : 'var(--danger-bg)', borderRadius: 6, fontSize: '0.83rem' }}>
                             <span style={{ fontWeight: 700, color: invokeResult.ok ? 'var(--ok)' : 'var(--danger)' }}>{invokeResult.ok ? '✓ Success' : '✗ Failed'}</span>
                             <span style={{ marginLeft: '0.5rem', color: 'var(--ink-muted)' }}>{invokeResult.summary}</span>
                             <span style={{ marginLeft: '0.75rem', color: 'var(--ink-muted)' }}>{invokeResult.duration_ms}ms</span>

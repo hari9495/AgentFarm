@@ -52,7 +52,7 @@ function truncate(s: string | undefined, max = 120): string {
 
 function confidencePill(score: number | undefined): React.ReactNode {
     if (score === undefined) return null;
-    const bg = score >= 0.8 ? 'var(--ok)' : score >= 0.5 ? '#78350f' : 'var(--danger)';
+    const bg = score >= 0.8 ? 'var(--ok)' : score >= 0.5 ? 'var(--warn)' : 'var(--danger)';
     const color = score >= 0.8 ? 'var(--ok)' : score >= 0.5 ? 'var(--warn)' : 'var(--danger)';
     return (
         <span style={{ background: bg, color, padding: '0.1rem 0.45rem', borderRadius: '4px', fontSize: '0.78rem', fontWeight: 600 }}>
@@ -263,7 +263,7 @@ export default function MemoryBrowserPanel() {
                     </div>
 
                     {reinforceMsg && (
-                        <p style={{ padding: '0.5rem 0.75rem', background: '#052e16', border: '1px solid #166534', borderRadius: '6px', color: 'var(--ok)', fontSize: '0.83rem', marginBottom: '0.75rem' }}>
+                        <p style={{ padding: '0.5rem 0.75rem', background: 'var(--ok-bg)', border: '1px solid #166534', borderRadius: '6px', color: 'var(--ok)', fontSize: '0.83rem', marginBottom: '0.75rem' }}>
                             {reinforceMsg}
                         </p>
                     )}

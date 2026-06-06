@@ -400,7 +400,7 @@ export default function PlaygroundClient({ tenantId, workspaceId }: { tenantId: 
                         typescript: buildTypeScript(endpoint, resolvedPath, bodyText, queryParams, BASE),
                     };
                     const active = snippets[snippetLang] ?? '';
-                    const LANG_COLORS: Record<string, string> = { curl: '#a8e6cf', python: '#ffd580', typescript: '#82b4ff' };
+                    const LANG_COLORS: Record<string, string> = { curl: 'var(--ok)', python: 'var(--warn)', typescript: 'var(--info)' };
                     return (
                         <div className="card" style={{ padding: '0.75rem 1rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '0.5rem' }}>
@@ -422,7 +422,7 @@ export default function PlaygroundClient({ tenantId, workspaceId }: { tenantId: 
                                     {copied ? '✓ Copied' : 'Copy'}
                                 </button>
                             </div>
-                            <pre style={{ margin: 0, fontSize: '0.75rem', fontFamily: 'ui-monospace, monospace', background: 'var(--bg-deep)', color: LANG_COLORS[snippetLang] ?? '#a8e6cf', padding: '0.75rem', borderRadius: '0.4rem', overflowX: 'auto', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                            <pre style={{ margin: 0, fontSize: '0.75rem', fontFamily: 'ui-monospace, monospace', background: 'var(--bg-deep)', color: LANG_COLORS[snippetLang] ?? 'var(--ok)', padding: '0.75rem', borderRadius: '0.4rem', overflowX: 'auto', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                                 {active}
                             </pre>
                         </div>

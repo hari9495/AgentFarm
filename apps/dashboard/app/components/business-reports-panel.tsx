@@ -83,12 +83,12 @@ export default function BusinessReportsPanel({ workspaceId }: { workspaceId: str
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                     {(['pending_review', 'approved', 'rejected', 'all'] as const).map(k => (
-                        <button key={k} type="button" onClick={() => setFilter(k)} style={{ padding: '5px 12px', border: `1px solid ${filter === k ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: filter === k ? 'rgba(0,102,204,0.07)' : 'var(--card)', color: filter === k ? 'var(--accent)' : '#64748b', fontSize: 12, fontWeight: filter === k ? 600 : 400, cursor: 'pointer' }}>
+                        <button key={k} type="button" onClick={() => setFilter(k)} style={{ padding: '5px 12px', border: `1px solid ${filter === k ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: filter === k ? 'rgba(0,102,204,0.07)' : 'var(--card)', color: filter === k ? 'var(--accent)' : 'var(--ink-muted)', fontSize: 12, fontWeight: filter === k ? 600 : 400, cursor: 'pointer' }}>
                             {k === 'all' ? 'All' : k.replace('_', ' ')}
                         </button>
                     ))}
                 </div>
-                <button type="button" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', fontSize: 12, color: '#64748b', cursor: 'pointer' }}><RefreshCw size={12} />Refresh</button>
+                <button type="button" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', fontSize: 12, color: 'var(--ink-muted)', cursor: 'pointer' }}><RefreshCw size={12} />Refresh</button>
             </div>
             {loading ? (
                 <div style={{ textAlign: 'center', padding: 40, color: 'var(--ink-muted)', fontSize: 13 }}>Loading reports…</div>
@@ -107,15 +107,15 @@ export default function BusinessReportsPanel({ workspaceId }: { workspaceId: str
                                 const st = STATUS_STYLE[r.status];
                                 const StIcon = st.icon;
                                 return (
-                                    <tr key={r.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : 'var(--card)' }}>
+                                    <tr key={r.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? 'var(--bg)' : 'var(--card)' }}>
                                         <td style={td}><div style={{ fontWeight: 500 }}>{r.title}</div><div style={{ fontSize: 11, color: 'var(--ink-muted)', marginTop: 2 }}>{r.summary}</div></td>
                                         <td style={td}><span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 4, background: 'var(--bg)', color: 'var(--ink-muted)' }}>{TYPE_LABEL[r.reportType]}</span></td>
-                                        <td style={{ ...td, color: '#64748b' }}>{r.pageCount}</td>
+                                        <td style={{ ...td, color: 'var(--ink-muted)' }}>{r.pageCount}</td>
                                         <td style={td}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, background: st.bg, color: st.color, fontSize: 11, fontWeight: 600 }}><StIcon size={10} />{r.status.replace('_', ' ')}</span></td>
-                                        <td style={{ ...td, color: '#64748b', fontSize: 12 }}>{new Date(r.createdAt).toLocaleDateString()}</td>
+                                        <td style={{ ...td, color: 'var(--ink-muted)', fontSize: 12 }}>{new Date(r.createdAt).toLocaleDateString()}</td>
                                         <td style={td}>
                                             <div style={{ display: 'flex', gap: 4 }}>
-                                                <button type="button" title="Download" style={{ padding: '4px 8px', border: '1px solid var(--line)', borderRadius: 6, background: 'var(--card)', cursor: 'pointer', color: '#64748b' }}><Download size={11} /></button>
+                                                <button type="button" title="Download" style={{ padding: '4px 8px', border: '1px solid var(--line)', borderRadius: 6, background: 'var(--card)', cursor: 'pointer', color: 'var(--ink-muted)' }}><Download size={11} /></button>
                                                 {r.status === 'pending_review' && <>
                                                     <button type="button" onClick={() => act(r.id, 'approve')} style={{ padding: '4px 8px', border: '1px solid var(--ok-border)', borderRadius: 6, background: 'var(--ok-bg)', cursor: 'pointer', fontSize: 11, color: 'var(--ok)', fontWeight: 600 }}>Approve</button>
                                                     <button type="button" onClick={() => act(r.id, 'reject')} style={{ padding: '4px 8px', border: '1px solid var(--danger-border)', borderRadius: 6, background: 'var(--danger-bg)', cursor: 'pointer', fontSize: 11, color: 'var(--danger)', fontWeight: 600 }}>Reject</button>

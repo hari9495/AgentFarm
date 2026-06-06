@@ -16,16 +16,16 @@ export type OperatorGuideProps = {
 };
 
 const LEVEL_STYLE: Record<GuideItem['level'], { dot: string; label: string; bg: string; border: string; text: string }> = {
-    verify:   { dot: 'var(--ok)', label: 'Verify',   bg: 'var(--ok-bg)', border: '#bbf7d0', text: 'var(--ok)' },
+    verify:   { dot: 'var(--ok)', label: 'Verify',   bg: 'var(--ok-bg)', border: 'var(--ok)', text: 'var(--ok)' },
     caution:  { dot: 'var(--warn)', label: 'Caution',  bg: 'var(--warn-bg)', border: 'var(--warn)', text: 'var(--warn)' },
-    critical: { dot: 'var(--danger)', label: 'Must check', bg: 'var(--danger-bg)', border: '#fecaca', text: 'var(--danger)' },
+    critical: { dot: 'var(--danger)', label: 'Must check', bg: 'var(--danger-bg)', border: 'var(--danger-bg)', text: 'var(--danger)' },
 };
 
 export default function OperatorGuide({ title = 'Operator Guide', intro, items, defaultOpen = false }: OperatorGuideProps) {
     const [open, setOpen] = useState(defaultOpen);
 
     return (
-        <div style={{ border: '1px solid var(--info-border)', borderRadius: 10, overflow: 'hidden', marginBottom: 16, background: '#fafbff' }}>
+        <div style={{ border: '1px solid var(--info-border)', borderRadius: 10, overflow: 'hidden', marginBottom: 16, background: 'var(--bg)' }}>
             {/* Header toggle */}
             <button
                 type="button"
@@ -33,7 +33,7 @@ export default function OperatorGuide({ title = 'Operator Guide', intro, items, 
                 style={{
                     width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '10px 14px', background: 'transparent', border: 'none', cursor: 'pointer',
-                    fontSize: 12, fontWeight: 600, color: '#4338ca',
+                    fontSize: 12, fontWeight: 600, color: 'var(--accent)',
                 }}
             >
                 <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -41,7 +41,7 @@ export default function OperatorGuide({ title = 'Operator Guide', intro, items, 
                     {title}
                     <span style={{
                         fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 4,
-                        background: '#e0e7ff', color: '#4338ca',
+                        background: 'var(--info-bg)', color: 'var(--accent)',
                     }}>
                         {items.filter(i => i.level === 'critical').length} critical · {items.filter(i => i.level === 'caution').length} caution
                     </span>

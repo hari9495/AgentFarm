@@ -199,7 +199,7 @@ function LoginForm() {
     // ── Shared UI blocks ──────────────────────────────────────────────────────
 
     const modeTabs = step === 'form' && (
-        <div style={{ display: 'flex', gap: 0, background: '#f0f0f5', borderRadius: '12px', padding: '3px' }}>
+        <div style={{ display: 'flex', gap: 0, background: 'var(--bg)', borderRadius: '12px', padding: '3px' }}>
             {(
                 [
                     { id: 'password', Icon: Lock, label: 'Password' },
@@ -216,7 +216,7 @@ function LoginForm() {
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem',
                         padding: '0.45rem 0', border: 'none', borderRadius: '9px', cursor: 'pointer',
                         fontSize: '0.77rem', fontWeight: mode === id ? 600 : 400,
-                        background: mode === id ? '#ffffff' : 'transparent',
+                        background: mode === id ? 'var(--card)' : 'transparent',
                         color: mode === id ? 'var(--ink)' : 'var(--ink-muted)',
                         boxShadow: mode === id ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
                         transition: 'all 150ms ease',

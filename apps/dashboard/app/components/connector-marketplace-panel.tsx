@@ -326,7 +326,7 @@ function InstallModal({ connector, onClose, onInstalled }: {
                 <div style={{ padding: '18px 20px', borderBottom: '1px solid #3f3f46', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
                         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--info)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>Install Connector</div>
-                        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#f4f4f5' }}>{connector.name}</h2>
+                        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--bg)' }}>{connector.name}</h2>
                         <p style={{ margin: 0, fontSize: 12, color: 'var(--ink-muted)', marginTop: 2 }}>{CATEGORY_LABELS[connector.category]}</p>
                     </div>
                     <button onClick={onClose} style={{ background: 'var(--bg-deep)', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-muted)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>

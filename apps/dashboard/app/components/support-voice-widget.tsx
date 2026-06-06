@@ -321,9 +321,9 @@ export function SupportVoiceWidget() {
                                 borderRadius: isUser ? '10px 10px 2px 10px' : '10px 10px 10px 2px',
                                 background: isUser
                                     ? (t.kind === 'partial' ? 'var(--bg)' : 'var(--bg-deep)')
-                                    : '#f0fdf4',
+                                    : 'var(--ok-bg)',
                                 color: isUser
-                                    ? (t.kind === 'partial' ? '#64748b' : 'var(--bg)')
+                                    ? (t.kind === 'partial' ? 'var(--ink-muted)' : 'var(--bg)')
                                     : 'var(--ok)',
                                 fontSize: '0.82rem',
                                 lineHeight: 1.45,
@@ -382,7 +382,7 @@ export function SupportVoiceWidget() {
                                 fontSize: '0.82rem',
                                 border: '1px solid var(--line)',
                                 borderRadius: 4,
-                                background: muted ? '#fef2f2' : 'var(--bg)',
+                                background: muted ? 'var(--danger-bg)' : 'var(--bg)',
                                 color: muted ? 'var(--danger)' : 'var(--ink)',
                                 cursor: 'pointer',
                             }}

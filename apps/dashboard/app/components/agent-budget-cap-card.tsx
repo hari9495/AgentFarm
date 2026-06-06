@@ -26,7 +26,7 @@ const fmtUsd = (v: number) => `$${v.toFixed(2)}`;
 function SpendBar({ spent, limit, label }: { spent: number; limit: number | null; label: string }) {
     if (!limit) return null;
     const pct = Math.min((spent / limit) * 100, 100);
-    const color = pct >= 100 ? '#c4161c' : pct >= 80 ? 'var(--warn)' : 'var(--ok)';
+    const color = pct >= 100 ? 'var(--danger)' : pct >= 80 ? 'var(--warn)' : 'var(--ok)';
     return (
         <div style={{ display: 'grid', gap: '0.25rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
@@ -176,7 +176,7 @@ export function AgentBudgetCapCard({ botId }: { botId: string }) {
             {cfg && !editing && (
                 <div style={{ display: 'grid', gap: '0.65rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--ink-muted)' }}>
-                        <span style={{ padding: '0.15rem 0.5rem', borderRadius: 9999, background: cfg.enabled ? 'rgba(26,122,74,0.08)' : 'var(--bg)', color: cfg.enabled ? '#1a7a4a' : 'var(--ink-muted)', fontSize: '0.72rem', fontWeight: 700 }}>
+                        <span style={{ padding: '0.15rem 0.5rem', borderRadius: 9999, background: cfg.enabled ? 'rgba(26,122,74,0.08)' : 'var(--bg)', color: cfg.enabled ? 'var(--ok)' : 'var(--ink-muted)', fontSize: '0.72rem', fontWeight: 700 }}>
                             {cfg.enabled ? 'active' : 'disabled'}
                         </span>
                         <span>Per-agent cap</span>

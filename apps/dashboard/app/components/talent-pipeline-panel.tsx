@@ -40,7 +40,7 @@ const STATUS_STYLE: Record<CandidateStatus, { bg: string; color: string; icon: R
     sourced:      { bg: 'var(--bg)', color: 'var(--ink-muted)', icon: Users },
     screened:     { bg: 'var(--info-bg)', color: 'var(--info)', icon: Clock },
     interviewing: { bg: 'var(--warn-bg)', color: 'var(--warn)', icon: Clock },
-    offer_sent:   { bg: '#fdf4ff', color: 'var(--accent)', icon: Briefcase },
+    offer_sent:   { bg: 'color-mix(in srgb, var(--accent) 8%, transparent)', color: 'var(--accent)', icon: Briefcase },
     hired:        { bg: 'var(--ok-bg)', color: 'var(--ok)', icon: CheckCircle2 },
     rejected:     { bg: 'var(--danger-bg)', color: 'var(--danger)', icon: XCircle },
 };
@@ -98,7 +98,7 @@ export default function TalentPipelinePanel({ workspaceId }: { workspaceId: stri
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                     {(['candidates', 'requisitions'] as const).map(v => (
-                        <button key={v} type="button" onClick={() => setView(v)} style={{ padding: '5px 14px', border: `1px solid ${view === v ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: view === v ? 'rgba(0,102,204,0.07)' : 'var(--card)', color: view === v ? 'var(--accent)' : '#64748b', fontSize: 12, fontWeight: view === v ? 600 : 400, cursor: 'pointer', textTransform: 'capitalize' }}>
+                        <button key={v} type="button" onClick={() => setView(v)} style={{ padding: '5px 14px', border: `1px solid ${view === v ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: view === v ? 'rgba(0,102,204,0.07)' : 'var(--card)', color: view === v ? 'var(--accent)' : 'var(--ink-muted)', fontSize: 12, fontWeight: view === v ? 600 : 400, cursor: 'pointer', textTransform: 'capitalize' }}>
                             {v}
                         </button>
                     ))}
@@ -123,7 +123,7 @@ export default function TalentPipelinePanel({ workspaceId }: { workspaceId: stri
                                     const st = STATUS_STYLE[c.status];
                                     const StIcon = st.icon;
                                     return (
-                                        <tr key={c.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : 'var(--card)' }}>
+                                        <tr key={c.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? 'var(--bg)' : 'var(--card)' }}>
                                             <td style={{ ...td, fontWeight: 500 }}>{c.name}</td>
                                             <td style={td}>{c.role}</td>
                                             <td style={{ ...td, color: 'var(--ink-muted)', fontSize: 12 }}>{c.source}</td>
@@ -160,7 +160,7 @@ export default function TalentPipelinePanel({ workspaceId }: { workspaceId: stri
                                 {requisitions.map((r, i) => {
                                     const st = JOB_STATUS_STYLE[r.status] ?? JOB_STATUS_STYLE.open;
                                     return (
-                                        <tr key={r.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : 'var(--card)' }}>
+                                        <tr key={r.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? 'var(--bg)' : 'var(--card)' }}>
                                             <td style={{ ...td, fontWeight: 500 }}>{r.title}</td>
                                             <td style={{ ...td, color: 'var(--ink-muted)' }}>{r.department}</td>
                                             <td style={{ ...td, color: 'var(--ink-muted)' }}>{r.candidateCount}</td>

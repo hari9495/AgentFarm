@@ -38,7 +38,7 @@ export default function AgentMessagingToggle({
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: '1.5' }}>
+            <p style={{ margin: 0, fontSize: '12px', color: 'var(--ink-muted)', lineHeight: '1.5' }}>
                 When disabled, this agent cannot send or receive messages from other agents.
                 Use this to isolate an agent that should work independently.
             </p>

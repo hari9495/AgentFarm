@@ -50,7 +50,7 @@ export default function AgentDecommissionButton({ botId }: Props) {
                     cursor: 'pointer',
                     transition: 'background 0.15s',
                 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#3b0d0d'; }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--danger-bg)'; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
             >
                 Decommission Agent
@@ -64,7 +64,7 @@ export default function AgentDecommissionButton({ botId }: Props) {
             flexDirection: 'column',
             gap: '8px',
             padding: '12px 16px',
-            background: '#1a0505',
+            background: 'var(--danger-bg)',
             border: '1px solid #7f1d1d',
             borderRadius: '8px',
         }}>
@@ -83,7 +83,7 @@ export default function AgentDecommissionButton({ botId }: Props) {
                         background: 'var(--danger)',
                         border: '1px solid #991b1b',
                         borderRadius: '6px',
-                        color: '#fef2f2',
+                        color: 'var(--danger-bg)',
                         fontSize: '12px',
                         fontWeight: 700,
                         cursor: loading ? 'not-allowed' : 'pointer',

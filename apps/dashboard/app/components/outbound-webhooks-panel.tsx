@@ -340,7 +340,7 @@ export default function OutboundWebhooksPanel({ tenantId: _tenantId }: OutboundW
                                             <td style={TD}>
                                                 <span style={{
                                                     padding: '2px 8px', borderRadius: 9999, fontSize: '0.72rem', fontWeight: 700,
-                                                    background: wh.enabled ? '#dcfce7' : '#f1f5f9',
+                                                    background: wh.enabled ? 'var(--ok-bg)' : 'var(--bg)',
                                                     color: wh.enabled ? 'var(--ok)' : 'var(--ink-muted)',
                                                 }}>
                                                     {wh.enabled ? 'Active' : 'Disabled'}

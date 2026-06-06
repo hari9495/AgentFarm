@@ -224,7 +224,7 @@ export default function AutonomousLoopsPanel() {
             <p
                 className="message-inline"
                 style={{
-                    borderColor: '#b45309',
+                    borderColor: 'var(--warn)',
                     background: 'var(--warn-bg)',
                     color: 'var(--warn)',
                     fontSize: '0.8rem',

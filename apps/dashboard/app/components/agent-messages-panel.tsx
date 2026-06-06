@@ -551,7 +551,7 @@ export default function AgentMessagesPanel({ botId }: { botId: string }) {
                                 background: 'transparent',
                                 border: 'none',
                                 borderBottom: activeTab === tab ? '2px solid #3b82f6' : '2px solid transparent',
-                                color: activeTab === tab ? 'var(--info)' : '#64748b',
+                                color: activeTab === tab ? 'var(--info)' : 'var(--ink-muted)',
                                 fontSize: '13px',
                                 fontWeight: activeTab === tab ? 600 : 400,
                                 cursor: 'pointer',

@@ -37,7 +37,7 @@ const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
 const CATEGORY_BADGE: Record<string, { bg: string; color: string }> = {
     runtime: { bg: 'var(--info-bg)', color: 'var(--info)' },
     approval: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
-    ci: { bg: '#f3e8ff', color: 'var(--accent)' },
+    ci: { bg: 'color-mix(in srgb, var(--accent) 8%, transparent)', color: 'var(--accent)' },
     connector: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
     provisioning: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
     security: { bg: 'var(--danger-bg)', color: 'var(--danger)' },

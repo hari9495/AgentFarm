@@ -119,7 +119,7 @@ export default function SupportQueuePanel({ workspaceId }: { workspaceId: string
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                     {(['open', 'in_progress', 'escalated', 'resolved', 'all'] as const).map(k => (
-                        <button key={k} type="button" onClick={() => setFilter(k)} style={{ padding: '5px 12px', border: `1px solid ${filter === k ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: filter === k ? 'rgba(0,102,204,0.07)' : 'var(--card)', color: filter === k ? 'var(--accent)' : '#64748b', fontSize: 12, fontWeight: filter === k ? 600 : 400, cursor: 'pointer' }}>
+                        <button key={k} type="button" onClick={() => setFilter(k)} style={{ padding: '5px 12px', border: `1px solid ${filter === k ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: filter === k ? 'rgba(0,102,204,0.07)' : 'var(--card)', color: filter === k ? 'var(--accent)' : 'var(--ink-muted)', fontSize: 12, fontWeight: filter === k ? 600 : 400, cursor: 'pointer' }}>
                             {k === 'all' ? 'All' : k.replace('_', ' ')}
                         </button>
                     ))}
@@ -146,7 +146,7 @@ export default function SupportQueuePanel({ workspaceId }: { workspaceId: string
                                 const isBreaching = t.slaBreachAt && new Date(t.slaBreachAt) < new Date(Date.now() + 30 * 60 * 1000);
                                 return (
                                     <React.Fragment key={t.id}>
-                                    <tr style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : 'var(--card)' }}>
+                                    <tr style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? 'var(--bg)' : 'var(--card)' }}>
                                         <td style={{ ...td, fontSize: 11, color: 'var(--ink-muted)', fontFamily: 'monospace' }}>{t.ticketNumber}</td>
                                         <td style={td}>
                                             <div style={{ fontWeight: 500 }}>{t.subject}</div>
@@ -166,7 +166,7 @@ export default function SupportQueuePanel({ workspaceId }: { workspaceId: string
                                                 {t.agentDraftReady && <button type="button" style={{ padding: '4px 8px', border: '1px solid var(--info-border)', borderRadius: 6, background: 'var(--info-bg)', cursor: 'pointer', fontSize: 11, color: 'var(--info)', fontWeight: 600 }}>Review</button>}
                                                 {['open', 'in_progress'].includes(t.status) && <button type="button" onClick={() => resolve(t.id)} style={{ padding: '4px 8px', border: '1px solid var(--ok-border)', borderRadius: 6, background: 'var(--ok-bg)', cursor: 'pointer', fontSize: 11, color: 'var(--ok)', fontWeight: 600 }}>Resolve</button>}
                                                 {t.status !== 'escalated' && t.status !== 'resolved' && <button type="button" onClick={() => escalate(t.id)} title="Escalate" style={{ padding: '4px 8px', border: '1px solid var(--danger-border)', borderRadius: 6, background: 'var(--danger-bg)', cursor: 'pointer', color: 'var(--danger)' }}><ArrowUpRight size={11} /></button>}
-                                                <button type="button" onClick={() => openNotes(t)} title={t.operatorNotes ? 'Edit notes' : 'Add notes'} style={{ padding: '4px 8px', border: `1px solid ${t.operatorNotes ? '#e9d5ff' : 'var(--bg)'}`, borderRadius: 6, background: t.operatorNotes ? '#faf5ff' : 'var(--card)', cursor: 'pointer', fontSize: 11, color: t.operatorNotes ? 'var(--accent)' : '#64748b' }}>
+                                                <button type="button" onClick={() => openNotes(t)} title={t.operatorNotes ? 'Edit notes' : 'Add notes'} style={{ padding: '4px 8px', border: `1px solid ${t.operatorNotes ? 'color-mix(in srgb, var(--accent) 12%, transparent)' : 'var(--bg)'}`, borderRadius: 6, background: t.operatorNotes ? 'color-mix(in srgb, var(--accent) 8%, transparent)' : 'var(--card)', cursor: 'pointer', fontSize: 11, color: t.operatorNotes ? 'var(--accent)' : 'var(--ink-muted)' }}>
                                                     📝{t.operatorNotes ? ' ✓' : ''}
                                                 </button>
                                             </div>

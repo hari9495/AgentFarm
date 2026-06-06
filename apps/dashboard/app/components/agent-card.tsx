@@ -101,7 +101,7 @@ export default function AgentCard({ agent, selected, onClick }: AgentCardProps) 
             }}
             onMouseEnter={(e) => {
                 if (!selected) {
-                    (e.currentTarget as HTMLButtonElement).style.background = '#0f172a';
+                    (e.currentTarget as HTMLButtonElement).style.background = 'var(--ink)';
                 }
             }}
             onMouseLeave={(e) => {
@@ -117,7 +117,7 @@ export default function AgentCard({ agent, selected, onClick }: AgentCardProps) 
                         width: '36px',
                         height: '36px',
                         borderRadius: '8px',
-                        background: '#1e3a5f',
+                        background: 'var(--info)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -146,7 +146,7 @@ export default function AgentCard({ agent, selected, onClick }: AgentCardProps) 
                     <div
                         style={{
                             fontSize: '11px',
-                            color: '#64748b',
+                            color: 'var(--ink-muted)',
                             fontFamily: 'monospace',
                             marginBottom: '6px',
                         }}
@@ -160,7 +160,7 @@ export default function AgentCard({ agent, selected, onClick }: AgentCardProps) 
                             onClick={(e) => e.stopPropagation()}
                             style={{
                                 fontSize: '11px',
-                                color: '#38bdf8',
+                                color: 'var(--info)',
                                 textDecoration: 'none',
                                 fontWeight: 500,
                             }}

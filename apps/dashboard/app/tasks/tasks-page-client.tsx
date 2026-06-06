@@ -150,7 +150,7 @@ export default function TasksPageClient({
                                 background: 'transparent', border: 'none',
                                 borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
                                 cursor: 'pointer',
-                                color: active ? 'var(--accent)' : needsBotUnset ? '#aeaeb2' : '#6e6e73',
+                                color: active ? 'var(--accent)' : needsBotUnset ? 'var(--ink-muted)' : 'var(--ink-muted)',
                                 fontSize: 13, fontWeight: active ? 600 : 500,
                                 transition: 'all 0.15s', marginBottom: -1,
                                 whiteSpace: 'nowrap',

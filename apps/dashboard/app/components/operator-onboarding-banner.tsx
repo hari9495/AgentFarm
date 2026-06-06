@@ -84,7 +84,7 @@ export function OperatorOnboardingBanner({
                             padding: '0.2rem 0.6rem', borderRadius: 9999,
                             fontSize: '0.75rem', fontWeight: 600, textDecoration: 'none',
                             background: s.done ? 'rgba(26,122,74,0.08)' : 'rgba(0,82,204,0.07)',
-                            color: s.done ? '#1a7a4a' : 'var(--accent)',
+                            color: s.done ? 'var(--ok)' : 'var(--accent)',
                             border: `1px solid ${s.done ? 'rgba(26,122,74,0.2)' : 'rgba(0,82,204,0.2)'}`,
                             opacity: s.done ? 0.7 : 1,
                         }}

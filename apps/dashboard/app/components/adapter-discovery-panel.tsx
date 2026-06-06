@@ -243,7 +243,7 @@ function RegisterForm({
                             <label style={label}>Authentication</label>
                             <div style={{ display: 'flex', gap: 6 }}>
                                 {(['none','api_key','bearer_token','basic_auth'] as AuthType[]).map(a => (
-                                    <button key={a} type="button" onClick={() => setAuthType(a)} style={{ padding: '6px 12px', borderRadius: 9999, border: `1px solid ${authType === a ? 'var(--accent)' : 'var(--line)'}`, background: authType === a ? 'rgba(0,102,204,0.07)' : 'var(--card)', color: authType === a ? 'var(--accent)' : '#424245', fontSize: 12, fontWeight: authType === a ? 700 : 500, cursor: 'pointer' }}>
+                                    <button key={a} type="button" onClick={() => setAuthType(a)} style={{ padding: '6px 12px', borderRadius: 9999, border: `1px solid ${authType === a ? 'var(--accent)' : 'var(--line)'}`, background: authType === a ? 'rgba(0,102,204,0.07)' : 'var(--card)', color: authType === a ? 'var(--accent)' : 'var(--ink-soft)', fontSize: 12, fontWeight: authType === a ? 700 : 500, cursor: 'pointer' }}>
                                         {a === 'none' ? 'None' : a === 'api_key' ? 'API Key' : a === 'bearer_token' ? 'Bearer Token' : 'Basic Auth'}
                                     </button>
                                 ))}

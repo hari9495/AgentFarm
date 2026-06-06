@@ -153,7 +153,7 @@ export function SkillInvokePanel({ workspaceId, botId }: SkillInvokePanelProps) 
 
             {/* Error state */}
             {fetchError && (
-                <div style={{ marginTop: '0.75rem', padding: '0.6rem', background: '#2a0a0a', borderRadius: 6, color: 'var(--danger)', fontSize: '0.85rem' }}>
+                <div style={{ marginTop: '0.75rem', padding: '0.6rem', background: 'var(--danger-bg)', borderRadius: 6, color: 'var(--danger)', fontSize: '0.85rem' }}>
                     {fetchError}
                 </div>
             )}
@@ -166,7 +166,7 @@ export function SkillInvokePanel({ workspaceId, botId }: SkillInvokePanelProps) 
                             {lastResult.ok ? '✓ OK' : '✗ FAILED'}
                         </span>
                         {lastResult.risk_level && (
-                            <span style={{ padding: '0.2rem 0.55rem', borderRadius: 4, background: '#1a1a2e', color: riskColor[lastResult.risk_level] ?? '#aaa', fontSize: '0.78rem', fontWeight: 600 }}>
+                            <span style={{ padding: '0.2rem 0.55rem', borderRadius: 4, background: 'var(--bg-deep)', color: riskColor[lastResult.risk_level] ?? 'var(--ink-muted)', fontSize: '0.78rem', fontWeight: 600 }}>
                                 RISK: {lastResult.risk_level}
                             </span>
                         )}
@@ -175,7 +175,7 @@ export function SkillInvokePanel({ workspaceId, botId }: SkillInvokePanelProps) 
                     <p style={{ fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--line-strong)' }}>{lastResult.summary}</p>
                     {lastResult.error && <p style={{ fontSize: '0.82rem', color: 'var(--danger)' }}>{lastResult.error}</p>}
                     {lastResult.result && Object.keys(lastResult.result).length > 0 && (
-                        <pre style={{ fontSize: '0.75rem', overflowX: 'auto', background: '#0a0a14', padding: '0.6rem', borderRadius: 6, color: '#a5f3fc', maxHeight: 300 }}>
+                        <pre style={{ fontSize: '0.75rem', overflowX: 'auto', background: 'var(--bg-deep)', padding: '0.6rem', borderRadius: 6, color: 'var(--info)', maxHeight: 300 }}>
                             {JSON.stringify(lastResult.result, null, 2)}
                         </pre>
                     )}

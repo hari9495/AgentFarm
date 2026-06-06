@@ -23,11 +23,11 @@ export type EvidenceViewerItem = {
 function methodColor(method: string): string {
     const m = method.toUpperCase();
     if (m === 'GET')    return 'var(--accent)';
-    if (m === 'POST')   return '#1a7a4a';
-    if (m === 'PUT')    return '#b45309';
+    if (m === 'POST')   return 'var(--ok)';
+    if (m === 'PUT')    return 'var(--warn)';
     if (m === 'PATCH')  return 'var(--accent)';
-    if (m === 'DELETE') return '#c4161c';
-    return '#6e6e73';
+    if (m === 'DELETE') return 'var(--danger)';
+    return 'var(--ink-muted)';
 }
 
 function statusColor(status?: number): string {
@@ -54,7 +54,7 @@ export function EvidenceViewer({ item }: { item: EvidenceViewerItem }) {
                     ].map(({ label, url, accent }) => (
                         <div key={label}>
                             <div style={{
-                                background: '#1c1917',
+                                background: 'var(--bg-deep)',
                                 borderRadius: 10,
                                 border: `1px solid ${label === 'After' ? 'rgba(0,102,204,0.35)' : 'var(--line)'}`,
                                 overflow: 'hidden',
@@ -91,7 +91,7 @@ export function EvidenceViewer({ item }: { item: EvidenceViewerItem }) {
                 {item.diffImageUrl && (
                     <div style={{ marginTop: '0.6rem' }}>
                         <div style={{
-                            background: '#1c1917',
+                            background: 'var(--bg-deep)',
                             borderRadius: 10,
                             border: '1px solid var(--warn-border)',
                             overflow: 'hidden',
@@ -190,7 +190,7 @@ export function EvidenceViewer({ item }: { item: EvidenceViewerItem }) {
                                 <span style={{
                                     fontSize: '0.75rem',
                                     fontFamily: 'var(--font-plex-mono, monospace)',
-                                    color: '#a8a29e',
+                                    color: 'var(--ink-muted)',
                                     flex: 1,
                                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                 }}>

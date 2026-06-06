@@ -145,7 +145,7 @@ export function KillSwitchBanner({ className }: Props) {
                                 borderRadius: 9999, border: '1px solid rgba(196,22,28,0.22)',
                                 letterSpacing: '0.02em',
                             }}>
-                                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#c4161c', display: 'inline-block' }} />
+                                <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--danger)', display: 'inline-block' }} />
                                 {SWITCH_TYPE_LABELS[ks.switchType]}
                             </span>
                             {ks.workspaceId && (
@@ -180,8 +180,8 @@ export function KillSwitchBanner({ className }: Props) {
                         style={{
                             display: 'inline-flex', alignItems: 'center', gap: 6,
                             padding: '7px 16px',
-                            background: resumingId === ks.id ? '#aeaeb2' : 'rgba(26,122,74,0.1)',
-                            color: resumingId === ks.id ? 'var(--card)' : '#1a7a4a',
+                            background: resumingId === ks.id ? 'var(--ink-muted)' : 'rgba(26,122,74,0.1)',
+                            color: resumingId === ks.id ? 'var(--card)' : 'var(--ok)',
                             border: '1px solid rgba(26,122,74,0.3)',
                             borderRadius: 9999,
                             fontSize: 12,

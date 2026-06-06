@@ -91,7 +91,7 @@ export default function ProjectPlansPanel({ workspaceId }: { workspaceId: string
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                     {(['in_review', 'approved', 'active', 'all'] as const).map(k => (
-                        <button key={k} type="button" onClick={() => setFilter(k)} style={{ padding: '5px 12px', border: `1px solid ${filter === k ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: filter === k ? 'rgba(0,102,204,0.07)' : 'var(--card)', color: filter === k ? 'var(--accent)' : '#64748b', fontSize: 12, fontWeight: filter === k ? 600 : 400, cursor: 'pointer' }}>
+                        <button key={k} type="button" onClick={() => setFilter(k)} style={{ padding: '5px 12px', border: `1px solid ${filter === k ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: filter === k ? 'rgba(0,102,204,0.07)' : 'var(--card)', color: filter === k ? 'var(--accent)' : 'var(--ink-muted)', fontSize: 12, fontWeight: filter === k ? 600 : 400, cursor: 'pointer' }}>
                             {k === 'all' ? 'All' : k.replace('_', ' ')}
                         </button>
                     ))}
@@ -116,7 +116,7 @@ export default function ProjectPlansPanel({ workspaceId }: { workspaceId: string
                                 const rk = RISK_STYLE[p.riskLevel];
                                 const RIcon = rk.icon;
                                 return (
-                                    <tr key={p.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : 'var(--card)' }}>
+                                    <tr key={p.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? 'var(--bg)' : 'var(--card)' }}>
                                         <td style={{ ...td, fontWeight: 500 }}>{p.title}</td>
                                         <td style={td}><span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 4, background: 'var(--bg)', color: 'var(--ink-muted)' }}>{TYPE_LABEL[p.planType]}</span></td>
                                         <td style={{ ...td, color: 'var(--ink-muted)' }}>{p.teamSize}</td>

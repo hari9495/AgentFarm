@@ -44,7 +44,7 @@ function CopyButton({ text }: { text: string }) {
     return (
         <button
             onClick={() => { void navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1800); }}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: copied ? '#1a7a4a' : '#6e6e73', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: copied ? 'var(--ok)' : 'var(--ink-muted)', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
         >
             {copied ? <Check size={11} /> : <Copy size={11} />}
             {copied ? 'Copied' : 'Copy ID'}
@@ -93,7 +93,7 @@ function PackRow({ pack }: { pack: ReproPack }) {
                         )}
                     </div>
                     {pack.payload !== undefined && (
-                        <pre style={{ margin: 0, padding: '10px 12px', borderRadius: 10, background: 'var(--bg-deep)', color: '#f5f5f7', fontSize: 11, overflow: 'auto', maxHeight: 220, lineHeight: 1.5, fontFamily: 'ui-monospace, SFMono-Regular, monospace' }}>
+                        <pre style={{ margin: 0, padding: '10px 12px', borderRadius: 10, background: 'var(--bg-deep)', color: 'var(--bg)', fontSize: 11, overflow: 'auto', maxHeight: 220, lineHeight: 1.5, fontFamily: 'ui-monospace, SFMono-Regular, monospace' }}>
                             {JSON.stringify(pack.payload, null, 2)}
                         </pre>
                     )}

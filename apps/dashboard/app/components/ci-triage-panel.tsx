@@ -232,7 +232,7 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                                 setIntakeBranch('main');
                                 setIntakeJobsRaw('typecheck, test:integration');
                             }}
-                            style={{ fontSize: '11px', color: 'var(--accent)', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '5px', padding: '3px 9px', cursor: 'pointer', fontWeight: 600 }}
+                            style={{ fontSize: '11px', color: 'var(--accent)', background: 'var(--info-bg)', border: '1px solid #c7d2fe', borderRadius: '5px', padding: '3px 9px', cursor: 'pointer', fontWeight: 600 }}
                         >
                             ✦ Use example data
                         </button>
@@ -318,7 +318,7 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                     {/* Failed jobs */}
                     <div style={{ marginBottom: '12px' }}>
                         <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--ink-muted)', display: 'block', marginBottom: '4px' }}>
-                            Failed Job Names <span style={{ color: '#64748b', fontWeight: 400 }}>(optional but recommended)</span>
+                            Failed Job Names <span style={{ color: 'var(--ink-muted)', fontWeight: 400 }}>(optional but recommended)</span>
                         </label>
                         <input
                             type="text"
@@ -575,7 +575,7 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                                 <div style={{ marginBottom: '4px' }}>
                                     <div
                                         style={{
-                                            background: '#451a03',
+                                            background: 'var(--warn)',
                                             border: '1px solid #92400e',
                                             borderRadius: '6px',
                                             padding: '8px 12px',
@@ -591,7 +591,7 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                                     </div>
                                     <pre
                                         style={{
-                                            background: '#0a0a0a',
+                                            background: 'var(--bg-deep)',
                                             border: '1px solid #1e293b',
                                             borderRadius: '6px',
                                             padding: '10px 12px',

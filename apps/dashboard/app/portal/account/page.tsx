@@ -16,7 +16,7 @@ const sectionTitle: React.CSSProperties = { fontSize: '1rem', fontWeight: 700, c
 
 function StatusMsg({ text, ok }: { text: string; ok: boolean }) {
     return (
-        <div style={{ padding: '0.5rem 0.7rem', borderRadius: 6, fontSize: '0.81rem', fontWeight: 600, background: ok ? '#f0fdf4' : '#fef2f2', color: ok ? 'var(--ok)' : 'var(--danger)', border: `1px solid ${ok ? '#bbf7d0' : '#fecaca'}` }}>
+        <div style={{ padding: '0.5rem 0.7rem', borderRadius: 6, fontSize: '0.81rem', fontWeight: 600, background: ok ? 'var(--ok-bg)' : 'var(--danger-bg)', color: ok ? 'var(--ok)' : 'var(--danger)', border: `1px solid ${ok ? 'var(--ok)' : 'var(--danger-bg)'}` }}>
             {ok ? '✓ ' : '✗ '}{text}
         </div>
     );

@@ -36,9 +36,9 @@ export function SubscriptionBanner({ tenantId }: Props) {
             <div
                 role="alert"
                 style={{
-                    background: '#fff3cd',
+                    background: 'var(--warn-bg)',
                     border: '1px solid #ffc107',
-                    color: '#856404',
+                    color: 'var(--warn)',
                     padding: '12px 16px',
                     borderRadius: '6px',
                     marginBottom: '12px',
@@ -47,7 +47,7 @@ export function SubscriptionBanner({ tenantId }: Props) {
             >
                 ⚠ Your subscription has expired. You have{' '}
                 {data.daysUntilSuspension ?? 0} day(s) before access is suspended.{' '}
-                <a href="/billing" style={{ color: '#856404', fontWeight: 600 }}>
+                <a href="/billing" style={{ color: 'var(--warn)', fontWeight: 600 }}>
                     Renew now →
                 </a>
             </div>
@@ -59,9 +59,9 @@ export function SubscriptionBanner({ tenantId }: Props) {
             <div
                 role="alert"
                 style={{
-                    background: '#f8d7da',
+                    background: 'var(--danger-bg)',
                     border: '1px solid #dc3545',
-                    color: '#721c24',
+                    color: 'var(--danger)',
                     padding: '12px 16px',
                     borderRadius: '6px',
                     marginBottom: '12px',
@@ -69,7 +69,7 @@ export function SubscriptionBanner({ tenantId }: Props) {
                 }}
             >
                 🔒 Your subscription is suspended. Renew to restore full access.{' '}
-                <a href="/billing" style={{ color: '#721c24', fontWeight: 600 }}>
+                <a href="/billing" style={{ color: 'var(--danger)', fontWeight: 600 }}>
                     →
                 </a>
             </div>

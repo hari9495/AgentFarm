@@ -31,9 +31,9 @@ type Metrics = {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const RISK_CONFIG: Record<RiskLevel, { label: string; bg: string; color: string; border: string }> = {
-    high:   { label: 'HIGH',   bg: 'var(--danger-bg)', color: 'var(--danger)', border: '#fecaca' },
+    high:   { label: 'HIGH',   bg: 'var(--danger-bg)', color: 'var(--danger)', border: 'var(--danger-bg)' },
     medium: { label: 'MEDIUM', bg: 'var(--warn-bg)', color: 'var(--warn)', border: 'var(--warn)' },
-    low:    { label: 'LOW',    bg: 'var(--ok-bg)', color: 'var(--ok)', border: '#bbf7d0' },
+    low:    { label: 'LOW',    bg: 'var(--ok-bg)', color: 'var(--ok)', border: 'var(--ok)' },
 };
 
 function timeAgo(iso: string): string {
@@ -85,7 +85,7 @@ function ApprovalCard({
         return (
             <div style={{
                 borderRadius: 16, border: '1px solid var(--line)',
-                background: flash === 'approved' ? '#f0fdf4' : '#fef2f2',
+                background: flash === 'approved' ? 'var(--ok-bg)' : 'var(--danger-bg)',
                 padding: '28px 20px',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
                 minHeight: 80, transition: 'opacity 0.3s',
@@ -375,7 +375,7 @@ export default function MobileApprovalsClient({ workspaceIds }: { workspaceIds: 
                             </span>
                         )}
                         {medCount > 0 && (
-                            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 9999, background: '#78350f', color: 'var(--warn)' }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 9999, background: 'var(--warn)', color: 'var(--warn)' }}>
                                 {medCount} medium
                             </span>
                         )}

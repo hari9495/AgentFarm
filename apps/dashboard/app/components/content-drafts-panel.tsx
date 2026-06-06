@@ -50,9 +50,9 @@ const STATUS_STYLE: Record<DraftStatus, { bg: string; color: string; icon: React
 };
 
 const ROLE_BADGE: Record<string, { bg: string; color: string; label: string }> = {
-    content_writer:    { bg: '#fdf4ff', color: 'var(--accent)', label: 'Content Writer' },
-    technical_writer:  { bg: '#f0f9ff', color: 'var(--info)', label: 'Tech Writer' },
-    corporate_assistant: { bg: '#fff7ed', color: '#c2410c', label: 'Corp. Assistant' },
+    content_writer:    { bg: 'color-mix(in srgb, var(--accent) 8%, transparent)', color: 'var(--accent)', label: 'Content Writer' },
+    technical_writer:  { bg: 'var(--info-bg)', color: 'var(--info)', label: 'Tech Writer' },
+    corporate_assistant: { bg: 'var(--warn-bg)', color: 'var(--warn)', label: 'Corp. Assistant' },
 };
 
 const th: React.CSSProperties = { padding: '8px 12px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: 'var(--ink-muted)', background: 'var(--bg)', textAlign: 'left' as const };
@@ -121,7 +121,7 @@ export default function ContentDraftsPanel({ workspaceId }: { workspaceId: strin
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                     {statusFilters.map(({ key, label }) => (
-                        <button key={key} type="button" onClick={() => setFilter(key)} style={{ padding: '5px 12px', border: `1px solid ${filter === key ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: filter === key ? 'rgba(0,102,204,0.07)' : 'var(--card)', color: filter === key ? 'var(--accent)' : '#64748b', fontSize: 12, fontWeight: filter === key ? 600 : 400, cursor: 'pointer' }}>
+                        <button key={key} type="button" onClick={() => setFilter(key)} style={{ padding: '5px 12px', border: `1px solid ${filter === key ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: filter === key ? 'rgba(0,102,204,0.07)' : 'var(--card)', color: filter === key ? 'var(--accent)' : 'var(--ink-muted)', fontSize: 12, fontWeight: filter === key ? 600 : 400, cursor: 'pointer' }}>
                             {label}
                         </button>
                     ))}
@@ -153,7 +153,7 @@ export default function ContentDraftsPanel({ workspaceId }: { workspaceId: strin
                                 const StIcon = st.icon;
                                 const rb = ROLE_BADGE[d.agentRole] ?? { bg: 'var(--bg)', color: 'var(--ink-muted)', label: d.agentRole };
                                 return (
-                                    <tr key={d.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : 'var(--card)' }}>
+                                    <tr key={d.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? 'var(--bg)' : 'var(--card)' }}>
                                         <td style={td}>
                                             <div style={{ fontWeight: 500, color: 'var(--ink-soft)' }}>{d.title}</div>
                                             <div style={{ fontSize: 11, color: 'var(--ink-muted)', marginTop: 2, maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.excerpt}</div>

@@ -16,11 +16,11 @@ export type SubscriptionStatusCardProps = {
 // ── Badge ─────────────────────────────────────────────────────────────────────
 
 const STATUS_COLOR: Record<string, { bg: string; text: string; border: string; label: string }> = {
-    active: { bg: 'var(--ok-bg)', text: 'var(--ok)', border: '#a7f3d0', label: 'Active' },
+    active: { bg: 'var(--ok-bg)', text: 'var(--ok)', border: 'var(--ok-border)', label: 'Active' },
     expired: { bg: 'var(--danger-bg)', text: 'var(--danger)', border: 'var(--danger)', label: 'Expired' },
     suspended: { bg: 'var(--warn-bg)', text: 'var(--warn)', border: 'var(--warn)', label: 'Suspended' },
-    cancelled: { bg: 'var(--bg)', text: 'var(--ink-muted)', border: '#cbd5e1', label: 'Cancelled' },
-    none: { bg: 'var(--bg)', text: 'var(--ink-muted)', border: '#cbd5e1', label: 'No Plan' },
+    cancelled: { bg: 'var(--bg)', text: 'var(--ink-muted)', border: 'var(--line)', label: 'Cancelled' },
+    none: { bg: 'var(--bg)', text: 'var(--ink-muted)', border: 'var(--line)', label: 'No Plan' },
 };
 
 function StatusBadge({ status }: { status: string }) {

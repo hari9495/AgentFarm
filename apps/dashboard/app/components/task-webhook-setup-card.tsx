@@ -230,7 +230,7 @@ export function TaskWebhookSetupCard({ workspaceId }: TaskWebhookSetupCardProps)
                         <div key={wh.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.65rem 0.75rem', background: 'var(--bg)', borderRadius: '0.4rem', border: '1px solid var(--line)' }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.2rem', flexWrap: 'wrap' }}>
-                                    <span style={{ padding: '0.1rem 0.4rem', borderRadius: 9999, background: wh.enabled ? 'rgba(26,122,74,0.08)' : 'var(--bg)', color: wh.enabled ? '#1a7a4a' : 'var(--ink-muted)', fontSize: '0.7rem', fontWeight: 700 }}>
+                                    <span style={{ padding: '0.1rem 0.4rem', borderRadius: 9999, background: wh.enabled ? 'rgba(26,122,74,0.08)' : 'var(--bg)', color: wh.enabled ? 'var(--ok)' : 'var(--ink-muted)', fontSize: '0.7rem', fontWeight: 700 }}>
                                         {wh.enabled ? 'active' : 'disabled'}
                                     </span>
                                     {wh.failureCount > 0 && (
@@ -263,7 +263,7 @@ export function TaskWebhookSetupCard({ workspaceId }: TaskWebhookSetupCardProps)
                 </div>
             )}
 
-            <p style={{ margin: '0.65rem 0 0', fontSize: '0.73rem', color: '#a8a29e' }}>
+            <p style={{ margin: '0.65rem 0 0', fontSize: '0.73rem', color: 'var(--ink-muted)' }}>
                 Webhooks are signed with HMAC-SHA256. Verify the <code style={{ fontFamily: 'ui-monospace, monospace' }}>X-AgentFarm-Signature</code> header in your receiver.
             </p>
         </section>

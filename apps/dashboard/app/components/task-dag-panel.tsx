@@ -42,14 +42,14 @@ const STATUS_FILL: Record<TaskDepStatus, string> = {
 
 const STATUS_TEXT: Record<TaskDepStatus, string> = {
     pending: 'var(--ink-muted)',
-    running: '#ffffff',
-    done: '#ffffff',
-    failed: '#ffffff',
-    blocked: '#ffffff',
+    running: 'var(--card)',
+    done: 'var(--card)',
+    failed: 'var(--card)',
+    blocked: 'var(--card)',
 };
 
 const STATUS_STROKE: Record<TaskDepStatus, string> = {
-    pending: '#cbd5e1',
+    pending: 'var(--line)',
     running: 'var(--info)',
     done: 'var(--ok)',
     failed: 'var(--danger)',
@@ -171,7 +171,7 @@ export default function TaskDagPanel({ taskIds }: TaskDagPanelProps) {
                         padding: '4px 10px',
                         borderRadius: 6,
                         border: '1px solid #cbd5e1',
-                        background: loading ? '#f1f5f9' : 'var(--card)',
+                        background: loading ? 'var(--bg)' : 'var(--card)',
                         cursor: loading ? 'default' : 'pointer',
                         color: 'var(--ink-muted)',
                     }}

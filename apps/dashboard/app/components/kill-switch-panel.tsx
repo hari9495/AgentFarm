@@ -147,7 +147,7 @@ function ActivateModal({ onClose, onActivated }: { onClose: () => void; onActiva
 
                     <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                         <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
-                        <button type="submit" disabled={busy} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: 'none', background: busy ? '#aeaeb2' : '#c4161c', color: 'var(--card)', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer' }}>
+                        <button type="submit" disabled={busy} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: 'none', background: busy ? 'var(--ink-muted)' : 'var(--danger)', color: 'var(--card)', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer' }}>
                             {busy ? 'Activating…' : '⚡ Activate'}
                         </button>
                     </div>
@@ -208,7 +208,7 @@ export default function KillSwitchPanel() {
                             fontSize: 12, fontWeight: 600,
                             background: filter === key ? 'var(--ink)' : 'var(--card)',
                             borderColor: filter === key ? 'var(--ink)' : 'var(--line)',
-                            color: filter === key ? 'var(--card)' : '#424245',
+                            color: filter === key ? 'var(--card)' : 'var(--ink-soft)',
                             transition: 'all 0.15s',
                         }}>{label}</button>
                     ))}
@@ -217,7 +217,7 @@ export default function KillSwitchPanel() {
                     <button onClick={load} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
                         <RefreshCw size={11} /> Refresh
                     </button>
-                    <button onClick={() => setShowActivate(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 9999, border: 'none', background: '#c4161c', color: 'var(--card)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                    <button onClick={() => setShowActivate(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 9999, border: 'none', background: 'var(--danger)', color: 'var(--card)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                         <Plus size={12} /> Activate Kill Switch
                     </button>
                 </div>
