@@ -7,8 +7,8 @@ export default async function SkillsPage() {
     if (!session?.tenantId) redirect('/login?next=/skills');
     return (
         <SkillsHubClient
-            workspaceId={session.workspaceIds?.[0] ?? 'ws_primary_001'}
-            botId={'bot_dev_001'}
+            workspaceId={session.workspaceIds?.[0] ?? ''}
+            botId={''}
             tenantId={session.tenantId}
         />
     );

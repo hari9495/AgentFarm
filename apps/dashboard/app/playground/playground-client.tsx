@@ -289,7 +289,13 @@ export default function PlaygroundClient({ tenantId, workspaceId }: { tenantId: 
                     body: parsedBody,
                 }),
             });
-            const data = await res.json() as typeof response;
+            const data = await res.json().catch(() => ({
+                status: res.status,
+                status_text: res.statusText,
+                duration_ms: 0,
+                body: null,
+                error: 'Failed to parse response.',
+            })) as NonNullable<typeof response>;
             setResponse(data);
         } finally {
             setLoading(false);

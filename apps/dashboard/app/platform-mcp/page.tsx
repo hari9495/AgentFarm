@@ -341,6 +341,7 @@ function ConfigureModal({
 export default function PlatformMcpPage() {
     const [data, setData]           = useState<PlatformMcpData | null>(null);
     const [loading, setLoading]     = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [expanded, setExpanded]   = useState<Record<string, boolean>>({});
     const [filterUnconfigured, setFilterUnconfigured] = useState(false);
     const [search, setSearch]       = useState('');
@@ -348,16 +349,21 @@ export default function PlatformMcpPage() {
     const [showAddCustom, setShowAddCustom] = useState(false);
 
     const load = useCallback(async () => {
-        setLoading(true);
+        setLoading(true); setLoadError(null);
         try {
             const res = await fetch('/api/health/platform-mcp', { cache: 'no-store' });
+            if (!res.ok) {
+                const d = await res.json().catch(() => ({})) as { error?: string };
+                setLoadError(d.error ?? 'Failed to load MCP configuration.');
+                return;
+            }
             const body = (await res.json()) as PlatformMcpData;
             setData(body);
             // Expand all by default
             const expanded: Record<string, boolean> = {};
             body.groups.forEach(g => { expanded[g.group] = true; });
             setExpanded(expanded);
-        } catch { /* silent */ }
+        } catch { setLoadError('Network error loading MCP configuration.'); }
         finally { setLoading(false); }
     }, []);
 
@@ -419,6 +425,13 @@ export default function PlatformMcpPage() {
 
             <div style={{ maxWidth: 1100, margin: '0 auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
 
+                {/* Load error */}
+                {loadError && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderRadius: 12, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 13, marginBottom: 16 }}>
+                        <span style={{ fontWeight: 600 }}>⚠</span> {loadError}
+                        <button onClick={() => void load()} style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }}>Retry</button>
+                    </div>
+                )}
                 {/* Explainer */}
                 <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 18, padding: '20px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>

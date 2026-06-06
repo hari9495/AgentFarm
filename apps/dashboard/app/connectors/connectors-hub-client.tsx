@@ -125,8 +125,15 @@ function McpTab() {
 
     const remove = async (server: McpServer) => {
         if (!confirm(`Remove "${server.name}"?`)) return;
-        try { await fetch(`/api/tenant/mcp/${encodeURIComponent(server.id)}`, { method: 'DELETE' }); await load(); }
-        catch { /* silent */ }
+        try {
+            const res = await fetch(`/api/tenant/mcp/${encodeURIComponent(server.id)}`, { method: 'DELETE' });
+            if (!res.ok) {
+                const d = await res.json().catch(() => ({})) as { error?: string };
+                setError(d.error ?? `Failed to remove "${server.name}".`);
+            } else {
+                await load();
+            }
+        } catch { setError('Network error removing server.'); }
     };
 
     const ping = async (server: McpServer) => {

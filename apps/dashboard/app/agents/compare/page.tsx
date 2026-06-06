@@ -88,8 +88,9 @@ export default function AgentComparePage() {
 
     useEffect(() => {
         void fetch('/api/agents')
-            .then((r) => r.json())
-            .then((data: { bots?: AgentOption[] }) => {
+            .then(async (r) => {
+                if (!r.ok) { setAgentsLoading(false); return; }
+                const data = await r.json() as { bots?: AgentOption[] };
                 setAgents(data.bots ?? []);
                 setAgentsLoading(false);
             })

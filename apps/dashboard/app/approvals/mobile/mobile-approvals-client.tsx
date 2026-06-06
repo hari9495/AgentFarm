@@ -332,7 +332,7 @@ export default function MobileApprovalsClient({ workspaceIds }: { workspaceIds: 
                         </div>
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--bg)' }}>Approvals</span>
+                                <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--card)' }}>Approvals</span>
                                 {metrics.pending_count > 0 && (
                                     <span style={{
                                         fontSize: 11, fontWeight: 700,

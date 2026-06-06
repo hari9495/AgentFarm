@@ -60,7 +60,12 @@ export default function SsoSettingsClient() {
         try {
             const res  = await fetch('/api/admin/sso', { cache: 'no-store' });
             const data = (await res.json()) as SsoConfig & { error?: string };
-            if (!res.ok) { setError(data.error ?? 'Failed to load SSO config'); return; }
+            if (!res.ok) {
+                const msg = data.error === 'upstream_unavailable'
+                    ? 'SSO service is temporarily unavailable. Please try again shortly.'
+                    : (data.error ?? 'Failed to load SSO config');
+                setError(msg); return;
+            }
             setConfig(data);
             if (data.configured) {
                 setEntryPoint(data.entryPoint ?? '');
@@ -97,9 +102,15 @@ export default function SsoSettingsClient() {
         if (!window.confirm('Remove SSO configuration? Users will need passwords to log in.')) return;
         setDeleting(true);
         try {
-            await fetch('/api/admin/sso', { method: 'DELETE' });
-            await load();
-        } finally { setDeleting(false); }
+            const res = await fetch('/api/admin/sso', { method: 'DELETE' });
+            if (!res.ok) {
+                const d = await res.json().catch(() => ({})) as { error?: string };
+                setError(d.error ?? 'Failed to remove SSO configuration.');
+            } else {
+                await load();
+            }
+        } catch { setError('Network error removing SSO configuration.'); }
+        finally { setDeleting(false); }
     };
 
     if (loading) return (

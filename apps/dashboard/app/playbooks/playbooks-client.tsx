@@ -402,8 +402,10 @@ export default function PlaybooksClient({
             setTemplates(tmplData.templates ?? []);
             setCategories(['all', ...(tmplData.categories ?? [])]);
 
-            const botData = (await botRes.json()) as { bots?: Bot[]; agents?: Bot[] };
-            setBots(botData.bots ?? botData.agents ?? []);
+            if (botRes.ok) {
+                const botData = (await botRes.json()) as { bots?: Bot[]; agents?: Bot[] };
+                setBots(botData.bots ?? botData.agents ?? []);
+            }
         } catch { setError('Network error loading playbooks.'); }
         finally { setLoading(false); }
     }, []);

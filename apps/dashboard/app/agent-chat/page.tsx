@@ -1,14 +1,11 @@
-/**
- * Agent Chat Page — Tier G Dashboard UX
- *
- * Provides an interactive chat interface for dispatching agent tasks,
- * showing real-time task step progress, and viewing LoopStepRecord history.
- */
-
+import { redirect } from 'next/navigation';
+import { getSessionPayload } from '../lib/internal-session';
 import { AgentChatPanel } from '../components/agent-chat-panel';
 import { PageHeader } from '../components/page-header';
 
-export default function AgentChatPage() {
+export default async function AgentChatPage() {
+    const session = await getSessionPayload();
+    if (!session?.tenantId) redirect('/login?next=/agent-chat');
     return (
         <main className="page-shell">
             <PageHeader

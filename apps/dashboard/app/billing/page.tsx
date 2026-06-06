@@ -120,7 +120,10 @@ export default function BillingPage() {
         setSubLoading(true);
         setSubError(null);
         Promise.all([
-            fetch('/api/billing/subscription', { cache: 'no-store' }).then((r) => r.json() as Promise<SubscriptionData>),
+            fetch('/api/billing/subscription', { cache: 'no-store' }).then(async (r) => {
+                if (!r.ok) throw new Error('Failed to load subscription');
+                return r.json() as Promise<SubscriptionData>;
+            }),
             fetch('/api/billing/orders', { cache: 'no-store' }).then((r) => r.ok ? (r.json() as Promise<{ orders: Order[] }>) : Promise.resolve({ orders: [] })),
         ])
             .then(([subData, ordersData]) => {
@@ -145,7 +148,10 @@ export default function BillingPage() {
         setCostError(null);
         const params = new URLSearchParams({ from, to });
         fetch(`/api/analytics/cost-summary?${params.toString()}`, { cache: 'no-store' })
-            .then((r) => r.json() as Promise<CostSummaryData>)
+            .then(async (r) => {
+                if (!r.ok) throw new Error('Failed to load cost data');
+                return r.json() as Promise<CostSummaryData>;
+            })
             .then((data) => {
                 setCostSummary(data);
                 setCostLoading(false);

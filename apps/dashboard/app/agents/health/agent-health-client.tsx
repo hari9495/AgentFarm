@@ -87,6 +87,7 @@ export default function AgentHealthClient() {
     const [refreshing, setRef]      = useState(false);
     const [lastAt, setLastAt]       = useState<Date | null>(null);
     const [busy, setBusy]           = useState<Record<string, string>>({});
+    const [actionError, setActionError] = useState<string | null>(null);
     const [statusFilter, setFilter] = useState<BotStatus | ''>('');
     const timerRef                  = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -111,12 +112,17 @@ export default function AgentHealthClient() {
     }, [load]);
 
     async function handleAction(agent: AgentHealth, action: 'pause' | 'resume') {
+        setActionError(null);
         setBusy(b => ({ ...b, [agent.id]: action }));
         try {
             const res = await fetch(`/api/agents/${encodeURIComponent(agent.id)}/${action}`, { method: 'POST' });
-            if (!res.ok) { const d = (await res.json()) as { message?: string }; window.alert(d.message ?? `${action} failed`); return; }
+            if (!res.ok) {
+                const d = await res.json().catch(() => ({})) as { message?: string };
+                setActionError(d.message ?? `Failed to ${action} agent "${agent.role}".`);
+                return;
+            }
             await load(true);
-        } catch { window.alert('Network error.'); }
+        } catch { setActionError('Network error. Please try again.'); }
         finally { setBusy(b => { const n = { ...b }; delete n[agent.id]; return n; }); }
     }
 
@@ -186,6 +192,12 @@ export default function AgentHealthClient() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 13, marginBottom: 16 }}>
                         <AlertCircle size={14} /> {error}
                         <button onClick={() => void load()} style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }}>Retry</button>
+                    </div>
+                )}
+                {actionError && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'var(--warn-bg)', border: '1px solid var(--warn-border)', color: 'var(--warn)', fontSize: 13, marginBottom: 16 }}>
+                        <AlertCircle size={14} /> {actionError}
+                        <button onClick={() => setActionError(null)} style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: 'var(--warn)', background: 'none', border: 'none', cursor: 'pointer' }}>Dismiss</button>
                     </div>
                 )}
 
