@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -104,8 +104,8 @@ export function TokenHeatmap({ workspaceId }: Props) {
 
                         {/* Day rows */}
                         {DAYS.map((day, dayIdx) => (
-                            <>
-                                <div key={`label-${dayIdx}`} style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--ink-muted)', display: 'flex', alignItems: 'center' }}>
+                            <Fragment key={dayIdx}>
+                                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--ink-muted)', display: 'flex', alignItems: 'center' }}>
                                     {day}
                                 </div>
                                 {HOURS.map((hour) => {
@@ -128,7 +128,7 @@ export function TokenHeatmap({ workspaceId }: Props) {
                                         />
                                     );
                                 })}
-                            </>
+                            </Fragment>
                         ))}
                     </div>
 
