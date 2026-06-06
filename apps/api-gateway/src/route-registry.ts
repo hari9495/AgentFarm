@@ -180,7 +180,7 @@ export const registerAllRoutes = async (
     const { secretStore } = deps;
 
     // Auth
-    await registerAuthRoutes(app);
+    await registerAuthRoutes(app, { getSession });
     await registerSsoRoutes(app, { getSession });
     await registerMfaRoutes(app, {
         getSession,

@@ -11,7 +11,7 @@ import {
     ScrollText, Film, Waves, Lock,
     SlidersHorizontal, Camera, GitBranch, RefreshCw,
     Network, CalendarDays, AlarmClock, Beaker, Monitor, Terminal,
-    Zap, Star, Plug, Layers, BookOpen, LifeBuoy,
+    Zap, Star, Plug, Layers, BookOpen, LifeBuoy, User,
     type LucideIcon,
 } from 'lucide-react';
 import type { DashboardTab } from './dashboard-navigation';
@@ -362,6 +362,8 @@ export function InternalSidebar({
                     <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Team &amp; Settings</p>
                     <div className="space-y-0.5">
                         {[
+                            { href: '/account', label: 'My Account', Icon: User },
+                            { href: '/team', label: 'Team Members', Icon: ListChecks },
                             { href: '/settings', label: 'API Keys', Icon: Lock },
                             { href: '/settings/sso', label: 'SSO / SAML', Icon: ShieldCheck },
                             { href: '/llm-config', label: 'LLM Config', Icon: Zap },

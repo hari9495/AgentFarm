@@ -34,6 +34,9 @@ const createRepo = (): { repo: AuthRepo; users: Map<string, StoredUser> } => {
         async runSignupTransaction() {
             throw new Error('runSignupTransaction is not used in this policy-focused test suite');
         },
+        async findUserById() { return null; },
+        async updateUserName() { /* no-op */ },
+        async updateUserPassword() { /* no-op */ },
         async getWorkspacesForTenant() {
             return [{ id: 'ws_policy_001' }];
         },

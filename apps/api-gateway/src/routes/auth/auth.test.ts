@@ -44,6 +44,17 @@ const createRepo = (): { repo: AuthRepo; users: Map<string, StoredUser>; signupC
                 job: { id: jobId },
             };
         },
+        async findUserById(id) {
+            const entry = [...users.entries()].find(([, u]) => u.id === id);
+            if (!entry) return null;
+            const [email, u] = entry;
+            return { id: u.id, tenantId: u.tenantId, email, name: 'Test User', role: u.role, passwordHash: u.passwordHash };
+        },
+        async updateUserName() { /* no-op in tests */ },
+        async updateUserPassword(id, passwordHash) {
+            const entry = [...users.entries()].find(([, u]) => u.id === id);
+            if (entry) users.set(entry[0], { ...entry[1], passwordHash });
+        },
         async getWorkspacesForTenant(tenantId) {
             const wsIndex = [...users.values()].findIndex((u) => u.tenantId === tenantId);
             if (wsIndex < 0) return [];

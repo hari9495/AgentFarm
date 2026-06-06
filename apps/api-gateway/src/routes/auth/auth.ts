@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { hashPassword, verifyPassword } from '../../lib/password.js';
 import { buildSessionToken } from '../../lib/session-auth.js';
 import { isInternalAccessAllowed } from '../../lib/internal-login-policy.js';
@@ -25,6 +25,15 @@ type UserRecord = {
     totpEnabled?: boolean; // present when MFA is configured
 };
 
+type UserProfile = {
+    id: string;
+    tenantId: string;
+    email: string;
+    name: string;
+    role: string;
+    passwordHash: string | null;
+};
+
 type SignupResult = {
     tenant: { id: string };
     user: { id: string };
@@ -35,6 +44,9 @@ type SignupResult = {
 
 export type AuthRepo = {
     findUserByEmail(email: string): Promise<UserRecord | null>;
+    findUserById(id: string): Promise<UserProfile | null>;
+    updateUserName(id: string, name: string): Promise<void>;
+    updateUserPassword(id: string, passwordHash: string): Promise<void>;
     runSignupTransaction(input: {
         companyName: string;
         email: string;
@@ -85,14 +97,35 @@ const getPrismaRepo = async (): Promise<AuthRepo> => {
                 return { tenant, user, workspace, bot, job };
             });
         },
+        async findUserById(id) {
+            return prisma.tenantUser.findUnique({
+                where: { id },
+                select: { id: true, tenantId: true, email: true, name: true, role: true, passwordHash: true },
+            }) as Promise<UserProfile | null>;
+        },
+        async updateUserName(id, name) {
+            await prisma.tenantUser.update({ where: { id }, data: { name } });
+        },
+        async updateUserPassword(id, passwordHash) {
+            await prisma.tenantUser.update({ where: { id }, data: { passwordHash } });
+        },
         async getWorkspacesForTenant(tenantId) {
             return prisma.workspace.findMany({ where: { tenantId }, select: { id: true } });
         },
     };
 };
 
+type SessionContext = {
+    userId: string;
+    tenantId: string;
+    workspaceIds: string[];
+    role?: string;
+    expiresAt: number;
+};
+
 export type RegisterAuthRoutesOptions = {
     repo?: AuthRepo;
+    getSession?: (request: FastifyRequest) => SessionContext | null;
 };
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -119,6 +152,7 @@ export const registerAuthRoutes = async (
     options: RegisterAuthRoutesOptions = {},
 ): Promise<void> => {
     const repo = options.repo ?? (await getPrismaRepo());
+    const getSession = options.getSession;
     /**
      * POST /auth/signup
      * Creates tenant, user, workspace, bot, and queues initial provisioning job.
@@ -357,5 +391,77 @@ export const registerAuthRoutes = async (
      */
     app.post('/auth/logout', async (_request, reply) => {
         return reply.header('Set-Cookie', clearSessionCookie()).send({ message: 'Logged out.' });
+    });
+
+    /**
+     * GET /v1/auth/me
+     * Returns the current authenticated user's profile.
+     */
+    app.get('/v1/auth/me', async (request, reply) => {
+        if (!getSession) return reply.code(503).send({ error: 'not_configured' });
+        const session = getSession(request);
+        if (!session) return reply.code(401).send({ error: 'unauthorized' });
+        const user = await repo.findUserById(session.userId);
+        if (!user || user.tenantId !== session.tenantId) {
+            return reply.code(404).send({ error: 'not_found' });
+        }
+        return reply.send({
+            userId: user.id,
+            tenantId: user.tenantId,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+        });
+    });
+
+    /**
+     * PATCH /v1/auth/profile
+     * Updates the current user's display name.
+     */
+    app.patch<{ Body: { name?: string } }>('/v1/auth/profile', async (request, reply) => {
+        if (!getSession) return reply.code(503).send({ error: 'not_configured' });
+        const session = getSession(request);
+        if (!session) return reply.code(401).send({ error: 'unauthorized' });
+        const { name } = request.body ?? {};
+        if (!name || typeof name !== 'string' || name.trim().length < 1) {
+            return reply.code(400).send({ error: 'validation_failed', field: 'name', message: 'Name is required.' });
+        }
+        const trimmed = name.trim();
+        if (trimmed.length > 100) {
+            return reply.code(400).send({ error: 'validation_failed', field: 'name', message: 'Name must be 100 characters or fewer.' });
+        }
+        await repo.updateUserName(session.userId, trimmed);
+        return reply.send({ ok: true, name: trimmed });
+    });
+
+    /**
+     * POST /v1/auth/change-password
+     * Changes the current user's password after verifying the current one.
+     */
+    app.post<{ Body: { currentPassword?: string; newPassword?: string } }>('/v1/auth/change-password', async (request, reply) => {
+        if (!getSession) return reply.code(503).send({ error: 'not_configured' });
+        const session = getSession(request);
+        if (!session) return reply.code(401).send({ error: 'unauthorized' });
+        const { currentPassword, newPassword } = request.body ?? {};
+        if (!currentPassword || typeof currentPassword !== 'string') {
+            return reply.code(400).send({ error: 'validation_failed', field: 'currentPassword', message: 'currentPassword is required.' });
+        }
+        if (!newPassword || typeof newPassword !== 'string' || newPassword.length < MIN_PASSWORD_LEN) {
+            return reply.code(400).send({ error: 'validation_failed', field: 'newPassword', message: `newPassword must be at least ${MIN_PASSWORD_LEN} characters.` });
+        }
+        const user = await repo.findUserById(session.userId);
+        if (!user || user.tenantId !== session.tenantId) {
+            return reply.code(404).send({ error: 'not_found' });
+        }
+        if (!user.passwordHash) {
+            return reply.code(400).send({ error: 'sso_account', message: 'Password changes are not available for SSO accounts.' });
+        }
+        const valid = await verifyPassword(currentPassword, user.passwordHash);
+        if (!valid) {
+            return reply.code(401).send({ error: 'invalid_credentials', message: 'Current password is incorrect.' });
+        }
+        const newHash = await hashPassword(newPassword);
+        await repo.updateUserPassword(session.userId, newHash);
+        return reply.send({ ok: true });
     });
 };
