@@ -325,6 +325,64 @@ body {
     display: none;
 }
 
+/* ─── Theme Toggle Switch ──────────────────────────────────────────── */
+.theme-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.45rem 0.75rem;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--ink-muted);
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.theme-toggle-row:hover {
+    background: var(--sidebar-hover-bg);
+    color: var(--ink);
+}
+
+.theme-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+
+.theme-toggle-track {
+    position: relative;
+    width: 32px;
+    height: 18px;
+    border-radius: 9999px;
+    background: var(--line-strong);
+    flex-shrink: 0;
+    transition: background 0.2s ease;
+}
+
+.theme-toggle-track--on {
+    background: var(--brand);
+}
+
+.theme-toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 9999px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    transition: transform 0.2s ease;
+}
+
+.theme-toggle-track--on .theme-toggle-thumb {
+    transform: translateX(14px);
+}
+
 /* ─── Sidebar ──────────────────────────────────────────────────────── */
 .dashboard-sidebar {
     border-right: 1px solid var(--line);
@@ -2625,6 +2683,87 @@ textarea {
 
 .audit-age-badge {
     margin-left: 0.1rem;
+}
+
+/* ─── Standalone Audit Log Panel ──────────────────────────────────── */
+.audit-log-standalone {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg, 12px);
+    padding: 1.25rem 1.5rem;
+}
+
+.audit-log-standalone-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.audit-log-standalone-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0;
+}
+
+.audit-log-thead-row {
+    border-bottom: 2px solid var(--line-strong);
+    text-align: left;
+}
+
+.audit-log-th {
+    padding: 0.5rem 0.75rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.audit-log-row {
+    border-bottom: 1px solid var(--line);
+    transition: background 0.1s ease;
+}
+
+.audit-log-row:hover {
+    background: var(--bg);
+}
+
+.audit-log-td {
+    padding: 0.5rem 0.75rem;
+    color: var(--ink);
+    font-size: 0.82rem;
+}
+
+.audit-log-td--muted {
+    color: var(--ink-muted);
+}
+
+.audit-log-td--mono {
+    font-family: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.audit-log-td--accent {
+    color: var(--brand);
+}
+
+.audit-log-empty {
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--ink-muted);
+}
+
+.audit-log-pagination {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    margin-top: 0.75rem;
+}
+
+.panel-error {
+    color: var(--danger);
+    font-size: 0.875rem;
 }
 
 .audit-filter-grid {
