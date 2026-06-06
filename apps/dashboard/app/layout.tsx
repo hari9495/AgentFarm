@@ -4,6 +4,7 @@ import { Inter, IBM_Plex_Mono } from 'next/font/google';
 import { SubscriptionBanner } from './components/subscription-banner';
 import { SuspensionWall } from './components/suspension-wall';
 import { getSessionPayload } from './lib/internal-session';
+import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 
 const inter = Inter({
@@ -33,6 +34,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                     <SubscriptionBanner tenantId={tenantId} />
                     {children}
                 </SuspensionWall>
+                <Toaster richColors position="bottom-right" />
             </body>
         </html>
     );
