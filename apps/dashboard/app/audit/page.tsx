@@ -48,10 +48,10 @@ const defaultFilters = (): Filters => ({
 });
 
 function severityBadge(severity: string): { bg: string; color: string; label: string } {
-    if (severity === 'error') return { bg: '#fee2e2', color: '#b91c1c', label: 'error' };
-    if (severity === 'warn')  return { bg: '#fef3c7', color: '#92400e', label: 'warn' };
-    if (severity === 'info')  return { bg: '#dcfce7', color: '#166534', label: 'info' };
-    return { bg: '#f3f4f6', color: '#6b7280', label: severity || '—' };
+    if (severity === 'error') return { bg: 'var(--danger-bg)', color: 'var(--danger)', label: 'error' };
+    if (severity === 'warn')  return { bg: 'var(--warn-bg)', color: 'var(--warn)', label: 'warn' };
+    if (severity === 'info')  return { bg: 'var(--ok-bg)', color: 'var(--ok)', label: 'info' };
+    return { bg: 'var(--bg)', color: 'var(--ink-muted)', label: severity || '—' };
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -206,12 +206,12 @@ export default function AuditPage() {
     const isNextDisabled = (page + 1) * PAGE_SIZE >= total;
 
     const inputStyle: React.CSSProperties = {
-        border: '1px solid #e5e7eb',
+        border: '1px solid var(--line)',
         borderRadius: 6,
         padding: '4px 8px',
         fontSize: '0.82rem',
-        color: '#111827',
-        background: '#fff',
+        color: 'var(--ink)',
+        background: 'var(--card)',
     };
 
     const btnBase: React.CSSProperties = {
@@ -235,8 +235,8 @@ export default function AuditPage() {
 
     if (!planChecked) {
         return (
-            <div style={{ minHeight: '100vh', background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Loading…</p>
+            <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <p style={{ color: 'var(--ink-muted)', fontSize: '0.875rem' }}>Loading…</p>
             </div>
         );
     }
@@ -251,7 +251,7 @@ export default function AuditPage() {
     }
 
     return (
-        <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
+        <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
             <div style={{ padding: '1.5rem 1.5rem 0' }}>
                 <PageHeader
                     eyebrow="Audit & Compliance"
@@ -263,15 +263,15 @@ export default function AuditPage() {
 
             {/* ── Filter bar ── */}
             <div style={{
-                background: '#fff',
-                borderBottom: '1px solid #e5e7eb',
+                background: 'var(--card)',
+                borderBottom: '1px solid var(--line)',
                 padding: '0.75rem 1.5rem',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.6rem',
                 flexWrap: 'wrap',
             }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', color: '#374151', fontWeight: 500 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', color: 'var(--ink)', fontWeight: 500 }}>
                     From
                     <input
                         type="date"
@@ -282,7 +282,7 @@ export default function AuditPage() {
                     />
                 </label>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', color: '#374151', fontWeight: 500 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', color: 'var(--ink)', fontWeight: 500 }}>
                     To
                     <input
                         type="date"
@@ -331,7 +331,7 @@ export default function AuditPage() {
                 <button
                     type="button"
                     onClick={handleClear}
-                    style={{ ...btnBase, border: '1px solid #e5e7eb', background: '#fff', color: '#374151' }}
+                    style={{ ...btnBase, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)' }}
                 >
                     Clear filters
                 </button>
@@ -348,7 +348,7 @@ export default function AuditPage() {
                         type="button"
                         onClick={() => { void handleExport('csv'); }}
                         disabled={exporting}
-                        style={{ ...btnBase, border: '1px solid #6366f1', background: '#6366f1', color: '#fff', opacity: exporting ? 0.6 : 1 }}
+                        style={{ ...btnBase, border: '1px solid var(--accent)', background: 'var(--accent)', color: '#fff', opacity: exporting ? 0.6 : 1 }}
                     >
                         {exporting ? 'Exporting…' : '↓ CSV'}
                     </button>
@@ -356,7 +356,7 @@ export default function AuditPage() {
                         type="button"
                         onClick={() => { void handleExport('json'); }}
                         disabled={exporting}
-                        style={{ ...btnBase, border: '1px solid #6366f1', background: '#fff', color: '#6366f1', opacity: exporting ? 0.6 : 1 }}
+                        style={{ ...btnBase, border: '1px solid #6366f1', background: 'var(--card)', color: 'var(--accent)', opacity: exporting ? 0.6 : 1 }}
                     >
                         ↓ JSON
                     </button>
@@ -369,29 +369,29 @@ export default function AuditPage() {
                 {exportError && (
                     <div style={{
                         padding: '0.6rem 1rem',
-                        background: '#fee2e2',
-                        border: '1px solid #fca5a5',
+                        background: 'var(--danger-bg)',
+                        border: '1px solid var(--danger-border)',
                         borderRadius: 8,
                         fontSize: '0.82rem',
-                        color: '#b91c1c',
+                        color: 'var(--danger)',
                         marginBottom: '1rem',
                     }}>
                         {exportError}
                     </div>
                 )}
 
-                <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
+                <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden' }}>
 
                     {/* Loading */}
                     {loading && (
-                        <p style={{ padding: '2rem', textAlign: 'center', color: '#6b7280', fontSize: '0.875rem' }}>
+                        <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--ink-muted)', fontSize: '0.875rem' }}>
                             Loading…
                         </p>
                     )}
 
                     {/* Error */}
                     {!loading && fetchError && (
-                        <p style={{ padding: '2rem', textAlign: 'center', color: '#ef4444', fontSize: '0.875rem' }}>
+                        <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--danger)', fontSize: '0.875rem' }}>
                             {fetchError}
                         </p>
                     )}
@@ -401,14 +401,14 @@ export default function AuditPage() {
                         <div style={{ overflowX: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                                 <thead>
-                                    <tr style={{ borderBottom: '2px solid #e5e7eb', background: '#f9fafb' }}>
+                                    <tr style={{ borderBottom: '2px solid var(--line)', background: 'var(--bg)' }}>
                                         {columns.map((col) => (
                                             <th
                                                 key={col.label}
                                                 style={{
                                                     padding: '0.6rem 0.75rem',
                                                     fontWeight: 600,
-                                                    color: '#374151',
+                                                    color: 'var(--ink)',
                                                     textAlign: 'left',
                                                     whiteSpace: 'nowrap',
                                                     userSelect: 'none',
@@ -424,7 +424,7 @@ export default function AuditPage() {
                                                             padding: 0,
                                                             font: 'inherit',
                                                             fontWeight: 600,
-                                                            color: sortKey === col.key ? '#6366f1' : '#374151',
+                                                            color: sortKey === col.key ? 'var(--accent)' : 'var(--ink)',
                                                             cursor: 'pointer',
                                                             display: 'inline-flex',
                                                             alignItems: 'center',
@@ -446,7 +446,7 @@ export default function AuditPage() {
                                 <tbody>
                                     {sortedEvents.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} style={{ padding: '2.5rem', textAlign: 'center', color: '#6b7280' }}>
+                                            <td colSpan={6} style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--ink-muted)' }}>
                                                 No audit events found for the selected filters.
                                             </td>
                                         </tr>
@@ -455,17 +455,17 @@ export default function AuditPage() {
                                             const badge = severityBadge(ev.severity);
                                             const isExpanded = expandedId === ev.event_id;
                                             const rows = [
-                                                <tr key={ev.event_id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                                                    <td style={{ padding: '0.5rem 0.75rem', whiteSpace: 'nowrap', color: '#6b7280' }}>
+                                                <tr key={ev.event_id} style={{ borderBottom: '1px solid var(--line)' }}>
+                                                    <td style={{ padding: '0.5rem 0.75rem', whiteSpace: 'nowrap', color: 'var(--ink-muted)' }}>
                                                         {new Date(ev.created_at).toLocaleString()}
                                                     </td>
-                                                    <td style={{ padding: '0.5rem 0.75rem', fontFamily: 'monospace', color: '#374151', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    <td style={{ padding: '0.5rem 0.75rem', fontFamily: 'monospace', color: 'var(--ink)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                         {ev.bot_id || '—'}
                                                     </td>
-                                                    <td style={{ padding: '0.5rem 0.75rem', fontFamily: 'monospace', color: '#6366f1' }}>
+                                                    <td style={{ padding: '0.5rem 0.75rem', fontFamily: 'monospace', color: 'var(--accent)' }}>
                                                         {ev.event_type}
                                                     </td>
-                                                    <td style={{ padding: '0.5rem 0.75rem', color: '#374151' }}>
+                                                    <td style={{ padding: '0.5rem 0.75rem', color: 'var(--ink)' }}>
                                                         {ev.source_system}
                                                     </td>
                                                     <td style={{ padding: '0.5rem 0.75rem' }}>
@@ -487,12 +487,12 @@ export default function AuditPage() {
                                                             aria-label={isExpanded ? 'Collapse' : 'Expand'}
                                                             style={{
                                                                 background: 'none',
-                                                                border: '1px solid #e5e7eb',
+                                                                border: '1px solid var(--line)',
                                                                 borderRadius: 4,
                                                                 cursor: 'pointer',
                                                                 padding: '2px 6px',
                                                                 fontSize: '0.72rem',
-                                                                color: '#6366f1',
+                                                                color: 'var(--accent)',
                                                                 display: 'inline-block',
                                                                 transform: isExpanded ? 'rotate(90deg)' : 'none',
                                                                 transition: 'transform 0.15s',
@@ -505,19 +505,19 @@ export default function AuditPage() {
                                             ];
                                             if (isExpanded) {
                                                 rows.push(
-                                                    <tr key={`${ev.event_id}-detail`} style={{ background: '#f8fafc' }}>
+                                                    <tr key={`${ev.event_id}-detail`} style={{ background: 'var(--bg)' }}>
                                                         <td colSpan={6} style={{ padding: '0.75rem 1.5rem' }}>
                                                             <pre style={{
                                                                 margin: 0,
                                                                 fontSize: '0.78rem',
                                                                 fontFamily: 'monospace',
-                                                                color: '#374151',
+                                                                color: 'var(--ink)',
                                                                 whiteSpace: 'pre-wrap',
                                                                 wordBreak: 'break-all',
-                                                                background: '#f1f5f9',
+                                                                background: 'var(--bg)',
                                                                 borderRadius: 6,
                                                                 padding: '0.75rem',
-                                                                border: '1px solid #e2e8f0',
+                                                                border: '1px solid var(--line)',
                                                             }}>
                                                                 {JSON.stringify(ev, null, 2)}
                                                             </pre>
@@ -541,7 +541,7 @@ export default function AuditPage() {
                             justifyContent: 'center',
                             gap: '0.75rem',
                             padding: '0.75rem 1.5rem',
-                            borderTop: '1px solid #e5e7eb',
+                            borderTop: '1px solid var(--line)',
                         }}>
                             <button
                                 type="button"
@@ -549,16 +549,16 @@ export default function AuditPage() {
                                 disabled={page === 0}
                                 style={{
                                     ...btnBase,
-                                    border: '1px solid #e5e7eb',
-                                    background: '#fff',
-                                    color: '#374151',
+                                    border: '1px solid var(--line)',
+                                    background: 'var(--card)',
+                                    color: 'var(--ink)',
                                     opacity: page === 0 ? 0.4 : 1,
                                     cursor: page === 0 ? 'default' : 'pointer',
                                 }}
                             >
                                 ← Previous
                             </button>
-                            <span style={{ fontSize: '0.82rem', color: '#374151' }}>
+                            <span style={{ fontSize: '0.82rem', color: 'var(--ink)' }}>
                                 Page {page + 1} of {totalPages}
                             </span>
                             <button
@@ -567,9 +567,9 @@ export default function AuditPage() {
                                 disabled={isNextDisabled}
                                 style={{
                                     ...btnBase,
-                                    border: '1px solid #e5e7eb',
-                                    background: '#fff',
-                                    color: '#374151',
+                                    border: '1px solid var(--line)',
+                                    background: 'var(--card)',
+                                    color: 'var(--ink)',
                                     opacity: isNextDisabled ? 0.4 : 1,
                                     cursor: isNextDisabled ? 'default' : 'pointer',
                                 }}

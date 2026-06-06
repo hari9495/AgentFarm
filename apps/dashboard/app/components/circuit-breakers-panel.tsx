@@ -14,9 +14,9 @@ type CircuitEntry = {
 };
 
 const STATE_BADGE: Record<CircuitEntry['state'], { bg: string; color: string; label: string }> = {
-    closed: { bg: '#dcfce7', color: '#166534', label: 'Closed' },
-    open: { bg: '#fee2e2', color: '#991b1b', label: 'Open' },
-    'half-open': { bg: '#fef9c3', color: '#854d0e', label: 'Half-Open' },
+    closed: { bg: 'var(--ok-bg)', color: 'var(--ok)', label: 'Closed' },
+    open: { bg: 'var(--danger-bg)', color: 'var(--danger)', label: 'Open' },
+    'half-open': { bg: 'var(--warn-bg)', color: 'var(--warn)', label: 'Half-Open' },
 };
 
 export default function CircuitBreakersPanel({ tenantId: _tenantId }: CircuitBreakersPanelProps) {
@@ -79,13 +79,13 @@ export default function CircuitBreakersPanel({ tenantId: _tenantId }: CircuitBre
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: '0.5rem',
-                    background: '#fffbeb',
-                    border: '1px solid #fde68a',
+                    background: 'var(--warn-bg)',
+                    border: '1px solid var(--warn-border)',
                     borderRadius: '6px',
                     padding: '0.6rem 0.85rem',
                     marginBottom: '1rem',
                     fontSize: '0.8rem',
-                    color: '#92400e',
+                    color: 'var(--warn)',
                 }}
             >
                 <span>⚠</span>
@@ -96,11 +96,11 @@ export default function CircuitBreakersPanel({ tenantId: _tenantId }: CircuitBre
             {error && (
                 <div
                     style={{
-                        background: '#fef2f2',
-                        border: '1px solid #fecaca',
+                        background: 'var(--danger-bg)',
+                        border: '1px solid var(--danger-border)',
                         borderRadius: '6px',
                         padding: '0.65rem 0.9rem',
-                        color: '#dc2626',
+                        color: 'var(--danger)',
                         fontSize: '0.85rem',
                         marginBottom: '0.75rem',
                     }}
