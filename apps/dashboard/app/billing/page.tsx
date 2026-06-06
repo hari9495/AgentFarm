@@ -220,7 +220,7 @@ export default function BillingPage() {
                             fontSize: '0.875rem',
                             fontWeight: 500,
                             color: 'var(--ink)',
-                            background: '#fff',
+                            background: 'var(--card)',
                         }}
                     />
                 </label>
@@ -250,7 +250,7 @@ export default function BillingPage() {
                             fontSize: '0.875rem',
                             fontWeight: 500,
                             color: 'var(--ink)',
-                            background: '#fff',
+                            background: 'var(--card)',
                         }}
                     />
                 </label>
@@ -263,11 +263,11 @@ export default function BillingPage() {
             )}
 
             {subError && (
-                <p style={{ color: '#dc2626', fontSize: '0.875rem', margin: 0 }}>{subError}</p>
+                <p style={{ color: 'var(--danger)', fontSize: '0.875rem', margin: 0 }}>{subError}</p>
             )}
 
             {costError && (
-                <p style={{ color: '#dc2626', fontSize: '0.875rem', margin: 0 }}>{costError}</p>
+                <p style={{ color: 'var(--danger)', fontSize: '0.875rem', margin: 0 }}>{costError}</p>
             )}
 
             {/* Row 1: Subscription */}

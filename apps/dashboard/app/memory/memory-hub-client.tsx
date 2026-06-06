@@ -53,7 +53,7 @@ function BotIdInput({ botId, setBotId }: { botId: string; setBotId: (v: string) 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'rgba(0,102,204,0.04)', border: '1px solid rgba(0,102,204,0.15)', borderRadius: 12, marginBottom: 14 }}>
             <Brain size={14} color="#0066cc" style={{ flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#0066cc', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Bot ID (optional — leave blank to search all)</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Bot ID (optional — leave blank to search all)</div>
                 <input
                     value={botId} onChange={e => setBotId(e.target.value)}
                     placeholder="Enter a Bot ID to filter by agent…"
@@ -97,7 +97,7 @@ export default function MemoryHubClient({
                     <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>Memory & Knowledge</span>
                 </div>
                 {workspaceId && (
-                    <div style={{ marginLeft: 8, display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 9999, background: 'rgba(0,102,204,0.07)', border: '1px solid rgba(0,102,204,0.2)', fontSize: 11, color: '#0066cc', fontWeight: 600, fontFamily: 'monospace' }}>
+                    <div style={{ marginLeft: 8, display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 9999, background: 'color-mix(in srgb, var(--accent) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--accent) 20%, transparent)', fontSize: 11, color: 'var(--accent)', fontWeight: 600, fontFamily: 'monospace' }}>
                         ws: {workspaceId.slice(0, 18)}
                     </div>
                 )}
@@ -111,8 +111,8 @@ export default function MemoryHubClient({
                         <button key={key} type="button" onClick={() => setActiveTab(key)} style={{
                             display: 'flex', alignItems: 'center', gap: 6,
                             padding: '13px 14px', background: 'transparent', border: 'none',
-                            borderBottom: `2px solid ${active ? '#0066cc' : 'transparent'}`,
-                            cursor: 'pointer', color: active ? '#0066cc' : 'var(--ink-muted)',
+                            borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
+                            cursor: 'pointer', color: active ? 'var(--accent)' : 'var(--ink-muted)',
                             fontSize: 13, fontWeight: active ? 600 : 500,
                             transition: 'all 0.15s', marginBottom: -1, whiteSpace: 'nowrap',
                         }}>

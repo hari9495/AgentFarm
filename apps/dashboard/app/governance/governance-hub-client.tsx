@@ -39,11 +39,11 @@ function BotIdInput({ botId, setBotId }: { botId: string; setBotId: (v: string) 
                 <Bot size={14} color="#0066cc" />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#0066cc', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Bot ID required</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Bot ID required</div>
                 <input
                     value={botId} onChange={e => setBotId(e.target.value)}
                     placeholder="Enter a Bot ID to load disclosure settings…"
-                    style={{ width: '100%', maxWidth: 360, padding: '7px 11px', borderRadius: 9, border: '1px solid #d2d2d7', background: '#fff', color: '#1d1d1f', fontSize: 13, outline: 'none', fontFamily: 'ui-monospace, monospace' }}
+                    style={{ width: '100%', maxWidth: 360, padding: '7px 11px', borderRadius: 9, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: 13, outline: 'none', fontFamily: 'ui-monospace, monospace' }}
                     autoFocus
                 />
             </div>
@@ -65,13 +65,13 @@ function TabShell({ title, icon: Icon, description, extra, children }: {
                         <Icon size={16} color="#0066cc" />
                     </div>
                     <div>
-                        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em' }}>{title}</h2>
-                        <p style={{ margin: '3px 0 0', fontSize: 13, color: '#6e6e73', lineHeight: 1.45 }}>{description}</p>
+                        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>{title}</h2>
+                        <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--ink-muted)', lineHeight: 1.45 }}>{description}</p>
                     </div>
                 </div>
                 {extra}
             </div>
-            <div style={{ background: '#fff', border: '1px solid #d2d2d7', borderRadius: 18, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 18, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                 {children}
             </div>
         </div>
@@ -92,45 +92,45 @@ export default function GovernanceHubClient({
 
     return (
         <div style={{
-            minHeight: '100vh', background: '#f5f5f7',
+            minHeight: '100vh', background: 'var(--bg)',
             fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
             display: 'flex', flexDirection: 'column',
         }}>
 
             {/* ── Top bar ──────────────────────────────────────────────── */}
             <header style={{
-                height: 56, background: '#fff', borderBottom: '1px solid #d2d2d7',
+                height: 56, background: 'var(--card)', borderBottom: '1px solid var(--line)',
                 display: 'flex', alignItems: 'center', padding: '0 20px', gap: 12,
                 flexShrink: 0, position: 'sticky', top: 0, zIndex: 10,
             }}>
-                <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#6e6e73', fontSize: 13, textDecoration: 'none', fontWeight: 500 }}>
+                <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--ink-muted)', fontSize: 13, textDecoration: 'none', fontWeight: 500 }}>
                     ← Dashboard
                 </Link>
-                <span style={{ color: '#d2d2d7' }}>|</span>
+                <span style={{ color: 'var(--line-strong)' }}>|</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(0,102,204,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <ShieldCheck size={14} color="#0066cc" />
                     </div>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em' }}>Governance</span>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>Governance</span>
                 </div>
 
                 {/* Quick link to approval queue */}
-                <Link href="/?tab=approvals" style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 8, padding: '5px 12px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 12, fontWeight: 500, textDecoration: 'none' }}>
+                <Link href="/?tab=approvals" style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 8, padding: '5px 12px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 12, fontWeight: 500, textDecoration: 'none' }}>
                     <ExternalLink size={11} /> Approval Queue
                 </Link>
 
                 {/* Active bot pill */}
                 {botId.trim() && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 9999, background: 'rgba(0,102,204,0.07)', border: '1px solid rgba(0,102,204,0.2)', fontSize: 12, color: '#0066cc', fontWeight: 600, fontFamily: 'monospace' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 9999, background: 'color-mix(in srgb, var(--accent) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--accent) 20%, transparent)', fontSize: 12, color: 'var(--accent)', fontWeight: 600, fontFamily: 'monospace' }}>
                         <Bot size={11} color="#0066cc" />
                         {botId.slice(0, 16)}{botId.length > 16 ? '…' : ''}
-                        <button onClick={() => setBotId('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0066cc', padding: 0, lineHeight: 1, marginLeft: 2, fontSize: 13 }}>×</button>
+                        <button onClick={() => setBotId('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', padding: 0, lineHeight: 1, marginLeft: 2, fontSize: 13 }}>×</button>
                     </div>
                 )}
             </header>
 
             {/* ── Tab bar ──────────────────────────────────────────────── */}
-            <div style={{ background: '#fff', borderBottom: '1px solid #d2d2d7', padding: '0 20px', display: 'flex', gap: 0, overflowX: 'auto' }}>
+            <div style={{ background: 'var(--card)', borderBottom: '1px solid var(--line)', padding: '0 20px', display: 'flex', gap: 0, overflowX: 'auto' }}>
                 {TABS.map(({ key, label, icon: Icon, needsBot }) => {
                     const active = activeTab === key;
                     const unset  = needsBot && !botId.trim();
@@ -138,14 +138,14 @@ export default function GovernanceHubClient({
                         <button key={key} type="button" onClick={() => setActiveTab(key)} style={{
                             display: 'flex', alignItems: 'center', gap: 6,
                             padding: '13px 14px', background: 'transparent', border: 'none',
-                            borderBottom: `2px solid ${active ? '#0066cc' : 'transparent'}`,
-                            cursor: 'pointer', color: active ? '#0066cc' : unset ? '#aeaeb2' : '#6e6e73',
+                            borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
+                            cursor: 'pointer', color: active ? 'var(--accent)' : unset ? 'var(--ink-muted)' : 'var(--ink-muted)',
                             fontSize: 13, fontWeight: active ? 600 : 500,
                             transition: 'all 0.15s', marginBottom: -1, whiteSpace: 'nowrap',
                         }}>
                             <Icon size={13} />
                             {label}
-                            {unset && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#d2d2d7', flexShrink: 0 }} />}
+                            {unset && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--line-strong)', flexShrink: 0 }} />}
                         </button>
                     );
                 })}
@@ -165,7 +165,7 @@ export default function GovernanceHubClient({
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                             <GovernanceWorkflowPanel workspaceId={workspaceId} />
                             <div style={{ borderTop: '1px solid #f0f0f2', paddingTop: 20 }}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>Workflow Builder</div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>Workflow Builder</div>
                                 <WorkflowBuilderPanel workspaceId={workspaceId} />
                             </div>
                         </div>
