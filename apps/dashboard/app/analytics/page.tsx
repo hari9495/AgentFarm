@@ -80,22 +80,22 @@ function MetricTile({ label, value }: { label: string; value: string }) {
             flex: '1 1 0',
             minWidth: 120,
             padding: '0.9rem 1rem',
-            border: '1px solid #e5e7eb',
+            border: '1px solid var(--line)',
             borderRadius: 8,
-            background: '#f9fafb',
+            background: 'var(--bg)',
         }}>
-            <p style={{ margin: '0 0 0.25rem', fontSize: '0.72rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <p style={{ margin: '0 0 0.25rem', fontSize: '0.72rem', color: 'var(--ink-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {label}
             </p>
-            <p style={{ margin: 0, fontSize: '1.35rem', fontWeight: 700, color: '#111827' }}>{value}</p>
+            <p style={{ margin: 0, fontSize: '1.35rem', fontWeight: 700, color: 'var(--ink)' }}>{value}</p>
         </div>
     );
 }
 
 function SectionCard({ title, children }: { title: string; children: ReactNode }) {
     return (
-        <section style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: '1.25rem 1.5rem' }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', margin: '0 0 1rem' }}>{title}</h2>
+        <section style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: '1.25rem 1.5rem' }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--ink)', margin: '0 0 1rem' }}>{title}</h2>
             {children}
         </section>
     );
@@ -115,7 +115,7 @@ function AgentPerformanceSection({
     if (isLoading) {
         return (
             <SectionCard title="Agent Performance">
-                <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Loading…</p>
+                <p style={{ color: 'var(--ink-muted)', fontSize: '0.875rem' }}>Loading…</p>
             </SectionCard>
         );
     }
@@ -123,7 +123,7 @@ function AgentPerformanceSection({
     if (error) {
         return (
             <SectionCard title="Agent Performance">
-                <p style={{ color: '#ef4444', fontSize: '0.875rem' }}>{error}</p>
+                <p style={{ color: 'var(--danger)', fontSize: '0.875rem' }}>{error}</p>
             </SectionCard>
         );
     }
@@ -131,7 +131,7 @@ function AgentPerformanceSection({
     if (!data || data.taskCount === 0) {
         return (
             <SectionCard title="Agent Performance">
-                <p style={{ color: '#6b7280', fontSize: '0.875rem', textAlign: 'center', padding: '1.5rem 0' }}>
+                <p style={{ color: 'var(--ink-muted)', fontSize: '0.875rem', textAlign: 'center', padding: '1.5rem 0' }}>
                     No tasks in this period.
                 </p>
             </SectionCard>
@@ -163,7 +163,7 @@ function AgentPerformanceSection({
 
             {trend.length > 0 && (
                 <div style={{ marginBottom: '1.25rem' }}>
-                    <p style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+                    <p style={{ fontSize: '0.72rem', color: 'var(--ink-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
                         Weekly Trend
                     </p>
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 72 }}>
@@ -172,10 +172,10 @@ function AgentPerformanceSection({
                             return (
                                 <div key={w.weekStart} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                                     <div
-                                        style={{ width: 22, height: barH, background: '#6366f1', borderRadius: '3px 3px 0 0' }}
+                                        style={{ width: 22, height: barH, background: 'var(--accent)', borderRadius: '3px 3px 0 0' }}
                                         title={`${w.weekStart}: ${w.taskCount} tasks`}
                                     />
-                                    <span style={{ fontSize: '0.6rem', color: '#9ca3af' }}>{w.weekStart.slice(5)}</span>
+                                    <span style={{ fontSize: '0.6rem', color: 'var(--ink-muted)' }}>{w.weekStart.slice(5)}</span>
                                 </div>
                             );
                         })}
@@ -185,26 +185,26 @@ function AgentPerformanceSection({
 
             {providers.length > 0 && (
                 <div>
-                    <p style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+                    <p style={{ fontSize: '0.72rem', color: 'var(--ink-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
                         By Provider
                     </p>
                     <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                             <thead>
-                                <tr style={{ borderBottom: '2px solid #e5e7eb', textAlign: 'left' }}>
-                                    <th style={{ padding: '0.4rem 0.6rem', fontWeight: 600, color: '#374151' }}>Provider</th>
-                                    <th style={{ padding: '0.4rem 0.6rem', fontWeight: 600, color: '#374151', textAlign: 'right' }}>Tasks</th>
-                                    <th style={{ padding: '0.4rem 0.6rem', fontWeight: 600, color: '#374151', textAlign: 'right' }}>Cost</th>
-                                    <th style={{ padding: '0.4rem 0.6rem', fontWeight: 600, color: '#374151', textAlign: 'right' }}>Avg Latency</th>
+                                <tr style={{ borderBottom: '2px solid var(--line)', textAlign: 'left' }}>
+                                    <th style={{ padding: '0.4rem 0.6rem', fontWeight: 600, color: 'var(--ink)' }}>Provider</th>
+                                    <th style={{ padding: '0.4rem 0.6rem', fontWeight: 600, color: 'var(--ink)', textAlign: 'right' }}>Tasks</th>
+                                    <th style={{ padding: '0.4rem 0.6rem', fontWeight: 600, color: 'var(--ink)', textAlign: 'right' }}>Cost</th>
+                                    <th style={{ padding: '0.4rem 0.6rem', fontWeight: 600, color: 'var(--ink)', textAlign: 'right' }}>Avg Latency</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {providers.map(([provider, stats]) => (
-                                    <tr key={provider} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                                        <td style={{ padding: '0.4rem 0.6rem', color: '#374151' }}>{provider}</td>
+                                    <tr key={provider} style={{ borderBottom: '1px solid var(--line)' }}>
+                                        <td style={{ padding: '0.4rem 0.6rem', color: 'var(--ink)' }}>{provider}</td>
                                         <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right' }}>{stats.taskCount.toLocaleString()}</td>
-                                        <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right', color: '#22c55e' }}>${stats.totalCostUsd.toFixed(3)}</td>
-                                        <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right', color: '#6b7280' }}>{stats.avgLatencyMs}ms</td>
+                                        <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right', color: 'var(--ok)' }}>${stats.totalCostUsd.toFixed(3)}</td>
+                                        <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right', color: 'var(--ink-muted)' }}>{stats.avgLatencyMs}ms</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -230,7 +230,7 @@ function CostSummarySection({
     if (isLoading) {
         return (
             <SectionCard title="Cost Summary">
-                <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Loading…</p>
+                <p style={{ color: 'var(--ink-muted)', fontSize: '0.875rem' }}>Loading…</p>
             </SectionCard>
         );
     }
@@ -238,7 +238,7 @@ function CostSummarySection({
     if (error) {
         return (
             <SectionCard title="Cost Summary">
-                <p style={{ color: '#ef4444', fontSize: '0.875rem' }}>{error}</p>
+                <p style={{ color: 'var(--danger)', fontSize: '0.875rem' }}>{error}</p>
             </SectionCard>
         );
     }
@@ -246,7 +246,7 @@ function CostSummarySection({
     if (!data) {
         return (
             <SectionCard title="Cost Summary">
-                <p style={{ color: '#6b7280', fontSize: '0.875rem', textAlign: 'center', padding: '1.5rem 0' }}>
+                <p style={{ color: 'var(--ink-muted)', fontSize: '0.875rem', textAlign: 'center', padding: '1.5rem 0' }}>
                     No cost data in this period.
                 </p>
             </SectionCard>
@@ -266,7 +266,7 @@ function CostSummarySection({
 
             {data.weekly_trend.length > 0 && (
                 <div style={{ marginBottom: '1.25rem' }}>
-                    <p style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+                    <p style={{ fontSize: '0.72rem', color: 'var(--ink-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
                         Weekly Token Usage
                     </p>
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.4rem', height: 80 }}>
@@ -274,12 +274,12 @@ function CostSummarySection({
                             const pct = Math.max(2, Math.round((b.tokens_used / maxTokens) * 80));
                             return (
                                 <div key={b.week} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
-                                    <span style={{ fontSize: '0.6rem', color: '#60a5fa' }}>{(b.tokens_used / 1000).toFixed(0)}k</span>
+                                    <span style={{ fontSize: '0.6rem', color: 'var(--info)' }}>{(b.tokens_used / 1000).toFixed(0)}k</span>
                                     <div
-                                        style={{ width: '100%', background: '#4f46e5', borderRadius: '3px 3px 0 0', height: pct, transition: 'height 0.3s ease' }}
+                                        style={{ width: '100%', background: 'var(--accent)', borderRadius: '3px 3px 0 0', height: pct, transition: 'height 0.3s ease' }}
                                         title={`${b.week}: ${b.tokens_used.toLocaleString()} tokens`}
                                     />
-                                    <span style={{ fontSize: '0.6rem', color: '#9ca3af' }}>{b.week.slice(5)}</span>
+                                    <span style={{ fontSize: '0.6rem', color: 'var(--ink-muted)' }}>{b.week.slice(5)}</span>
                                 </div>
                             );
                         })}
@@ -289,24 +289,24 @@ function CostSummarySection({
 
             {data.by_provider.length > 0 && (
                 <div>
-                    <p style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+                    <p style={{ fontSize: '0.72rem', color: 'var(--ink-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
                         By Provider
                     </p>
                     <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                             <thead>
-                                <tr style={{ borderBottom: '2px solid #e5e7eb', textAlign: 'left' }}>
-                                    <th style={{ padding: '0.4rem 0.6rem', fontWeight: 600, color: '#374151' }}>Provider</th>
-                                    <th style={{ padding: '0.4rem 0.6rem', fontWeight: 600, color: '#374151', textAlign: 'right' }}>Tokens</th>
-                                    <th style={{ padding: '0.4rem 0.6rem', fontWeight: 600, color: '#374151', textAlign: 'right' }}>Est. Cost</th>
+                                <tr style={{ borderBottom: '2px solid var(--line)', textAlign: 'left' }}>
+                                    <th style={{ padding: '0.4rem 0.6rem', fontWeight: 600, color: 'var(--ink)' }}>Provider</th>
+                                    <th style={{ padding: '0.4rem 0.6rem', fontWeight: 600, color: 'var(--ink)', textAlign: 'right' }}>Tokens</th>
+                                    <th style={{ padding: '0.4rem 0.6rem', fontWeight: 600, color: 'var(--ink)', textAlign: 'right' }}>Est. Cost</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {data.by_provider.map((p) => (
-                                    <tr key={p.provider} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                                        <td style={{ padding: '0.4rem 0.6rem', color: '#374151' }}>{p.provider}</td>
+                                    <tr key={p.provider} style={{ borderBottom: '1px solid var(--line)' }}>
+                                        <td style={{ padding: '0.4rem 0.6rem', color: 'var(--ink)' }}>{p.provider}</td>
                                         <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right' }}>{(p.tokens_used / 1000).toFixed(1)}k</td>
-                                        <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right', color: '#22c55e' }}>${p.estimated_cost_usd.toFixed(4)}</td>
+                                        <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right', color: 'var(--ok)' }}>${p.estimated_cost_usd.toFixed(4)}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -414,11 +414,11 @@ export default function AnalyticsPage() {
     const auditKey = `${fromIso ?? ''}-${toIso ?? ''}-${workspaceId}`;
 
     return (
-        <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
+        <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
             {/* Top bar */}
             <header style={{
-                background: '#fff',
-                borderBottom: '1px solid #e5e7eb',
+                background: 'var(--card)',
+                borderBottom: '1px solid var(--line)',
                 padding: '0 1.5rem',
                 display: 'flex',
                 alignItems: 'center',
@@ -428,61 +428,51 @@ export default function AnalyticsPage() {
             }}>
                 <Link
                     href="/"
-                    style={{ fontSize: '0.82rem', color: '#6366f1', textDecoration: 'none', fontWeight: 600, whiteSpace: 'nowrap' }}
+                    style={{ fontSize: '0.82rem', color: 'var(--accent)', textDecoration: 'none', fontWeight: 600, whiteSpace: 'nowrap' }}
                 >
                     ← Dashboard
                 </Link>
-                <h1 style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', margin: 0, marginRight: 'auto', whiteSpace: 'nowrap' }}>
+                <h1 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--ink)', margin: 0, marginRight: 'auto', whiteSpace: 'nowrap' }}>
                     Analytics
                 </h1>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', color: '#374151', fontWeight: 500 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', color: 'var(--ink)', fontWeight: 500 }}>
                     From
                     <input
                         type="date"
                         value={from}
                         max={to}
                         onChange={(e) => setFrom(e.target.value)}
-                        style={{ border: '1px solid #e5e7eb', borderRadius: 6, padding: '4px 8px', fontSize: '0.82rem', color: '#111827' }}
+                        style={{ border: '1px solid var(--line)', borderRadius: 6, padding: '4px 8px', fontSize: '0.82rem', color: 'var(--ink)' }}
                     />
                 </label>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', color: '#374151', fontWeight: 500 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', color: 'var(--ink)', fontWeight: 500 }}>
                     To
                     <input
                         type="date"
                         value={to}
                         min={from}
                         onChange={(e) => setTo(e.target.value)}
-                        style={{ border: '1px solid #e5e7eb', borderRadius: 6, padding: '4px 8px', fontSize: '0.82rem', color: '#111827' }}
+                        style={{ border: '1px solid var(--line)', borderRadius: 6, padding: '4px 8px', fontSize: '0.82rem', color: 'var(--ink)' }}
                     />
                 </label>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', color: '#374151', fontWeight: 500 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', color: 'var(--ink)', fontWeight: 500 }}>
                     Workspace
                     <input
                         type="text"
                         value={workspaceId}
                         onChange={(e) => setWorkspaceId(e.target.value)}
                         placeholder="ws_…"
-                        style={{ border: '1px solid #e5e7eb', borderRadius: 6, padding: '4px 8px', fontSize: '0.82rem', width: 140, color: '#111827' }}
+                        style={{ border: '1px solid var(--line)', borderRadius: 6, padding: '4px 8px', fontSize: '0.82rem', width: 140, color: 'var(--ink)' }}
                     />
                 </label>
 
                 <button
                     type="button"
+                    className="primary-action"
                     onClick={() => { void handleExportCsv(); }}
-                    style={{
-                        padding: '6px 14px',
-                        borderRadius: 6,
-                        border: '1px solid #6366f1',
-                        background: '#6366f1',
-                        color: '#fff',
-                        fontSize: '0.82rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
-                    }}
                 >
                     Export CSV
                 </button>
@@ -493,11 +483,11 @@ export default function AnalyticsPage() {
                 {exportError && (
                     <div style={{
                         padding: '0.6rem 1rem',
-                        background: '#fee2e2',
-                        border: '1px solid #fca5a5',
+                        background: 'var(--danger-bg)',
+                        border: '1px solid var(--danger-border)',
                         borderRadius: 8,
                         fontSize: '0.82rem',
-                        color: '#b91c1c',
+                        color: 'var(--danger)',
                     }}>
                         {exportError}
                     </div>
