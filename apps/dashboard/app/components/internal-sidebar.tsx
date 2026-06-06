@@ -11,7 +11,7 @@ import {
     ScrollText, Film, Waves, Lock,
     SlidersHorizontal, Camera, GitBranch, RefreshCw,
     Network, CalendarDays, AlarmClock, Beaker, Monitor, Terminal,
-    Zap, Star, Plug, Layers, BookOpen, LifeBuoy, User,
+    Zap, Star, Plug, Layers, BookOpen, LifeBuoy, User, Users, Key,
     type LucideIcon,
 } from 'lucide-react';
 import type { DashboardTab } from './dashboard-navigation';
@@ -20,18 +20,40 @@ import { NotificationBell } from './notification-bell';
 import { ThemeToggle } from './theme-toggle';
 import { LocaleSwitcher } from './locale-switcher';
 
+// ─── Color system ────────────────────────────────────────────────────────────
+
+type NavColor =
+    | 'blue' | 'purple' | 'green' | 'amber' | 'red' | 'rose'
+    | 'pink' | 'orange' | 'teal' | 'cyan' | 'indigo' | 'sky'
+    | 'violet' | 'gold' | 'emerald' | 'slate';
+
+const COLOR_MAP: Record<NavColor, { bg: string; text: string }> = {
+    blue:    { bg: 'rgba(0,102,204,0.1)',    text: '#0066cc' },
+    purple:  { bg: 'rgba(124,58,237,0.1)',   text: '#7c3aed' },
+    green:   { bg: 'rgba(5,150,105,0.1)',    text: '#059669' },
+    amber:   { bg: 'rgba(217,119,6,0.1)',    text: '#d97706' },
+    red:     { bg: 'rgba(220,38,38,0.1)',    text: '#dc2626' },
+    rose:    { bg: 'rgba(225,29,72,0.1)',    text: '#e11d48' },
+    pink:    { bg: 'rgba(219,39,119,0.1)',   text: '#db2777' },
+    orange:  { bg: 'rgba(234,88,12,0.1)',    text: '#ea580c' },
+    teal:    { bg: 'rgba(13,148,136,0.1)',   text: '#0d9488' },
+    cyan:    { bg: 'rgba(8,145,178,0.1)',    text: '#0891b2' },
+    indigo:  { bg: 'rgba(79,70,229,0.1)',    text: '#4f46e5' },
+    sky:     { bg: 'rgba(2,132,199,0.1)',    text: '#0284c7' },
+    violet:  { bg: 'rgba(109,40,217,0.1)',   text: '#7c3aed' },
+    gold:    { bg: 'rgba(202,138,4,0.1)',    text: '#ca8a04' },
+    emerald: { bg: 'rgba(16,185,129,0.1)',   text: '#059669' },
+    slate:   { bg: 'rgba(71,85,105,0.1)',    text: '#475569' },
+};
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
 type NavItemDef = {
     key: DashboardTab;
     label: string;
     icon: LucideIcon;
+    color: NavColor;
 };
-
-const navItems: NavItemDef[] = [
-    { key: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { key: 'approvals', label: 'Approvals', icon: ClipboardCheck },
-    { key: 'observability', label: 'Observability', icon: Activity },
-    { key: 'audit', label: 'Evidence', icon: FileText },
-];
 
 type WorkspaceOption = {
     workspaceId: string;
@@ -48,6 +70,17 @@ type InternalSidebarProps = {
     activeRoles?: string[];
 };
 
+// ─── Tab nav items (Operations section) ─────────────────────────────────────
+
+const navItems: NavItemDef[] = [
+    { key: 'overview',      label: 'Overview',      icon: LayoutDashboard, color: 'blue'   },
+    { key: 'approvals',     label: 'Approvals',     icon: ClipboardCheck,  color: 'rose'   },
+    { key: 'observability', label: 'Observability', icon: Activity,        color: 'orange' },
+    { key: 'audit',         label: 'Evidence',      icon: FileText,        color: 'teal'   },
+];
+
+// ─── NavItem (tab-based) ─────────────────────────────────────────────────────
+
 function NavItem({
     def,
     active,
@@ -60,6 +93,7 @@ function NavItem({
     onClick: () => void;
 }) {
     const Icon = def.icon;
+    const c = COLOR_MAP[def.color];
     return (
         <button
             type="button"
@@ -74,15 +108,14 @@ function NavItem({
             style={active ? { background: 'rgba(0,102,204,0.07)', color: '#0066cc' } : {}}
         >
             <span
-                className={[
-                    'inline-flex h-7 w-7 items-center justify-center rounded-lg shrink-0',
-                    active ? '' : 'bg-slate-100',
-                ].join(' ')}
-                style={active ? { background: 'rgba(0,102,204,0.12)' } : {}}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-lg shrink-0"
+                style={active
+                    ? { background: 'rgba(0,102,204,0.12)' }
+                    : { background: c.bg }}
             >
                 <Icon
-                    className={['w-3.5 h-3.5', active ? '' : 'text-slate-500'].join(' ')}
-                    style={active ? { color: '#0066cc' } : {}}
+                    className="w-3.5 h-3.5"
+                    style={{ color: active ? '#0066cc' : c.text }}
                     aria-hidden="true"
                 />
             </span>
@@ -98,6 +131,57 @@ function NavItem({
         </button>
     );
 }
+
+// ─── SidebarLink (page-based nav item) ──────────────────────────────────────
+
+function SidebarLink({
+    href,
+    label,
+    Icon,
+    color,
+    badge,
+}: {
+    href: string;
+    label: string;
+    Icon: LucideIcon;
+    color: NavColor;
+    badge?: string;
+}) {
+    const c = COLOR_MAP[color];
+    return (
+        <Link
+            href={href}
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+        >
+            <span
+                className="inline-flex h-7 w-7 items-center justify-center rounded-lg shrink-0"
+                style={{ background: c.bg }}
+            >
+                <Icon className="w-3.5 h-3.5" style={{ color: c.text }} aria-hidden="true" />
+            </span>
+            <span className="flex-1">{label}</span>
+            {badge && (
+                <span style={{
+                    fontSize: '0.6rem', fontWeight: 700, padding: '1px 5px', borderRadius: 4,
+                    background: 'rgba(0,102,204,0.08)', color: '#0066cc',
+                    border: '1px solid rgba(0,102,204,0.2)', whiteSpace: 'nowrap',
+                }}>{badge}</span>
+            )}
+        </Link>
+    );
+}
+
+// ─── Section header ───────────────────────────────────────────────────────────
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+    return (
+        <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+            {children}
+        </p>
+    );
+}
+
+// ─── Main sidebar ─────────────────────────────────────────────────────────────
 
 export function InternalSidebar({
     activeTab,
@@ -126,7 +210,7 @@ export function InternalSidebar({
     };
 
     const handleSearchKey = () => {
-        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
     };
 
     return (
@@ -142,6 +226,7 @@ export function InternalSidebar({
 
             {/* Nav */}
             <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5 sidebar-scroll">
+
                 {/* ⌘K Search */}
                 <button
                     type="button"
@@ -156,9 +241,7 @@ export function InternalSidebar({
                 {/* Workspace switcher */}
                 {workspaces.length > 1 && (
                     <div>
-                        <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-                            Workspace
-                        </p>
+                        <SectionLabel>Workspace</SectionLabel>
                         <div className="relative">
                             <select
                                 value={workspaceId}
@@ -171,19 +254,14 @@ export function InternalSidebar({
                                     </option>
                                 ))}
                             </select>
-                            <ChevronDown
-                                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none"
-                                aria-hidden="true"
-                            />
+                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" aria-hidden="true" />
                         </div>
                     </div>
                 )}
 
-                {/* Navigation */}
+                {/* ── Operations ────────────────────────────────────── */}
                 <div>
-                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-                        Operations
-                    </p>
+                    <SectionLabel>Operations</SectionLabel>
                     <div className="space-y-0.5">
                         {navItems.map((item) => (
                             <NavItem
@@ -194,88 +272,60 @@ export function InternalSidebar({
                                 onClick={() => handleTabSelect(item.key)}
                             />
                         ))}
-                        <Link href="/activity" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
-                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Bell className="w-3.5 h-3.5 text-slate-500" /></span>
-                            <span className="flex-1">Activity</span>
-                        </Link>
-                        <Link href="/approvals/mobile" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
-                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><ClipboardCheck className="w-3.5 h-3.5 text-slate-500" /></span>
-                            <span className="flex-1">Mobile Approvals</span>
-                            <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '1px 5px', borderRadius: 4, background: 'rgba(0,102,204,0.08)', color: '#0066cc', border: '1px solid rgba(0,102,204,0.2)', whiteSpace: 'nowrap' }}>Mobile</span>
-                        </Link>
+                        <SidebarLink href="/activity"          label="Activity"         Icon={Bell}          color="violet" />
+                        <SidebarLink href="/approvals/mobile"  label="Mobile Approvals" Icon={ClipboardCheck} color="sky"    badge="Mobile" />
                     </div>
                 </div>
 
-                {/* ── Agents ───────────────────────────────────────── */}
+                {/* ── Agents ────────────────────────────────────────── */}
                 <div>
-                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Agents</p>
+                    <SectionLabel>Agents</SectionLabel>
                     <div className="space-y-0.5">
-                        {[
-                            { href: '/agents', label: 'Agents', Icon: Bot },
-                            { href: '/agents/health', label: 'Agent Health', Icon: HeartPulse },
-                            { href: '/agents/compare', label: 'Agent Comparison', Icon: BarChart2 },
-                            { href: '/tasks', label: 'Tasks', Icon: ListChecks },
-                            { href: '/tasks?tab=queue', label: 'Task Queue', Icon: Layers },
-                            { href: '/playbooks', label: 'Playbooks', Icon: BookOpen },
-                            { href: '/devops', label: 'DevOps Hub', Icon: Wrench },
-                            { href: '/chat', label: 'Chat', Icon: MessageSquare },
-                        ].map(({ href, label, Icon }) => (
-                            <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
-                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
-                                <span className="flex-1">{label}</span>
-                            </Link>
-                        ))}
+                        <SidebarLink href="/agents"          label="Agents"           Icon={Bot}         color="purple" />
+                        <SidebarLink href="/agents/health"   label="Agent Health"     Icon={HeartPulse}  color="green"  />
+                        <SidebarLink href="/agents/compare"  label="Agent Comparison" Icon={BarChart2}    color="blue"   />
+                        <SidebarLink href="/tasks"           label="Tasks"            Icon={ListChecks}  color="amber"  />
+                        <SidebarLink href="/tasks?tab=queue" label="Task Queue"       Icon={Layers}      color="orange" />
+                        <SidebarLink href="/playbooks"       label="Playbooks"        Icon={BookOpen}    color="indigo" />
+                        <SidebarLink href="/devops"          label="DevOps Hub"       Icon={Wrench}      color="red"    />
+                        <SidebarLink href="/chat"            label="Chat"             Icon={MessageSquare} color="sky"  />
                     </div>
                 </div>
 
-                {/* ── Developer Tools ── */}
+                {/* ── Developer Tools ───────────────────────────────── */}
                 <div>
-                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Developer Tools</p>
+                    <SectionLabel>Developer Tools</SectionLabel>
                     <div className="space-y-0.5">
-                        {[
-                            { href: '/playground', label: 'API Playground', Icon: Zap },
-                            { href: '/ci', label: 'CI Triage', Icon: Terminal },
-                            { href: '/env', label: 'Env Reconciler', Icon: SlidersHorizontal },
-                            { href: '/snapshots', label: 'Bot Snapshots', Icon: Camera },
-                            { href: '/handoffs', label: 'Handoffs', Icon: GitBranch },
-                            { href: '/loops', label: 'Autonomous Loops', Icon: RefreshCw },
-                            { href: '/agent-chat', label: 'Loop Chat', Icon: MessageSquare },
-                            { href: '/orchestration', label: 'Orchestration Runs', Icon: Network },
-                            { href: '/routine-tasks', label: 'Routine Scheduler', Icon: CalendarDays },
-                            { href: '/wake-runs', label: 'Wake Runs', Icon: AlarmClock },
-                            { href: '/ab-tests', label: 'A/B Tests', Icon: Beaker },
-                            { href: '/desktop', label: 'Desktop', Icon: Monitor },
-                        ].map(({ href, label, Icon }) => (
-                            <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
-                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
-                                <span className="flex-1">{label}</span>
-                            </Link>
-                        ))}
+                        <SidebarLink href="/playground"      label="API Playground"     Icon={Zap}              color="gold"   />
+                        <SidebarLink href="/ci"              label="CI Triage"           Icon={Terminal}         color="slate"  />
+                        <SidebarLink href="/env"             label="Env Reconciler"      Icon={SlidersHorizontal} color="green" />
+                        <SidebarLink href="/snapshots"       label="Bot Snapshots"       Icon={Camera}           color="blue"   />
+                        <SidebarLink href="/handoffs"        label="Handoffs"            Icon={GitBranch}        color="orange" />
+                        <SidebarLink href="/loops"           label="Autonomous Loops"    Icon={RefreshCw}        color="purple" />
+                        <SidebarLink href="/agent-chat"      label="Loop Chat"           Icon={MessageSquare}    color="pink"   />
+                        <SidebarLink href="/orchestration"   label="Orchestration Runs"  Icon={Network}          color="teal"   />
+                        <SidebarLink href="/routine-tasks"   label="Routine Scheduler"   Icon={CalendarDays}     color="sky"    />
+                        <SidebarLink href="/wake-runs"       label="Wake Runs"           Icon={AlarmClock}       color="amber"  />
+                        <SidebarLink href="/ab-tests"        label="A/B Tests"           Icon={Beaker}           color="violet" />
+                        <SidebarLink href="/desktop"         label="Desktop"             Icon={Monitor}          color="cyan"   />
                     </div>
                 </div>
 
-                {/* ── Analytics ────────────────────────────────────── */}
+                {/* ── Analytics ─────────────────────────────────────── */}
                 <div>
-                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Analytics</p>
+                    <SectionLabel>Analytics</SectionLabel>
                     <div className="space-y-0.5">
-                        {[
-                            { href: '/analytics', label: 'Overview', Icon: BarChart2 },
-                            { href: '/roi', label: 'ROI Dashboard', Icon: Trophy },
-                            { href: '/cost-dashboard', label: 'Cost Dashboard', Icon: PieChart },
-                            { href: '/historical-metrics', label: 'Historical Metrics', Icon: LineChart },
-                            { href: '/deliverables', label: 'Deliverables', Icon: ListChecks },
-                            { href: '/scheduled-tasks', label: 'Scheduled Tasks', Icon: CalendarDays },
-                            { href: '/batch-tasks', label: 'Batch Tasks', Icon: Layers },
-                        ].map(({ href, label, Icon }) => (
-                            <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
-                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
-                                <span className="flex-1">{label}</span>
-                            </Link>
-                        ))}
+                        <SidebarLink href="/analytics"           label="Overview"           Icon={BarChart2}   color="blue"   />
+                        <SidebarLink href="/roi"                 label="ROI Dashboard"      Icon={Trophy}      color="gold"   />
+                        <SidebarLink href="/cost-dashboard"      label="Cost Dashboard"     Icon={PieChart}    color="green"  />
+                        <SidebarLink href="/historical-metrics"  label="Historical Metrics" Icon={LineChart}   color="violet" />
+                        <SidebarLink href="/deliverables"        label="Deliverables"       Icon={ListChecks}  color="teal"   />
+                        <SidebarLink href="/scheduled-tasks"     label="Scheduled Tasks"    Icon={CalendarDays} color="orange" />
+                        <SidebarLink href="/batch-tasks"         label="Batch Tasks"        Icon={Layers}      color="purple" />
                     </div>
                 </div>
 
-                {/* ── Audit & Compliance ───────────────────────────── */}
+                {/* ── Audit & Compliance ────────────────────────────── */}
                 <div>
                     <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
                         Audit &amp; Compliance
@@ -283,17 +333,12 @@ export function InternalSidebar({
                     </p>
                     <div className="space-y-0.5">
                         {auditUnlocked ? (
-                            [
-                                { href: '/audit', label: 'Audit Log', Icon: ScrollText },
-                                { href: '/audit/session-replay', label: 'Session Replay', Icon: Film },
-                                { href: '/operational-signals', label: 'Op. Signals', Icon: Waves },
-                                { href: '/circuit-breakers', label: 'Circuit Breakers', Icon: Plug },
-                            ].map(({ href, label, Icon }) => (
-                                <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
-                                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
-                                    <span className="flex-1">{label}</span>
-                                </Link>
-                            ))
+                            <>
+                                <SidebarLink href="/audit"                label="Audit Log"       Icon={ScrollText} color="red"    />
+                                <SidebarLink href="/audit/session-replay" label="Session Replay"  Icon={Film}       color="orange" />
+                                <SidebarLink href="/operational-signals"  label="Op. Signals"     Icon={Waves}      color="amber"  />
+                                <SidebarLink href="/circuit-breakers"     label="Circuit Breakers" Icon={Plug}      color="rose"   />
+                            </>
                         ) : (
                             <Link
                                 href="/billing"
@@ -305,85 +350,57 @@ export function InternalSidebar({
                                 </span>
                                 <span className="flex-1 text-slate-400">Upgrade to unlock</span>
                                 <span style={{
-                                    fontSize: '0.62rem',
-                                    fontWeight: 700,
-                                    padding: '1px 5px',
-                                    borderRadius: 4,
-                                    background: 'rgba(0,102,204,0.08)',
-                                    color: '#0066cc',
-                                    border: '1px solid rgba(0,102,204,0.2)',
-                                    whiteSpace: 'nowrap',
-                                }}>
-                                    Business+
-                                </span>
+                                    fontSize: '0.62rem', fontWeight: 700, padding: '1px 5px', borderRadius: 4,
+                                    background: 'rgba(0,102,204,0.08)', color: '#0066cc',
+                                    border: '1px solid rgba(0,102,204,0.2)', whiteSpace: 'nowrap',
+                                }}>Business+</span>
                             </Link>
                         )}
                     </div>
                 </div>
 
-                {/* ── Platform ─────────────────────────────────────── */}
+                {/* ── Platform ──────────────────────────────────────── */}
                 <div>
-                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Platform</p>
+                    <SectionLabel>Platform</SectionLabel>
                     <div className="space-y-0.5">
-                        {[
-                            { href: '/connectors', label: 'Connectors', Icon: Link2 },
-                            { href: '/platform-mcp', label: 'Platform MCP', Icon: Cpu },
-                            { href: '/skills', label: 'Skills', Icon: ShoppingBag },
-                            { href: '/memory', label: 'Memory', Icon: Brain },
-                            { href: '/governance', label: 'Governance', Icon: ShieldCheck },
-                            { href: '/support', label: 'Support Agent', Icon: LifeBuoy },
-                        ].map(({ href, label, Icon }) => (
-                            <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
-                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
-                                <span className="flex-1">{label}</span>
-                            </Link>
-                        ))}
+                        <SidebarLink href="/connectors"    label="Connectors"    Icon={Link2}      color="blue"   />
+                        <SidebarLink href="/platform-mcp"  label="Platform MCP"  Icon={Cpu}        color="cyan"   />
+                        <SidebarLink href="/skills"         label="Skills"        Icon={ShoppingBag} color="purple" />
+                        <SidebarLink href="/memory"         label="Memory"        Icon={Brain}      color="violet" />
+                        <SidebarLink href="/governance"     label="Governance"    Icon={ShieldCheck} color="green" />
+                        <SidebarLink href="/support"        label="Support Agent" Icon={LifeBuoy}   color="orange" />
                     </div>
                 </div>
 
-                {/* ── Business (billing / reports — always visible) ── */}
+                {/* ── Business ──────────────────────────────────────── */}
                 <div>
-                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Business</p>
+                    <SectionLabel>Business</SectionLabel>
                     <div className="space-y-0.5">
-                        {[
-                            { href: '/billing', label: 'Billing', Icon: CreditCard },
-                            { href: '/budget', label: 'Budget', Icon: DollarSign },
-                        ].map(({ href, label, Icon }) => (
-                            <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
-                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
-                                <span className="flex-1">{label}</span>
-                            </Link>
-                        ))}
+                        <SidebarLink href="/billing" label="Billing" Icon={CreditCard} color="green"   />
+                        <SidebarLink href="/budget"  label="Budget"  Icon={DollarSign} color="emerald" />
                     </div>
                 </div>
 
-                {/* ── Team & Settings ──────────────────────────────── */}
+                {/* ── Team & Settings ───────────────────────────────── */}
                 <div>
-                    <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Team &amp; Settings</p>
+                    <SectionLabel>Team &amp; Settings</SectionLabel>
                     <div className="space-y-0.5">
-                        {[
-                            { href: '/account', label: 'My Account', Icon: User },
-                            { href: '/team', label: 'Team Members', Icon: ListChecks },
-                            { href: '/settings', label: 'API Keys', Icon: Lock },
-                            { href: '/settings/sso', label: 'SSO / SAML', Icon: ShieldCheck },
-                            { href: '/llm-config', label: 'LLM Config', Icon: Zap },
-                            { href: '/quality', label: 'Quality Feedback', Icon: Star },
-                            { href: '/notifications', label: 'Notifications', Icon: Bell },
-                            { href: '/sla-alerts', label: 'SLA Alerts', Icon: AlarmClock },
-                            { href: '/scheduled-reports', label: 'Report Emails', Icon: CalendarDays },
-                        ].map(({ href, label, Icon }) => (
-                            <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
-                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 shrink-0"><Icon className="w-3.5 h-3.5 text-slate-500" /></span>
-                                <span className="flex-1">{label}</span>
-                            </Link>
-                        ))}
+                        <SidebarLink href="/account"            label="My Account"       Icon={User}         color="blue"   />
+                        <SidebarLink href="/team"               label="Team Members"     Icon={Users}        color="indigo" />
+                        <SidebarLink href="/settings"           label="API Keys"         Icon={Key}          color="slate"  />
+                        <SidebarLink href="/settings/sso"       label="SSO / SAML"       Icon={ShieldCheck}  color="green"  />
+                        <SidebarLink href="/llm-config"         label="LLM Config"       Icon={Zap}          color="purple" />
+                        <SidebarLink href="/quality"            label="Quality Feedback" Icon={Star}         color="gold"   />
+                        <SidebarLink href="/notifications"      label="Notifications"    Icon={Bell}         color="rose"   />
+                        <SidebarLink href="/sla-alerts"         label="SLA Alerts"       Icon={AlarmClock}   color="red"    />
+                        <SidebarLink href="/scheduled-reports"  label="Report Emails"    Icon={CalendarDays} color="sky"    />
                     </div>
                 </div>
+
             </nav>
 
             {/* Footer */}
             <div className="border-t border-slate-200 px-3 py-3 space-y-0.5 shrink-0">
-                {/* Current workspace indicator (single workspace) */}
                 {workspaces.length <= 1 && (
                     <div className="flex items-center gap-3 px-3 py-2 rounded-lg">
                         <div className="h-7 w-7 rounded-full bg-sky-100 flex items-center justify-center text-[10px] font-bold text-sky-600 shrink-0">
