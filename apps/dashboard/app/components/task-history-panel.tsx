@@ -53,7 +53,7 @@ function formatDate(iso: string): string {
     );
 }
 
-export default function TaskHistoryPanel({ tenantId: _tenantId }: TaskHistoryPanelProps) {
+export default function TaskHistoryPanel({ tenantId }: TaskHistoryPanelProps) {
     const [tasks, setTasks] = useState<TaskRecord[]>([]);
     const [total, setTotal] = useState(0);
     const [hasMore, setHasMore] = useState(false);
@@ -74,6 +74,7 @@ export default function TaskHistoryPanel({ tenantId: _tenantId }: TaskHistoryPan
             setError(null);
             try {
                 const params = new URLSearchParams();
+                params.set('tenantId', tenantId);
                 if (filterOutcome) params.set('outcome', filterOutcome);
                 if (filterBotId.trim()) params.set('botId', filterBotId.trim());
                 if (filterProvider) params.set('modelProvider', filterProvider);

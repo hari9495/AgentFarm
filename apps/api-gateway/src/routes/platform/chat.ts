@@ -19,8 +19,10 @@ export type RegisterChatRoutesOptions = {
 };
 
 function getRuntimeUrl(): string {
-    return (process.env['AGENT_RUNTIME_URL'] ?? 'http://localhost:3001').replace(/\/+$/, '');
+    return (process.env['AGENT_RUNTIME_URL'] ?? 'http://localhost:4000').replace(/\/+$/, '');
 }
+
+const RUNTIME_UNAVAILABLE = { error: 'runtime_unavailable', message: 'Agent runtime is not reachable.' };
 
 // ---------------------------------------------------------------------------
 // Route registration
@@ -30,7 +32,10 @@ export const registerChatRoutes = async (
     app: FastifyInstance,
     options: RegisterChatRoutesOptions,
 ): Promise<void> => {
-    const resolveFetch = options.fetch ?? globalThis.fetch;
+    const rawFetch = options.fetch ?? globalThis.fetch;
+    const safeFetch = async (url: string, init?: RequestInit): Promise<Response | null> => {
+        try { return await rawFetch(url, init); } catch { return null; }
+    };
 
     // ── GET /v1/chat/sessions — viewer+ ─────────────────────────────────────
     app.get('/v1/chat/sessions', async (req, reply) => {
@@ -45,8 +50,9 @@ export const registerChatRoutes = async (
         }
 
         const url = `${getRuntimeUrl()}/chat/sessions?tenantId=${encodeURIComponent(session.tenantId)}`;
-        const upstream = await resolveFetch(url);
-        const body = await upstream.json();
+        const upstream = await safeFetch(url);
+        if (!upstream) return reply.code(503).send(RUNTIME_UNAVAILABLE);
+        const body = await upstream.json().catch(() => ({ sessions: [] }));
         return reply.code(upstream.status).send(body);
     });
 
@@ -66,18 +72,19 @@ export const registerChatRoutes = async (
 
         const { agentId, title } = req.body ?? {};
         const payload = {
-            tenantId: session.tenantId, // always from session — never trust client
+            tenantId: session.tenantId,
             agentId: agentId ?? undefined,
             title: title ?? undefined,
         };
 
         const url = `${getRuntimeUrl()}/chat/sessions`;
-        const upstream = await resolveFetch(url, {
+        const upstream = await safeFetch(url, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify(payload),
         });
-        const body = await upstream.json();
+        if (!upstream) return reply.code(503).send(RUNTIME_UNAVAILABLE);
+        const body = await upstream.json().catch(() => ({ error: 'upstream_error' }));
         return reply.code(upstream.status).send(body);
     });
 
@@ -97,8 +104,9 @@ export const registerChatRoutes = async (
 
             const { sessionId } = req.params;
             const url = `${getRuntimeUrl()}/chat/sessions/${encodeURIComponent(sessionId)}/messages?tenantId=${encodeURIComponent(session.tenantId)}`;
-            const upstream = await resolveFetch(url);
-            const body = await upstream.json();
+            const upstream = await safeFetch(url);
+            if (!upstream) return reply.code(503).send(RUNTIME_UNAVAILABLE);
+            const body = await upstream.json().catch(() => ({ messages: [] }));
             return reply.code(upstream.status).send(body);
         },
     );
@@ -122,17 +130,18 @@ export const registerChatRoutes = async (
         const { content } = req.body ?? {};
 
         const payload = {
-            tenantId: session.tenantId, // always from session — never trust client
+            tenantId: session.tenantId,
             content,
         };
 
         const url = `${getRuntimeUrl()}/chat/sessions/${encodeURIComponent(sessionId)}/messages`;
-        const upstream = await resolveFetch(url, {
+        const upstream = await safeFetch(url, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify(payload),
         });
-        const body = await upstream.json();
+        if (!upstream) return reply.code(503).send(RUNTIME_UNAVAILABLE);
+        const body = await upstream.json().catch(() => ({ error: 'upstream_error' }));
         return reply.code(upstream.status).send(body);
     });
 
@@ -152,12 +161,13 @@ export const registerChatRoutes = async (
 
             const { sessionId } = req.params;
             const url = `${getRuntimeUrl()}/chat/sessions/${encodeURIComponent(sessionId)}?tenantId=${encodeURIComponent(session.tenantId)}`;
-            const upstream = await resolveFetch(url, { method: 'DELETE' });
+            const upstream = await safeFetch(url, { method: 'DELETE' });
+            if (!upstream) return reply.code(503).send(RUNTIME_UNAVAILABLE);
 
             if (upstream.status === 204) {
                 return reply.code(204).send();
             }
-            const body = await upstream.json();
+            const body = await upstream.json().catch(() => ({ error: 'upstream_error' }));
             return reply.code(upstream.status).send(body);
         },
     );
