@@ -213,14 +213,6 @@ export default function ChatSessionsPanel({ tenantId }: { tenantId: string }) {
                 overflow: 'hidden',
             }}
         >
-            {/* Header */}
-            <header style={{ padding: '0.9rem 1rem', borderBottom: '1px solid var(--line)' }}>
-                <h2 style={{ margin: '0 0 0.2rem' }}>Agent Chat</h2>
-                <p style={{ margin: 0, color: 'var(--ink-soft)', fontSize: '0.86rem' }}>
-                    Create and manage direct chat sessions with agents.
-                </p>
-            </header>
-
             {/* Two-column body */}
             <div
                 style={{
@@ -295,7 +287,7 @@ export default function ChatSessionsPanel({ tenantId }: { tenantId: string }) {
                                 <p
                                     style={{
                                         margin: 0,
-                                        color: '#991b1b',
+                                        color: 'var(--danger)',
                                         fontSize: '0.75rem',
                                     }}
                                 >
@@ -332,7 +324,7 @@ export default function ChatSessionsPanel({ tenantId }: { tenantId: string }) {
                                 style={{
                                     margin: 0,
                                     padding: '0.8rem',
-                                    color: '#991b1b',
+                                    color: 'var(--danger)',
                                     fontSize: '0.82rem',
                                 }}
                             >
@@ -495,8 +487,8 @@ export default function ChatSessionsPanel({ tenantId }: { tenantId: string }) {
                                             borderRadius: '4px',
                                             fontSize: '11px',
                                             fontWeight: 700,
-                                            background: '#dbeafe',
-                                            color: '#1d4ed8',
+                                            background: 'var(--info-bg)',
+                                            color: 'var(--info)',
                                         }}
                                     >
                                         {selectedSession.agentId}
@@ -531,7 +523,7 @@ export default function ChatSessionsPanel({ tenantId }: { tenantId: string }) {
                                     <p
                                         style={{
                                             margin: 0,
-                                            color: '#991b1b',
+                                            color: 'var(--danger)',
                                             fontSize: '0.82rem',
                                         }}
                                     >
@@ -568,8 +560,8 @@ export default function ChatSessionsPanel({ tenantId }: { tenantId: string }) {
                                                         maxWidth: '72%',
                                                         padding: '0.45rem 0.7rem',
                                                         borderRadius: '10px 10px 2px 10px',
-                                                        background: '#334155',
-                                                        color: '#f8fafc',
+                                                        background: 'var(--ink)',
+                                                        color: 'var(--card)',
                                                         fontSize: '0.83rem',
                                                         lineHeight: 1.5,
                                                     }}
@@ -594,8 +586,8 @@ export default function ChatSessionsPanel({ tenantId }: { tenantId: string }) {
                                                         maxWidth: '72%',
                                                         padding: '0.45rem 0.7rem',
                                                         borderRadius: '10px 10px 10px 2px',
-                                                        background: '#e2e8f0',
-                                                        color: '#1e293b',
+                                                        background: 'var(--line)',
+                                                        color: 'var(--ink)',
                                                         fontSize: '0.83rem',
                                                         lineHeight: 1.5,
                                                     }}
@@ -673,7 +665,7 @@ export default function ChatSessionsPanel({ tenantId }: { tenantId: string }) {
                                     style={{
                                         margin: 0,
                                         padding: '0.3rem 0.9rem',
-                                        color: '#991b1b',
+                                        color: 'var(--danger)',
                                         fontSize: '0.78rem',
                                     }}
                                 >
