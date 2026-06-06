@@ -20,10 +20,10 @@ type PendingHandoff = Record<string, unknown>;
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    pending: { bg: '#fef9c3', color: '#854d0e' },
-    accepted: { bg: '#dbeafe', color: '#1d4ed8' },
-    completed: { bg: '#dcfce7', color: '#166534' },
-    failed: { bg: '#fee2e2', color: '#991b1b' },
+    pending: { bg: '#fef9c3', color: 'var(--warn)' },
+    accepted: { bg: '#dbeafe', color: 'var(--info)' },
+    completed: { bg: '#dcfce7', color: 'var(--ok)' },
+    failed: { bg: '#fee2e2', color: 'var(--danger)' },
     timed_out: { bg: '#f1f5f9', color: '#475569' },
 };
 
@@ -219,7 +219,7 @@ export default function HandoffsPanel({ tenantId, workspaceId }: HandoffsPanelPr
                 <div style={{ display: 'grid', gap: '0.55rem', maxWidth: '480px' }}>
                     <div>
                         <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--ink-muted)', marginBottom: '0.25rem' }}>
-                            Task ID <span style={{ color: '#991b1b' }}>*</span>
+                            Task ID <span style={{ color: 'var(--danger)' }}>*</span>
                         </label>
                         <input
                             type="text"
@@ -231,7 +231,7 @@ export default function HandoffsPanel({ tenantId, workspaceId }: HandoffsPanelPr
                     </div>
                     <div>
                         <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--ink-muted)', marginBottom: '0.25rem' }}>
-                            From Bot ID <span style={{ color: '#991b1b' }}>*</span>
+                            From Bot ID <span style={{ color: 'var(--danger)' }}>*</span>
                         </label>
                         <input
                             type="text"
@@ -243,7 +243,7 @@ export default function HandoffsPanel({ tenantId, workspaceId }: HandoffsPanelPr
                     </div>
                     <div>
                         <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--ink-muted)', marginBottom: '0.25rem' }}>
-                            To Bot ID <span style={{ color: '#991b1b' }}>*</span>
+                            To Bot ID <span style={{ color: 'var(--danger)' }}>*</span>
                         </label>
                         <input
                             type="text"
@@ -255,7 +255,7 @@ export default function HandoffsPanel({ tenantId, workspaceId }: HandoffsPanelPr
                     </div>
                     <div>
                         <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--ink-muted)', marginBottom: '0.25rem' }}>
-                            Reason <span style={{ color: '#991b1b' }}>*</span>
+                            Reason <span style={{ color: 'var(--danger)' }}>*</span>
                         </label>
                         <textarea
                             value={formReason}

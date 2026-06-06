@@ -87,7 +87,7 @@ export function AgentCostTable({ byProvider }: AgentCostTableProps) {
                             <tr key={row.provider}>
                                 <td style={{ ...tdStyle, fontWeight: 600 }}>{row.provider}</td>
                                 <td style={tdNumStyle}>{tokensLabel}</td>
-                                <td style={{ ...tdNumStyle, color: '#059669', fontWeight: 600 }}>
+                                <td style={{ ...tdNumStyle, color: 'var(--ok)', fontWeight: 600 }}>
                                     ${row.estimated_cost_usd.toFixed(4)}
                                 </td>
                                 <td style={tdNumStyle}>
@@ -129,7 +129,7 @@ export function AgentCostTable({ byProvider }: AgentCostTableProps) {
                                 style={{
                                     ...tdNumStyle,
                                     fontWeight: 700,
-                                    color: '#059669',
+                                    color: 'var(--ok)',
                                     borderTop: '2px solid var(--line)',
                                     borderBottom: 'none',
                                 }}

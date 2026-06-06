@@ -21,7 +21,7 @@ function MetricTile({
     return (
         <div
             style={{
-                background: '#fff',
+                background: 'var(--card)',
                 border: '1px solid var(--line)',
                 borderRadius: 10,
                 padding: '1rem 1.1rem',

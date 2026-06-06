@@ -51,7 +51,7 @@ function PortalLoginForm() {
     return (
         <main style={{
             minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: '#f8fafc', fontFamily: 'Inter, system-ui, sans-serif',
+            background: 'var(--bg)', fontFamily: 'Inter, system-ui, sans-serif',
         }}>
             <style>{`
                 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -66,26 +66,26 @@ function PortalLoginForm() {
             `}</style>
 
             <div style={{
-                background: '#fff', borderRadius: 12, padding: '2.5rem 2rem',
+                background: 'var(--card)', borderRadius: 12, padding: '2.5rem 2rem',
                 boxShadow: '0 2px 16px rgba(0,0,0,0.08)',
                 width: '100%', maxWidth: 400,
             }}>
                 {/* Logo / Brand */}
                 <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
                     <div style={{ fontSize: '1.75rem', marginBottom: '0.4rem' }}>🤖</div>
-                    <h1 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#111827' }}>AgentFarm Support Portal</h1>
-                    <p style={{ fontSize: '0.83rem', color: '#6b7280', marginTop: '0.25rem' }}>Sign in to get support for your platform</p>
+                    <h1 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--ink)' }}>AgentFarm Support Portal</h1>
+                    <p style={{ fontSize: '0.83rem', color: 'var(--ink-muted)', marginTop: '0.25rem' }}>Sign in to get support for your platform</p>
                 </div>
 
                 {justRegistered && (
-                    <div style={{ padding: '0.6rem 0.8rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 6, marginBottom: '1rem', fontSize: '0.83rem', color: '#15803d' }}>
+                    <div style={{ padding: '0.6rem 0.8rem', background: 'var(--ok-bg)', border: '1px solid var(--ok-border)', borderRadius: 6, marginBottom: '1rem', fontSize: '0.83rem', color: 'var(--ok)' }}>
                         ✓ Account created! Sign in below.
                     </div>
                 )}
                 {error && (
                     <div style={{
-                        padding: '0.6rem 0.8rem', background: '#fef2f2', border: '1px solid #fecaca',
-                        borderRadius: 6, marginBottom: '1rem', fontSize: '0.83rem', color: '#b91c1c',
+                        padding: '0.6rem 0.8rem', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)',
+                        borderRadius: 6, marginBottom: '1rem', fontSize: '0.83rem', color: 'var(--danger)',
                     }}>
                         {error}
                     </div>
@@ -143,10 +143,10 @@ function PortalLoginForm() {
                     </button>
                 </form>
 
-                <p style={{ marginTop: '1.25rem', textAlign: 'center', fontSize: '0.78rem', color: '#9ca3af' }}>
-                    <a href="/portal/forgot-password" style={{ color: '#2563eb', textDecoration: 'none' }}>Forgot password?</a>
+                <p style={{ marginTop: '1.25rem', textAlign: 'center', fontSize: '0.78rem', color: 'var(--ink-muted)' }}>
+                    <a href="/portal/forgot-password" style={{ color: 'var(--info)', textDecoration: 'none' }}>Forgot password?</a>
                     {' · '}
-                    <a href="/portal/signup" style={{ color: '#2563eb', textDecoration: 'none' }}>Create account</a>
+                    <a href="/portal/signup" style={{ color: 'var(--info)', textDecoration: 'none' }}>Create account</a>
                 </p>
             </div>
         </main>

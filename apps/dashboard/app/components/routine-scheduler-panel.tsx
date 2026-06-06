@@ -45,11 +45,11 @@ type ScheduledTaskRecord = {
 
 const STATUS_STYLE: Record<ScheduledRunStatus, { bg: string; color: string }> = {
     scheduled: { bg: '#eff6ff', color: '#1e40af' },
-    queued: { bg: '#fef9c3', color: '#854d0e' },
-    active: { bg: '#dcfce7', color: '#15803d' },
-    completed: { bg: '#f0fdf4', color: '#166534' },
+    queued: { bg: '#fef9c3', color: 'var(--warn)' },
+    active: { bg: '#dcfce7', color: 'var(--ok)' },
+    completed: { bg: '#f0fdf4', color: 'var(--ok)' },
     skipped: { bg: '#f5f5f5', color: '#737373' },
-    failed: { bg: '#fef2f2', color: '#b91c1c' },
+    failed: { bg: '#fef2f2', color: 'var(--danger)' },
 };
 
 const SCHEDULE_TYPES: ScheduleType[] = ['once', 'hourly', 'daily', 'weekly', 'monthly'];
@@ -194,7 +194,7 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                 <div>
                     <h2 style={{ margin: 0, fontSize: '1.05rem' }}>Routine Scheduler</h2>
-                    <p style={{ margin: '0.1rem 0 0', fontSize: '0.75rem', color: '#78716c' }}>
+                    <p style={{ margin: '0.1rem 0 0', fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
                         Bot: <code style={{ fontSize: '0.72rem' }}>{botId}</code>
                         {' · '}
                         {tasks.length} task{tasks.length !== 1 ? 's' : ''}
@@ -205,7 +205,7 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
                         type="button"
                         disabled={loading}
                         onClick={() => { void loadTasks(); }}
-                        style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', border: '1px solid #d4d4d4', borderRadius: 6, background: '#fff', cursor: loading ? 'wait' : 'pointer' }}
+                        style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', border: '1px solid #d4d4d4', borderRadius: 6, background: 'var(--card)', cursor: loading ? 'wait' : 'pointer' }}
                     >
                         {loading ? 'Loading…' : 'Refresh'}
                     </button>
@@ -219,7 +219,7 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
                 </div>
             </div>
 
-            {error && <p style={{ color: '#dc2626', fontSize: '0.83rem', marginBottom: '0.5rem' }}>{error}</p>}
+            {error && <p style={{ color: 'var(--danger)', fontSize: '0.83rem', marginBottom: '0.5rem' }}>{error}</p>}
 
             {/* Create form */}
             {showCreateForm && (
@@ -231,7 +231,7 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
                             <select
                                 value={formScheduleType}
                                 onChange={(e) => setFormScheduleType(e.target.value as ScheduleType)}
-                                style={{ ...inputStyle, background: '#fff' }}
+                                style={{ ...inputStyle, background: 'var(--card)' }}
                             >
                                 {SCHEDULE_TYPES.map((t) => (
                                     <option key={t} value={t}>{t}</option>
@@ -261,7 +261,7 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
                             <select
                                 value={formConcurrency}
                                 onChange={(e) => setFormConcurrency(e.target.value as 'queue' | 'replace' | 'skip')}
-                                style={{ ...inputStyle, background: '#fff' }}
+                                style={{ ...inputStyle, background: 'var(--card)' }}
                             >
                                 {CONCURRENCY_POLICIES.map((p) => (
                                     <option key={p} value={p}>{p}</option>
@@ -290,7 +290,7 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
                         </div>
                     </div>
                     {createError && (
-                        <p style={{ color: '#dc2626', fontSize: '0.78rem', margin: '0.5rem 0 0' }}>{createError}</p>
+                        <p style={{ color: 'var(--danger)', fontSize: '0.78rem', margin: '0.5rem 0 0' }}>{createError}</p>
                     )}
                     <button
                         type="button"
@@ -305,7 +305,7 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
 
             {/* Task list */}
             {!loading && tasks.length === 0 && !error && (
-                <p style={{ fontSize: '0.85rem', color: '#78716c', textAlign: 'center', padding: '2rem 0' }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--ink-muted)', textAlign: 'center', padding: '2rem 0' }}>
                     No routine tasks scheduled for this bot.
                 </p>
             )}
@@ -321,7 +321,7 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
                             <div
                                 key={task.id}
                                 style={{
-                                    border: '1px solid #e5e7eb',
+                                    border: '1px solid var(--line)',
                                     borderRadius: 8,
                                     padding: '0.75rem 1rem',
                                     background: task.enabled ? '#fff' : '#fafafa',
@@ -343,7 +343,7 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
                                                 {task.status}
                                             </span>
                                             {!task.enabled && (
-                                                <span style={{ fontSize: '0.72rem', color: '#9ca3af', fontStyle: 'italic' }}>disabled</span>
+                                                <span style={{ fontSize: '0.72rem', color: 'var(--ink-muted)', fontStyle: 'italic' }}>disabled</span>
                                             )}
                                             {task.isFeatureFlagged && (
                                                 <span style={{ fontSize: '0.7rem', background: '#ede9fe', color: '#6d28d9', padding: '1px 6px', borderRadius: 4 }}>
@@ -354,23 +354,23 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
                                         <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#1c1917' }}>
                                             {task.policy.dedupeKey}
                                         </p>
-                                        <p style={{ margin: '0.1rem 0 0', fontSize: '0.77rem', color: '#78716c' }}>
+                                        <p style={{ margin: '0.1rem 0 0', fontSize: '0.77rem', color: 'var(--ink-muted)' }}>
                                             {task.scheduleType} · <code style={{ fontSize: '0.72rem' }}>{task.scheduleExpression}</code>
                                             {' · '}
                                             concurrency: {task.policy.concurrencyPolicy}
                                         </p>
                                         {task.nextScheduledAt && (
-                                            <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#6b7280' }}>
+                                            <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: 'var(--ink-muted)' }}>
                                                 Next run: {new Date(task.nextScheduledAt).toLocaleString()}
                                             </p>
                                         )}
                                         {task.lastTriggeredAt && (
-                                            <p style={{ margin: '0.05rem 0 0', fontSize: '0.72rem', color: '#9ca3af' }}>
+                                            <p style={{ margin: '0.05rem 0 0', fontSize: '0.72rem', color: 'var(--ink-muted)' }}>
                                                 Last triggered: {new Date(task.lastTriggeredAt).toLocaleString()}
                                             </p>
                                         )}
                                         {task.failureCount > 0 && (
-                                            <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#dc2626' }}>
+                                            <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: 'var(--danger)' }}>
                                                 ⚠ {task.failureCount} failure{task.failureCount > 1 ? 's' : ''}
                                                 {task.lastFailureReason ? `: ${task.lastFailureReason}` : ''}
                                             </p>
@@ -398,7 +398,7 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
                                     </button>
                                 </div>
                                 {resultForThis && (
-                                    <p style={{ margin: '0.4rem 0 0', fontSize: '0.75rem', color: '#0f766e', background: '#f0fdf4', padding: '0.3rem 0.5rem', borderRadius: 4 }}>
+                                    <p style={{ margin: '0.4rem 0 0', fontSize: '0.75rem', color: '#0f766e', background: 'var(--ok-bg)', padding: '0.3rem 0.5rem', borderRadius: 4 }}>
                                         {resultForThis}
                                     </p>
                                 )}

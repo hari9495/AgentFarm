@@ -558,7 +558,7 @@ export function ConnectorConfigPanel({ workspaceId, apiBase, initialConnectors }
                             </div>
 
                             {connector.last_healthcheck_at && !isEditing && (
-                                <p className="panel-inline-note" style={{ color: '#78716c' }}>
+                                <p className="panel-inline-note" style={{ color: 'var(--ink-muted)' }}>
                                     Last checked: {new Date(connector.last_healthcheck_at).toLocaleString('en-US')}
                                 </p>
                             )}
@@ -668,14 +668,14 @@ export function ConnectorConfigPanel({ workspaceId, apiBase, initialConnectors }
             </ul>
 
             {connectors.length === 0 && (
-                <div style={{ padding: '20px', textAlign: 'center', border: '1px dashed #d2d2d7', borderRadius: 14, background: '#f5f5f7' }}>
+                <div style={{ padding: '20px', textAlign: 'center', border: '1px dashed #d2d2d7', borderRadius: 14, background: 'var(--bg)' }}>
                     <div style={{ fontSize: 28, marginBottom: 8 }}>🔌</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1d1d1f', marginBottom: 4 }}>No connectors installed yet</div>
-                    <p style={{ margin: '0 0 12px', fontSize: 13, color: '#6e6e73', lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', marginBottom: 4 }}>No connectors installed yet</div>
+                    <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--ink-muted)', lineHeight: 1.5 }}>
                         Go to the <strong>Marketplace</strong> tab to browse and install connectors
                         (Jira, GitHub, Slack, Teams, etc.), then return here to configure their credentials.
                     </p>
-                    <p style={{ margin: 0, fontSize: 11, color: '#aeaeb2' }}>Workspace: {workspaceId}</p>
+                    <p style={{ margin: 0, fontSize: 11, color: 'var(--ink-muted)' }}>Workspace: {workspaceId}</p>
                 </div>
             )}
         </article>

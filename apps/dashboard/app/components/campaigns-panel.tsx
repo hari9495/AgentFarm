@@ -40,16 +40,16 @@ const CHANNEL_LABEL: Record<CampaignChannel, string> = {
 
 const STATUS_STYLE: Record<CampaignStatus, { bg: string; color: string; icon: React.ElementType }> = {
     draft:            { bg: '#f1f5f9', color: '#475569', icon: Clock },
-    pending_approval: { bg: '#fef9c3', color: '#854d0e', icon: Clock },
-    approved:         { bg: '#dcfce7', color: '#166534', icon: CheckCircle2 },
+    pending_approval: { bg: '#fef9c3', color: 'var(--warn)', icon: Clock },
+    approved:         { bg: '#dcfce7', color: 'var(--ok)', icon: CheckCircle2 },
     active:           { bg: '#eff6ff', color: '#1e40af', icon: Play },
-    paused:           { bg: '#fef3c7', color: '#92400e', icon: Pause },
-    completed:        { bg: '#f0fdf4', color: '#15803d', icon: CheckCircle2 },
-    rejected:         { bg: '#fee2e2', color: '#991b1b', icon: Clock },
+    paused:           { bg: '#fef3c7', color: 'var(--warn)', icon: Pause },
+    completed:        { bg: '#f0fdf4', color: 'var(--ok)', icon: CheckCircle2 },
+    rejected:         { bg: '#fee2e2', color: 'var(--danger)', icon: Clock },
 };
 
-const th: React.CSSProperties = { padding: '8px 12px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#94a3b8', background: '#f8fafc', textAlign: 'left' as const };
-const td: React.CSSProperties = { padding: '10px 12px', fontSize: 13, color: '#334155', verticalAlign: 'middle' };
+const th: React.CSSProperties = { padding: '8px 12px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: 'var(--ink-muted)', background: 'var(--bg)', textAlign: 'left' as const };
+const td: React.CSSProperties = { padding: '10px 12px', fontSize: 13, color: 'var(--ink-soft)', verticalAlign: 'middle' };
 
 export default function CampaignsPanel({ workspaceId }: { workspaceId: string }) {
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -97,18 +97,18 @@ export default function CampaignsPanel({ workspaceId }: { workspaceId: string })
                         </button>
                     ))}
                 </div>
-                <button type="button" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', fontSize: 12, color: '#64748b', cursor: 'pointer' }}><RefreshCw size={12} />Refresh</button>
+                <button type="button" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', fontSize: 12, color: '#64748b', cursor: 'pointer' }}><RefreshCw size={12} />Refresh</button>
             </div>
             {loading ? (
-                <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 13 }}>Loading campaigns…</div>
+                <div style={{ textAlign: 'center', padding: 40, color: 'var(--ink-muted)', fontSize: 13 }}>Loading campaigns…</div>
             ) : campaigns.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '48px 0', color: '#94a3b8' }}>
+                <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--ink-muted)' }}>
                     <Megaphone size={32} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
                     <p style={{ margin: 0, fontSize: 14 }}>No campaigns yet.</p>
                     <p style={{ margin: '4px 0 0', fontSize: 12 }}>Marketing campaigns drafted by your marketing specialist will appear here.</p>
                 </div>
             ) : (
-                <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 12 }}>
+                <div style={{ overflowX: 'auto', border: '1px solid var(--line)', borderRadius: 12 }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead><tr>{['Campaign', 'Channel', 'Budget', 'CTR', 'Conversions', 'Status', 'Actions'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
                         <tbody>
@@ -119,13 +119,13 @@ export default function CampaignsPanel({ workspaceId }: { workspaceId: string })
                                     <tr key={c.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : '#fff' }}>
                                         <td style={td}>
                                             <div style={{ fontWeight: 500 }}>{c.name}</div>
-                                            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{c.targetAudience}</div>
+                                            <div style={{ fontSize: 11, color: 'var(--ink-muted)', marginTop: 2 }}>{c.targetAudience}</div>
                                         </td>
-                                        <td style={td}><span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 4, background: '#f1f5f9', color: '#475569' }}>{CHANNEL_LABEL[c.channel]}</span></td>
+                                        <td style={td}><span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 4, background: 'var(--bg)', color: '#475569' }}>{CHANNEL_LABEL[c.channel]}</span></td>
                                         <td style={{ ...td, color: '#64748b' }}>${c.budgetUsd.toLocaleString()}</td>
                                         <td style={{ ...td, color: '#64748b' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                {c.clicks != null && <TrendingUp size={11} style={{ color: '#16a34a' }} />}
+                                                {c.clicks != null && <TrendingUp size={11} style={{ color: 'var(--ok)' }} />}
                                                 {ctr(c)}
                                             </div>
                                         </td>
@@ -134,11 +134,11 @@ export default function CampaignsPanel({ workspaceId }: { workspaceId: string })
                                         <td style={td}>
                                             <div style={{ display: 'flex', gap: 4 }}>
                                                 {c.status === 'pending_approval' && <>
-                                                    <button type="button" onClick={() => act(c.id, 'approve')} style={{ padding: '4px 8px', border: '1px solid #bbf7d0', borderRadius: 6, background: '#f0fdf4', cursor: 'pointer', fontSize: 11, color: '#16a34a', fontWeight: 600 }}>Approve</button>
-                                                    <button type="button" onClick={() => act(c.id, 'reject')} style={{ padding: '4px 8px', border: '1px solid #fecaca', borderRadius: 6, background: '#fef2f2', cursor: 'pointer', fontSize: 11, color: '#dc2626', fontWeight: 600 }}>Reject</button>
+                                                    <button type="button" onClick={() => act(c.id, 'approve')} style={{ padding: '4px 8px', border: '1px solid var(--ok-border)', borderRadius: 6, background: 'var(--ok-bg)', cursor: 'pointer', fontSize: 11, color: 'var(--ok)', fontWeight: 600 }}>Approve</button>
+                                                    <button type="button" onClick={() => act(c.id, 'reject')} style={{ padding: '4px 8px', border: '1px solid var(--danger-border)', borderRadius: 6, background: 'var(--danger-bg)', cursor: 'pointer', fontSize: 11, color: 'var(--danger)', fontWeight: 600 }}>Reject</button>
                                                 </>}
                                                 {c.status === 'active' && <button type="button" onClick={() => act(c.id, 'pause')} style={{ padding: '4px 8px', border: '1px solid #fef08a', borderRadius: 6, background: '#fefce8', cursor: 'pointer', fontSize: 11, color: '#ca8a04', fontWeight: 600 }}>Pause</button>}
-                                                {c.status === 'paused' && <button type="button" onClick={() => act(c.id, 'resume')} style={{ padding: '4px 8px', border: '1px solid #bfdbfe', borderRadius: 6, background: '#eff6ff', cursor: 'pointer', fontSize: 11, color: '#1d4ed8', fontWeight: 600 }}>Resume</button>}
+                                                {c.status === 'paused' && <button type="button" onClick={() => act(c.id, 'resume')} style={{ padding: '4px 8px', border: '1px solid var(--info-border)', borderRadius: 6, background: 'var(--info-bg)', cursor: 'pointer', fontSize: 11, color: 'var(--info)', fontWeight: 600 }}>Resume</button>}
                                             </div>
                                         </td>
                                     </tr>

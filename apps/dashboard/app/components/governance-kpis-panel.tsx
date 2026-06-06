@@ -71,12 +71,12 @@ function KPICard({ title, value, unit, status, sub }: {
     const { bg, text, border } = statusColor(status);
     return (
         <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 10, padding: '0.9rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-            <div style={{ fontSize: '0.75rem', color: '#78716c', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{title}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{title}</div>
             <div style={{ fontSize: '1.55rem', fontWeight: 700, color: text, lineHeight: 1.1 }}>
                 {value}
-                {unit && <span style={{ fontSize: '0.85rem', fontWeight: 400, marginLeft: '0.2rem', color: '#78716c' }}>{unit}</span>}
+                {unit && <span style={{ fontSize: '0.85rem', fontWeight: 400, marginLeft: '0.2rem', color: 'var(--ink-muted)' }}>{unit}</span>}
             </div>
-            {sub && <div style={{ fontSize: '0.75rem', color: '#78716c' }}>{sub}</div>}
+            {sub && <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{sub}</div>}
         </div>
     );
 }
@@ -159,11 +159,11 @@ function Metric({ label, value, sub, bar, barColor, why }: {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#aeaeb2', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>{label}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>{label}</span>
                 {why && <span style={{ fontSize: 10, color: '#d2d2d7', flexShrink: 0 }}>{why}</span>}
             </div>
-            <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: '#1d1d1f', lineHeight: 1 }}>{value}</div>
-            {sub && <div style={{ fontSize: 12, color: '#6e6e73', lineHeight: 1.4 }}>{sub}</div>}
+            <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--ink)', lineHeight: 1 }}>{value}</div>
+            {sub && <div style={{ fontSize: 12, color: 'var(--ink-muted)', lineHeight: 1.4 }}>{sub}</div>}
             {bar && <Bar value={bar.value} max={bar.max} color={barColor ?? '#0066cc'} />}
         </div>
     );
@@ -176,7 +176,7 @@ function Section({ title, accent, children, span2 }: {
 }) {
     return (
         <div style={{
-            background: '#fff', border: '1px solid #d2d2d7', borderRadius: 16,
+            background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 16,
             overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
             gridColumn: span2 ? 'span 2' : undefined,
         }}>
@@ -237,7 +237,7 @@ export function GovernanceKPIPanel({ workspaceId, language = 'en' }: Props) {
     if (loading) {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {[1, 2, 3].map(i => <div key={i} style={{ height: 120, borderRadius: 16, background: '#f5f5f7' }} />)}
+                {[1, 2, 3].map(i => <div key={i} style={{ height: 120, borderRadius: 16, background: 'var(--bg)' }} />)}
             </div>
         );
     }
@@ -259,17 +259,17 @@ export function GovernanceKPIPanel({ workspaceId, language = 'en' }: Props) {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {lastRefresh && (
-                        <span style={{ fontSize: 12, color: '#aeaeb2' }}>
+                        <span style={{ fontSize: 12, color: 'var(--ink-muted)' }}>
                             Snapshot at {safeDate(kpis.snapshot_at)} · refreshes every 30s
                         </span>
                     )}
                     {isMock && (
-                        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 9999, background: 'rgba(180,83,9,0.08)', border: '1px solid rgba(180,83,9,0.22)', color: '#b45309' }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 9999, background: 'color-mix(in srgb, var(--warn) 8%, transparent)', border: '1px solid rgba(180,83,9,0.22)', color: 'var(--warn)' }}>
                             Demo data
                         </span>
                     )}
                 </div>
-                <button onClick={() => void fetch_kpis()} disabled={loading} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                <button onClick={() => void fetch_kpis()} disabled={loading} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
                     ↻ Refresh
                 </button>
             </div>
@@ -277,11 +277,11 @@ export function GovernanceKPIPanel({ workspaceId, language = 'en' }: Props) {
             {/* ── Hero SLA ─────────────────────────────────────────────────── */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 {/* SLA number */}
-                <div style={{ background: '#fff', border: `2px solid ${slaColor}33`, borderRadius: 18, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 20, boxShadow: `0 0 0 4px ${slaColor}0a` }}>
+                <div style={{ background: 'var(--card)', border: `2px solid ${slaColor}33`, borderRadius: 18, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 20, boxShadow: `0 0 0 4px ${slaColor}0a` }}>
                     <div>
                         <div style={{ fontSize: 11, fontWeight: 800, color: slaColor, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Overall SLA Compliance</div>
                         <div style={{ fontSize: 48, fontWeight: 900, letterSpacing: '-0.04em', color: slaColor, lineHeight: 1 }}>{sla.toFixed(1)}<span style={{ fontSize: 24 }}>%</span></div>
-                        <div style={{ fontSize: 12, color: '#6e6e73', marginTop: 4 }}>
+                        <div style={{ fontSize: 12, color: 'var(--ink-muted)', marginTop: 4 }}>
                             <StatusDot ok={sla >= 98} />
                             {sla >= 98 ? 'On target' : sla >= 90 ? 'Watch — below 98% threshold' : 'Breached — below 90% threshold'}
                         </div>
@@ -290,8 +290,8 @@ export function GovernanceKPIPanel({ workspaceId, language = 'en' }: Props) {
                 </div>
 
                 {/* Approval throughput */}
-                <div style={{ background: '#fff', border: '1px solid #d2d2d7', borderRadius: 18, padding: '20px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: '#0066cc', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Approvals Today</div>
+                <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 18, padding: '20px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Approvals Today</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px' }}>
                         <Metric label="Approved" value={n(kpis.approvals?.total_approved).toLocaleString()} sub="decisions made" />
                         <Metric label="Pending" value={n(kpis.approvals?.total_pending).toLocaleString()}

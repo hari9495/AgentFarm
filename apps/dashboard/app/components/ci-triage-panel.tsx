@@ -47,10 +47,10 @@ type IntakeResponse = {
 };
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    queued: { bg: '#fef9c3', color: '#854d0e' },
-    triaging: { bg: '#dbeafe', color: '#1d4ed8' },
-    complete: { bg: '#dcfce7', color: '#166534' },
-    failed: { bg: '#fee2e2', color: '#991b1b' },
+    queued: { bg: '#fef9c3', color: 'var(--warn)' },
+    triaging: { bg: '#dbeafe', color: 'var(--info)' },
+    complete: { bg: '#dcfce7', color: 'var(--ok)' },
+    failed: { bg: '#fee2e2', color: 'var(--danger)' },
 };
 
 function statusBadge(status: string) {
@@ -232,7 +232,7 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                                 setIntakeBranch('main');
                                 setIntakeJobsRaw('typecheck, test:integration');
                             }}
-                            style={{ fontSize: '11px', color: '#6366f1', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '5px', padding: '3px 9px', cursor: 'pointer', fontWeight: 600 }}
+                            style={{ fontSize: '11px', color: 'var(--accent)', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '5px', padding: '3px 9px', cursor: 'pointer', fontWeight: 600 }}
                         >
                             ✦ Use example data
                         </button>
@@ -242,7 +242,7 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                         {/* Provider */}
                         <div>
                             <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--ink-muted)', display: 'block', marginBottom: '4px' }}>
-                                CI Provider <span style={{ color: '#ef4444' }}>*</span>
+                                CI Provider <span style={{ color: 'var(--danger)' }}>*</span>
                             </label>
                             <select
                                 value={intakeProvider}
@@ -258,7 +258,7 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                                 <option value="azure">Azure DevOps</option>
                                 <option value="buildkite">Buildkite</option>
                             </select>
-                            <p style={{ fontSize: '10px', color: '#94a3b8', margin: '3px 0 0' }}>
+                            <p style={{ fontSize: '10px', color: 'var(--ink-muted)', margin: '3px 0 0' }}>
                                 Which CI system ran the failing pipeline?
                             </p>
                         </div>
@@ -266,7 +266,7 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                         {/* Run ID */}
                         <div>
                             <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--ink-muted)', display: 'block', marginBottom: '4px' }}>
-                                Run ID <span style={{ color: '#ef4444' }}>*</span>
+                                Run ID <span style={{ color: 'var(--danger)' }}>*</span>
                             </label>
                             <input
                                 type="text"
@@ -275,7 +275,7 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                                 onChange={(e) => setIntakeRunId(e.target.value)}
                                 style={inputStyle}
                             />
-                            <p style={{ fontSize: '10px', color: '#94a3b8', margin: '3px 0 0' }}>
+                            <p style={{ fontSize: '10px', color: 'var(--ink-muted)', margin: '3px 0 0' }}>
                                 The numeric ID in the CI run URL. GitHub: <em>…/actions/runs/<strong>12345678</strong></em>
                             </p>
                         </div>
@@ -283,7 +283,7 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                         {/* Repository */}
                         <div>
                             <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--ink-muted)', display: 'block', marginBottom: '4px' }}>
-                                Repository <span style={{ color: '#ef4444' }}>*</span>
+                                Repository <span style={{ color: 'var(--danger)' }}>*</span>
                             </label>
                             <input
                                 type="text"
@@ -300,7 +300,7 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                         {/* Branch */}
                         <div>
                             <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--ink-muted)', display: 'block', marginBottom: '4px' }}>
-                                Branch <span style={{ color: '#ef4444' }}>*</span>
+                                Branch <span style={{ color: 'var(--danger)' }}>*</span>
                             </label>
                             <input
                                 type="text"
@@ -309,7 +309,7 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                                 onChange={(e) => setIntakeBranch(e.target.value)}
                                 style={inputStyle}
                             />
-                            <p style={{ fontSize: '10px', color: '#94a3b8', margin: '3px 0 0' }}>
+                            <p style={{ fontSize: '10px', color: 'var(--ink-muted)', margin: '3px 0 0' }}>
                                 The branch that was running when the failure occurred. Shown in the CI run summary.
                             </p>
                         </div>
@@ -327,21 +327,21 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                             onChange={(e) => setIntakeJobsRaw(e.target.value)}
                             style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
                         />
-                        <p style={{ fontSize: '10px', color: '#94a3b8', margin: '3px 0 0' }}>
+                        <p style={{ fontSize: '10px', color: 'var(--ink-muted)', margin: '3px 0 0' }}>
                             Comma-separated job names that show a ✗ or red status in the CI run. Find under the <strong>Jobs</strong> panel of your CI run page. The more specific, the more accurate the AI diagnosis.
                         </p>
                     </div>
 
                     {intakeError && (
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', padding: '8px 10px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', marginBottom: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', padding: '8px 10px', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: '6px', marginBottom: '10px' }}>
                             <span style={{ fontSize: '13px', lineHeight: 1 }}>⚠</span>
-                            <p style={{ fontSize: '12px', color: '#dc2626', margin: 0 }}>{intakeError}</p>
+                            <p style={{ fontSize: '12px', color: 'var(--danger)', margin: 0 }}>{intakeError}</p>
                         </div>
                     )}
                     {intakeSuccess && (
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', padding: '8px 10px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', marginBottom: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', padding: '8px 10px', background: 'var(--ok-bg)', border: '1px solid var(--ok-border)', borderRadius: '6px', marginBottom: '10px' }}>
                             <span style={{ fontSize: '13px', lineHeight: 1 }}>✓</span>
-                            <p style={{ fontSize: '12px', color: '#16a34a', margin: 0 }}>{intakeSuccess}</p>
+                            <p style={{ fontSize: '12px', color: 'var(--ok)', margin: 0 }}>{intakeSuccess}</p>
                         </div>
                     )}
 
@@ -363,7 +363,7 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                         >
                             {intakeSubmitting ? 'Submitting…' : 'Submit for Triage'}
                         </button>
-                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--ink-muted)' }}>
                             The AI will analyse the failure and return a root-cause report within seconds.
                         </span>
                     </div>
@@ -515,8 +515,8 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                                                 key={job.jobName}
                                                 style={{
                                                     padding: '2px 8px',
-                                                    background: '#fee2e2',
-                                                    color: '#991b1b',
+                                                    background: 'var(--danger-bg)',
+                                                    color: 'var(--danger)',
                                                     borderRadius: '4px',
                                                     fontSize: '11px',
                                                     fontWeight: 600,

@@ -29,11 +29,11 @@ function SpendBar({ spent, limit, label }: { spent: number; limit: number | null
     const color = pct >= 100 ? '#c4161c' : pct >= 80 ? '#b45309' : '#1a7a4a';
     return (
         <div style={{ display: 'grid', gap: '0.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#57534e' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
                 <span>{label}</span>
                 <span style={{ fontWeight: 600, color }}>{fmtUsd(spent)} / {fmtUsd(limit)}</span>
             </div>
-            <div style={{ height: 6, background: '#f3f4f6', borderRadius: 9999, overflow: 'hidden' }}>
+            <div style={{ height: 6, background: 'var(--bg)', borderRadius: 9999, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${pct.toFixed(1)}%`, background: color, borderRadius: 9999, transition: 'width 0.4s' }} />
             </div>
             {pct >= 80 && (
@@ -135,7 +135,7 @@ export function AgentBudgetCapCard({ botId }: { botId: string }) {
         return (
             <section className="card">
                 <h2>Budget Cap</h2>
-                <p style={{ margin: 0, fontSize: '0.83rem', color: '#78716c' }}>Loading…</p>
+                <p style={{ margin: 0, fontSize: '0.83rem', color: 'var(--ink-muted)' }}>Loading…</p>
             </section>
         );
     }
@@ -168,14 +168,14 @@ export function AgentBudgetCapCard({ botId }: { botId: string }) {
             )}
 
             {!cfg && !editing && (
-                <p style={{ margin: 0, fontSize: '0.83rem', color: '#78716c' }}>
+                <p style={{ margin: 0, fontSize: '0.83rem', color: 'var(--ink-muted)' }}>
                     No spending cap set. This agent uses the workspace-level budget policy.
                 </p>
             )}
 
             {cfg && !editing && (
                 <div style={{ display: 'grid', gap: '0.65rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#57534e' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--ink-muted)' }}>
                         <span style={{ padding: '0.15rem 0.5rem', borderRadius: 9999, background: cfg.enabled ? 'rgba(26,122,74,0.08)' : '#f3f4f6', color: cfg.enabled ? '#1a7a4a' : '#6b7280', fontSize: '0.72rem', fontWeight: 700 }}>
                             {cfg.enabled ? 'active' : 'disabled'}
                         </span>
@@ -188,7 +188,7 @@ export function AgentBudgetCapCard({ botId }: { botId: string }) {
                         </>
                     )}
                     {!cfg.daily_limit_usd && !cfg.monthly_limit_usd && (
-                        <p style={{ margin: 0, fontSize: '0.8rem', color: '#78716c' }}>
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--ink-muted)' }}>
                             Cap is configured but no limits set. Click &ldquo;Edit cap&rdquo; to add limits.
                         </p>
                     )}
@@ -200,7 +200,7 @@ export function AgentBudgetCapCard({ botId }: { botId: string }) {
                     <label style={{ display: 'grid', gap: '0.25rem', fontSize: '0.82rem', fontWeight: 600 }}>
                         Daily limit (USD)
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <span style={{ color: '#57534e' }}>$</span>
+                            <span style={{ color: 'var(--ink-muted)' }}>$</span>
                             <input
                                 type="number" min="0" step="0.01"
                                 value={dailyLimit}
@@ -214,7 +214,7 @@ export function AgentBudgetCapCard({ botId }: { botId: string }) {
                     <label style={{ display: 'grid', gap: '0.25rem', fontSize: '0.82rem', fontWeight: 600 }}>
                         Monthly limit (USD)
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <span style={{ color: '#57534e' }}>$</span>
+                            <span style={{ color: 'var(--ink-muted)' }}>$</span>
                             <input
                                 type="number" min="0" step="0.01"
                                 value={monthlyLimit}

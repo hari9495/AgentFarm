@@ -818,7 +818,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
     return (
         <article className="card">
             <h2>Approval Queue Workflow</h2>
-            <p style={{ margin: '-0.45rem 0 0.7rem', fontSize: '0.82rem', color: '#57534e' }}>
+            <p style={{ margin: '-0.45rem 0 0.7rem', fontSize: '0.82rem', color: 'var(--ink-muted)' }}>
                 Pending: <strong>{metrics.pending_count}</strong> | Recent: <strong>{metrics.decision_count}</strong> | P95 latency:{' '}
                 <strong>{p95Latency === null ? 'N/A' : `${p95Latency}s`}</strong>
                 {p95Latency !== null && p95Latency > 300 && (
@@ -871,7 +871,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.7rem' }}>
-                <span style={{ fontSize: '0.82rem', color: '#57534e' }}>Capture decisions with reasons, latency, and escalation control.</span>
+                <span style={{ fontSize: '0.82rem', color: 'var(--ink-muted)' }}>Capture decisions with reasons, latency, and escalation control.</span>
                 <button
                     type="button"
                     onClick={runEscalation}
@@ -907,7 +907,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                 >
                     Bulk Timeout Reject
                 </button>
-                <span style={{ fontSize: '0.8rem', color: '#57534e' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--ink-muted)' }}>
                     Selected: {Object.values(selectedApprovals).filter(Boolean).length}
                 </span>
                 <button
@@ -999,7 +999,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                             return (
                                 <tr
                                     key={approval.approval_id}
-                                    style={focusedApprovalId === approval.approval_id ? { background: '#eff6ff' } : undefined}
+                                    style={focusedApprovalId === approval.approval_id ? { background: 'var(--info-bg)' } : undefined}
                                 >
                                     <td>
                                         <div style={{ display: 'grid', gap: '0.2rem' }}>
@@ -1018,7 +1018,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                 <strong>{getApprovalHeadline(approval)}</strong>
                                             </label>
                                             {approval.packet_complete && (
-                                                <div style={{ display: 'grid', gap: '0.18rem', fontSize: '0.78rem', color: '#57534e', paddingLeft: '1.55rem' }}>
+                                                <div style={{ display: 'grid', gap: '0.18rem', fontSize: '0.78rem', color: 'var(--ink-muted)', paddingLeft: '1.55rem' }}>
                                                     {approval.impacted_scope && <span>Scope: {approval.impacted_scope}</span>}
                                                     {approval.risk_reason && <span>Risk: {approval.risk_reason}</span>}
                                                     {approval.proposed_rollback && <span>Rollback: {approval.proposed_rollback}</span>}
@@ -1030,10 +1030,10 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                     <span className={gateCategoryBadgeClass(approval.gate_category ?? 'quality')}>
                                                         {approval.gate_category ?? 'quality'}
                                                     </span>
-                                                    <span style={{ color: '#57534e' }}>human validation gate — {approval.gate_type}</span>
+                                                    <span style={{ color: 'var(--ink-muted)' }}>human validation gate — {approval.gate_type}</span>
                                                 </div>
                                             )}
-                                            <span style={{ fontSize: '0.78rem', color: '#57534e', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                                            <span style={{ fontSize: '0.78rem', color: 'var(--ink-muted)', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
                                                 {approval.approval_id}
                                                 <button
                                                     type="button"
@@ -1058,12 +1058,12 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                 />
                                             </span>
                                             {approval.delegated_to_user_id && (
-                                                <span style={{ fontSize: '0.75rem', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '0.3rem', paddingLeft: '1.55rem' }}>
+                                                <span style={{ fontSize: '0.75rem', color: 'var(--info)', display: 'flex', alignItems: 'center', gap: '0.3rem', paddingLeft: '1.55rem' }}>
                                                     <span style={{ padding: '0.1rem 0.45rem', borderRadius: 9999, background: 'rgba(3,105,161,0.08)', border: '1px solid rgba(3,105,161,0.2)', fontWeight: 600 }}>
                                                         → {approval.delegated_to_user_name ?? approval.delegated_to_user_id}
                                                     </span>
                                                     {approval.delegation_expires_at && (
-                                                        <span style={{ color: '#78716c' }}>
+                                                        <span style={{ color: 'var(--ink-muted)' }}>
                                                             expires {new Date(approval.delegation_expires_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                         </span>
                                                     )}
@@ -1182,7 +1182,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                     )}
                 </tbody>
             </table>
-            <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#57534e' }}>
+            <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--ink-muted)' }}>
                 <span>Pending page {pendingPage} of {pendingPageCount}</span>
                 <div style={{ display: 'flex', gap: '0.4rem' }}>
                     <button type="button" onClick={() => setPendingPage((v) => Math.max(1, v - 1))} disabled={pendingPage <= 1}>Prev</button>
@@ -1223,10 +1223,10 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                             <span>{getApprovalHeadline(approval)}</span>
                                             <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap' }}>
                                                 {approval.packet_complete && approval.impacted_scope && (
-                                                    <span style={{ fontSize: '0.78rem', color: '#57534e' }}>{approval.impacted_scope}</span>
+                                                    <span style={{ fontSize: '0.78rem', color: 'var(--ink-muted)' }}>{approval.impacted_scope}</span>
                                                 )}
                                                 {approval.selected_option_id && (
-                                                    <span style={{ fontSize: '0.78rem', color: '#57534e' }}>
+                                                    <span style={{ fontSize: '0.78rem', color: 'var(--ink-muted)' }}>
                                                         Option: {approval.selected_option_id}
                                                     </span>
                                                 )}
@@ -1254,7 +1254,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                     )}
                 </tbody>
             </table>
-            <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#57534e' }}>
+            <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--ink-muted)' }}>
                 <span>Recent page {recentPage} of {recentPageCount}</span>
                 <div style={{ display: 'flex', gap: '0.4rem' }}>
                     <button type="button" onClick={() => setRecentPage((v) => Math.max(1, v - 1))} disabled={recentPage <= 1}>Prev</button>
@@ -1270,11 +1270,11 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                     style={{ position: 'fixed', inset: 0, background: 'rgba(12,18,28,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}
                     onClick={(e) => { if (e.target === e.currentTarget) closeDelegateModal(); }}
                 >
-                    <div style={{ width: 'min(26rem, 95%)', background: '#fff', borderRadius: '0.75rem', padding: '1.25rem', boxShadow: '0 24px 48px rgba(15,23,42,0.22)', display: 'grid', gap: '0.85rem' }}>
+                    <div style={{ width: 'min(26rem, 95%)', background: 'var(--card)', borderRadius: '0.75rem', padding: '1.25rem', boxShadow: '0 24px 48px rgba(15,23,42,0.22)', display: 'grid', gap: '0.85rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
                                 <h3 style={{ margin: 0, fontSize: '1rem' }}>Delegate Approval</h3>
-                                <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: '#57534e' }}>
+                                <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: 'var(--ink-muted)' }}>
                                     Assign this approval to another team member for review.
                                 </p>
                             </div>
@@ -1302,7 +1302,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                             </label>
 
                             <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>
-                                Decision deadline <span style={{ fontWeight: 400, color: '#78716c' }}>(optional)</span>
+                                Decision deadline <span style={{ fontWeight: 400, color: 'var(--ink-muted)' }}>(optional)</span>
                                 <input
                                     type="datetime-local"
                                     value={delegateExpiresAt}
@@ -1314,7 +1314,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                             </label>
 
                             <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>
-                                Note <span style={{ fontWeight: 400, color: '#78716c' }}>(optional)</span>
+                                Note <span style={{ fontWeight: 400, color: 'var(--ink-muted)' }}>(optional)</span>
                                 <input
                                     type="text"
                                     value={delegateNote}
@@ -1367,7 +1367,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                         style={{
                             width: 'min(32rem, 100%)',
                             height: '100%',
-                            background: '#fffbeb',
+                            background: 'var(--warn-bg)',
                             borderLeft: '1px solid #d6d3d1',
                             padding: '1rem',
                             overflowY: 'auto',
@@ -1379,7 +1379,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                     >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
                             <div style={{ display: 'grid', gap: '0.3rem' }}>
-                                <span style={{ fontSize: '0.78rem', color: '#57534e' }}>{selectedApproval.approval_id}</span>
+                                <span style={{ fontSize: '0.78rem', color: 'var(--ink-muted)' }}>{selectedApproval.approval_id}</span>
                                 <h3 style={{ margin: 0, fontSize: '1.05rem' }}>{getApprovalHeadline(selectedApproval)}</h3>
                             </div>
                             <button type="button" className="chip-button" onClick={() => { setSelectedApprovalId(null); setDrawerTab('summary'); setEvidenceOffset(0); setEvidenceData(null); }}>
@@ -1436,7 +1436,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                         cursor: 'pointer',
                                         fontSize: '0.85rem',
                                         fontWeight: drawerTab === 'negotiate' ? 'bold' : 'normal',
-                                        color: '#0369a1',
+                                        color: 'var(--info)',
                                     }}
                                 >
                                     Negotiate
@@ -1468,79 +1468,79 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                     {selectedApproval.gate_category ?? 'quality'}
                                                 </span>
                                                 <strong>Human Validation Gate</strong>
-                                                <span style={{ fontSize: '0.8rem', color: '#57534e' }}>— {selectedApproval.gate_type}</span>
+                                                <span style={{ fontSize: '0.8rem', color: 'var(--ink-muted)' }}>— {selectedApproval.gate_type}</span>
                                             </div>
                                             {selectedApproval.change_summary && (
-                                                <p style={{ margin: 0, fontSize: '0.85rem', color: '#44403c' }}>{selectedApproval.change_summary}</p>
+                                                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--ink-soft)' }}>{selectedApproval.change_summary}</p>
                                             )}
                                         </div>
                                     )}
 
                                     <div>
                                         <strong>Requested</strong>
-                                        <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{new Date(selectedApproval.requested_at).toLocaleString()}</p>
+                                        <p style={{ margin: '0.2rem 0 0', color: 'var(--ink-soft)' }}>{new Date(selectedApproval.requested_at).toLocaleString()}</p>
                                     </div>
                                     {selectedApproval.decided_at && (
                                         <div>
                                             <strong>Decided</strong>
-                                            <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{new Date(selectedApproval.decided_at).toLocaleString()}</p>
+                                            <p style={{ margin: '0.2rem 0 0', color: 'var(--ink-soft)' }}>{new Date(selectedApproval.decided_at).toLocaleString()}</p>
                                         </div>
                                     )}
                                     {selectedApproval.impacted_scope && (
                                         <div>
                                             <strong>Impacted Scope</strong>
-                                            <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{selectedApproval.impacted_scope}</p>
+                                            <p style={{ margin: '0.2rem 0 0', color: 'var(--ink-soft)' }}>{selectedApproval.impacted_scope}</p>
                                         </div>
                                     )}
                                     {selectedApproval.risk_reason && (
                                         <div>
                                             <strong>Risk Reason</strong>
-                                            <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{selectedApproval.risk_reason}</p>
+                                            <p style={{ margin: '0.2rem 0 0', color: 'var(--ink-soft)' }}>{selectedApproval.risk_reason}</p>
                                         </div>
                                     )}
                                     {selectedApproval.proposed_rollback && (
                                         <div>
                                             <strong>Rollback Plan</strong>
-                                            <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{selectedApproval.proposed_rollback}</p>
+                                            <p style={{ margin: '0.2rem 0 0', color: 'var(--ink-soft)' }}>{selectedApproval.proposed_rollback}</p>
                                         </div>
                                     )}
                                     <div>
                                         <strong>Quality Gate</strong>
-                                        <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{getQualityStatus(selectedApproval)}</p>
+                                        <p style={{ margin: '0.2rem 0 0', color: 'var(--ink-soft)' }}>{getQualityStatus(selectedApproval)}</p>
                                     </div>
                                     {selectedApproval.decision_reason && (
                                         <div>
                                             <strong>Decision Reason</strong>
-                                            <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{selectedApproval.decision_reason}</p>
+                                            <p style={{ margin: '0.2rem 0 0', color: 'var(--ink-soft)' }}>{selectedApproval.decision_reason}</p>
                                         </div>
                                     )}
                                     {selectedApproval.selected_option_id && (
                                         <div>
                                             <strong>Selected What-If Option</strong>
-                                            <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{selectedApproval.selected_option_id}</p>
+                                            <p style={{ margin: '0.2rem 0 0', color: 'var(--ink-soft)' }}>{selectedApproval.selected_option_id}</p>
                                         </div>
                                     )}
                                     {selectedApproval.change_summary && selectedApproval.change_summary !== selectedApproval.action_summary && (
                                         <div>
                                             <strong>Raw Action Summary</strong>
-                                            <p style={{ margin: '0.2rem 0 0', color: '#44403c' }}>{selectedApproval.action_summary}</p>
+                                            <p style={{ margin: '0.2rem 0 0', color: 'var(--ink-soft)' }}>{selectedApproval.action_summary}</p>
                                         </div>
                                     )}
 
                                     {/* ── Delegation info ─────────────────────────────────── */}
                                     {selectedApproval.delegated_to_user_id && (
                                         <div style={{ padding: '0.65rem 0.75rem', borderRadius: '0.4rem', background: 'rgba(3,105,161,0.05)', border: '1px solid rgba(3,105,161,0.18)', display: 'grid', gap: '0.3rem' }}>
-                                            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Delegated</div>
+                                            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--info)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Delegated</div>
                                             <div style={{ fontSize: '0.85rem', color: '#0c4a6e' }}>
                                                 → <strong>{selectedApproval.delegated_to_user_name ?? selectedApproval.delegated_to_user_id}</strong>
                                             </div>
                                             {selectedApproval.delegated_at && (
-                                                <div style={{ fontSize: '0.75rem', color: '#57534e' }}>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
                                                     since {new Date(selectedApproval.delegated_at).toLocaleString()}
                                                 </div>
                                             )}
                                             {selectedApproval.delegation_expires_at && (
-                                                <div style={{ fontSize: '0.75rem', color: '#b45309' }}>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--warn)' }}>
                                                     deadline: {new Date(selectedApproval.delegation_expires_at).toLocaleString()}
                                                 </div>
                                             )}
@@ -1548,7 +1548,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                 <button
                                                     type="button"
                                                     onClick={() => openDelegateModal(selectedApproval.approval_id)}
-                                                    style={{ marginTop: '0.3rem', alignSelf: 'flex-start', padding: '0.3rem 0.65rem', borderRadius: 9999, border: '1px solid rgba(3,105,161,0.3)', background: 'rgba(3,105,161,0.07)', color: '#0369a1', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
+                                                    style={{ marginTop: '0.3rem', alignSelf: 'flex-start', padding: '0.3rem 0.65rem', borderRadius: 9999, border: '1px solid rgba(3,105,161,0.3)', background: 'rgba(3,105,161,0.07)', color: 'var(--info)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
                                                 >
                                                     Re-delegate
                                                 </button>
@@ -1569,8 +1569,8 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                         <span style={{ fontSize: 13 }}>↑</span>
                                                     </div>
                                                     <div>
-                                                        <div style={{ fontSize: 12, fontWeight: 700, color: '#1d1d1f' }}>Escalate to Senior Reviewer</div>
-                                                        <div style={{ fontSize: 11, color: '#6e6e73' }}>This decision is above my authority</div>
+                                                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>Escalate to Senior Reviewer</div>
+                                                        <div style={{ fontSize: 11, color: 'var(--ink-muted)' }}>This decision is above my authority</div>
                                                     </div>
                                                 </div>
                                                 <textarea
@@ -1578,7 +1578,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                     onChange={e => setEscalateReasonByApproval(prev => ({ ...prev, [id]: e.target.value }))}
                                                     placeholder="Why are you escalating? e.g. This touches production data — needs VP approval."
                                                     rows={2}
-                                                    style={{ width: '100%', padding: '7px 10px', borderRadius: 9, border: '1px solid #d2d2d7', background: '#fff', color: '#1d1d1f', fontSize: 12, resize: 'vertical', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                                                    style={{ width: '100%', padding: '7px 10px', borderRadius: 9, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: 12, resize: 'vertical', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
                                                 />
                                                 {result && (
                                                     <div style={{ marginTop: 6, padding: '6px 10px', borderRadius: 8, background: result.ok ? 'rgba(26,122,74,0.07)' : 'rgba(196,22,28,0.07)', border: `1px solid ${result.ok ? 'rgba(26,122,74,0.2)' : 'rgba(196,22,28,0.2)'}`, fontSize: 12, color: result.ok ? '#1a7a4a' : '#c4161c' }}>
@@ -1623,7 +1623,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                             display: 'grid',
                                             gap: '0.35rem',
                                         }}>
-                                            <strong style={{ color: '#0369a1', fontSize: '0.85rem' }}>Negotiation Request</strong>
+                                            <strong style={{ color: 'var(--info)', fontSize: '0.85rem' }}>Negotiation Request</strong>
                                             <pre style={{
                                                 margin: 0,
                                                 fontSize: '0.78rem',
@@ -1675,14 +1675,14 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                                 <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#0c4a6e' }}>
                                                                     {option.optionId}
                                                                 </span>
-                                                                <span style={{ fontSize: '0.78rem', color: '#44403c' }}>{option.summary}</span>
+                                                                <span style={{ fontSize: '0.78rem', color: 'var(--ink-soft)' }}>{option.summary}</span>
                                                             </div>
                                                         </label>
                                                     );
                                                 })}
                                             </div>
                                         ) : (
-                                            <p style={{ fontSize: '0.82rem', color: '#57534e', fontStyle: 'italic' }}>
+                                            <p style={{ fontSize: '0.82rem', color: 'var(--ink-muted)', fontStyle: 'italic' }}>
                                                 No options found in the action summary.
                                             </p>
                                         )}
@@ -1724,7 +1724,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                     </button>
                                                 </div>
                                                 {!selectedOptionValue && (
-                                                    <p style={{ fontSize: '0.75rem', color: '#b45309', margin: 0 }}>
+                                                    <p style={{ fontSize: '0.75rem', color: 'var(--warn)', margin: 0 }}>
                                                         Select an option above before clicking &ldquo;Accept Option&rdquo;.
                                                     </p>
                                                 )}
@@ -1757,16 +1757,16 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                     {/* Loading */}
                                     {evidenceBusy && (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                            {[1,2,3].map(i => <div key={i} style={{ height: 52, borderRadius: 10, background: '#f5f5f7' }} />)}
+                                            {[1,2,3].map(i => <div key={i} style={{ height: 52, borderRadius: 10, background: 'var(--bg)' }} />)}
                                         </div>
                                     )}
 
                                     {/* No evidence */}
                                     {!evidenceBusy && evidenceData && evidenceData.total === 0 && (
-                                        <div style={{ padding: '20px 16px', textAlign: 'center', borderRadius: 12, border: '1px dashed #d2d2d7', background: '#f5f5f7' }}>
+                                        <div style={{ padding: '20px 16px', textAlign: 'center', borderRadius: 12, border: '1px dashed #d2d2d7', background: 'var(--bg)' }}>
                                             <div style={{ fontSize: 22, marginBottom: 6 }}>📋</div>
-                                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 3 }}>No evidence bundle yet</div>
-                                            <div style={{ fontSize: 12, color: '#6e6e73', lineHeight: 1.5 }}>
+                                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginBottom: 3 }}>No evidence bundle yet</div>
+                                            <div style={{ fontSize: 12, color: 'var(--ink-muted)', lineHeight: 1.5 }}>
                                                 The agent has not submitted an evidence bundle for this approval.
                                                 Evidence is attached when an agent packages context for a high-risk action.
                                             </div>
@@ -1780,15 +1780,15 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                         if (!rec) return null;
 
                                         const fieldStyle: React.CSSProperties = {
-                                            background: '#fff', border: '1px solid #e5e5ea',
+                                            background: 'var(--card)', border: '1px solid var(--line)',
                                             borderRadius: 10, padding: '10px 12px',
                                         };
                                         const labelStyle: React.CSSProperties = {
-                                            fontSize: 10, fontWeight: 700, color: '#aeaeb2',
+                                            fontSize: 10, fontWeight: 700, color: 'var(--ink-muted)',
                                             textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4,
                                         };
                                         const valueStyle: React.CSSProperties = {
-                                            fontSize: 13, color: '#1d1d1f', lineHeight: 1.45,
+                                            fontSize: 13, color: 'var(--ink)', lineHeight: 1.45,
                                             fontFamily: rec.connector_used ? 'ui-monospace, monospace' : undefined,
                                         };
 
@@ -1797,11 +1797,11 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                 {/* Evidence count badge */}
                                                 {evidenceData.total > 0 && (
                                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                        <span style={{ fontSize: 11, fontWeight: 700, color: '#0066cc', padding: '2px 8px', borderRadius: 9999, background: 'rgba(0,102,204,0.07)', border: '1px solid rgba(0,102,204,0.18)' }}>
+                                                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', padding: '2px 8px', borderRadius: 9999, background: 'color-mix(in srgb, var(--accent) 7%, transparent)', border: '1px solid rgba(0,102,204,0.18)' }}>
                                                             {evidenceData.total} evidence record{evidenceData.total !== 1 ? 's' : ''}
                                                         </span>
                                                         {evidenceData.total > 1 && (
-                                                            <span style={{ fontSize: 11, color: '#6e6e73' }}>
+                                                            <span style={{ fontSize: 11, color: 'var(--ink-muted)' }}>
                                                                 Showing {pagination.startIndex}–{pagination.endIndex} of {evidenceData.total}
                                                             </span>
                                                         )}
@@ -1839,7 +1839,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                                 {rec.action_outcome.result_summary ?? 'Pending'}
                                                             </div>
                                                             {rec.action_outcome.error_reason && (
-                                                                <div style={{ fontSize: 12, color: '#c4161c', marginTop: 4 }}>
+                                                                <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: 4 }}>
                                                                     {rec.action_outcome.error_reason}
                                                                 </div>
                                                             )}
@@ -1850,7 +1850,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                 {/* Quality gates */}
                                                 {rec.quality_gate_results && rec.quality_gate_results.length > 0 && (
                                                     <div>
-                                                        <div style={{ fontSize: 11, fontWeight: 700, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
+                                                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
                                                             Quality Gates ({rec.quality_gate_results.length})
                                                         </div>
                                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -1870,7 +1870,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                                                 {check.checkType}
                                                                             </div>
                                                                             {check.details && (
-                                                                                <div style={{ fontSize: 11, color: '#6e6e73', marginTop: 2 }}>{check.details}</div>
+                                                                                <div style={{ fontSize: 11, color: 'var(--ink-muted)', marginTop: 2 }}>{check.details}</div>
                                                                             )}
                                                                         </div>
                                                                         <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: passed ? '#1a7a4a' : failed ? '#c4161c' : '#b45309', flexShrink: 0 }}>
@@ -1886,7 +1886,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                 {/* Execution logs */}
                                                 {rec.execution_logs && rec.execution_logs.length > 0 && (
                                                     <div>
-                                                        <div style={{ fontSize: 11, fontWeight: 700, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
+                                                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
                                                             Execution Logs
                                                         </div>
                                                         <div style={{ background: '#1d1d1f', borderRadius: 10, padding: '10px 12px', maxHeight: '180px', overflowY: 'auto' }}>
@@ -1894,7 +1894,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                                 const color = log.level === 'error' ? '#ff6b6b' : log.level === 'warn' ? '#ffd93d' : '#a8e6cf';
                                                                 return (
                                                                     <div key={idx} style={{ fontSize: 11, fontFamily: 'ui-monospace, monospace', lineHeight: 1.6, display: 'flex', gap: 8 }}>
-                                                                        <span style={{ color: '#6e6e73', flexShrink: 0 }}>
+                                                                        <span style={{ color: 'var(--ink-muted)', flexShrink: 0 }}>
                                                                             {log.timestamp.split('T')[1]?.slice(0, 8)}
                                                                         </span>
                                                                         <span style={{ color, flexShrink: 0, fontWeight: 700 }}>
@@ -1916,7 +1916,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                             onClick={() => void fetchEvidence(selectedApproval.approval_id, { offset: normalizeEvidenceOffset(evidenceData.total, evidenceData.limit, Math.max(0, evidenceOffset - evidenceData.limit)) })}>
                                                             ← Newer
                                                         </button>
-                                                        <span style={{ fontSize: 11, color: '#6e6e73' }}>
+                                                        <span style={{ fontSize: 11, color: 'var(--ink-muted)' }}>
                                                             Page {pagination.page} / {pagination.pageCount}
                                                         </span>
                                                         <button type="button" className="chip-button"

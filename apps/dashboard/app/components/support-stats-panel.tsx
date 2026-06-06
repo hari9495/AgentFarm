@@ -23,15 +23,15 @@ const FALLBACK: SupportStats = {
 
 function StatCard({ label, value, icon: Icon, accent, sub }: { label: string; value: string | number; icon: React.ElementType; accent: string; sub?: string }) {
     return (
-        <div style={{ flex: '1 1 140px', minWidth: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ flex: '1 1 140px', minWidth: 0, background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ width: 32, height: 32, borderRadius: 8, background: accent + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Icon size={16} color={accent} />
                 </div>
                 <span style={{ fontSize: 12, color: '#64748b', fontWeight: 500 }}>{label}</span>
             </div>
-            <div style={{ fontSize: 26, fontWeight: 700, color: '#1e293b', lineHeight: 1 }}>{value}</div>
-            {sub && <div style={{ fontSize: 11, color: '#94a3b8' }}>{sub}</div>}
+            <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--ink-soft)', lineHeight: 1 }}>{value}</div>
+            {sub && <div style={{ fontSize: 11, color: 'var(--ink-muted)' }}>{sub}</div>}
         </div>
     );
 }
@@ -41,11 +41,11 @@ function TierBar({ label, count, total, color }: { label: string; count: number;
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ width: 52, fontSize: 11, fontWeight: 600, color: '#64748b', flexShrink: 0 }}>{label}</span>
-            <div style={{ flex: 1, height: 8, background: '#f1f5f9', borderRadius: 99, overflow: 'hidden' }}>
+            <div style={{ flex: 1, height: 8, background: 'var(--bg)', borderRadius: 99, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 99, transition: 'width 0.4s ease' }} />
             </div>
             <span style={{ width: 36, fontSize: 11, color: '#475569', textAlign: 'right' as const, flexShrink: 0 }}>{count}</span>
-            <span style={{ width: 32, fontSize: 10, color: '#94a3b8', textAlign: 'right' as const, flexShrink: 0 }}>{pct}%</span>
+            <span style={{ width: 32, fontSize: 10, color: 'var(--ink-muted)', textAlign: 'right' as const, flexShrink: 0 }}>{pct}%</span>
         </div>
     );
 }
@@ -80,22 +80,22 @@ export default function SupportStatsPanel() {
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--info-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <BarChart3 size={18} color="#0066cc" />
                     </div>
                     <div>
                         <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Support Agent Stats</div>
-                        <div style={{ fontSize: 12, color: '#94a3b8' }}>Resolution metrics across all tiers</div>
+                        <div style={{ fontSize: 12, color: 'var(--ink-muted)' }}>Resolution metrics across all tiers</div>
                     </div>
                 </div>
-                <button type="button" onClick={load} disabled={loading} title="Refresh" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', fontSize: 12, color: '#64748b', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.5 : 1 }}>
+                <button type="button" onClick={load} disabled={loading} title="Refresh" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', fontSize: 12, color: '#64748b', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.5 : 1 }}>
                     <RefreshCw size={12} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
                     Refresh
                 </button>
             </div>
 
             {error && (
-                <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, fontSize: 12, color: '#dc2626', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ padding: '10px 14px', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: 8, fontSize: 12, color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <AlertTriangle size={14} />
                     Could not load support stats. The support agent may not be active.
                 </div>
@@ -132,12 +132,12 @@ export default function SupportStatsPanel() {
             </div>
 
             {/* Tier breakdown */}
-            <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '16px 18px' }}>
+            <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: '16px 18px' }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 14, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>Resolution tier breakdown</div>
                 {loading ? (
-                    <div style={{ color: '#94a3b8', fontSize: 12 }}>Loading…</div>
+                    <div style={{ color: 'var(--ink-muted)', fontSize: 12 }}>Loading…</div>
                 ) : tierTotal === 0 ? (
-                    <div style={{ color: '#94a3b8', fontSize: 12 }}>No resolved issues yet.</div>
+                    <div style={{ color: 'var(--ink-muted)', fontSize: 12 }}>No resolved issues yet.</div>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         <TierBar label="Tier 1" count={stats.tierBreakdown[1]} total={tierTotal} color="#0066cc" />
@@ -149,7 +149,7 @@ export default function SupportStatsPanel() {
                 {!loading && tierTotal > 0 && (
                     <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#64748b' }}>
                         <CheckCircle2 size={12} color="#16a34a" />
-                        <span>Tier 1 auto-fixes resolve <strong style={{ color: '#16a34a' }}>{autoFixPct}%</strong> of issues with no code changes or escalation required.</span>
+                        <span>Tier 1 auto-fixes resolve <strong style={{ color: 'var(--ok)' }}>{autoFixPct}%</strong> of issues with no code changes or escalation required.</span>
                     </div>
                 )}
             </div>

@@ -45,27 +45,27 @@ const SOURCE_LABEL: Record<WakeSource, string> = {
 
 const STATUS_STYLE: Record<WakeRun['status'], { bg: string; color: string; icon: React.ElementType }> = {
     scheduled: { bg: '#eff6ff', color: '#1e40af', icon: Clock },
-    running: { bg: '#fef9c3', color: '#854d0e', icon: Loader2 },
-    completed: { bg: '#dcfce7', color: '#166534', icon: CheckCircle2 },
-    failed: { bg: '#fee2e2', color: '#991b1b', icon: XCircle },
+    running: { bg: '#fef9c3', color: 'var(--warn)', icon: Loader2 },
+    completed: { bg: '#dcfce7', color: 'var(--ok)', icon: CheckCircle2 },
+    failed: { bg: '#fee2e2', color: 'var(--danger)', icon: XCircle },
     skipped: { bg: '#f1f5f9', color: '#475569', icon: RefreshCw },
 };
 
 const SOURCE_BADGE: Record<WakeSource, { bg: string; color: string }> = {
     timer: { bg: '#eff6ff', color: '#1e40af' },
-    assignment: { bg: '#f0fdf4', color: '#166534' },
+    assignment: { bg: '#f0fdf4', color: 'var(--ok)' },
     on_demand: { bg: '#fdf4ff', color: '#7c3aed' },
     automation: { bg: '#fff7ed', color: '#c2410c' },
-    proactive_signal: { bg: '#fefce8', color: '#854d0e' },
-    agent_handoff: { bg: '#f0f9ff', color: '#0369a1' },
+    proactive_signal: { bg: '#fefce8', color: 'var(--warn)' },
+    agent_handoff: { bg: '#f0f9ff', color: 'var(--info)' },
 };
 
-const cell: React.CSSProperties = { padding: '10px 12px', fontSize: 13, color: '#334155', verticalAlign: 'middle' };
-const th: React.CSSProperties = { padding: '8px 12px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#94a3b8', background: '#f8fafc', textAlign: 'left' as const };
+const cell: React.CSSProperties = { padding: '10px 12px', fontSize: 13, color: 'var(--ink-soft)', verticalAlign: 'middle' };
+const th: React.CSSProperties = { padding: '8px 12px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: 'var(--ink-muted)', background: 'var(--bg)', textAlign: 'left' as const };
 
 function EmptyState({ label }: { label: string }) {
     return (
-        <div style={{ textAlign: 'center', padding: '48px 0', color: '#94a3b8' }}>
+        <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--ink-muted)' }}>
             <AlarmClock size={32} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
             <p style={{ margin: 0, fontSize: 14 }}>{label}</p>
         </div>
@@ -164,8 +164,8 @@ export default function WakeRunsPanel({ workspaceId }: { workspaceId: string }) 
     };
 
     const inp: React.CSSProperties = {
-        width: '100%', padding: '7px 10px', border: '1px solid #e2e8f0',
-        borderRadius: 8, fontSize: 13, color: '#1e293b', background: '#fff',
+        width: '100%', padding: '7px 10px', border: '1px solid var(--line)',
+        borderRadius: 8, fontSize: 13, color: 'var(--ink-soft)', background: 'var(--card)',
         outline: 'none', boxSizing: 'border-box',
     };
 
@@ -174,10 +174,10 @@ export default function WakeRunsPanel({ workspaceId }: { workspaceId: string }) 
             {/* Toolbar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <button type="button" onClick={load} title="Refresh" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 13, color: '#64748b' }}>
+                    <button type="button" onClick={load} title="Refresh" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', cursor: 'pointer', fontSize: 13, color: '#64748b' }}>
                         <RefreshCw size={13} />Refresh
                     </button>
-                    <span style={{ fontSize: 12, color: '#94a3b8' }}>{runs.length} run{runs.length !== 1 ? 's' : ''}</span>
+                    <span style={{ fontSize: 12, color: 'var(--ink-muted)' }}>{runs.length} run{runs.length !== 1 ? 's' : ''}</span>
                 </div>
                 <button type="button" onClick={() => { setShowForm(f => !f); setSubmitError(null); setSubmitOk(false); }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', border: 'none', borderRadius: 8, background: '#0066cc', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
                     <Play size={12} />Schedule Wake Run
@@ -186,8 +186,8 @@ export default function WakeRunsPanel({ workspaceId }: { workspaceId: string }) 
 
             {/* Schedule form */}
             {showForm && (
-                <form onSubmit={handleSubmit} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1e293b' }}>New Wake Run</p>
+                <form onSubmit={handleSubmit} style={{ background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--ink-soft)' }}>New Wake Run</p>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                         <div>
                             <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>Bot ID *</label>
@@ -212,10 +212,10 @@ export default function WakeRunsPanel({ workspaceId }: { workspaceId: string }) 
                             <input style={inp} placeholder="optional trace ID" value={form.correlationId} onChange={e => setForm(f => ({ ...f, correlationId: e.target.value }))} />
                         </div>
                     </div>
-                    {submitError && <p style={{ margin: 0, fontSize: 12, color: '#dc2626' }}>{submitError}</p>}
-                    {submitOk && <p style={{ margin: 0, fontSize: 12, color: '#16a34a' }}>Wake run scheduled successfully.</p>}
+                    {submitError && <p style={{ margin: 0, fontSize: 12, color: 'var(--danger)' }}>{submitError}</p>}
+                    {submitOk && <p style={{ margin: 0, fontSize: 12, color: 'var(--ok)' }}>Wake run scheduled successfully.</p>}
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <button type="button" onClick={() => setShowForm(false)} style={{ padding: '6px 14px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 13, color: '#64748b' }}>Cancel</button>
+                        <button type="button" onClick={() => setShowForm(false)} style={{ padding: '6px 14px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', cursor: 'pointer', fontSize: 13, color: '#64748b' }}>Cancel</button>
                         <button type="submit" disabled={submitting} style={{ padding: '6px 14px', border: 'none', borderRadius: 8, background: '#0066cc', color: '#fff', cursor: submitting ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600, opacity: submitting ? 0.7 : 1 }}>
                             {submitting ? 'Scheduling…' : 'Schedule'}
                         </button>
@@ -225,13 +225,13 @@ export default function WakeRunsPanel({ workspaceId }: { workspaceId: string }) 
 
             {/* Table */}
             {loading ? (
-                <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 13 }}>Loading wake runs…</div>
+                <div style={{ textAlign: 'center', padding: 40, color: 'var(--ink-muted)', fontSize: 13 }}>Loading wake runs…</div>
             ) : error ? (
-                <div style={{ padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, color: '#dc2626', fontSize: 13 }}>{error}</div>
+                <div style={{ padding: '12px 16px', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: 10, color: 'var(--danger)', fontSize: 13 }}>{error}</div>
             ) : runs.length === 0 ? (
                 <EmptyState label="No wake runs yet. Schedule one to get started." />
             ) : (
-                <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 12 }}>
+                <div style={{ overflowX: 'auto', border: '1px solid var(--line)', borderRadius: 12 }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr>
@@ -243,7 +243,7 @@ export default function WakeRunsPanel({ workspaceId }: { workspaceId: string }) 
                         <tbody>
                             {runs.map((run, i) => (
                                 <tr key={run.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : '#fff' }}>
-                                    <td style={cell}><code style={{ fontSize: 11, background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>{run.botId}</code></td>
+                                    <td style={cell}><code style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 6px', borderRadius: 4 }}>{run.botId}</code></td>
                                     <td style={cell}><SourceBadge source={run.wakeSource} /></td>
                                     <td style={cell}><StatusBadge status={run.status} /></td>
                                     <td style={{ ...cell, color: '#64748b' }}>{run.scheduledAt ? new Date(run.scheduledAt).toLocaleString() : run.createdAt ? new Date(run.createdAt).toLocaleString() : '—'}</td>

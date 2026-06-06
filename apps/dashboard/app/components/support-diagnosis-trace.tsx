@@ -164,7 +164,7 @@ export function SupportDiagnosisTrace() {
                     <p style={{ color: 'var(--ink-soft)', fontSize: '0.85rem', margin: 0 }}>Loading…</p>
                 )}
                 {error && (
-                    <p style={{ color: '#dc2626', fontSize: '0.82rem', margin: 0 }}>{error}</p>
+                    <p style={{ color: 'var(--danger)', fontSize: '0.82rem', margin: 0 }}>{error}</p>
                 )}
                 {data && data.steps.length === 0 && (
                     <p style={{ color: 'var(--ink-soft)', fontStyle: 'italic', fontSize: '0.85rem', margin: 0 }}>

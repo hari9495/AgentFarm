@@ -153,7 +153,7 @@ export default function TaskDagPanel({ taskIds }: TaskDagPanelProps) {
                                 marginLeft: '0.5rem',
                                 fontSize: '0.75rem',
                                 fontWeight: 400,
-                                background: '#e2e8f0',
+                                background: 'var(--line)',
                                 color: '#475569',
                                 borderRadius: 9999,
                                 padding: '1px 8px',
@@ -186,8 +186,8 @@ export default function TaskDagPanel({ taskIds }: TaskDagPanelProps) {
                     style={{
                         padding: '0.75rem',
                         borderRadius: 8,
-                        background: '#fee2e2',
-                        color: '#991b1b',
+                        background: 'var(--danger-bg)',
+                        color: 'var(--danger)',
                         fontSize: '0.8125rem',
                     }}
                 >
@@ -196,19 +196,19 @@ export default function TaskDagPanel({ taskIds }: TaskDagPanelProps) {
             )}
 
             {!error && taskIds.length === 0 && (
-                <div style={{ color: '#94a3b8', fontSize: '0.875rem', padding: '1rem 0' }}>
+                <div style={{ color: 'var(--ink-muted)', fontSize: '0.875rem', padding: '1rem 0' }}>
                     No tasks selected.
                 </div>
             )}
 
             {!error && taskIds.length > 0 && !loading && graph && graph.nodes.length === 0 && (
-                <div style={{ color: '#94a3b8', fontSize: '0.875rem', padding: '1rem 0' }}>
+                <div style={{ color: 'var(--ink-muted)', fontSize: '0.875rem', padding: '1rem 0' }}>
                     No dependency data available.
                 </div>
             )}
 
             {!error && graph && graph.nodes.length > 0 && (
-                <div style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                <div style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid var(--line)' }}>
                     <svg
                         width={dims.width}
                         height={dims.height}

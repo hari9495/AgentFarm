@@ -43,24 +43,24 @@ const TYPE_LABEL: Record<DraftType, string> = {
 };
 
 const STATUS_STYLE: Record<DraftStatus, { bg: string; color: string; icon: React.ElementType }> = {
-    pending_review: { bg: '#fef9c3', color: '#854d0e', icon: Clock },
-    approved:       { bg: '#dcfce7', color: '#166534', icon: CheckCircle2 },
-    rejected:       { bg: '#fee2e2', color: '#991b1b', icon: XCircle },
+    pending_review: { bg: '#fef9c3', color: 'var(--warn)', icon: Clock },
+    approved:       { bg: '#dcfce7', color: 'var(--ok)', icon: CheckCircle2 },
+    rejected:       { bg: '#fee2e2', color: 'var(--danger)', icon: XCircle },
     published:      { bg: '#eff6ff', color: '#1e40af', icon: CheckCircle2 },
 };
 
 const ROLE_BADGE: Record<string, { bg: string; color: string; label: string }> = {
     content_writer:    { bg: '#fdf4ff', color: '#7c3aed', label: 'Content Writer' },
-    technical_writer:  { bg: '#f0f9ff', color: '#0369a1', label: 'Tech Writer' },
+    technical_writer:  { bg: '#f0f9ff', color: 'var(--info)', label: 'Tech Writer' },
     corporate_assistant: { bg: '#fff7ed', color: '#c2410c', label: 'Corp. Assistant' },
 };
 
-const th: React.CSSProperties = { padding: '8px 12px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#94a3b8', background: '#f8fafc', textAlign: 'left' as const };
-const td: React.CSSProperties = { padding: '10px 12px', fontSize: 13, color: '#334155', verticalAlign: 'middle' };
+const th: React.CSSProperties = { padding: '8px 12px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: 'var(--ink-muted)', background: 'var(--bg)', textAlign: 'left' as const };
+const td: React.CSSProperties = { padding: '10px 12px', fontSize: 13, color: 'var(--ink-soft)', verticalAlign: 'middle' };
 
 function EmptyState() {
     return (
-        <div style={{ textAlign: 'center', padding: '48px 0', color: '#94a3b8' }}>
+        <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--ink-muted)' }}>
             <FileText size={32} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
             <p style={{ margin: 0, fontSize: 14 }}>No drafts awaiting review.</p>
             <p style={{ margin: '4px 0 0', fontSize: 12 }}>Content and technical writing agents will surface drafts here.</p>
@@ -126,19 +126,19 @@ export default function ContentDraftsPanel({ workspaceId }: { workspaceId: strin
                         </button>
                     ))}
                 </div>
-                <button type="button" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', fontSize: 12, color: '#64748b', cursor: 'pointer' }}>
+                <button type="button" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', fontSize: 12, color: '#64748b', cursor: 'pointer' }}>
                     <RefreshCw size={12} />Refresh
                 </button>
             </div>
 
-            {error && <div style={{ padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, fontSize: 13, color: '#dc2626' }}>{error}</div>}
+            {error && <div style={{ padding: '10px 14px', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: 8, fontSize: 13, color: 'var(--danger)' }}>{error}</div>}
 
             {loading ? (
-                <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 13 }}>Loading drafts…</div>
+                <div style={{ textAlign: 'center', padding: 40, color: 'var(--ink-muted)', fontSize: 13 }}>Loading drafts…</div>
             ) : drafts.length === 0 ? (
                 <EmptyState />
             ) : (
-                <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 12 }}>
+                <div style={{ overflowX: 'auto', border: '1px solid var(--line)', borderRadius: 12 }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr>
@@ -155,10 +155,10 @@ export default function ContentDraftsPanel({ workspaceId }: { workspaceId: strin
                                 return (
                                     <tr key={d.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : '#fff' }}>
                                         <td style={td}>
-                                            <div style={{ fontWeight: 500, color: '#1e293b' }}>{d.title}</div>
-                                            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2, maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.excerpt}</div>
+                                            <div style={{ fontWeight: 500, color: 'var(--ink-soft)' }}>{d.title}</div>
+                                            <div style={{ fontSize: 11, color: 'var(--ink-muted)', marginTop: 2, maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.excerpt}</div>
                                         </td>
-                                        <td style={td}><span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 4, background: '#f1f5f9', color: '#475569' }}>{TYPE_LABEL[d.draftType] ?? d.draftType}</span></td>
+                                        <td style={td}><span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 4, background: 'var(--bg)', color: '#475569' }}>{TYPE_LABEL[d.draftType] ?? d.draftType}</span></td>
                                         <td style={td}><span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 4, background: rb.bg, color: rb.color }}>{rb.label}</span></td>
                                         <td style={{ ...td, color: '#64748b' }}>{d.wordCount.toLocaleString()}</td>
                                         <td style={td}>
@@ -168,17 +168,17 @@ export default function ContentDraftsPanel({ workspaceId }: { workspaceId: strin
                                         </td>
                                         <td style={td}>
                                             <div style={{ display: 'flex', gap: 4 }}>
-                                                <button type="button" title="Preview" style={{ padding: '4px 8px', border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 11, color: '#475569', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                                <button type="button" title="Preview" style={{ padding: '4px 8px', border: '1px solid var(--line)', borderRadius: 6, background: 'var(--card)', cursor: 'pointer', fontSize: 11, color: '#475569', display: 'flex', alignItems: 'center', gap: 3 }}>
                                                     <Eye size={11} />
                                                 </button>
                                                 {d.status === 'pending_review' && (
                                                     <>
-                                                        <button type="button" onClick={() => act(d.id, 'approve')} style={{ padding: '4px 8px', border: '1px solid #bbf7d0', borderRadius: 6, background: '#f0fdf4', cursor: 'pointer', fontSize: 11, color: '#16a34a', fontWeight: 600 }}>Approve</button>
-                                                        <button type="button" onClick={() => act(d.id, 'reject')} style={{ padding: '4px 8px', border: '1px solid #fecaca', borderRadius: 6, background: '#fef2f2', cursor: 'pointer', fontSize: 11, color: '#dc2626', fontWeight: 600 }}>Reject</button>
+                                                        <button type="button" onClick={() => act(d.id, 'approve')} style={{ padding: '4px 8px', border: '1px solid var(--ok-border)', borderRadius: 6, background: 'var(--ok-bg)', cursor: 'pointer', fontSize: 11, color: 'var(--ok)', fontWeight: 600 }}>Approve</button>
+                                                        <button type="button" onClick={() => act(d.id, 'reject')} style={{ padding: '4px 8px', border: '1px solid var(--danger-border)', borderRadius: 6, background: 'var(--danger-bg)', cursor: 'pointer', fontSize: 11, color: 'var(--danger)', fontWeight: 600 }}>Reject</button>
                                                     </>
                                                 )}
                                                 {d.status === 'approved' && (
-                                                    <button type="button" onClick={() => act(d.id, 'publish')} style={{ padding: '4px 8px', border: '1px solid #bfdbfe', borderRadius: 6, background: '#eff6ff', cursor: 'pointer', fontSize: 11, color: '#1d4ed8', fontWeight: 600 }}>Publish</button>
+                                                    <button type="button" onClick={() => act(d.id, 'publish')} style={{ padding: '4px 8px', border: '1px solid var(--info-border)', borderRadius: 6, background: 'var(--info-bg)', cursor: 'pointer', fontSize: 11, color: 'var(--info)', fontWeight: 600 }}>Publish</button>
                                                 )}
                                             </div>
                                         </td>

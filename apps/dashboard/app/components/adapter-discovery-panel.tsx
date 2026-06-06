@@ -53,31 +53,31 @@ const ADAPTER_TYPES: { value: AdapterType; label: string }[] = [
 const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
 const METHOD_COLORS: Record<HttpMethod, { bg: string; color: string }> = {
-    GET:    { bg: 'rgba(26,122,74,0.08)',   color: '#1a7a4a' },
-    POST:   { bg: 'rgba(0,102,204,0.08)',   color: '#0066cc' },
-    PUT:    { bg: 'rgba(180,83,9,0.08)',    color: '#b45309' },
+    GET:    { bg: 'rgba(26,122,74,0.08)',   color: 'var(--ok)' },
+    POST:   { bg: 'rgba(0,102,204,0.08)',   color: 'var(--accent)' },
+    PUT:    { bg: 'rgba(180,83,9,0.08)',    color: 'var(--warn)' },
     PATCH:  { bg: 'rgba(124,45,146,0.08)', color: '#7c2d92' },
-    DELETE: { bg: 'rgba(196,22,28,0.08)',  color: '#c4161c' },
+    DELETE: { bg: 'rgba(196,22,28,0.08)',  color: 'var(--danger)' },
 };
 
 function statusDot(status: AdapterRecord['status']) {
-    if (status === 'active')   return { color: '#1a7a4a', bg: 'rgba(26,122,74,0.08)',  border: 'rgba(26,122,74,0.2)',  label: 'Active'   };
-    if (status === 'inactive') return { color: '#6e6e73', bg: 'rgba(110,110,115,0.08)', border: 'rgba(110,110,115,0.2)', label: 'Inactive' };
-    if (status === 'error')    return { color: '#c4161c', bg: 'rgba(196,22,28,0.08)',  border: 'rgba(196,22,28,0.2)',  label: 'Error'    };
-    return                            { color: '#b45309', bg: 'rgba(180,83,9,0.08)',   border: 'rgba(180,83,9,0.2)',   label: 'Unknown'  };
+    if (status === 'active')   return { color: 'var(--ok)', bg: 'rgba(26,122,74,0.08)',  border: 'rgba(26,122,74,0.2)',  label: 'Active'   };
+    if (status === 'inactive') return { color: 'var(--ink-muted)', bg: 'rgba(110,110,115,0.08)', border: 'rgba(110,110,115,0.2)', label: 'Inactive' };
+    if (status === 'error')    return { color: 'var(--danger)', bg: 'rgba(196,22,28,0.08)',  border: 'rgba(196,22,28,0.2)',  label: 'Error'    };
+    return                            { color: 'var(--warn)', bg: 'rgba(180,83,9,0.08)',   border: 'rgba(180,83,9,0.2)',   label: 'Unknown'  };
 }
 
 // ── Shared input style ─────────────────────────────────────────────────────────
 
 const inp: React.CSSProperties = {
     width: '100%', padding: '8px 11px', borderRadius: 9,
-    border: '1px solid #d2d2d7', background: '#fff',
-    color: '#1d1d1f', fontSize: 13, outline: 'none',
+    border: '1px solid var(--line)', background: 'var(--card)',
+    color: 'var(--ink)', fontSize: 13, outline: 'none',
     boxSizing: 'border-box', fontFamily: 'inherit',
 };
 
 const label: React.CSSProperties = {
-    fontSize: 11, fontWeight: 700, color: '#6e6e73',
+    fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)',
     textTransform: 'uppercase', letterSpacing: '0.06em',
     display: 'block', marginBottom: 5,
 };
@@ -166,14 +166,14 @@ function RegisterForm({
     ];
 
     return (
-        <div style={{ border: '1px solid rgba(0,102,204,0.25)', borderRadius: 18, background: '#fff', boxShadow: '0 0 0 4px rgba(0,102,204,0.04)', marginBottom: 20, overflow: 'hidden' }}>
+        <div style={{ border: '1px solid rgba(0,102,204,0.25)', borderRadius: 18, background: 'var(--card)', boxShadow: '0 0 0 4px rgba(0,102,204,0.04)', marginBottom: 20, overflow: 'hidden' }}>
             {/* Header */}
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f2', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#0066cc', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>Register Custom Adapter</div>
-                    <p style={{ margin: 0, fontSize: 13, color: '#6e6e73' }}>Connect your own internal API so agents can call it</p>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>Register Custom Adapter</div>
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-muted)' }}>Connect your own internal API so agents can call it</p>
                 </div>
-                <button onClick={onCancel} style={{ background: '#f5f5f7', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', color: '#6e6e73', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                <button onClick={onCancel} style={{ background: 'var(--bg)', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-muted)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             </div>
 
             {/* Step indicator */}
@@ -198,12 +198,12 @@ function RegisterForm({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                             <div>
-                                <label style={label}>Adapter ID <span style={{ color: '#c4161c' }}>*</span></label>
+                                <label style={label}>Adapter ID <span style={{ color: 'var(--danger)' }}>*</span></label>
                                 <input value={adapterId} onChange={e => setAdapterId(e.target.value)} style={inp} placeholder="inventory-api" />
-                                <p style={{ fontSize: 11, color: '#aeaeb2', margin: '4px 0 0' }}>Unique identifier — use lowercase with hyphens</p>
+                                <p style={{ fontSize: 11, color: 'var(--ink-muted)', margin: '4px 0 0' }}>Unique identifier — use lowercase with hyphens</p>
                             </div>
                             <div>
-                                <label style={label}>Display Name <span style={{ color: '#c4161c' }}>*</span></label>
+                                <label style={label}>Display Name <span style={{ color: 'var(--danger)' }}>*</span></label>
                                 <input value={name} onChange={e => setName(e.target.value)} style={inp} placeholder="Inventory API" />
                             </div>
                             <div>
@@ -234,9 +234,9 @@ function RegisterForm({
                 {step === 2 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                         <div>
-                            <label style={label}>API Base URL <span style={{ color: '#c4161c' }}>*</span></label>
+                            <label style={label}>API Base URL <span style={{ color: 'var(--danger)' }}>*</span></label>
                             <input value={endpointUrl} onChange={e => setEndpointUrl(e.target.value)} type="url" style={inp} placeholder="https://api.yourcompany.com/v1" />
-                            <p style={{ fontSize: 11, color: '#aeaeb2', margin: '4px 0 0' }}>All action paths are appended to this base URL</p>
+                            <p style={{ fontSize: 11, color: 'var(--ink-muted)', margin: '4px 0 0' }}>All action paths are appended to this base URL</p>
                         </div>
 
                         <div>
@@ -257,27 +257,27 @@ function RegisterForm({
                                     <input value={apiKeyHeader} onChange={e => setApiKeyHeader(e.target.value)} style={inp} placeholder="X-API-Key" />
                                 </div>
                                 <div>
-                                    <label style={label}>API Key Value <span style={{ color: '#c4161c' }}>*</span></label>
+                                    <label style={label}>API Key Value <span style={{ color: 'var(--danger)' }}>*</span></label>
                                     <input value={apiKeyValue} onChange={e => setApiKeyValue(e.target.value)} type="password" style={inp} placeholder="sk-…" />
-                                    <p style={{ fontSize: 11, color: '#aeaeb2', margin: '4px 0 0' }}>Stored encrypted in Azure Key Vault, never logged</p>
+                                    <p style={{ fontSize: 11, color: 'var(--ink-muted)', margin: '4px 0 0' }}>Stored encrypted in Azure Key Vault, never logged</p>
                                 </div>
                             </div>
                         )}
                         {authType === 'bearer_token' && (
                             <div>
-                                <label style={label}>Bearer Token <span style={{ color: '#c4161c' }}>*</span></label>
+                                <label style={label}>Bearer Token <span style={{ color: 'var(--danger)' }}>*</span></label>
                                 <input value={bearerToken} onChange={e => setBearerToken(e.target.value)} type="password" style={inp} placeholder="eyJ…" />
-                                <p style={{ fontSize: 11, color: '#aeaeb2', margin: '4px 0 0' }}>Sent as Authorization: Bearer {'<token>'} on every request</p>
+                                <p style={{ fontSize: 11, color: 'var(--ink-muted)', margin: '4px 0 0' }}>Sent as Authorization: Bearer {'<token>'} on every request</p>
                             </div>
                         )}
                         {authType === 'basic_auth' && (
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                                 <div>
-                                    <label style={label}>Username <span style={{ color: '#c4161c' }}>*</span></label>
+                                    <label style={label}>Username <span style={{ color: 'var(--danger)' }}>*</span></label>
                                     <input value={basicUser} onChange={e => setBasicUser(e.target.value)} style={inp} />
                                 </div>
                                 <div>
-                                    <label style={label}>Password <span style={{ color: '#c4161c' }}>*</span></label>
+                                    <label style={label}>Password <span style={{ color: 'var(--danger)' }}>*</span></label>
                                     <input value={basicPass} onChange={e => setBasicPass(e.target.value)} type="password" style={inp} />
                                 </div>
                             </div>
@@ -286,11 +286,11 @@ function RegisterForm({
                         <div>
                             <label style={label}>Health Check Path</label>
                             <input value={healthPath} onChange={e => setHealthPath(e.target.value)} style={inp} placeholder="/health" />
-                            <p style={{ fontSize: 11, color: '#aeaeb2', margin: '4px 0 0' }}>GET request — expects HTTP 200. Used to confirm the API is reachable.</p>
+                            <p style={{ fontSize: 11, color: 'var(--ink-muted)', margin: '4px 0 0' }}>GET request — expects HTTP 200. Used to confirm the API is reachable.</p>
                         </div>
 
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                            <button onClick={() => setStep(1)} style={{ padding: '8px 18px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>← Back</button>
+                            <button onClick={() => setStep(1)} style={{ padding: '8px 18px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>← Back</button>
                             <button onClick={() => { if (!endpointUrl.trim()) { setError('API Base URL is required.'); return; } setError(null); setStep(3); }}
                                 style={{ padding: '8px 24px', borderRadius: 9999, border: 'none', background: '#0066cc', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                                 Next: Actions →
@@ -305,41 +305,41 @@ function RegisterForm({
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                                 <div>
-                                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#1d1d1f' }}>Define what your agents can do</p>
-                                    <p style={{ margin: '2px 0 0', fontSize: 12, color: '#6e6e73' }}>Each action is a typed API call your agent can invoke. Skip this to register without actions now and add them later.</p>
+                                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>Define what your agents can do</p>
+                                    <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--ink-muted)' }}>Each action is a typed API call your agent can invoke. Skip this to register without actions now and add them later.</p>
                                 </div>
-                                <button onClick={addAction} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                                <button onClick={addAction} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                                     <Plus size={12} /> Add action
                                 </button>
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                                 {actions.map((action, i) => (
-                                    <div key={i} style={{ border: '1px solid #e5e5ea', borderRadius: 12, padding: '12px 14px', background: '#f5f5f7' }}>
+                                    <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: '12px 14px', background: 'var(--bg)' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                                            <span style={{ fontSize: 11, fontWeight: 700, color: '#aeaeb2', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Action {i + 1}</span>
+                                            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Action {i + 1}</span>
                                             {actions.length > 1 && (
-                                                <button onClick={() => removeAction(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#aeaeb2' }}><Trash2 size={13} /></button>
+                                                <button onClick={() => removeAction(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-muted)' }}><Trash2 size={13} /></button>
                                             )}
                                         </div>
                                         <div style={{ display: 'grid', gridTemplateColumns: '2fr 90px 2fr', gap: 8 }}>
                                             <div>
                                                 <label style={label}>Action name</label>
-                                                <input value={action.name} onChange={e => updateAction(i, { name: e.target.value })} style={{ ...inp, background: '#fff' }} placeholder="get_stock" />
+                                                <input value={action.name} onChange={e => updateAction(i, { name: e.target.value })} style={{ ...inp, background: 'var(--card)' }} placeholder="get_stock" />
                                             </div>
                                             <div>
                                                 <label style={label}>Method</label>
-                                                <select value={action.method} onChange={e => updateAction(i, { method: e.target.value as HttpMethod })} style={{ ...inp, background: '#fff', cursor: 'pointer', color: METHOD_COLORS[action.method].color, fontWeight: 700 }}>
+                                                <select value={action.method} onChange={e => updateAction(i, { method: e.target.value as HttpMethod })} style={{ ...inp, background: 'var(--card)', cursor: 'pointer', color: METHOD_COLORS[action.method].color, fontWeight: 700 }}>
                                                     {HTTP_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
                                                 </select>
                                             </div>
                                             <div>
                                                 <label style={label}>Path</label>
-                                                <input value={action.path} onChange={e => updateAction(i, { path: e.target.value })} style={{ ...inp, background: '#fff', fontFamily: 'ui-monospace, monospace' }} placeholder="/inventory/{sku}" />
+                                                <input value={action.path} onChange={e => updateAction(i, { path: e.target.value })} style={{ ...inp, background: 'var(--card)', fontFamily: 'ui-monospace, monospace' }} placeholder="/inventory/{sku}" />
                                             </div>
                                             <div style={{ gridColumn: '1 / -1' }}>
                                                 <label style={label}>Description</label>
-                                                <input value={action.description} onChange={e => updateAction(i, { description: e.target.value })} style={{ ...inp, background: '#fff' }} placeholder="What does this action do? e.g. Look up stock level by SKU" />
+                                                <input value={action.description} onChange={e => updateAction(i, { description: e.target.value })} style={{ ...inp, background: 'var(--card)' }} placeholder="What does this action do? e.g. Look up stock level by SKU" />
                                             </div>
                                         </div>
                                     </div>
@@ -349,8 +349,8 @@ function RegisterForm({
 
                         {/* Summary preview */}
                         <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(0,102,204,0.04)', border: '1px solid rgba(0,102,204,0.15)' }}>
-                            <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, color: '#0066cc', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Summary</p>
-                            <div style={{ fontSize: 12, color: '#424245', lineHeight: 1.6 }}>
+                            <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Summary</p>
+                            <div style={{ fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.6 }}>
                                 <strong>{name || 'Adapter'}</strong> · {endpointUrl || 'no endpoint'}<br />
                                 Auth: <strong>{authType.replace(/_/g, ' ')}</strong> ·{' '}
                                 {actions.filter(a => a.name.trim()).length} action{actions.filter(a => a.name.trim()).length !== 1 ? 's' : ''} defined
@@ -358,18 +358,18 @@ function RegisterForm({
                         </div>
 
                         {error && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 12 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 12 }}>
                                 <AlertCircle size={13} /> {error}
                             </div>
                         )}
                         {success && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: 'rgba(26,122,74,0.07)', border: '1px solid rgba(26,122,74,0.2)', color: '#1a7a4a', fontSize: 12 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: 'var(--ok-bg)', border: '1px solid var(--ok-border)', color: 'var(--ok)', fontSize: 12 }}>
                                 <CheckCircle2 size={13} /> Adapter registered successfully!
                             </div>
                         )}
 
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                            <button onClick={() => setStep(2)} style={{ padding: '8px 18px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>← Back</button>
+                            <button onClick={() => setStep(2)} style={{ padding: '8px 18px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>← Back</button>
                             <button onClick={submit} disabled={saving || success} style={{ padding: '8px 28px', borderRadius: 9999, border: 'none', background: saving || success ? '#aeaeb2' : '#0066cc', color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
                                 {saving ? 'Registering…' : success ? '✓ Registered' : 'Register Adapter'}
                             </button>
@@ -379,7 +379,7 @@ function RegisterForm({
 
                 {/* Error shown at step 1 / 2 */}
                 {error && step < 3 && (
-                    <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 12 }}>
+                    <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 12 }}>
                         <AlertCircle size={13} /> {error}
                     </div>
                 )}
@@ -449,7 +449,7 @@ export function AdapterDiscoveryPanel({ workspaceId }: Props) {
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => void load()} disabled={loading} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                    <button onClick={() => void load()} disabled={loading} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
                         <RefreshCw size={11} className={loading ? 'animate-spin' : ''} /> Refresh
                     </button>
                     <button onClick={() => setShowForm(v => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 9999, border: 'none', background: showForm ? '#aeaeb2' : '#0066cc', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
@@ -465,15 +465,15 @@ export function AdapterDiscoveryPanel({ workspaceId }: Props) {
 
             {/* Error */}
             {error && !showForm && (
-                <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 13, marginBottom: 12 }}>{error}</div>
+                <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>{error}</div>
             )}
 
             {/* Empty state */}
             {!loading && adapters.length === 0 && !error && !showForm && (
-                <div style={{ padding: '32px', textAlign: 'center', border: '1px dashed #d2d2d7', borderRadius: 14, background: '#f5f5f7' }}>
+                <div style={{ padding: '32px', textAlign: 'center', border: '1px dashed #d2d2d7', borderRadius: 14, background: 'var(--bg)' }}>
                     <div style={{ fontSize: 28, marginBottom: 8 }}>🔌</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1d1d1f', marginBottom: 4 }}>No adapters registered yet</div>
-                    <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6e6e73', maxWidth: 320, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', marginBottom: 4 }}>No adapters registered yet</div>
+                    <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--ink-muted)', maxWidth: 320, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.5 }}>
                         Register your custom internal APIs so agents can call them as typed actions — just like GitHub or Jira.
                     </p>
                     <button onClick={() => setShowForm(true)} style={{ padding: '8px 20px', borderRadius: 9999, border: 'none', background: '#0066cc', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
@@ -491,7 +491,7 @@ export function AdapterDiscoveryPanel({ workspaceId }: Props) {
                     const isExpanded = expanded === adapter.adapter_id;
 
                     return (
-                        <div key={adapter.adapter_id} style={{ border: `1px solid ${dot.border}`, borderRadius: 14, background: '#fff', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                        <div key={adapter.adapter_id} style={{ border: `1px solid ${dot.border}`, borderRadius: 14, background: 'var(--card)', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px' }}>
                                 {/* Status */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, paddingTop: 2 }}>
@@ -500,12 +500,12 @@ export function AdapterDiscoveryPanel({ workspaceId }: Props) {
                                 {/* Info */}
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 3 }}>
-                                        <span style={{ fontSize: 14, fontWeight: 700, color: '#1d1d1f' }}>{adapter.name}</span>
+                                        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{adapter.name}</span>
                                         <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 9999, background: dot.bg, color: dot.color, border: `1px solid ${dot.border}` }}>{dot.label}</span>
-                                        {adapter.version && <span style={{ fontSize: 11, color: '#aeaeb2' }}>v{adapter.version}</span>}
+                                        {adapter.version && <span style={{ fontSize: 11, color: 'var(--ink-muted)' }}>v{adapter.version}</span>}
                                     </div>
-                                    <div style={{ fontSize: 12, color: '#6e6e73', fontFamily: 'ui-monospace, monospace' }}>{adapter.adapter_id}</div>
-                                    {adapter.endpoint_url && <div style={{ fontSize: 12, color: '#0066cc', marginTop: 3 }}>{adapter.endpoint_url}</div>}
+                                    <div style={{ fontSize: 12, color: 'var(--ink-muted)', fontFamily: 'ui-monospace, monospace' }}>{adapter.adapter_id}</div>
+                                    {adapter.endpoint_url && <div style={{ fontSize: 12, color: 'var(--accent)', marginTop: 3 }}>{adapter.endpoint_url}</div>}
                                     {health && (
                                         <div style={{ marginTop: 4, fontSize: 12, color: health.healthy ? '#1a7a4a' : '#c4161c', display: 'flex', alignItems: 'center', gap: 4 }}>
                                             {health.healthy ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
@@ -516,29 +516,29 @@ export function AdapterDiscoveryPanel({ workspaceId }: Props) {
                                 {/* Actions */}
                                 <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
                                     {adapter.actions && adapter.actions.length > 0 && (
-                                        <button onClick={() => setExpanded(isExpanded ? null : adapter.adapter_id)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#f5f5f7', color: '#424245', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                                        <button onClick={() => setExpanded(isExpanded ? null : adapter.adapter_id)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--bg)', color: 'var(--ink-soft)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                                             {adapter.actions.length} actions {isExpanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
                                         </button>
                                     )}
-                                    <button onClick={() => void healthCheck(adapter)} disabled={checking} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                                    <button onClick={() => void healthCheck(adapter)} disabled={checking} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                                         <Zap size={11} /> {checking ? '…' : 'Ping'}
                                     </button>
-                                    <button onClick={() => void deleteAdapter(adapter.adapter_id)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 9999, border: '1px solid rgba(196,22,28,0.25)', background: 'rgba(196,22,28,0.06)', color: '#c4161c', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                                    <button onClick={() => void deleteAdapter(adapter.adapter_id)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 9999, border: '1px solid var(--danger-border)', background: 'var(--danger-bg)', color: 'var(--danger)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                                         <Trash2 size={11} />
                                     </button>
                                 </div>
                             </div>
                             {/* Expanded actions */}
                             {isExpanded && adapter.actions && adapter.actions.length > 0 && (
-                                <div style={{ borderTop: '1px solid #f0f0f2', padding: '10px 16px', background: '#f5f5f7' }}>
-                                    <div style={{ fontSize: 10, fontWeight: 700, color: '#aeaeb2', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>Available Actions</div>
+                                <div style={{ borderTop: '1px solid #f0f0f2', padding: '10px 16px', background: 'var(--bg)' }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>Available Actions</div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                         {adapter.actions.map((a, i) => (
                                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                                 <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 7px', borderRadius: 5, background: METHOD_COLORS[a.method].bg, color: METHOD_COLORS[a.method].color, fontFamily: 'ui-monospace, monospace', flexShrink: 0 }}>{a.method}</span>
-                                                <span style={{ fontSize: 12, fontWeight: 700, color: '#1d1d1f', fontFamily: 'ui-monospace, monospace' }}>{a.name}</span>
-                                                <span style={{ fontSize: 11, color: '#aeaeb2', fontFamily: 'ui-monospace, monospace' }}>{a.path}</span>
-                                                {a.description && <span style={{ fontSize: 11, color: '#6e6e73' }}>— {a.description}</span>}
+                                                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', fontFamily: 'ui-monospace, monospace' }}>{a.name}</span>
+                                                <span style={{ fontSize: 11, color: 'var(--ink-muted)', fontFamily: 'ui-monospace, monospace' }}>{a.path}</span>
+                                                {a.description && <span style={{ fontSize: 11, color: 'var(--ink-muted)' }}>— {a.description}</span>}
                                             </div>
                                         ))}
                                     </div>

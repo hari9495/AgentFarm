@@ -36,16 +36,16 @@ function MetricCard({ label, value }: { label: string; value: string }) {
     return (
         <div style={{
             flex: '1 1 0',
-            border: '1px solid #e5e7eb',
+            border: '1px solid var(--line)',
             borderRadius: 8,
             padding: 16,
-            background: '#fff',
+            background: 'var(--card)',
             minWidth: 0,
         }}>
-            <p style={{ fontSize: '0.72rem', color: '#6b7280', marginBottom: '0.4rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <p style={{ fontSize: '0.72rem', color: 'var(--ink-muted)', marginBottom: '0.4rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {label}
             </p>
-            <p style={{ fontSize: '1.4rem', fontWeight: 700, color: '#111827', margin: 0 }}>{value}</p>
+            <p style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>{value}</p>
         </div>
     );
 }
@@ -55,7 +55,7 @@ function SkeletonBox({ width, height }: { width: string | number; height: number
         <div style={{
             width,
             height,
-            background: '#f3f4f6',
+            background: 'var(--bg)',
             borderRadius: 6,
             animation: 'pulse 1.5s ease-in-out infinite',
         }} />
@@ -98,10 +98,10 @@ export default function AgentPerformancePanel() {
     const maxTrendCount = trend.length > 0 ? Math.max(...trend.map((w) => w.taskCount), 1) : 1;
 
     return (
-        <section style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', padding: '1.25rem 1.5rem', marginTop: '1rem' }}>
+        <section style={{ background: 'var(--card)', borderRadius: 12, border: '1px solid var(--line)', padding: '1.25rem 1.5rem', marginTop: '1rem' }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-                <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', margin: 0 }}>Agent Performance</h2>
+                <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>Agent Performance</h2>
                 <div style={{ display: 'flex', gap: 4 }}>
                     {DAYS_OPTIONS.map((d) => (
                         <button
@@ -110,7 +110,7 @@ export default function AgentPerformancePanel() {
                             style={{
                                 padding: '3px 10px',
                                 borderRadius: 6,
-                                border: '1px solid #e5e7eb',
+                                border: '1px solid var(--line)',
                                 background: days === d ? '#6366f1' : '#f9fafb',
                                 color: days === d ? '#fff' : '#374151',
                                 fontSize: '0.78rem',
@@ -126,7 +126,7 @@ export default function AgentPerformancePanel() {
 
             {/* Error */}
             {error && (
-                <p style={{ color: '#ef4444', fontSize: '0.85rem', marginBottom: '1rem' }}>{error}</p>
+                <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: '1rem' }}>{error}</p>
             )}
 
             {/* Loading skeleton */}
@@ -145,7 +145,7 @@ export default function AgentPerformancePanel() {
 
             {/* Empty state */}
             {!isLoading && data && data.taskCount === 0 && (
-                <p style={{ color: '#6b7280', fontSize: '0.875rem', textAlign: 'center', padding: '2rem 0' }}>
+                <p style={{ color: 'var(--ink-muted)', fontSize: '0.875rem', textAlign: 'center', padding: '2rem 0' }}>
                     No tasks in this period.
                 </p>
             )}
@@ -173,7 +173,7 @@ export default function AgentPerformancePanel() {
                     {/* Weekly trend chart */}
                     {trend.length > 0 && (
                         <div>
-                            <p style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                            <p style={{ fontSize: '0.72rem', color: 'var(--ink-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
                                 Weekly Trend
                             </p>
                             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 80 }}>
@@ -190,7 +190,7 @@ export default function AgentPerformancePanel() {
                                                 }}
                                                 title={`${w.weekStart}: ${w.taskCount} tasks`}
                                             />
-                                            <span style={{ fontSize: '0.6rem', color: '#9ca3af' }}>
+                                            <span style={{ fontSize: '0.6rem', color: 'var(--ink-muted)' }}>
                                                 {w.weekStart.slice(5)}
                                             </span>
                                         </div>
@@ -203,25 +203,25 @@ export default function AgentPerformancePanel() {
                     {/* By provider table */}
                     {providers.length > 0 && (
                         <div>
-                            <p style={{ fontSize: '0.72rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                            <p style={{ fontSize: '0.72rem', color: 'var(--ink-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
                                 By Provider
                             </p>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                                 <thead>
-                                    <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-                                        <th style={{ padding: '0.4rem 0.5rem', textAlign: 'left', color: '#6b7280', fontWeight: 600, fontSize: '0.72rem' }}>PROVIDER</th>
-                                        <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: '#6b7280', fontWeight: 600, fontSize: '0.72rem' }}>TASKS</th>
-                                        <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: '#6b7280', fontWeight: 600, fontSize: '0.72rem' }}>TOTAL COST</th>
-                                        <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: '#6b7280', fontWeight: 600, fontSize: '0.72rem' }}>AVG LATENCY</th>
+                                    <tr style={{ borderBottom: '1px solid var(--line)' }}>
+                                        <th style={{ padding: '0.4rem 0.5rem', textAlign: 'left', color: 'var(--ink-muted)', fontWeight: 600, fontSize: '0.72rem' }}>PROVIDER</th>
+                                        <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink-muted)', fontWeight: 600, fontSize: '0.72rem' }}>TASKS</th>
+                                        <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink-muted)', fontWeight: 600, fontSize: '0.72rem' }}>TOTAL COST</th>
+                                        <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: 'var(--ink-muted)', fontWeight: 600, fontSize: '0.72rem' }}>AVG LATENCY</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {providers.map(([provider, stats]) => (
-                                        <tr key={provider} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                                            <td style={{ padding: '0.45rem 0.5rem', color: '#374151' }}>{provider}</td>
-                                            <td style={{ padding: '0.45rem 0.5rem', textAlign: 'right', color: '#374151' }}>{stats.taskCount.toLocaleString()}</td>
-                                            <td style={{ padding: '0.45rem 0.5rem', textAlign: 'right', color: '#059669' }}>${stats.totalCostUsd.toFixed(3)}</td>
-                                            <td style={{ padding: '0.45rem 0.5rem', textAlign: 'right', color: '#6b7280' }}>{stats.avgLatencyMs.toLocaleString()}ms</td>
+                                        <tr key={provider} style={{ borderBottom: '1px solid var(--line)' }}>
+                                            <td style={{ padding: '0.45rem 0.5rem', color: 'var(--ink)' }}>{provider}</td>
+                                            <td style={{ padding: '0.45rem 0.5rem', textAlign: 'right', color: 'var(--ink)' }}>{stats.taskCount.toLocaleString()}</td>
+                                            <td style={{ padding: '0.45rem 0.5rem', textAlign: 'right', color: 'var(--ok)' }}>${stats.totalCostUsd.toFixed(3)}</td>
+                                            <td style={{ padding: '0.45rem 0.5rem', textAlign: 'right', color: 'var(--ink-muted)' }}>{stats.avgLatencyMs.toLocaleString()}ms</td>
                                         </tr>
                                     ))}
                                 </tbody>

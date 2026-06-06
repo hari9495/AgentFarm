@@ -56,17 +56,17 @@ type Props = {
 };
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    pending: { bg: '#fef9c3', color: '#854d0e' },
-    in_review: { bg: '#dbeafe', color: '#1d4ed8' },
-    approved: { bg: '#dcfce7', color: '#166534' },
-    rejected: { bg: '#fee2e2', color: '#991b1b' },
+    pending: { bg: '#fef9c3', color: 'var(--warn)' },
+    in_review: { bg: '#dbeafe', color: 'var(--info)' },
+    approved: { bg: '#dcfce7', color: 'var(--ok)' },
+    rejected: { bg: '#fee2e2', color: 'var(--danger)' },
     timed_out: { bg: '#f1f5f9', color: '#475569' },
 };
 
 const RISK_BADGE: Record<string, { bg: string; color: string }> = {
-    low: { bg: '#dcfce7', color: '#166534' },
-    medium: { bg: '#fef9c3', color: '#854d0e' },
-    high: { bg: '#fee2e2', color: '#991b1b' },
+    low: { bg: '#dcfce7', color: 'var(--ok)' },
+    medium: { bg: '#fef9c3', color: 'var(--warn)' },
+    high: { bg: '#fee2e2', color: 'var(--danger)' },
 };
 
 const Badge = ({ label, style }: { label: string; style: { bg: string; color: string } }) => (
@@ -284,11 +284,11 @@ export function GovernanceWorkflowPanel({ workspaceId }: Props) {
                 {workflowsError && (
                     <div
                         style={{
-                            background: '#fef2f2',
-                            border: '1px solid #fecaca',
+                            background: 'var(--danger-bg)',
+                            border: '1px solid var(--danger-border)',
                             borderRadius: '6px',
                             padding: '0.65rem 0.9rem',
-                            color: '#dc2626',
+                            color: 'var(--danger)',
                             fontSize: '0.85rem',
                             marginBottom: '0.75rem',
                         }}

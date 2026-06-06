@@ -226,7 +226,7 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                         background: '#1e293b',
                         border: '1px solid #334155',
                         borderRadius: '6px',
-                        color: '#94a3b8',
+                        color: 'var(--ink-muted)',
                         fontSize: '12px',
                         fontWeight: 600,
                         cursor: snapshotLoading ? 'not-allowed' : 'pointer',
@@ -280,7 +280,7 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                                     <div
                                         style={{
                                             fontSize: '12px',
-                                            color: '#94a3b8',
+                                            color: 'var(--ink-muted)',
                                             marginBottom: '4px',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
@@ -290,7 +290,7 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                                         {v.changeNote}
                                     </div>
                                 )}
-                                <div style={{ fontSize: '11px', color: '#334155' }}>
+                                <div style={{ fontSize: '11px', color: 'var(--ink-soft)' }}>
                                     {new Date(v.createdAt).toLocaleString()} · by {v.createdBy}
                                 </div>
                             </div>
@@ -349,7 +349,7 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                                         background: '#1e293b',
                                         border: '1px solid #334155',
                                         borderRadius: '5px',
-                                        color: '#94a3b8',
+                                        color: 'var(--ink-muted)',
                                         fontSize: '11px',
                                         fontWeight: 600,
                                         cursor: restoring === v.id ? 'not-allowed' : 'pointer',
@@ -366,7 +366,7 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
 
             {/* Diff hint */}
             {versions.length > 1 && !diffBase && (
-                <p style={{ fontSize: '11px', color: '#334155', marginTop: '12px' }}>
+                <p style={{ fontSize: '11px', color: 'var(--ink-soft)', marginTop: '12px' }}>
                     Tip: click <strong style={{ color: '#475569' }}>Set Base</strong> on one version, then <strong style={{ color: '#475569' }}>Compare →</strong> on another to diff their brainConfig.
                 </p>
             )}
@@ -438,9 +438,9 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
                                 <thead>
                                     <tr>
-                                        <th style={{ textAlign: 'left', color: '#334155', padding: '4px 8px', fontWeight: 600, width: '30%' }}>Key</th>
-                                        <th style={{ textAlign: 'left', color: '#334155', padding: '4px 8px', fontWeight: 600, width: '35%' }}>Old</th>
-                                        <th style={{ textAlign: 'left', color: '#334155', padding: '4px 8px', fontWeight: 600, width: '35%' }}>New</th>
+                                        <th style={{ textAlign: 'left', color: 'var(--ink-soft)', padding: '4px 8px', fontWeight: 600, width: '30%' }}>Key</th>
+                                        <th style={{ textAlign: 'left', color: 'var(--ink-soft)', padding: '4px 8px', fontWeight: 600, width: '35%' }}>Old</th>
+                                        <th style={{ textAlign: 'left', color: 'var(--ink-soft)', padding: '4px 8px', fontWeight: 600, width: '35%' }}>New</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -460,10 +460,10 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                                                     <td style={{ padding: '4px 8px', color: prefixColor, fontFamily: 'monospace' }}>
                                                         {prefix} {line.key}
                                                     </td>
-                                                    <td style={{ padding: '4px 8px', color: '#94a3b8', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                                                    <td style={{ padding: '4px 8px', color: 'var(--ink-muted)', fontFamily: 'monospace', wordBreak: 'break-all' }}>
                                                         {isAdd ? '' : truncate(line.oldValue)}
                                                     </td>
-                                                    <td style={{ padding: '4px 8px', color: '#94a3b8', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                                                    <td style={{ padding: '4px 8px', color: 'var(--ink-muted)', fontFamily: 'monospace', wordBreak: 'break-all' }}>
                                                         {isAdd ? truncate(line.newValue) : ''}
                                                     </td>
                                                 </tr>

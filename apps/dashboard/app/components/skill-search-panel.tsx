@@ -115,10 +115,10 @@ export function SkillSearchPanel({ workspaceId, botId }: Props) {
         <section style={{ marginTop: '1rem' }}>
             {/* Catalog loading / error */}
             {catalogLoading && (
-                <p style={{ fontSize: '0.83rem', color: '#78716c', marginBottom: '0.75rem' }}>Loading skill catalog…</p>
+                <p style={{ fontSize: '0.83rem', color: 'var(--ink-muted)', marginBottom: '0.75rem' }}>Loading skill catalog…</p>
             )}
             {catalogError && (
-                <div style={{ marginBottom: '0.75rem', padding: '0.6rem 0.9rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 6, color: '#dc2626', fontSize: '0.83rem' }}>
+                <div style={{ marginBottom: '0.75rem', padding: '0.6rem 0.9rem', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: 6, color: 'var(--danger)', fontSize: '0.83rem' }}>
                     {catalogError}
                 </div>
             )}
@@ -135,7 +135,7 @@ export function SkillSearchPanel({ workspaceId, botId }: Props) {
                 <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    style={{ padding: '0.45rem 0.7rem', borderRadius: 6, border: '1px solid #d4d4d4', fontSize: '0.88rem', background: '#fff' }}
+                    style={{ padding: '0.45rem 0.7rem', borderRadius: 6, border: '1px solid #d4d4d4', fontSize: '0.88rem', background: 'var(--card)' }}
                 >
                     {categories.map((c) => (
                         <option key={c} value={c}>{c === 'all' ? 'All Sources' : c}</option>
@@ -144,7 +144,7 @@ export function SkillSearchPanel({ workspaceId, botId }: Props) {
             </div>
 
             {/* Results count */}
-            <p style={{ fontSize: '0.8rem', color: '#78716c', marginBottom: '0.5rem' }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--ink-muted)', marginBottom: '0.5rem' }}>
                 {filteredSkills.length} skill{filteredSkills.length !== 1 ? 's' : ''} found
             </p>
 
@@ -162,16 +162,16 @@ export function SkillSearchPanel({ workspaceId, botId }: Props) {
                         }}
                     >
                         <div style={{ fontWeight: 600, fontSize: '0.88rem', marginBottom: '0.25rem' }}>{skill.name}</div>
-                        <div style={{ fontSize: '0.78rem', color: '#57534e', marginBottom: '0.35rem', lineHeight: 1.4, fontFamily: 'monospace' }}>{skill.id}</div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--ink-muted)', marginBottom: '0.35rem', lineHeight: 1.4, fontFamily: 'monospace' }}>{skill.id}</div>
                         <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: 99, background: '#f1f5f9', color: '#475569' }}>
+                            <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: 99, background: 'var(--bg)', color: '#475569' }}>
                                 {skill.source}
                             </span>
-                            <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: 99, background: '#f1f5f9', color: '#475569' }}>
+                            <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: 99, background: 'var(--bg)', color: '#475569' }}>
                                 v{skill.version}
                             </span>
                             {skill.verified && (
-                                <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: 99, background: '#dcfce7', color: '#166534' }}>
+                                <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: 99, background: 'var(--ok-bg)', color: 'var(--ok)' }}>
                                     ✓ verified
                                 </span>
                             )}
@@ -184,10 +184,10 @@ export function SkillSearchPanel({ workspaceId, botId }: Props) {
             {selectedSkill && (
                 <div style={{ marginTop: '1.25rem', padding: '1rem', border: '1px solid #6366f1', borderRadius: 8, background: '#fafafa' }}>
                     <h3 style={{ margin: '0 0 0.15rem', fontSize: '1rem' }}>{selectedSkill.name}</h3>
-                    <p style={{ margin: '0 0 0.4rem', fontSize: '0.78rem', color: '#57534e', fontFamily: 'monospace' }}>{selectedSkill.id} · v{selectedSkill.version} · {selectedSkill.source}</p>
+                    <p style={{ margin: '0 0 0.4rem', fontSize: '0.78rem', color: 'var(--ink-muted)', fontFamily: 'monospace' }}>{selectedSkill.id} · v{selectedSkill.version} · {selectedSkill.source}</p>
 
                     {selectedSkill.permissions.length > 0 && (
-                        <p style={{ fontSize: '0.78rem', color: '#92400e', marginBottom: '0.5rem' }}>
+                        <p style={{ fontSize: '0.78rem', color: 'var(--warn)', marginBottom: '0.5rem' }}>
                             Permissions: {selectedSkill.permissions.join(', ')}
                         </p>
                     )}
@@ -210,13 +210,13 @@ export function SkillSearchPanel({ workspaceId, botId }: Props) {
                         {invoking ? 'Running…' : 'Run Skill'}
                     </button>
 
-                    {invokeError && <p style={{ color: '#dc2626', fontSize: '0.82rem', marginTop: '0.5rem' }}>{invokeError}</p>}
+                    {invokeError && <p style={{ color: 'var(--danger)', fontSize: '0.82rem', marginTop: '0.5rem' }}>{invokeError}</p>}
 
                     {invokeResult && (
                         <div style={{ marginTop: '0.6rem', padding: '0.6rem', background: invokeResult.ok ? '#f0fdf4' : '#fef2f2', borderRadius: 6, fontSize: '0.83rem' }}>
                             <span style={{ fontWeight: 700, color: invokeResult.ok ? '#15803d' : '#dc2626' }}>{invokeResult.ok ? '✓ Success' : '✗ Failed'}</span>
-                            <span style={{ marginLeft: '0.5rem', color: '#57534e' }}>{invokeResult.summary}</span>
-                            <span style={{ marginLeft: '0.75rem', color: '#78716c' }}>{invokeResult.duration_ms}ms</span>
+                            <span style={{ marginLeft: '0.5rem', color: 'var(--ink-muted)' }}>{invokeResult.summary}</span>
+                            <span style={{ marginLeft: '0.75rem', color: 'var(--ink-muted)' }}>{invokeResult.duration_ms}ms</span>
                         </div>
                     )}
                 </div>

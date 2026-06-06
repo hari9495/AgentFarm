@@ -264,10 +264,10 @@ const METHOD_COLORS: Record<HttpMethod, CSSProperties> = {
 
 const AUTH_COLORS: Record<AuthLevel, CSSProperties> = {
     'public':    { backgroundColor: '#e2e8f0', color: '#475569' },
-    'session':   { backgroundColor: '#dbeafe', color: '#1d4ed8' },
+    'session':   { backgroundColor: '#dbeafe', color: 'var(--info)' },
     'viewer+':   { backgroundColor: '#d1fae5', color: '#065f46' },
-    'operator+': { backgroundColor: '#fef3c7', color: '#92400e' },
-    'admin+':    { backgroundColor: '#fee2e2', color: '#991b1b' },
+    'operator+': { backgroundColor: '#fef3c7', color: 'var(--warn)' },
+    'admin+':    { backgroundColor: '#fee2e2', color: 'var(--danger)' },
 };
 
 export default function ApiDocsPanel() {
@@ -577,7 +577,7 @@ export default function ApiDocsPanel() {
                                 <span
                                     style={{
                                         backgroundColor: '#334155',
-                                        color: '#94a3b8',
+                                        color: 'var(--ink-muted)',
                                         padding: '0.15rem 0.5rem',
                                         borderRadius: '0.25rem',
                                         fontSize: '0.7rem',

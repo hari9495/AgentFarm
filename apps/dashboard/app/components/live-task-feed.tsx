@@ -155,7 +155,7 @@ export function LiveTaskFeed({ workspaceId, maxEvents = 50 }: LiveTaskFeedProps)
                     {connected ? 'Live' : 'Reconnecting...'}
                 </span>
                 {events.length > 0 && (
-                    <span style={{ color: '#6b7280', marginLeft: 8 }}>
+                    <span style={{ color: 'var(--ink-muted)', marginLeft: 8 }}>
                         {events.length} event{events.length !== 1 ? 's' : ''}
                     </span>
                 )}
@@ -163,12 +163,12 @@ export function LiveTaskFeed({ workspaceId, maxEvents = 50 }: LiveTaskFeedProps)
 
             {/* Empty / error states */}
             {events.length === 0 && connected && (
-                <p style={{ color: '#6b7280', fontStyle: 'italic' }}>
+                <p style={{ color: 'var(--ink-muted)', fontStyle: 'italic' }}>
                     Waiting for task events...
                 </p>
             )}
             {events.length === 0 && error && (
-                <p style={{ color: '#dc2626' }}>{error}</p>
+                <p style={{ color: 'var(--danger)' }}>{error}</p>
             )}
 
             {/* Event rows — newest first (already prepended) */}
@@ -192,7 +192,7 @@ export function LiveTaskFeed({ workspaceId, maxEvents = 50 }: LiveTaskFeedProps)
                             <span style={{ fontFamily: 'monospace', color: '#e2e8f0', minWidth: 96 }}>
                                 {(evt.taskId ?? '—').slice(0, 12)}
                             </span>
-                            <span style={{ color: '#94a3b8', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <span style={{ color: 'var(--ink-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {evt.workspaceId}
                             </span>
                             <span style={{ color: '#64748b', fontSize: 11, flexShrink: 0 }}>

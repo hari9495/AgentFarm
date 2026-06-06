@@ -63,7 +63,7 @@ function AgentBubble({ text }: { text: string }) {
             <div style={{
                 maxWidth: '75%', padding: '0.4rem 0.65rem',
                 borderRadius: '10px 10px 10px 2px',
-                background: '#e2e8f0', color: '#1e293b',
+                background: 'var(--line)', color: 'var(--ink-soft)',
                 fontSize: '0.83rem', lineHeight: 1.5, whiteSpace: 'pre-wrap',
             }}>
                 {text}
@@ -79,7 +79,7 @@ function StepBubble({ text, status }: { text: string; status?: string }) {
             <div style={{
                 display: 'flex', alignItems: 'center', gap: '0.4rem',
                 padding: '0.3rem 0.6rem', borderRadius: 6,
-                background: '#f8fafc', border: '1px solid #e2e8f0',
+                background: 'var(--bg)', border: '1px solid var(--line)',
                 fontSize: '0.75rem', color: '#475569',
             }}>
                 {isRunning ? (
@@ -91,7 +91,7 @@ function StepBubble({ text, status }: { text: string; status?: string }) {
                         display: 'inline-block', flexShrink: 0,
                     }} />
                 ) : (
-                    <span style={{ color: '#16a34a', flexShrink: 0 }}>✓</span>
+                    <span style={{ color: 'var(--ok)', flexShrink: 0 }}>✓</span>
                 )}
                 {text}
             </div>
@@ -104,8 +104,8 @@ function FixBubble({ tier, description }: { tier: number; description: string })
         <div style={{ marginBottom: '0.3rem' }}>
             <div style={{
                 padding: '0.3rem 0.6rem', borderRadius: 6,
-                background: '#f0fdf4', border: '1px solid #bbf7d0',
-                fontSize: '0.75rem', color: '#15803d',
+                background: 'var(--ok-bg)', border: '1px solid var(--ok-border)',
+                fontSize: '0.75rem', color: 'var(--ok)',
             }}>
                 <span style={{ fontWeight: 700 }}>Tier {tier} fix:</span>{' '}{description}
             </div>
@@ -232,7 +232,7 @@ export function SupportChatWidget() {
             </header>
 
             {wsError && (
-                <p style={{ margin: 0, padding: '0.4rem 1rem', fontSize: '0.76rem', color: '#dc2626' }}>
+                <p style={{ margin: 0, padding: '0.4rem 1rem', fontSize: '0.76rem', color: 'var(--danger)' }}>
                     {wsError}
                 </p>
             )}
@@ -242,7 +242,7 @@ export function SupportChatWidget() {
                     padding: '0.3rem 1rem',
                     background: 'rgba(0,102,204,0.05)',
                     borderBottom: '1px solid var(--line)',
-                    fontSize: '0.72rem', color: '#0066cc',
+                    fontSize: '0.72rem', color: 'var(--accent)',
                 }}>
                     Issue: {issueId.slice(0, 18)}…
                 </div>
@@ -265,7 +265,7 @@ export function SupportChatWidget() {
                     if (msg.kind === 'step') return <StepBubble key={msg.id} text={msg.text} status={msg.status} />;
                     if (msg.kind === 'fix') return <FixBubble key={msg.id} tier={msg.tier} description={msg.description} />;
                     return (
-                        <p key={msg.id} style={{ margin: '0.2rem 0', fontSize: '0.78rem', color: '#dc2626' }}>
+                        <p key={msg.id} style={{ margin: '0.2rem 0', fontSize: '0.78rem', color: 'var(--danger)' }}>
                             {msg.text}
                         </p>
                     );

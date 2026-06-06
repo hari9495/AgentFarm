@@ -138,7 +138,7 @@ export function SkillInvokePanel({ workspaceId, botId }: SkillInvokePanelProps) 
                         style={{ padding: '0.45rem 0.6rem', borderRadius: 6, border: `1px solid ${inputError ? '#ef4444' : 'var(--border-color, #444)'}`, background: 'var(--input-bg, #0f0f1a)', color: 'inherit', fontSize: '0.8rem', fontFamily: 'monospace', resize: 'vertical' }}
                         placeholder='{"repo": "org/repo", "pr_number": 42}'
                     />
-                    {inputError && <span style={{ color: '#ef4444', fontSize: '0.75rem' }}>{inputError}</span>}
+                    {inputError && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>{inputError}</span>}
                 </label>
 
                 {/* Submit */}
@@ -170,7 +170,7 @@ export function SkillInvokePanel({ workspaceId, botId }: SkillInvokePanelProps) 
                                 RISK: {lastResult.risk_level}
                             </span>
                         )}
-                        <span style={{ fontSize: '0.75rem', color: '#888' }}>{lastResult.duration_ms}ms</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{lastResult.duration_ms}ms</span>
                     </div>
                     <p style={{ fontSize: '0.85rem', marginBottom: '0.5rem', color: '#ccc' }}>{lastResult.summary}</p>
                     {lastResult.error && <p style={{ fontSize: '0.82rem', color: '#f87171' }}>{lastResult.error}</p>}

@@ -184,7 +184,7 @@ export function SupportIssueFeed() {
             </header>
 
             {error && (
-                <p style={{ margin: 0, padding: '0.5rem 1rem', fontSize: '0.78rem', color: '#dc2626' }}>
+                <p style={{ margin: 0, padding: '0.5rem 1rem', fontSize: '0.78rem', color: 'var(--danger)' }}>
                     {error}
                 </p>
             )}
@@ -214,7 +214,7 @@ export function SupportIssueFeed() {
                                 <SeverityBadge severity={issue.severity} />
                                 <StatusPill status={issue.status} />
                                 {issue.fixApplied && (
-                                    <span style={{ fontSize: 11, color: '#15803d', marginLeft: 'auto', flexShrink: 0 }}>
+                                    <span style={{ fontSize: 11, color: 'var(--ok)', marginLeft: 'auto', flexShrink: 0 }}>
                                         ✓ Fixed
                                     </span>
                                 )}

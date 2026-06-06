@@ -82,13 +82,13 @@ export default function IssueHistoryPage() {
     const filtered = filter === 'all' ? issues : issues.filter((i) => i.status === filter);
 
     return (
-        <main style={{ minHeight: 'calc(100vh - 52px)', background: '#f8fafc', padding: '2rem 1.5rem', fontFamily: 'Inter, system-ui, sans-serif' }}>
+        <main style={{ minHeight: 'calc(100vh - 52px)', background: 'var(--bg)', padding: '2rem 1.5rem', fontFamily: 'Inter, system-ui, sans-serif' }}>
             <div style={{ maxWidth: 900, margin: '0 auto' }}>
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
                     <div style={{ flex: 1 }}>
-                        <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#111827', marginBottom: '0.2rem' }}>Ticket History</h1>
-                        <p style={{ fontSize: '0.84rem', color: '#6b7280' }}>All support tickets for your account</p>
+                        <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--ink)', marginBottom: '0.2rem' }}>Ticket History</h1>
+                        <p style={{ fontSize: '0.84rem', color: 'var(--ink-muted)' }}>All support tickets for your account</p>
                     </div>
                     <Link href="/portal/support" style={{ padding: '0.4rem 0.9rem', background: '#2563eb', color: '#fff', borderRadius: 6, fontSize: '0.83rem', fontWeight: 600, textDecoration: 'none' }}>
                         + New Ticket
@@ -104,7 +104,7 @@ export default function IssueHistoryPage() {
                             onClick={() => setFilter(s)}
                             style={{
                                 padding: '0.28rem 0.75rem', fontSize: '0.8rem', fontWeight: 600,
-                                border: '1px solid #e2e8f0', borderRadius: 20,
+                                border: '1px solid var(--line)', borderRadius: 20,
                                 background: filter === s ? '#1e293b' : '#fff',
                                 color: filter === s ? '#fff' : '#475569',
                                 cursor: 'pointer',
@@ -117,15 +117,15 @@ export default function IssueHistoryPage() {
 
                 {/* Content */}
                 {loading && (
-                    <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280', fontSize: '0.9rem' }}>Loading…</div>
+                    <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ink-muted)', fontSize: '0.9rem' }}>Loading…</div>
                 )}
                 {error && (
-                    <div style={{ padding: '1rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, color: '#b91c1c', fontSize: '0.84rem' }}>{error}</div>
+                    <div style={{ padding: '1rem', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: 8, color: 'var(--danger)', fontSize: '0.84rem' }}>{error}</div>
                 )}
                 {!loading && !error && filtered.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af', fontSize: '0.88rem' }}>
+                    <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--ink-muted)', fontSize: '0.88rem' }}>
                         No tickets found.{' '}
-                        <Link href="/portal/support" style={{ color: '#2563eb' }}>Open a support chat</Link> to create one.
+                        <Link href="/portal/support" style={{ color: 'var(--info)' }}>Open a support chat</Link> to create one.
                     </div>
                 )}
                 {!loading && !error && filtered.length > 0 && (
@@ -134,45 +134,45 @@ export default function IssueHistoryPage() {
                             const sc = STATUS_COLOR[issue.status];
                             return (
                                 <div key={issue.id} style={{ display: 'flex', flexDirection: 'column' }}>
-                                <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: '1rem 1.1rem', display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                                <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 8, padding: '1rem 1.1rem', display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
                                     {/* Severity dot */}
                                     <div style={{ width: 9, height: 9, borderRadius: '50%', background: SEVERITY_DOT[issue.severity], marginTop: 5, flexShrink: 0 }} title={issue.severity} />
 
                                     {/* Main content */}
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
-                                            <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                 {issue.title}
                                             </span>
                                             <span style={{ padding: '0.1rem 0.45rem', borderRadius: 12, fontSize: '0.72rem', fontWeight: 600, background: sc.bg, color: sc.text, flexShrink: 0 }}>
                                                 {STATUS_LABEL[issue.status]}
                                             </span>
                                             {issue.fixApplied && (
-                                                <span style={{ padding: '0.1rem 0.45rem', borderRadius: 12, fontSize: '0.72rem', fontWeight: 600, background: '#f0fdf4', color: '#15803d', flexShrink: 0 }}>
+                                                <span style={{ padding: '0.1rem 0.45rem', borderRadius: 12, fontSize: '0.72rem', fontWeight: 600, background: 'var(--ok-bg)', color: 'var(--ok)', flexShrink: 0 }}>
                                                     ✓ Fixed
                                                 </span>
                                             )}
                                             {issue.escalatedTo && (
-                                                <span style={{ padding: '0.1rem 0.45rem', borderRadius: 12, fontSize: '0.72rem', fontWeight: 600, background: '#fef2f2', color: '#b91c1c', flexShrink: 0 }}>
+                                                <span style={{ padding: '0.1rem 0.45rem', borderRadius: 12, fontSize: '0.72rem', fontWeight: 600, background: 'var(--danger-bg)', color: 'var(--danger)', flexShrink: 0 }}>
                                                     ↑ Tier {issue.tierReached ?? '?'} escalated
                                                 </span>
                                             )}
                                             {issue.prUrl && (
-                                                <a href={issue.prUrl} target="_blank" rel="noopener noreferrer" style={{ padding: '0.1rem 0.45rem', borderRadius: 12, fontSize: '0.72rem', fontWeight: 600, background: '#f0fdf4', color: '#15803d', textDecoration: 'none', flexShrink: 0 }}>
+                                                <a href={issue.prUrl} target="_blank" rel="noopener noreferrer" style={{ padding: '0.1rem 0.45rem', borderRadius: 12, fontSize: '0.72rem', fontWeight: 600, background: 'var(--ok-bg)', color: 'var(--ok)', textDecoration: 'none', flexShrink: 0 }}>
                                                     🔀 PR raised
                                                 </a>
                                             )}
                                         </div>
-                                        <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        <p style={{ fontSize: '0.8rem', color: 'var(--ink-muted)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                             {issue.description}
                                         </p>
                                     </div>
 
                                     {/* Meta + expand */}
-                                    <div style={{ flexShrink: 0, textAlign: 'right', fontSize: '0.75rem', color: '#9ca3af' }}>
+                                    <div style={{ flexShrink: 0, textAlign: 'right', fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
                                         <div>{formatDate(issue.createdAt)}</div>
                                         {issue.resolvedAt && (
-                                            <div style={{ color: '#16a34a', marginTop: '0.15rem' }}>
+                                            <div style={{ color: 'var(--ok)', marginTop: '0.15rem' }}>
                                                 Resolved {formatDate(issue.resolvedAt)}
                                             </div>
                                         )}
@@ -183,7 +183,7 @@ export default function IssueHistoryPage() {
                                             <button
                                                 type="button"
                                                 onClick={() => setExpanded((prev) => prev === issue.id ? null : issue.id)}
-                                                style={{ marginTop: '0.3rem', fontSize: '0.72rem', color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                                style={{ marginTop: '0.3rem', fontSize: '0.72rem', color: 'var(--info)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                                             >
                                                 {expanded === issue.id ? '▲ Hide chat' : `▼ ${issue.messages!.length} messages`}
                                             </button>
@@ -193,7 +193,7 @@ export default function IssueHistoryPage() {
 
                                 {/* Expanded chat thread */}
                                 {expanded === issue.id && issue.messages && issue.messages.length > 0 && (
-                                    <div style={{ marginTop: '0.75rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: 300, overflowY: 'auto' }}>
+                                    <div style={{ marginTop: '0.75rem', borderTop: '1px solid var(--line)', paddingTop: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: 300, overflowY: 'auto' }}>
                                         {issue.messages.map((msg) => (
                                             <div key={msg.id} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
                                                 <div style={{
@@ -204,8 +204,8 @@ export default function IssueHistoryPage() {
                                                     border: msg.role === 'step' || msg.role === 'fix' ? '1px solid #e2e8f0' : 'none',
                                                     fontStyle: msg.role === 'step' ? 'italic' : undefined,
                                                 }}>
-                                                    {msg.role === 'step' && <span style={{ color: '#16a34a', marginRight: '0.3rem' }}>✓</span>}
-                                                    {msg.role === 'fix' && <span style={{ color: '#15803d', fontWeight: 600, marginRight: '0.3rem' }}>Fix:</span>}
+                                                    {msg.role === 'step' && <span style={{ color: 'var(--ok)', marginRight: '0.3rem' }}>✓</span>}
+                                                    {msg.role === 'fix' && <span style={{ color: 'var(--ok)', fontWeight: 600, marginRight: '0.3rem' }}>Fix:</span>}
                                                     {msg.content}
                                                 </div>
                                             </div>

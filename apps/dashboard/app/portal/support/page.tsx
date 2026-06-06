@@ -112,13 +112,13 @@ function PortalChatPanel() {
             </div>
 
             {reconnecting && !connected && (
-                <div style={{ padding: '0.4rem 1rem', background: '#fffbeb', borderBottom: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: '#92400e', animation: 'pulse-o 1.5s ease infinite' }}>
+                <div style={{ padding: '0.4rem 1rem', background: 'var(--warn-bg)', borderBottom: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: 'var(--warn)', animation: 'pulse-o 1.5s ease infinite' }}>
                     <span style={{ width: 7, height: 7, border: '1.5px solid #d97706', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block', flexShrink: 0 }} />
                     Reconnecting… your session will resume automatically
                 </div>
             )}
             {issueId && (
-                <div style={{ padding: '0.25rem 1rem', background: 'rgba(0,102,204,0.05)', borderBottom: '1px solid var(--line)', fontSize: '0.72rem', color: '#0066cc' }}>
+                <div style={{ padding: '0.25rem 1rem', background: 'rgba(0,102,204,0.05)', borderBottom: '1px solid var(--line)', fontSize: '0.72rem', color: 'var(--accent)' }}>
                     Ticket #{issueId.slice(0, 8)}
                 </div>
             )}
@@ -137,23 +137,23 @@ function PortalChatPanel() {
                     );
                     if (m.kind === 'agent') return (
                         <div key={m.id} style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                            <div style={{ maxWidth: '78%', padding: '0.4rem 0.65rem', borderRadius: '10px 10px 10px 2px', background: '#e2e8f0', color: '#1e293b', fontSize: '0.84rem', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{m.text}</div>
+                            <div style={{ maxWidth: '78%', padding: '0.4rem 0.65rem', borderRadius: '10px 10px 10px 2px', background: 'var(--line)', color: 'var(--ink-soft)', fontSize: '0.84rem', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{m.text}</div>
                         </div>
                     );
                     if (m.kind === 'step') return (
-                        <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.28rem 0.55rem', borderRadius: 5, background: '#f8fafc', border: '1px solid #e2e8f0', fontSize: '0.75rem', color: '#475569' }}>
+                        <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.28rem 0.55rem', borderRadius: 5, background: 'var(--bg)', border: '1px solid var(--line)', fontSize: '0.75rem', color: '#475569' }}>
                             {m.status === 'running'
                                 ? <span style={{ width: 7, height: 7, border: '1.5px solid #2563eb', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block', flexShrink: 0 }} />
-                                : <span style={{ color: '#16a34a', flexShrink: 0 }}>✓</span>}
+                                : <span style={{ color: 'var(--ok)', flexShrink: 0 }}>✓</span>}
                             {m.text}
                         </div>
                     );
                     if (m.kind === 'fix') return (
-                        <div key={m.id} style={{ padding: '0.28rem 0.55rem', borderRadius: 5, background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: '0.75rem', color: '#15803d' }}>
+                        <div key={m.id} style={{ padding: '0.28rem 0.55rem', borderRadius: 5, background: 'var(--ok-bg)', border: '1px solid var(--ok-border)', fontSize: '0.75rem', color: 'var(--ok)' }}>
                             <strong>Fix applied:</strong> {m.description}
                         </div>
                     );
-                    return <p key={m.id} style={{ margin: 0, fontSize: '0.78rem', color: '#dc2626' }}>{m.text}</p>;
+                    return <p key={m.id} style={{ margin: 0, fontSize: '0.78rem', color: 'var(--danger)' }}>{m.text}</p>;
                 })}
                 {processing && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.2rem 0' }}>
@@ -338,12 +338,12 @@ function PortalVoicePanel() {
                 <span style={{ fontSize: '1rem' }}>🎙</span>
                 <span style={{ flex: 1, fontWeight: 600, fontSize: '0.95rem' }}>Voice / Call Support</span>
                 {callActive && <span style={{ width: 8, height: 8, borderRadius: '50%', background: connected ? '#16a34a' : '#f59e0b', flexShrink: 0, animation: connected ? 'pulse-g 2s ease infinite' : undefined }} />}
-                {langLabel && <span style={{ padding: '0.1rem 0.35rem', fontSize: '0.65rem', fontWeight: 700, background: '#eff6ff', color: '#1d4ed8', borderRadius: 4 }}>{langLabel}</span>}
+                {langLabel && <span style={{ padding: '0.1rem 0.35rem', fontSize: '0.65rem', fontWeight: 700, background: 'var(--info-bg)', color: 'var(--info)', borderRadius: 4 }}>{langLabel}</span>}
             </div>
 
-            {error && <p style={{ margin: 0, padding: '0.35rem 1rem', fontSize: '0.76rem', color: '#dc2626', background: '#fef2f2' }}>{error}</p>}
+            {error && <p style={{ margin: 0, padding: '0.35rem 1rem', fontSize: '0.76rem', color: 'var(--danger)', background: 'var(--danger-bg)' }}>{error}</p>}
             {reconnecting && !callActive && (
-                <div style={{ padding: '0.4rem 1rem', background: '#fffbeb', borderBottom: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: '#92400e', animation: 'pulse-o 1.5s ease infinite' }}>
+                <div style={{ padding: '0.4rem 1rem', background: 'var(--warn-bg)', borderBottom: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: 'var(--warn)', animation: 'pulse-o 1.5s ease infinite' }}>
                     <span style={{ width: 7, height: 7, border: '1.5px solid #d97706', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block', flexShrink: 0 }} />
                     Disconnected — start a new call when ready
                 </div>
@@ -378,7 +378,7 @@ function PortalVoicePanel() {
                 {playingAudio && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.2rem 0' }}>
                         <span style={{ width: 7, height: 7, border: '1.5px solid #16a34a', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
-                        <span style={{ fontSize: '0.74rem', color: '#15803d' }}>Agent speaking…</span>
+                        <span style={{ fontSize: '0.74rem', color: 'var(--ok)' }}>Agent speaking…</span>
                     </div>
                 )}
                 <div ref={bottomRef} />
@@ -404,7 +404,7 @@ function PortalVoicePanel() {
                         <button type="button" onClick={() => setMuted((m) => !m)} style={{ flex: 1, padding: '0.35rem', fontSize: '0.82rem', border: '1px solid var(--line)', borderRadius: 4, background: muted ? '#fef2f2' : 'var(--bg)', color: muted ? '#dc2626' : 'var(--ink)', cursor: 'pointer' }}>
                             {muted ? '🔇 Unmute' : '🎤 Mute'}
                         </button>
-                        <button type="button" onClick={endCall} style={{ flex: 1, padding: '0.35rem', fontSize: '0.82rem', border: '1px solid #fca5a5', borderRadius: 4, background: '#fef2f2', color: '#dc2626', cursor: 'pointer', fontWeight: 600 }}>
+                        <button type="button" onClick={endCall} style={{ flex: 1, padding: '0.35rem', fontSize: '0.82rem', border: '1px solid var(--danger-border)', borderRadius: 4, background: 'var(--danger-bg)', color: 'var(--danger)', cursor: 'pointer', fontWeight: 600 }}>
                             ⛔ End Call
                         </button>
                     </>
@@ -439,7 +439,7 @@ export default function PortalSupportPage() {
     if (!sessionReady) {
         return (
             <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>Loading…</p>
+                <p style={{ color: 'var(--ink-muted)', fontSize: '0.9rem' }}>Loading…</p>
             </main>
         );
     }

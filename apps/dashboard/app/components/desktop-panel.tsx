@@ -45,21 +45,21 @@ type RotateResult = {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const RESULT_BADGE: Record<string, { bg: string; color: string }> = {
-    success: { bg: '#dcfce7', color: '#166534' },
-    failed: { bg: '#fee2e2', color: '#991b1b' },
-    retrying: { bg: '#fef9c3', color: '#854d0e' },
-    approval_pending: { bg: '#dbeafe', color: '#1d4ed8' },
+    success: { bg: '#dcfce7', color: 'var(--ok)' },
+    failed: { bg: '#fee2e2', color: 'var(--danger)' },
+    retrying: { bg: '#fef9c3', color: 'var(--warn)' },
+    approval_pending: { bg: '#dbeafe', color: 'var(--info)' },
     blocked: { bg: '#f1f5f9', color: '#475569' },
 };
 
 const RISK_BADGE: Record<string, { bg: string; color: string }> = {
-    low: { bg: '#dcfce7', color: '#166534' },
-    medium: { bg: '#fef9c3', color: '#854d0e' },
-    high: { bg: '#fee2e2', color: '#991b1b' },
+    low: { bg: '#dcfce7', color: 'var(--ok)' },
+    medium: { bg: '#fef9c3', color: 'var(--warn)' },
+    high: { bg: '#fee2e2', color: 'var(--danger)' },
 };
 
 const SOURCE_BADGE: Record<string, { bg: string; color: string }> = {
-    persisted: { bg: '#dcfce7', color: '#166534' },
+    persisted: { bg: '#dcfce7', color: 'var(--ok)' },
     default: { bg: '#f1f5f9', color: '#475569' },
 };
 
@@ -345,11 +345,11 @@ export default function DesktopPanel({ tenantId, workspaceId }: DesktopPanelProp
                         <div
                             style={{
                                 padding: '0.5rem 0.75rem',
-                                background: '#fef9c3',
-                                border: '1px solid #fde68a',
+                                background: 'var(--warn-bg)',
+                                border: '1px solid var(--warn-border)',
                                 borderRadius: '4px',
                                 fontSize: '0.78rem',
-                                color: '#854d0e',
+                                color: 'var(--warn)',
                             }}
                         >
                             Rotation invalidates the current session and assigns a new profile ID.
@@ -370,11 +370,11 @@ export default function DesktopPanel({ tenantId, workspaceId }: DesktopPanelProp
                             <div
                                 style={{
                                     padding: '0.55rem 0.75rem',
-                                    background: '#dcfce7',
-                                    border: '1px solid #86efac',
+                                    background: 'var(--ok-bg)',
+                                    border: '1px solid var(--ok-border)',
                                     borderRadius: '4px',
                                     fontSize: '0.83rem',
-                                    color: '#166534',
+                                    color: 'var(--ok)',
                                 }}
                             >
                                 Session rotated. New profile ID:{' '}
@@ -502,11 +502,11 @@ export default function DesktopPanel({ tenantId, workspaceId }: DesktopPanelProp
                             <div
                                 style={{
                                     padding: '0.4rem 0.65rem',
-                                    background: '#fef9c3',
-                                    border: '1px solid #fde68a',
+                                    background: 'var(--warn-bg)',
+                                    border: '1px solid var(--warn-border)',
                                     borderRadius: '4px',
                                     fontSize: '0.78rem',
-                                    color: '#854d0e',
+                                    color: 'var(--warn)',
                                 }}
                             >
                                 High-risk action routed to approval queue.

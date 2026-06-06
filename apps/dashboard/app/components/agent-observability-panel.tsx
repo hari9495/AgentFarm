@@ -571,7 +571,7 @@ export default function AgentObservabilityPanel({ botId }: AgentObservabilityPan
                                         key={s.id ?? i}
                                         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}
                                     >
-                                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                                        <span style={{ fontSize: '11px', color: 'var(--ink-muted)' }}>
                                             {s.signalType ?? 'unknown'}
                                         </span>
                                         <span

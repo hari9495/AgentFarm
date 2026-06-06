@@ -66,7 +66,7 @@ const STATUS_COLOR: Record<string, string> = {
 function TaskTimeline({ steps }: { steps: LoopStepRecord[] }) {
     return (
         <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: '#0f0f1a', borderRadius: 8, border: '1px solid #222' }}>
-            <p style={{ fontSize: '0.75rem', color: '#888', marginBottom: '0.5rem', fontWeight: 600 }}>TASK TIMELINE</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginBottom: '0.5rem', fontWeight: 600 }}>TASK TIMELINE</p>
             <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                 {STEP_ORDER.map((step) => {
                     const record = steps.find((s) => s.step === step);
@@ -112,7 +112,7 @@ function ChatBubble({ message }: { message: LoopMessage }) {
             }}>
                 {message.content}
             </div>
-            <span suppressHydrationWarning style={{ fontSize: '0.68rem', color: '#6b7280', marginTop: '0.2rem' }}>
+            <span suppressHydrationWarning style={{ fontSize: '0.68rem', color: 'var(--ink-muted)', marginTop: '0.2rem' }}>
                 {new Date(message.timestamp).toLocaleTimeString()}
                 {message.loop_id && ` · ${message.loop_id}`}
             </span>

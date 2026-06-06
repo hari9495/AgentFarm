@@ -49,7 +49,7 @@ export function SuspensionWall({ tenantId, children }: Props) {
             >
                 <div
                     style={{
-                        background: '#fff',
+                        background: 'var(--card)',
                         borderRadius: '12px',
                         padding: '40px',
                         maxWidth: '480px',

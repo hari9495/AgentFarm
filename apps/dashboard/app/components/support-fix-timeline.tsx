@@ -126,7 +126,7 @@ export function SupportFixTimeline() {
                     <p style={{ color: 'var(--ink-soft)', fontSize: '0.85rem', margin: '0.5rem 0' }}>Loading…</p>
                 )}
                 {error && (
-                    <p style={{ color: '#dc2626', fontSize: '0.82rem', margin: '0.5rem 0' }}>{error}</p>
+                    <p style={{ color: 'var(--danger)', fontSize: '0.82rem', margin: '0.5rem 0' }}>{error}</p>
                 )}
                 {issue && (
                     <>
@@ -164,7 +164,7 @@ export function SupportFixTimeline() {
                         />
 
                         {resolutionTime != null && (
-                            <p style={{ margin: '0.6rem 0 0', fontSize: '0.78rem', color: '#15803d' }}>
+                            <p style={{ margin: '0.6rem 0 0', fontSize: '0.78rem', color: 'var(--ok)' }}>
                                 Resolved in {resolutionTime < 60
                                     ? `${resolutionTime}s`
                                     : `${Math.round(resolutionTime / 60)}m`}

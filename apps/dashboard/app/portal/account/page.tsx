@@ -7,12 +7,12 @@ type Me = { accountId: string; tenantId: string; email: string; displayName: str
 
 const inputStyle: React.CSSProperties = {
     width: '100%', padding: '0.5rem 0.7rem', fontSize: '0.88rem',
-    border: '1px solid #e2e8f0', borderRadius: 6, outline: 'none', fontFamily: 'inherit',
-    background: '#fff', color: '#0f172a',
+    border: '1px solid var(--line)', borderRadius: 6, outline: 'none', fontFamily: 'inherit',
+    background: 'var(--card)', color: '#0f172a',
 };
-const labelStyle: React.CSSProperties = { display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#374151', marginBottom: '0.3rem' };
-const sectionStyle: React.CSSProperties = { background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: '1.4rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' };
-const sectionTitle: React.CSSProperties = { fontSize: '1rem', fontWeight: 700, color: '#111827', margin: 0 };
+const labelStyle: React.CSSProperties = { display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.3rem' };
+const sectionStyle: React.CSSProperties = { background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: '1.4rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' };
+const sectionTitle: React.CSSProperties = { fontSize: '1rem', fontWeight: 700, color: 'var(--ink)', margin: 0 };
 
 function StatusMsg({ text, ok }: { text: string; ok: boolean }) {
     return (
@@ -106,19 +106,19 @@ export default function AccountSettingsPage() {
     if (loading) {
         return (
             <main style={{ minHeight: 'calc(100vh - 52px)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>Loading…</p>
+                <p style={{ color: 'var(--ink-muted)', fontSize: '0.9rem' }}>Loading…</p>
             </main>
         );
     }
 
     return (
-        <main style={{ minHeight: 'calc(100vh - 52px)', background: '#f8fafc', padding: '2rem 1.5rem', fontFamily: 'Inter, system-ui, sans-serif' }}>
+        <main style={{ minHeight: 'calc(100vh - 52px)', background: 'var(--bg)', padding: '2rem 1.5rem', fontFamily: 'Inter, system-ui, sans-serif' }}>
             <div style={{ maxWidth: 560, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
                 {/* Page header */}
                 <div>
-                    <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#111827', marginBottom: '0.2rem' }}>Account Settings</h1>
-                    <p style={{ fontSize: '0.84rem', color: '#6b7280' }}>Manage your profile and security</p>
+                    <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--ink)', marginBottom: '0.2rem' }}>Account Settings</h1>
+                    <p style={{ fontSize: '0.84rem', color: 'var(--ink-muted)' }}>Manage your profile and security</p>
                 </div>
 
                 {/* Account info (read-only) */}
@@ -132,8 +132,8 @@ export default function AccountSettingsPage() {
                             { label: 'Account ID', value: (me?.accountId ?? '').slice(0, 16) + '…' },
                         ].map(({ label, value }) => (
                             <div key={label}>
-                                <p style={{ fontSize: '0.72rem', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.15rem' }}>{label}</p>
-                                <p style={{ fontSize: '0.87rem', color: '#1e293b', fontFamily: label === 'Account ID' || label === 'Tenant ID' ? 'monospace' : 'inherit' }}>{value}</p>
+                                <p style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.15rem' }}>{label}</p>
+                                <p style={{ fontSize: '0.87rem', color: 'var(--ink-soft)', fontFamily: label === 'Account ID' || label === 'Tenant ID' ? 'monospace' : 'inherit' }}>{value}</p>
                             </div>
                         ))}
                     </div>
@@ -185,8 +185,8 @@ export default function AccountSettingsPage() {
                 {/* Sign out */}
                 <div style={sectionStyle}>
                     <p style={sectionTitle}>Session</p>
-                    <p style={{ fontSize: '0.83rem', color: '#6b7280', margin: 0 }}>Sign out from all portal sessions on this device.</p>
-                    <button type="button" onClick={() => void signOut()} style={{ alignSelf: 'flex-start', padding: '0.4rem 1rem', fontSize: '0.84rem', fontWeight: 600, background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 6, cursor: 'pointer' }}>
+                    <p style={{ fontSize: '0.83rem', color: 'var(--ink-muted)', margin: 0 }}>Sign out from all portal sessions on this device.</p>
+                    <button type="button" onClick={() => void signOut()} style={{ alignSelf: 'flex-start', padding: '0.4rem 1rem', fontSize: '0.84rem', fontWeight: 600, background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger-border)', borderRadius: 6, cursor: 'pointer' }}>
                         Sign Out
                     </button>
                 </div>

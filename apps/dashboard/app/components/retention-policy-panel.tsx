@@ -35,15 +35,15 @@ const SCOPE_BADGE: Record<string, { bg: string; color: string }> = {
 };
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    active: { bg: '#dcfce7', color: '#166534' },
+    active: { bg: '#dcfce7', color: 'var(--ok)' },
     archived: { bg: '#f1f5f9', color: '#475569' },
-    expired: { bg: '#fee2e2', color: '#991b1b' },
+    expired: { bg: '#fee2e2', color: 'var(--danger)' },
 };
 
 const ACTION_BADGE: Record<string, { bg: string; color: string }> = {
-    never_delete: { bg: '#dcfce7', color: '#166534' },
-    archive: { bg: '#fef9c3', color: '#854d0e' },
-    delete: { bg: '#fee2e2', color: '#991b1b' },
+    never_delete: { bg: '#dcfce7', color: 'var(--ok)' },
+    archive: { bg: '#fef9c3', color: 'var(--warn)' },
+    delete: { bg: '#fee2e2', color: 'var(--danger)' },
     anonymize: { bg: '#f3e8ff', color: '#6b21a8' },
 };
 

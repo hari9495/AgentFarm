@@ -46,9 +46,9 @@ type PluginHistoryRecord = {
 };
 
 const LOAD_STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    loaded: { bg: '#dcfce7', color: '#166534' },
-    rejected: { bg: '#fee2e2', color: '#991b1b' },
-    disabled: { bg: '#fef9c3', color: '#854d0e' },
+    loaded: { bg: '#dcfce7', color: 'var(--ok)' },
+    rejected: { bg: '#fee2e2', color: 'var(--danger)' },
+    disabled: { bg: '#fef9c3', color: 'var(--warn)' },
 };
 
 function loadStatusBadge(status: string) {
@@ -202,7 +202,7 @@ export function PluginLoadingPanel({ workspaceId }: { workspaceId: string }) {
     return (
         <section className="card" style={{ marginTop: '1rem' }}>
             <h2>External Plugin Loading Controls</h2>
-            <p style={{ margin: '-0.4rem 0 0.7rem', fontSize: '0.84rem', color: '#57534e' }}>
+            <p style={{ margin: '-0.4rem 0 0.7rem', fontSize: '0.84rem', color: 'var(--ink-muted)' }}>
                 Workspace allowlist enforcement, trust checks, and kill-switch state for C2 plugin onboarding.
             </p>
 
@@ -257,7 +257,7 @@ export function PluginLoadingPanel({ workspaceId }: { workspaceId: string }) {
                             {status.kill_switches.map((ks) => (
                                 <li key={ks.pluginKey} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <strong>{ks.pluginKey}</strong>
-                                    <span style={{ fontSize: '0.8rem', color: '#57534e' }}>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--ink-muted)' }}>
                                         ({ks.status}){ks.reason ? `: ${ks.reason}` : ''}
                                     </span>
                                     {ks.status === 'active' ? (
@@ -355,18 +355,18 @@ export function PluginLoadingPanel({ workspaceId }: { workspaceId: string }) {
                 </div>
                 {historyError && <p className="message-inline">{historyError}</p>}
                 {!historyLoading && history.length === 0 && (
-                    <p style={{ fontSize: '0.84rem', color: '#57534e' }}>No history records loaded yet.</p>
+                    <p style={{ fontSize: '0.84rem', color: 'var(--ink-muted)' }}>No history records loaded yet.</p>
                 )}
                 {history.length > 0 && (
                     <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
                             <thead>
                                 <tr style={{ borderBottom: '1px solid #e7e5e4', textAlign: 'left' }}>
-                                    <th style={{ padding: '0.3rem 0.4rem', color: '#57534e' }}>Plugin Key</th>
-                                    <th style={{ padding: '0.3rem 0.4rem', color: '#57534e' }}>Trust</th>
-                                    <th style={{ padding: '0.3rem 0.4rem', color: '#57534e' }}>Status</th>
-                                    <th style={{ padding: '0.3rem 0.4rem', color: '#57534e' }}>Workspace</th>
-                                    <th style={{ padding: '0.3rem 0.4rem', color: '#57534e' }}>Loaded At</th>
+                                    <th style={{ padding: '0.3rem 0.4rem', color: 'var(--ink-muted)' }}>Plugin Key</th>
+                                    <th style={{ padding: '0.3rem 0.4rem', color: 'var(--ink-muted)' }}>Trust</th>
+                                    <th style={{ padding: '0.3rem 0.4rem', color: 'var(--ink-muted)' }}>Status</th>
+                                    <th style={{ padding: '0.3rem 0.4rem', color: 'var(--ink-muted)' }}>Workspace</th>
+                                    <th style={{ padding: '0.3rem 0.4rem', color: 'var(--ink-muted)' }}>Loaded At</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -375,8 +375,8 @@ export function PluginLoadingPanel({ workspaceId }: { workspaceId: string }) {
                                         <td style={{ padding: '0.35rem 0.4rem', fontFamily: 'monospace', fontSize: '0.8rem' }}>{r.pluginKey}</td>
                                         <td style={{ padding: '0.35rem 0.4rem', fontSize: '0.8rem' }}>{r.trustLevel}</td>
                                         <td style={{ padding: '0.35rem 0.4rem' }}>{loadStatusBadge(r.loadStatus)}</td>
-                                        <td style={{ padding: '0.35rem 0.4rem', fontSize: '0.8rem', color: '#57534e' }}>{r.workspaceId}</td>
-                                        <td style={{ padding: '0.35rem 0.4rem', fontSize: '0.8rem', whiteSpace: 'nowrap', color: '#57534e' }}>
+                                        <td style={{ padding: '0.35rem 0.4rem', fontSize: '0.8rem', color: 'var(--ink-muted)' }}>{r.workspaceId}</td>
+                                        <td style={{ padding: '0.35rem 0.4rem', fontSize: '0.8rem', whiteSpace: 'nowrap', color: 'var(--ink-muted)' }}>
                                             {new Date(r.loadedAt).toLocaleString()}
                                         </td>
                                     </tr>

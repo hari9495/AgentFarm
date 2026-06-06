@@ -20,8 +20,8 @@ type ScheduledReport = {
 };
 
 const FREQ_BADGE: Record<string, { bg: string; color: string }> = {
-    daily: { bg: '#dbeafe', color: '#1d4ed8' },
-    weekly: { bg: '#dcfce7', color: '#166534' },
+    daily: { bg: '#dbeafe', color: 'var(--info)' },
+    weekly: { bg: '#dcfce7', color: 'var(--ok)' },
     monthly: { bg: '#f3e8ff', color: '#7c3aed' },
 };
 
@@ -319,11 +319,11 @@ export default function ScheduledReportsPanel({ tenantId: _tenantId }: Scheduled
             {error && (
                 <div
                     style={{
-                        background: '#fef2f2',
-                        border: '1px solid #fecaca',
+                        background: 'var(--danger-bg)',
+                        border: '1px solid var(--danger-border)',
                         borderRadius: '6px',
                         padding: '0.65rem 0.9rem',
-                        color: '#dc2626',
+                        color: 'var(--danger)',
                         fontSize: '0.85rem',
                         marginBottom: '0.75rem',
                     }}
@@ -389,13 +389,13 @@ export default function ScheduledReportsPanel({ tenantId: _tenantId }: Scheduled
                                         </td>
                                         <td style={TD_MUTED}>{report.reportTypes.map((t) => t.charAt(0).toUpperCase() + t.slice(1)).join(', ')}</td>
                                         <td style={TD}>
-                                            <span style={{ padding: '2px 7px', borderRadius: 4, fontSize: '0.72rem', fontWeight: 700, background: '#f1f5f9', color: '#374151', border: '1px solid #e2e8f0' }}>
+                                            <span style={{ padding: '2px 7px', borderRadius: 4, fontSize: '0.72rem', fontWeight: 700, background: 'var(--bg)', color: 'var(--ink)', border: '1px solid var(--line)' }}>
                                                 CSV
                                             </span>
                                         </td>
                                         <td style={TD}>
                                             {report.enabled ? (
-                                                <span style={{ color: '#166534', fontWeight: 600, fontSize: '0.85rem' }}>✓ Active</span>
+                                                <span style={{ color: 'var(--ok)', fontWeight: 600, fontSize: '0.85rem' }}>✓ Active</span>
                                             ) : (
                                                 <span style={{ color: '#475569', fontWeight: 600, fontSize: '0.85rem' }}>✗ Paused</span>
                                             )}
@@ -436,10 +436,10 @@ export default function ScheduledReportsPanel({ tenantId: _tenantId }: Scheduled
                                                     style={{
                                                         padding: '0.25rem 0.6rem',
                                                         fontSize: '0.75rem',
-                                                        border: '1px solid #fecaca',
+                                                        border: '1px solid var(--danger-border)',
                                                         borderRadius: '4px',
-                                                        background: '#fff',
-                                                        color: '#dc2626',
+                                                        background: 'var(--card)',
+                                                        color: 'var(--danger)',
                                                         cursor: deleting === report.id ? 'not-allowed' : 'pointer',
                                                         opacity: deleting === report.id ? 0.6 : 1,
                                                     }}

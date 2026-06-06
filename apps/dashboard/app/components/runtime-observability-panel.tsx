@@ -498,13 +498,13 @@ export function RuntimeObservabilityPanel({
                     <div>
                         <p className="obs-metric-label">Sent / Failed</p>
                         <p className="obs-metric-value">
-                            <span style={{ color: '#16a34a' }}>{health.heartbeat_sent ?? 0}</span>
+                            <span style={{ color: 'var(--ok)' }}>{health.heartbeat_sent ?? 0}</span>
                             {' / '}
                             <span style={{ color: (health.heartbeat_failed ?? 0) > 0 ? '#dc2626' : '#374151' }}>
                                 {health.heartbeat_failed ?? 0}
                             </span>
                             {heartbeatSuccessRate !== null && (
-                                <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 400, marginLeft: '0.25rem' }}>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', fontWeight: 400, marginLeft: '0.25rem' }}>
                                     ({heartbeatSuccessRate}%)
                                 </span>
                             )}
@@ -519,7 +519,7 @@ export function RuntimeObservabilityPanel({
                     <div>
                         <p className="obs-metric-label">Tasks processed</p>
                         <p className="obs-metric-value">
-                            <span style={{ color: '#16a34a' }}>{health.succeeded_tasks ?? 0}</span>
+                            <span style={{ color: 'var(--ok)' }}>{health.succeeded_tasks ?? 0}</span>
                             {' ok / '}
                             <span style={{ color: (health.failed_tasks ?? 0) > 0 ? '#dc2626' : '#374151' }}>
                                 {health.failed_tasks ?? 0}
@@ -582,7 +582,7 @@ export function RuntimeObservabilityPanel({
                             <div className="obs-transition-list" style={{ maxHeight: '11rem', overflowY: 'auto' }}>
                                 {workspaceActions.map((action) => (
                                     <div key={action} className="obs-transition-item">
-                                        <span className="obs-transition-to" style={{ color: '#1d4ed8' }}>{action}</span>
+                                        <span className="obs-transition-to" style={{ color: 'var(--info)' }}>{action}</span>
                                     </div>
                                 ))}
                             </div>
@@ -639,7 +639,7 @@ export function RuntimeObservabilityPanel({
                                 <div className="obs-transition-list" style={{ maxHeight: '8rem', overflowY: 'auto' }}>
                                     {weeklyRoiReport.report.time_saved_by_task_category.map((item) => (
                                         <div key={item.category} className="obs-transition-item">
-                                            <span className="obs-transition-to" style={{ color: '#1d4ed8' }}>{item.category}</span>
+                                            <span className="obs-transition-to" style={{ color: 'var(--info)' }}>{item.category}</span>
                                             <span className="obs-muted-empty">{item.estimated_minutes_saved} min saved</span>
                                         </div>
                                     ))}
@@ -659,7 +659,7 @@ export function RuntimeObservabilityPanel({
                                 <div key={`${entry.taskId}:${entry.completedAt}`} className="obs-transition-item" style={{ alignItems: 'flex-start', flexDirection: 'column' }}>
                                     <div>
                                         <span className="obs-transition-time">{formatTs(entry.completedAt)}</span>
-                                        <span className="obs-transition-to" style={{ color: '#1d4ed8', marginLeft: '0.4rem' }}>{entry.actionType}</span>
+                                        <span className="obs-transition-to" style={{ color: 'var(--info)', marginLeft: '0.4rem' }}>{entry.actionType}</span>
                                         <span className={`badge ${entry.status === 'success' ? 'low' : entry.status === 'approval_required' ? 'warn' : 'high'}`} style={{ marginLeft: '0.5rem' }}>
                                             {entry.status}
                                         </span>
@@ -816,7 +816,7 @@ export function RuntimeObservabilityPanel({
                                                     <div className="obs-muted-empty" style={{ marginTop: '0.15rem' }}>follow-up: {ev.followUpQuestion}</div>
                                                 )}
                                                 {ev.finalRecommendation && (
-                                                    <div className="obs-muted-empty" style={{ marginTop: '0.15rem', color: '#b45309' }}>recommendation: {ev.finalRecommendation}</div>
+                                                    <div className="obs-muted-empty" style={{ marginTop: '0.15rem', color: 'var(--warn)' }}>recommendation: {ev.finalRecommendation}</div>
                                                 )}
                                             </div>
                                         ))}

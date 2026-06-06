@@ -146,11 +146,11 @@ export default function SignupPage() {
                     <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
                         {brandBadge}
                         <h1 style={headingStyle}>
-                            Check your <span style={{ color: '#0066cc' }}>email</span>
+                            Check your <span style={{ color: 'var(--accent)' }}>email</span>
                         </h1>
-                        <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#6e6e73' }}>
+                        <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: 'var(--ink-muted)' }}>
                             We sent a 6-digit code to{' '}
-                            <strong style={{ color: '#1d1d1f' }}>{email.trim()}</strong>
+                            <strong style={{ color: 'var(--ink)' }}>{email.trim()}</strong>
                         </p>
                     </div>
 
@@ -175,8 +175,8 @@ export default function SignupPage() {
                                         width: '100%', padding: '0.75rem 1rem',
                                         textAlign: 'center', fontSize: '2rem', fontWeight: 700,
                                         letterSpacing: '0.4em', borderRadius: '12px',
-                                        border: '1.5px solid #d2d2d7', background: '#f5f5f7',
-                                        color: '#1d1d1f', outline: 'none', boxSizing: 'border-box',
+                                        border: '1.5px solid #d2d2d7', background: 'var(--bg)',
+                                        color: 'var(--ink)', outline: 'none', boxSizing: 'border-box',
                                         transition: 'border-color 180ms ease, box-shadow 180ms ease',
                                     }}
                                     onFocus={(e) => { e.currentTarget.style.borderColor = '#0066cc'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,102,204,0.12)'; }}
@@ -184,7 +184,7 @@ export default function SignupPage() {
                                 />
                             </div>
 
-                            <p style={{ fontSize: '0.75rem', color: '#aeaeb2', textAlign: 'center', margin: 0 }}>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', textAlign: 'center', margin: 0 }}>
                                 In development, find your code in the server console logs.
                             </p>
 
@@ -219,9 +219,9 @@ export default function SignupPage() {
                 <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
                     {brandBadge}
                     <h1 style={headingStyle}>
-                        Create your <span style={{ color: '#0066cc' }}>account</span>
+                        Create your <span style={{ color: 'var(--accent)' }}>account</span>
                     </h1>
-                    <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#6e6e73' }}>
+                    <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: 'var(--ink-muted)' }}>
                         Internal dashboard access for approved team members.
                     </p>
                 </div>
@@ -257,7 +257,7 @@ export default function SignupPage() {
                         <div style={{ display: 'grid', gap: '0.375rem' }}>
                             <label htmlFor="signup-email" style={labelStyle}>
                                 Work email{' '}
-                                <span style={{ fontWeight: 400, color: '#aeaeb2', fontSize: '0.75rem' }}>@{INTERNAL_DOMAIN} only</span>
+                                <span style={{ fontWeight: 400, color: 'var(--ink-muted)', fontSize: '0.75rem' }}>@{INTERNAL_DOMAIN} only</span>
                             </label>
                             <div style={{ position: 'relative' }}>
                                 <Mail style={iconStyle} />
@@ -268,7 +268,7 @@ export default function SignupPage() {
                                     onFocus={onFocus} onBlur={onBlur} />
                             </div>
                             {email && !emailInternal && (
-                                <p style={{ fontSize: '0.75rem', color: '#c4161c', margin: 0 }}>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--danger)', margin: 0 }}>
                                     Must be an @{INTERNAL_DOMAIN} address.
                                 </p>
                             )}
@@ -289,7 +289,7 @@ export default function SignupPage() {
                                 <div style={{
                                     display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.3rem 0.75rem',
                                     marginTop: '0.25rem', padding: '0.625rem 0.75rem',
-                                    background: '#f5f5f7', borderRadius: '10px', border: '1px solid #e5e5ea',
+                                    background: 'var(--bg)', borderRadius: '10px', border: '1px solid var(--line)',
                                 }}>
                                     {PWD_RULES.map(({ key, label }) => {
                                         const met = pwdChecks[key];
@@ -317,9 +317,9 @@ export default function SignupPage() {
                     </form>
                 </div>
 
-                <p style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.8rem', color: '#aeaeb2' }}>
+                <p style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--ink-muted)' }}>
                     Already have an account?{' '}
-                    <a href="/login" style={{ color: '#0066cc', textDecoration: 'none' }}>Sign in</a>
+                    <a href="/login" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Sign in</a>
                 </p>
             </div>
             <style>{spinKeyframes}</style>
@@ -330,7 +330,7 @@ export default function SignupPage() {
 // ── Shared constants ──────────────────────────────────────────────────────────
 
 const pageStyle: React.CSSProperties = {
-    minHeight: '100vh', background: '#f5f5f7',
+    minHeight: '100vh', background: 'var(--bg)',
     display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
 };
 
@@ -340,7 +340,7 @@ const brandBadge = (
         background: 'rgba(0,102,204,0.06)', border: '1px solid rgba(0,102,204,0.18)',
         borderRadius: '9999px', padding: '0.25rem 0.75rem',
         fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.03em',
-        color: '#0066cc', textTransform: 'uppercase',
+        color: 'var(--accent)', textTransform: 'uppercase',
     }}>
         <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#0066cc', display: 'inline-block' }} aria-hidden />
         AgentFarms Internal
@@ -350,35 +350,35 @@ const brandBadge = (
 const headingStyle: React.CSSProperties = {
     marginTop: '1rem', marginBottom: 0,
     fontSize: 'clamp(1.6rem, 4vw, 2rem)', fontWeight: 700,
-    letterSpacing: '-0.025em', color: '#1d1d1f', lineHeight: 1.1,
+    letterSpacing: '-0.025em', color: 'var(--ink)', lineHeight: 1.1,
 };
 
 const cardStyle: React.CSSProperties = {
-    background: '#ffffff', border: '1px solid #d2d2d7',
+    background: 'var(--card)', border: '1px solid var(--line)',
     borderRadius: '18px', padding: '2rem',
     boxShadow: '0 4px 24px -8px rgba(0,0,0,0.08)',
 };
 
 const errorBoxStyle: React.CSSProperties = {
     padding: '0.75rem 1rem', borderRadius: '10px', fontSize: '0.875rem',
-    background: 'rgba(255,59,48,0.06)', border: '1px solid rgba(255,59,48,0.2)', color: '#c4161c',
+    background: 'rgba(255,59,48,0.06)', border: '1px solid rgba(255,59,48,0.2)', color: 'var(--danger)',
 };
 
 const labelStyle: React.CSSProperties = {
-    fontSize: '0.8rem', fontWeight: 600, color: '#1d1d1f', letterSpacing: '0.01em',
+    fontSize: '0.8rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '0.01em',
     display: 'flex', alignItems: 'baseline', gap: '0.25rem',
 };
 
 const iconStyle: React.CSSProperties = {
     position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)',
-    width: 16, height: 16, color: '#aeaeb2',
+    width: 16, height: 16, color: 'var(--ink-muted)',
 };
 
 const inputStyle: React.CSSProperties = {
     width: '100%', paddingLeft: '2.25rem', paddingRight: '0.75rem',
     paddingTop: '0.625rem', paddingBottom: '0.625rem',
-    borderRadius: '10px', border: '1px solid #d2d2d7',
-    background: '#f5f5f7', fontSize: '0.9rem', color: '#1d1d1f',
+    borderRadius: '10px', border: '1px solid var(--line)',
+    background: 'var(--bg)', fontSize: '0.9rem', color: 'var(--ink)',
     outline: 'none', boxSizing: 'border-box',
     transition: 'border-color 180ms ease, box-shadow 180ms ease',
 };
@@ -398,7 +398,7 @@ function submitBtnStyle(disabled: boolean): React.CSSProperties {
 const ghostBtnStyle: React.CSSProperties = {
     display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
     background: 'none', border: 'none', cursor: 'pointer',
-    fontSize: '0.8rem', color: '#6e6e73', padding: '0.25rem 0',
+    fontSize: '0.8rem', color: 'var(--ink-muted)', padding: '0.25rem 0',
 };
 
 function onFocus(e: React.FocusEvent<HTMLInputElement>) {

@@ -51,7 +51,7 @@ function LangBadge({ code }: { code: string }) {
         <span style={{
             display: 'inline-block', padding: '0.1rem 0.35rem',
             fontSize: '0.65rem', fontWeight: 700,
-            background: '#eff6ff', color: '#1d4ed8',
+            background: 'var(--info-bg)', color: 'var(--info)',
             borderRadius: 4, letterSpacing: '0.04em',
         }}>
             {label}
@@ -276,7 +276,7 @@ export function SupportVoiceWidget() {
             `}</style>
 
             {error && (
-                <p style={{ margin: 0, padding: '0.4rem 1rem', fontSize: '0.76rem', color: '#dc2626', background: '#fef2f2' }}>
+                <p style={{ margin: 0, padding: '0.4rem 1rem', fontSize: '0.76rem', color: 'var(--danger)', background: 'var(--danger-bg)' }}>
                     {error}
                 </p>
             )}
@@ -286,7 +286,7 @@ export function SupportVoiceWidget() {
                     padding: '0.3rem 1rem',
                     background: 'rgba(0,102,204,0.05)',
                     borderBottom: '1px solid var(--line)',
-                    fontSize: '0.72rem', color: '#0066cc',
+                    fontSize: '0.72rem', color: 'var(--accent)',
                 }}>
                     Issue: {issueId.slice(0, 18)}…
                 </div>
@@ -349,7 +349,7 @@ export function SupportVoiceWidget() {
                             animation: 'spin 0.7s linear infinite',
                             display: 'inline-block',
                         }} />
-                        <span style={{ fontSize: '0.74rem', color: '#15803d' }}>Agent speaking…</span>
+                        <span style={{ fontSize: '0.74rem', color: 'var(--ok)' }}>Agent speaking…</span>
                     </div>
                 )}
                 <div ref={bottomRef} />
@@ -396,10 +396,10 @@ export function SupportVoiceWidget() {
                                 flex: 1,
                                 padding: '0.35rem 0.75rem',
                                 fontSize: '0.82rem',
-                                border: '1px solid #fca5a5',
+                                border: '1px solid var(--danger-border)',
                                 borderRadius: 4,
-                                background: '#fef2f2',
-                                color: '#dc2626',
+                                background: 'var(--danger-bg)',
+                                color: 'var(--danger)',
                                 cursor: 'pointer',
                                 fontWeight: 600,
                             }}

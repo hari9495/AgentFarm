@@ -93,7 +93,7 @@ export function KillSwitchBanner({ className }: Props) {
             aria-live="assertive"
             className={className}
             style={{
-                background: 'rgba(196,22,28,0.06)',
+                background: 'var(--danger-bg)',
                 border: '1px solid rgba(196,22,28,0.3)',
                 borderLeft: '4px solid #c4161c',
                 borderRadius: 14,
@@ -111,10 +111,10 @@ export function KillSwitchBanner({ className }: Props) {
                     <span style={{ fontSize: 16 }} aria-hidden="true">⛔</span>
                 </div>
                 <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: '#c4161c', letterSpacing: '-0.01em' }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--danger)', letterSpacing: '-0.01em' }}>
                         AGENTS HALTED — {activeSwitches.length === 1 ? '1 kill switch active' : `${activeSwitches.length} kill switches active`}
                     </div>
-                    <div style={{ fontSize: 12, color: '#c4161c', opacity: 0.75, marginTop: 1 }}>
+                    <div style={{ fontSize: 12, color: 'var(--danger)', opacity: 0.75, marginTop: 1 }}>
                         All task execution is stopped in the affected scope. Resume when the incident is resolved.
                     </div>
                 </div>
@@ -124,8 +124,8 @@ export function KillSwitchBanner({ className }: Props) {
                 <div
                     key={ks.id}
                     style={{
-                        background: '#ffffff',
-                        border: '1px solid rgba(196,22,28,0.2)',
+                        background: 'var(--card)',
+                        border: '1px solid var(--danger-border)',
                         borderRadius: 10,
                         padding: '10px 14px',
                         display: 'flex',
@@ -140,7 +140,7 @@ export function KillSwitchBanner({ className }: Props) {
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
                             <span style={{
                                 display: 'inline-flex', alignItems: 'center', gap: 4,
-                                background: 'rgba(196,22,28,0.08)', color: '#c4161c',
+                                background: 'var(--danger-bg)', color: 'var(--danger)',
                                 fontSize: 11, fontWeight: 700, padding: '2px 9px',
                                 borderRadius: 9999, border: '1px solid rgba(196,22,28,0.22)',
                                 letterSpacing: '0.02em',
@@ -149,26 +149,26 @@ export function KillSwitchBanner({ className }: Props) {
                                 {SWITCH_TYPE_LABELS[ks.switchType]}
                             </span>
                             {ks.workspaceId && (
-                                <span style={{ fontSize: 11, fontWeight: 600, color: '#6e6e73', padding: '2px 8px', borderRadius: 9999, background: '#f5f5f7', border: '1px solid #e5e5ea', fontFamily: 'ui-monospace, monospace' }}>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-muted)', padding: '2px 8px', borderRadius: 9999, background: 'var(--bg)', border: '1px solid var(--line)', fontFamily: 'ui-monospace, monospace' }}>
                                     ws: {ks.workspaceId}
                                 </span>
                             )}
                             {ks.botId && (
-                                <span style={{ fontSize: 11, fontWeight: 600, color: '#6e6e73', padding: '2px 8px', borderRadius: 9999, background: '#f5f5f7', border: '1px solid #e5e5ea', fontFamily: 'ui-monospace, monospace' }}>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-muted)', padding: '2px 8px', borderRadius: 9999, background: 'var(--bg)', border: '1px solid var(--line)', fontFamily: 'ui-monospace, monospace' }}>
                                     bot: {ks.botId}
                                 </span>
                             )}
                         </div>
                         {/* Reason */}
-                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1d1d1f', lineHeight: 1.45 }}>
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.45 }}>
                             {ks.reason}
                         </p>
                         {ks.incidentRef && (
-                            <p style={{ margin: '4px 0 0', fontSize: 11, color: '#6e6e73' }}>
-                                Incident ref: <strong style={{ fontFamily: 'ui-monospace, monospace', color: '#424245' }}>{ks.incidentRef}</strong>
+                            <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--ink-muted)' }}>
+                                Incident ref: <strong style={{ fontFamily: 'ui-monospace, monospace', color: 'var(--ink-soft)' }}>{ks.incidentRef}</strong>
                             </p>
                         )}
-                        <p style={{ margin: '4px 0 0', fontSize: 11, color: '#aeaeb2' }}>
+                        <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--ink-muted)' }}>
                             {ks.affectedActionTypes.length > 0 && `Blocked: ${ks.affectedActionTypes.join(', ')} · `}
                             Activated: {new Date(ks.activatedAt).toLocaleString()}
                         </p>
@@ -198,7 +198,7 @@ export function KillSwitchBanner({ className }: Props) {
             ))}
 
             {resumeError && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 12 }}>
                     ⚠ {resumeError}
                 </div>
             )}

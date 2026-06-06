@@ -29,17 +29,17 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    unread: { bg: '#dbeafe', color: '#1d4ed8' },
+    unread: { bg: '#dbeafe', color: 'var(--info)' },
     read: { bg: '#f1f5f9', color: '#475569' },
-    acked: { bg: '#dcfce7', color: '#166534' },
+    acked: { bg: '#dcfce7', color: 'var(--ok)' },
 };
 
 const CATEGORY_BADGE: Record<string, { bg: string; color: string }> = {
-    runtime: { bg: '#dbeafe', color: '#1d4ed8' },
-    approval: { bg: '#fef9c3', color: '#854d0e' },
+    runtime: { bg: '#dbeafe', color: 'var(--info)' },
+    approval: { bg: '#fef9c3', color: 'var(--warn)' },
     ci: { bg: '#f3e8ff', color: '#7c3aed' },
-    connector: { bg: '#dcfce7', color: '#166534' },
-    provisioning: { bg: '#fee2e2', color: '#991b1b' },
+    connector: { bg: '#dcfce7', color: 'var(--ok)' },
+    provisioning: { bg: '#fee2e2', color: 'var(--danger)' },
     security: { bg: '#fee2e2', color: '#7f1d1d' },
     system: { bg: '#f1f5f9', color: '#475569' },
 };
@@ -309,14 +309,14 @@ export default function ActivityEventsPanel({ tenantId, workspaceId }: ActivityE
                             alignItems: 'center',
                             gap: '0.75rem',
                             padding: '0.4rem 0.65rem',
-                            background: '#eff6ff',
-                            border: '1px solid #bfdbfe',
+                            background: 'var(--info-bg)',
+                            border: '1px solid var(--info-border)',
                             borderRadius: '4px',
                             marginBottom: '0.6rem',
                             fontSize: '0.83rem',
                         }}
                     >
-                        <span style={{ fontWeight: 600, color: '#1d4ed8' }}>{selectedIds.size} selected</span>
+                        <span style={{ fontWeight: 600, color: 'var(--info)' }}>{selectedIds.size} selected</span>
                         <button
                             type="button"
                             className="primary-action"
@@ -443,7 +443,7 @@ export default function ActivityEventsPanel({ tenantId, workspaceId }: ActivityE
                     <div style={{ display: 'grid', gap: '0.55rem', maxWidth: '480px' }}>
                         <div>
                             <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--ink-muted)', marginBottom: '0.25rem' }}>
-                                Category <span style={{ color: '#991b1b' }}>*</span>
+                                Category <span style={{ color: 'var(--danger)' }}>*</span>
                             </label>
                             <select
                                 value={emitCategory}
@@ -457,7 +457,7 @@ export default function ActivityEventsPanel({ tenantId, workspaceId }: ActivityE
                         </div>
                         <div>
                             <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--ink-muted)', marginBottom: '0.25rem' }}>
-                                Title <span style={{ color: '#991b1b' }}>*</span>
+                                Title <span style={{ color: 'var(--danger)' }}>*</span>
                             </label>
                             <input
                                 type="text"
@@ -486,11 +486,11 @@ export default function ActivityEventsPanel({ tenantId, workspaceId }: ActivityE
                             <div
                                 style={{
                                     padding: '0.4rem 0.65rem',
-                                    background: '#dcfce7',
-                                    border: '1px solid #86efac',
+                                    background: 'var(--ok-bg)',
+                                    border: '1px solid var(--ok-border)',
                                     borderRadius: '4px',
                                     fontSize: '0.82rem',
-                                    color: '#166534',
+                                    color: 'var(--ok)',
                                     fontWeight: 600,
                                 }}
                             >

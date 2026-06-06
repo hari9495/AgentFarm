@@ -66,7 +66,7 @@ export default function AgentBillingCard({ botId }: Props) {
 
     if (error || !data) {
         return (
-            <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
+            <p style={{ margin: 0, fontSize: '12px', color: 'var(--ink-muted)' }}>
                 {error ?? 'No billing data available.'}
             </p>
         );

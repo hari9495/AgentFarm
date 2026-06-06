@@ -156,7 +156,7 @@ export default function BrowserTasksPage() {
             </div>
 
             {error && (
-                <div style={{ background: '#fef2f2', border: '1px solid var(--danger)', borderRadius: 8, padding: '0.75rem 1rem', color: 'var(--danger)', fontSize: '0.875rem' }}>
+                <div style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger)', borderRadius: 8, padding: '0.75rem 1rem', color: 'var(--danger)', fontSize: '0.875rem' }}>
                     {error}
                 </div>
             )}

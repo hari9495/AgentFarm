@@ -18,8 +18,8 @@ type ApiKeyRecord = {
 
 const ROLE_BADGE: Record<string, { bg: string; color: string }> = {
     viewer:   { bg: '#f1f5f9', color: '#475569' },
-    operator: { bg: '#dbeafe', color: '#1d4ed8' },
-    admin:    { bg: '#fef3c7', color: '#92400e' },
+    operator: { bg: '#dbeafe', color: 'var(--info)' },
+    admin:    { bg: '#fef3c7', color: 'var(--warn)' },
 };
 
 function timeAgo(iso: string): string {
@@ -197,7 +197,7 @@ export default function ApiKeysPanel({ tenantId: _tenantId }: { tenantId: string
                     <Plus size={14} /> {creating ? 'Creating…' : 'Create'}
                 </button>
             </form>
-            {createErr && <p style={{ color: '#dc2626', fontSize: '0.82rem', marginBottom: '0.75rem' }}>{createErr}</p>}
+            {createErr && <p style={{ color: 'var(--danger)', fontSize: '0.82rem', marginBottom: '0.75rem' }}>{createErr}</p>}
 
             {/* ── Raw key reveal ── */}
             {newRawKey && (
@@ -206,19 +206,19 @@ export default function ApiKeysPanel({ tenantId: _tenantId }: { tenantId: string
                         <AlertTriangle size={14} color="#92400e" />
                         <span style={{ fontWeight: 700, fontSize: '0.83rem', color: '#78350f' }}>Copy now — this key will not be shown again.</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #fde047', borderRadius: 6, padding: '0.4rem 0.7rem', marginBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--card)', border: '1px solid #fde047', borderRadius: 6, padding: '0.4rem 0.7rem', marginBottom: '0.5rem' }}>
                         <code style={{ flex: 1, wordBreak: 'break-all', fontSize: '0.8rem', color: '#1c1917', fontFamily: 'monospace' }}>{newRawKey}</code>
                         <CopyButton text={newRawKey} />
                     </div>
                     <button onClick={() => setNewRawKey(null)}
-                        style={{ padding: '0.3rem 0.75rem', fontSize: '0.78rem', border: '1px solid #fde047', borderRadius: 5, background: '#fff', cursor: 'pointer', color: '#78350f', fontWeight: 600 }}>
+                        style={{ padding: '0.3rem 0.75rem', fontSize: '0.78rem', border: '1px solid #fde047', borderRadius: 5, background: 'var(--card)', cursor: 'pointer', color: '#78350f', fontWeight: 600 }}>
                         I&apos;ve saved it
                     </button>
                 </div>
             )}
 
             {error && (
-                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '0.65rem 0.9rem', color: '#dc2626', fontSize: '0.83rem', marginBottom: '0.75rem' }}>
+                <div style={{ background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: 6, padding: '0.65rem 0.9rem', color: 'var(--danger)', fontSize: '0.83rem', marginBottom: '0.75rem' }}>
                     {error}
                 </div>
             )}
@@ -300,9 +300,9 @@ export default function ApiKeysPanel({ tenantId: _tenantId }: { tenantId: string
                                     {/* Expires */}
                                     <td style={{ ...TD, fontSize: '0.78rem' }}>
                                         {exp === null ? <span style={{ color: 'var(--ink-muted)' }}>Never</span>
-                                         : exp <= 0   ? <span style={{ color: '#dc2626', fontWeight: 700 }}>Expired</span>
+                                         : exp <= 0   ? <span style={{ color: 'var(--danger)', fontWeight: 700 }}>Expired</span>
                                          : expiredOrSoon
-                                             ? <span style={{ color: '#d97706', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><AlertTriangle size={11} /> {exp}d</span>
+                                             ? <span style={{ color: 'var(--warn)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><AlertTriangle size={11} /> {exp}d</span>
                                              : <span style={{ color: 'var(--ink-soft)' }}>in {exp}d</span>}
                                     </td>
 
@@ -317,21 +317,21 @@ export default function ApiKeysPanel({ tenantId: _tenantId }: { tenantId: string
                                             {/* Toggle enable/disable */}
                                             <button onClick={() => void handleToggle(k)} disabled={!!row}
                                                 title={k.enabled ? 'Disable' : 'Enable'}
-                                                style={{ padding: '3px 8px', fontSize: '0.72rem', fontWeight: 600, borderRadius: 4, cursor: row ? 'not-allowed' : 'pointer', border: `1px solid ${k.enabled ? '#fecaca' : '#bbf7d0'}`, background: '#fff', color: k.enabled ? '#dc2626' : '#166534' }}>
+                                                style={{ padding: '3px 8px', fontSize: '0.72rem', fontWeight: 600, borderRadius: 4, cursor: row ? 'not-allowed' : 'pointer', border: `1px solid ${k.enabled ? '#fecaca' : '#bbf7d0'}`, background: 'var(--card)', color: k.enabled ? '#dc2626' : '#166534' }}>
                                                 {row === 'toggle' ? '…' : k.enabled ? 'Disable' : 'Enable'}
                                             </button>
 
                                             {/* Rotate */}
                                             <button onClick={() => void handleRotate(k)} disabled={!!row}
                                                 title="Rotate — creates a new key and disables this one"
-                                                style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', fontSize: '0.72rem', fontWeight: 600, borderRadius: 4, cursor: row ? 'not-allowed' : 'pointer', border: '1px solid var(--line)', background: '#fff', color: 'var(--ink-soft)' }}>
+                                                style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '3px 8px', fontSize: '0.72rem', fontWeight: 600, borderRadius: 4, cursor: row ? 'not-allowed' : 'pointer', border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)' }}>
                                                 <RotateCcw size={11} /> {row === 'rotate' ? '…' : 'Rotate'}
                                             </button>
 
                                             {/* Delete */}
                                             <button onClick={() => void handleDelete(k)} disabled={!!row}
                                                 title="Permanently delete"
-                                                style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 6px', borderRadius: 4, cursor: row ? 'not-allowed' : 'pointer', border: '1px solid #fecaca', background: '#fff', color: '#dc2626' }}>
+                                                style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 6px', borderRadius: 4, cursor: row ? 'not-allowed' : 'pointer', border: '1px solid var(--danger-border)', background: 'var(--card)', color: 'var(--danger)' }}>
                                                 {row === 'delete' ? <RefreshCw size={11} className="animate-spin" /> : <Trash2 size={11} />}
                                             </button>
                                         </div>

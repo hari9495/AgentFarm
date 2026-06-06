@@ -9,12 +9,12 @@ import type { Agent, BotStatus } from '../components/agent-card';
 // ── Status helpers ─────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<BotStatus, { label: string; color: string; bg: string; border: string }> = {
-    active:                    { label: 'Active',         color: '#1a7a4a', bg: 'rgba(26,122,74,0.07)',   border: 'rgba(26,122,74,0.22)'  },
-    created:                   { label: 'Created',        color: '#0066cc', bg: 'rgba(0,102,204,0.07)',   border: 'rgba(0,102,204,0.22)'  },
-    bootstrapping:             { label: 'Bootstrapping',  color: '#b45309', bg: 'rgba(180,83,9,0.07)',    border: 'rgba(180,83,9,0.22)'   },
-    connector_setup_required:  { label: 'Setup Required', color: '#b45309', bg: 'rgba(180,83,9,0.07)',    border: 'rgba(180,83,9,0.22)'   },
-    paused:                    { label: 'Paused',         color: '#6e6e73', bg: 'rgba(110,110,115,0.07)', border: 'rgba(110,110,115,0.22)'},
-    failed:                    { label: 'Failed',         color: '#c4161c', bg: 'rgba(196,22,28,0.07)',   border: 'rgba(196,22,28,0.22)'  },
+    active:                    { label: 'Active',         color: 'var(--ok)', bg: 'rgba(26,122,74,0.07)',   border: 'rgba(26,122,74,0.22)'  },
+    created:                   { label: 'Created',        color: 'var(--accent)', bg: 'rgba(0,102,204,0.07)',   border: 'rgba(0,102,204,0.22)'  },
+    bootstrapping:             { label: 'Bootstrapping',  color: 'var(--warn)', bg: 'rgba(180,83,9,0.07)',    border: 'rgba(180,83,9,0.22)'   },
+    connector_setup_required:  { label: 'Setup Required', color: 'var(--warn)', bg: 'rgba(180,83,9,0.07)',    border: 'rgba(180,83,9,0.22)'   },
+    paused:                    { label: 'Paused',         color: 'var(--ink-muted)', bg: 'rgba(110,110,115,0.07)', border: 'rgba(110,110,115,0.22)'},
+    failed:                    { label: 'Failed',         color: 'var(--danger)', bg: 'rgba(196,22,28,0.07)',   border: 'rgba(196,22,28,0.22)'  },
 };
 
 const ROLE_ICONS: Record<string, string> = {
@@ -76,7 +76,7 @@ function AgentListItem({ agent, selected, onClick }: { agent: Agent; selected: b
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {roleLabel}
                 </div>
-                <div style={{ fontSize: 11, color: '#6e6e73', marginTop: 1,
+                <div style={{ fontSize: 11, color: 'var(--ink-muted)', marginTop: 1,
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     #{agent.id.slice(-8).toUpperCase()}
                 </div>
@@ -115,11 +115,11 @@ function CreateAgentModal({
         finally { setCreating(false); }
     }
 
-    const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: '#424245', display: 'block', marginBottom: 5 };
+    const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', display: 'block', marginBottom: 5 };
     const inputStyle: React.CSSProperties = {
         width: '100%', padding: '8px 11px', borderRadius: 8,
-        border: '1px solid #d2d2d7', background: '#ffffff',
-        color: '#1d1d1f', fontSize: 14, outline: 'none',
+        border: '1px solid var(--line)', background: 'var(--card)',
+        color: 'var(--ink)', fontSize: 14, outline: 'none',
         transition: 'border-color 0.15s',
     };
 
@@ -130,24 +130,24 @@ function CreateAgentModal({
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
         }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
             <div style={{
-                background: '#ffffff', borderRadius: 20, padding: 28, width: '100%', maxWidth: 480,
-                border: '1px solid #d2d2d7', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.15)',
+                background: 'var(--card)', borderRadius: 20, padding: 28, width: '100%', maxWidth: 480,
+                border: '1px solid var(--line)', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.15)',
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
                     <div>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: '#0066cc', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>New Agent</div>
-                        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em' }}>Create an Agent</h2>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>New Agent</div>
+                        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>Create an Agent</h2>
                     </div>
-                    <button onClick={onClose} style={{ background: '#f5f5f7', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: '#6e6e73', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                    <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: 'var(--ink-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
                 </div>
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div>
-                        <label style={labelStyle}>Name <span style={{ color: '#6e6e73', fontWeight: 400 }}>(optional)</span></label>
+                        <label style={labelStyle}>Name <span style={{ color: 'var(--ink-muted)', fontWeight: 400 }}>(optional)</span></label>
                         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} placeholder="e.g. Dev Agent Alpha" />
                     </div>
                     <div>
-                        <label style={labelStyle}>Role <span style={{ color: '#c4161c' }}>*</span></label>
+                        <label style={labelStyle}>Role <span style={{ color: 'var(--danger)' }}>*</span></label>
                         <select value={role} onChange={(e) => setRole(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }} required>
                             <option value="">Select a role…</option>
                             <option value="developer">Developer</option>
@@ -171,18 +171,18 @@ function CreateAgentModal({
                         </select>
                     </div>
                     <div>
-                        <label style={labelStyle}>Workspace ID <span style={{ color: '#c4161c' }}>*</span></label>
+                        <label style={labelStyle}>Workspace ID <span style={{ color: 'var(--danger)' }}>*</span></label>
                         <input value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} style={inputStyle} placeholder="ws_..." required />
                     </div>
 
                     {error && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 8, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 13 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 8, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 13 }}>
                             <AlertCircle size={14} /> {error}
                         </div>
                     )}
 
                     <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                        <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#ffffff', color: '#424245', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
+                        <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
                             Cancel
                         </button>
                         <button type="submit" disabled={creating} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: 'none', background: creating ? '#aeaeb2' : '#0066cc', color: '#ffffff', fontSize: 14, fontWeight: 500, cursor: creating ? 'not-allowed' : 'pointer', transition: 'background 0.15s' }}>
@@ -200,11 +200,11 @@ function CreateAgentModal({
 function EmptyState({ onNew }: { onNew: () => void }) {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 40, textAlign: 'center' }}>
-            <div style={{ width: 64, height: 64, borderRadius: 18, background: 'rgba(0,102,204,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+            <div style={{ width: 64, height: 64, borderRadius: 18, background: 'color-mix(in srgb, var(--accent) 8%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
                 <Bot size={28} color="#0066cc" />
             </div>
-            <h3 style={{ margin: '0 0 6px', fontSize: 17, fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em' }}>No agents yet</h3>
-            <p style={{ margin: '0 0 20px', fontSize: 14, color: '#6e6e73', maxWidth: 280, lineHeight: 1.5 }}>
+            <h3 style={{ margin: '0 0 6px', fontSize: 17, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>No agents yet</h3>
+            <p style={{ margin: '0 0 20px', fontSize: 14, color: 'var(--ink-muted)', maxWidth: 280, lineHeight: 1.5 }}>
                 Create your first AI agent. Each agent has a dedicated role, memory, and action capabilities.
             </p>
             <button onClick={onNew} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 9999, border: 'none', background: '#0066cc', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
@@ -265,15 +265,15 @@ export default function AgentsPage() {
     const failedCount = agents.filter((a) => a.status === 'failed').length;
 
     return (
-        <div style={{ minHeight: '100vh', background: '#f5f5f7', fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", display: 'flex', flexDirection: 'column' }}>
+        <div style={{ minHeight: '100vh', background: 'var(--bg)', fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", display: 'flex', flexDirection: 'column' }}>
 
             {/* ── Top bar ────────────────────────────────────────────────── */}
             <header style={{
-                height: 56, background: '#ffffff', borderBottom: '1px solid #d2d2d7',
+                height: 56, background: 'var(--card)', borderBottom: '1px solid var(--line)',
                 display: 'flex', alignItems: 'center', padding: '0 24px', gap: 16, flexShrink: 0,
                 position: 'sticky', top: 0, zIndex: 10,
             }}>
-                <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#6e6e73', fontSize: 13, textDecoration: 'none', fontWeight: 500 }}>
+                <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--ink-muted)', fontSize: 13, textDecoration: 'none', fontWeight: 500 }}>
                     ← Dashboard
                 </Link>
                 <span style={{ color: '#d2d2d7' }}>|</span>
@@ -281,16 +281,16 @@ export default function AgentsPage() {
                     <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(0,102,204,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Bot size={14} color="#0066cc" />
                     </div>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em' }}>Agent Management</span>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>Agent Management</span>
                 </div>
 
                 {/* Stats */}
                 {agents.length > 0 && (
                     <div style={{ display: 'flex', gap: 12, marginLeft: 16 }}>
                         {[
-                            { icon: Zap, color: '#1a7a4a', bg: 'rgba(26,122,74,0.07)', val: activeCount, label: 'Active' },
-                            { icon: Clock, color: '#6e6e73', bg: 'rgba(110,110,115,0.07)', val: pausedCount, label: 'Paused' },
-                            { icon: AlertCircle, color: '#c4161c', bg: 'rgba(196,22,28,0.07)', val: failedCount, label: 'Failed' },
+                            { icon: Zap, color: 'var(--ok)', bg: 'rgba(26,122,74,0.07)', val: activeCount, label: 'Active' },
+                            { icon: Clock, color: 'var(--ink-muted)', bg: 'rgba(110,110,115,0.07)', val: pausedCount, label: 'Paused' },
+                            { icon: AlertCircle, color: 'var(--danger)', bg: 'rgba(196,22,28,0.07)', val: failedCount, label: 'Failed' },
                         ].map(({ icon: Icon, color, bg, val, label }) => val > 0 ? (
                             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 9999, background: bg, border: `1px solid ${color}33` }}>
                                 <Icon size={11} color={color} />
@@ -301,7 +301,7 @@ export default function AgentsPage() {
                 )}
 
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-                    <button onClick={loadAgents} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                    <button onClick={loadAgents} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
                         <RefreshCw size={12} />
                     </button>
                     <button onClick={() => setShowCreate(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 16px', borderRadius: 9999, border: 'none', background: '#0066cc', color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
@@ -345,7 +345,7 @@ export default function AgentsPage() {
 
                     {agents.length > 0 && (
                         <div style={{ marginTop: 'auto', paddingTop: 12 }}>
-                            <Link href="/agents" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 10, color: '#0066cc', fontSize: 12, fontWeight: 600, textDecoration: 'none', background: 'rgba(0,102,204,0.04)' }}>
+                            <Link href="/agents" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 10, color: 'var(--accent)', fontSize: 12, fontWeight: 600, textDecoration: 'none', background: 'rgba(0,102,204,0.04)' }}>
                                 View all agents <ChevronRight size={12} />
                             </Link>
                         </div>
@@ -353,22 +353,22 @@ export default function AgentsPage() {
                 </div>
 
                 {/* Right column — detail / empty */}
-                <div style={{ flex: 1, overflowY: 'auto', background: '#f5f5f7' }}>
+                <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg)' }}>
                     {loading ? null : selectedAgent ? (
                         <div style={{ padding: 20 }}>
                             {/* Agent header */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', background: '#ffffff', border: '1px solid #d2d2d7', borderRadius: 18, marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 18, marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                                 <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(0,102,204,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
                                     {ROLE_ICONS[selectedAgent.role] ?? '🤖'}
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <div style={{ fontSize: 16, fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em', marginBottom: 3 }}>
+                                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em', marginBottom: 3 }}>
                                         {selectedAgent.role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
                                     </div>
-                                    <div style={{ fontSize: 12, color: '#6e6e73', fontFamily: 'monospace' }}>#{selectedAgent.id.slice(-8).toUpperCase()}</div>
+                                    <div style={{ fontSize: 12, color: 'var(--ink-muted)', fontFamily: 'monospace' }}>#{selectedAgent.id.slice(-8).toUpperCase()}</div>
                                 </div>
                                 <StatusBadge status={selectedAgent.status} />
-                                <Link href={`/agents/${selectedAgent.id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 12, fontWeight: 500, textDecoration: 'none' }}>
+                                <Link href={`/agents/${selectedAgent.id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 12, fontWeight: 500, textDecoration: 'none' }}>
                                     Full detail <ChevronRight size={11} />
                                 </Link>
                             </div>

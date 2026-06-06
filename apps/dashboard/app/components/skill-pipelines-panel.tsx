@@ -40,14 +40,14 @@ type SchedulerHistoryEntry = Record<string, unknown>;
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const RUN_STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    success: { bg: '#dcfce7', color: '#166534' },
-    failed: { bg: '#fee2e2', color: '#991b1b' },
-    running: { bg: '#dbeafe', color: '#1d4ed8' },
-    pending: { bg: '#fef9c3', color: '#854d0e' },
+    success: { bg: '#dcfce7', color: 'var(--ok)' },
+    failed: { bg: '#fee2e2', color: 'var(--danger)' },
+    running: { bg: '#dbeafe', color: 'var(--info)' },
+    pending: { bg: '#fef9c3', color: 'var(--warn)' },
 };
 
 const JOB_ENABLED_BADGE: Record<string, { bg: string; color: string }> = {
-    Active: { bg: '#dcfce7', color: '#166534' },
+    Active: { bg: '#dcfce7', color: 'var(--ok)' },
     Paused: { bg: '#f1f5f9', color: '#475569' },
 };
 
@@ -608,7 +608,7 @@ export default function SkillPipelinesPanel() {
                         <div style={{ display: 'grid', gap: '0.55rem', maxWidth: '480px' }}>
                             <div>
                                 <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--ink-muted)', marginBottom: '0.25rem' }}>
-                                    Name <span style={{ color: '#991b1b' }}>*</span>
+                                    Name <span style={{ color: 'var(--danger)' }}>*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -620,7 +620,7 @@ export default function SkillPipelinesPanel() {
                             </div>
                             <div>
                                 <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--ink-muted)', marginBottom: '0.25rem' }}>
-                                    Target <span style={{ color: '#991b1b' }}>*</span>
+                                    Target <span style={{ color: 'var(--danger)' }}>*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -632,7 +632,7 @@ export default function SkillPipelinesPanel() {
                             </div>
                             <div>
                                 <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--ink-muted)', marginBottom: '0.25rem' }}>
-                                    Frequency <span style={{ color: '#991b1b' }}>*</span>
+                                    Frequency <span style={{ color: 'var(--danger)' }}>*</span>
                                 </label>
                                 <select
                                     value={newJobFrequency}
@@ -743,7 +743,7 @@ export default function SkillPipelinesPanel() {
                                                         <button
                                                             type="button"
                                                             className="secondary-action"
-                                                            style={{ fontSize: '0.76rem', padding: '0.2rem 0.5rem', color: '#991b1b', borderColor: '#fca5a5' }}
+                                                            style={{ fontSize: '0.76rem', padding: '0.2rem 0.5rem', color: 'var(--danger)', borderColor: '#fca5a5' }}
                                                             disabled={deleting === job.id}
                                                             onClick={() => void deleteJob(job.id)}
                                                         >

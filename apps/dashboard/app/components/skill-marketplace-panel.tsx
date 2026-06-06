@@ -33,13 +33,13 @@ type Install = {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    active: { bg: '#dcfce7', color: '#166534' },
+    active: { bg: '#dcfce7', color: 'var(--ok)' },
     deprecated: { bg: '#f1f5f9', color: '#475569' },
 };
 
 const INSTALL_BADGE: Record<string, { bg: string; color: string }> = {
-    installed: { bg: '#dcfce7', color: '#166534' },
-    disabled: { bg: '#fef9c3', color: '#854d0e' },
+    installed: { bg: '#dcfce7', color: 'var(--ok)' },
+    disabled: { bg: '#fef9c3', color: 'var(--warn)' },
     uninstalled: { bg: '#f1f5f9', color: '#475569' },
 };
 
@@ -383,7 +383,7 @@ export function SkillMarketplacePanel({ workspaceId, botId }: MarketplaceSkillPa
                                                         <h3 style={{ margin: 0 }}>{listing.name}</h3>
                                                         <span style={BADGE_PILL(statusStyle)}>{listing.status}</span>
                                                         {isInstalled && (
-                                                            <span style={BADGE_PILL({ bg: '#dcfce7', color: '#166534' })}>Installed ✓</span>
+                                                            <span style={BADGE_PILL({ bg: '#dcfce7', color: 'var(--ok)' })}>Installed ✓</span>
                                                         )}
                                                         <code style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>v{listing.version}</code>
                                                     </div>
@@ -405,7 +405,7 @@ export function SkillMarketplacePanel({ workspaceId, botId }: MarketplaceSkillPa
                                                         isConfirming ? (
                                                             <>
                                                                 <button type="button" className="secondary-action"
-                                                                    style={{ fontSize: '0.78rem', borderColor: '#dc2626', color: '#dc2626' }}
+                                                                    style={{ fontSize: '0.78rem', borderColor: '#dc2626', color: 'var(--danger)' }}
                                                                     disabled={isBusy}
                                                                     onClick={() => void runUninstall(listing.skillId, listing.name)}>
                                                                     {isBusy ? 'Removing...' : 'Confirm uninstall'}
@@ -494,7 +494,7 @@ export function SkillMarketplacePanel({ workspaceId, botId }: MarketplaceSkillPa
                                                     {isConfirming ? (
                                                         <>
                                                             <button type="button" className="secondary-action"
-                                                                style={{ fontSize: '0.78rem', borderColor: '#dc2626', color: '#dc2626' }}
+                                                                style={{ fontSize: '0.78rem', borderColor: '#dc2626', color: 'var(--danger)' }}
                                                                 disabled={isBusy}
                                                                 onClick={() => void runUninstall(install.skillId, displayName)}>
                                                                 {isBusy ? 'Removing...' : 'Confirm uninstall'}
@@ -602,7 +602,7 @@ export function SkillMarketplacePanel({ workspaceId, botId }: MarketplaceSkillPa
                                 <p style={{ margin: '0 0 0.4rem', fontWeight: 600, fontSize: '0.82rem', color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Permissions</p>
                                 <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
                                     {(drawerListing.permissions as string[]).map((p, i) => (
-                                        <span key={i} style={{ padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: '#fef9c3', color: '#854d0e' }}>
+                                        <span key={i} style={{ padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: 'var(--warn-bg)', color: 'var(--warn)' }}>
                                             {String(p)}
                                         </span>
                                     ))}
@@ -627,7 +627,7 @@ export function SkillMarketplacePanel({ workspaceId, botId }: MarketplaceSkillPa
                         <div style={{ marginTop: '0.5rem' }}>
                             {installedSkillIds.has(drawerListing.skillId) ? (
                                 <button type="button" className="secondary-action"
-                                    style={{ borderColor: '#dc2626', color: '#dc2626' }}
+                                    style={{ borderColor: '#dc2626', color: 'var(--danger)' }}
                                     disabled={busySkillId === drawerListing.skillId}
                                     onClick={() => {
                                         void runUninstall(drawerListing.skillId, drawerListing.name);

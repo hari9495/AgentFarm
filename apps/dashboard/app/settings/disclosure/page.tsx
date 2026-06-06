@@ -41,13 +41,13 @@ export default async function DisclosureSettingsPage() {
             {firstBotId ? (
                 <DisclosureSettingsPanel botId={firstBotId} />
             ) : (
-                <div style={{ padding: '1.5rem', border: '1px solid var(--border, #e5e7eb)', borderRadius: '0.5rem', background: '#f9fafb' }}>
+                <div style={{ padding: '1.5rem', border: '1px solid var(--border, #e5e7eb)', borderRadius: '0.5rem', background: 'var(--bg)' }}>
                     <p style={{ color: 'var(--ink-muted)', fontSize: '0.9rem' }}>
                         No agents found. Create an agent first to configure disclosure settings.
                     </p>
                     <Link
                         href="/settings"
-                        style={{ display: 'inline-block', marginTop: '0.75rem', fontSize: '0.875rem', color: '#4f46e5' }}
+                        style={{ display: 'inline-block', marginTop: '0.75rem', fontSize: '0.875rem', color: 'var(--accent)' }}
                     >
                         Go to Settings →
                     </Link>

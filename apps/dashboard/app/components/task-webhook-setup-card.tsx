@@ -116,7 +116,7 @@ export function TaskWebhookSetupCard({ workspaceId }: TaskWebhookSetupCardProps)
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                 <div>
                     <h2 style={{ margin: 0 }}>Output Delivery Webhooks</h2>
-                    <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: '#57534e' }}>
+                    <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: 'var(--ink-muted)' }}>
                         Push task results to your systems automatically when agents complete work.
                     </p>
                 </div>
@@ -135,10 +135,10 @@ export function TaskWebhookSetupCard({ workspaceId }: TaskWebhookSetupCardProps)
 
             {/* Create form */}
             {showForm && (
-                <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '0.5rem', padding: '1rem', marginBottom: '0.85rem', display: 'grid', gap: '0.75rem' }}>
+                <div style={{ background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: '0.5rem', padding: '1rem', marginBottom: '0.85rem', display: 'grid', gap: '0.75rem' }}>
                     <div>
                         <label style={{ fontSize: '0.82rem', fontWeight: 700, display: 'block', marginBottom: '0.3rem' }}>
-                            Destination URL <span style={{ color: '#6b7280', fontWeight: 400 }}>(must be https://)</span>
+                            Destination URL <span style={{ color: 'var(--ink-muted)', fontWeight: 400 }}>(must be https://)</span>
                         </label>
                         <input
                             type="url"
@@ -161,7 +161,7 @@ export function TaskWebhookSetupCard({ workspaceId }: TaskWebhookSetupCardProps)
                                         onChange={() => toggleEvent(evt)}
                                         style={{ width: 15, height: 15 }}
                                     />
-                                    <code style={{ fontFamily: 'ui-monospace, monospace', background: '#f3f4f6', padding: '0.1rem 0.35rem', borderRadius: '0.2rem', fontSize: '0.78rem' }}>
+                                    <code style={{ fontFamily: 'ui-monospace, monospace', background: 'var(--bg)', padding: '0.1rem 0.35rem', borderRadius: '0.2rem', fontSize: '0.78rem' }}>
                                         {evt}
                                     </code>
                                 </label>
@@ -171,7 +171,7 @@ export function TaskWebhookSetupCard({ workspaceId }: TaskWebhookSetupCardProps)
 
                     {/* Sample payload preview */}
                     <div>
-                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>
                             Sample payload
                         </div>
                         <pre style={{ margin: 0, background: '#1d1d1f', color: '#a8e6cf', padding: '0.65rem 0.75rem', borderRadius: '0.4rem', fontSize: '0.73rem', fontFamily: 'ui-monospace, monospace', lineHeight: 1.6, overflowX: 'auto' }}>
@@ -212,13 +212,13 @@ export function TaskWebhookSetupCard({ workspaceId }: TaskWebhookSetupCardProps)
             )}
 
             {/* Webhook list */}
-            {loading && <p style={{ margin: 0, fontSize: '0.83rem', color: '#78716c' }}>Loading…</p>}
+            {loading && <p style={{ margin: 0, fontSize: '0.83rem', color: 'var(--ink-muted)' }}>Loading…</p>}
 
             {!loading && webhooks.length === 0 && !showForm && (
-                <div style={{ padding: '1.5rem', textAlign: 'center', background: '#f9fafb', borderRadius: '0.4rem', border: '1px dashed #e5e7eb' }}>
+                <div style={{ padding: '1.5rem', textAlign: 'center', background: 'var(--bg)', borderRadius: '0.4rem', border: '1px dashed #e5e7eb' }}>
                     <div style={{ fontSize: '1.3rem', marginBottom: '0.35rem' }}>🔗</div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1d1d1f', marginBottom: '0.2rem' }}>No delivery webhooks yet</div>
-                    <div style={{ fontSize: '0.78rem', color: '#78716c' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.2rem' }}>No delivery webhooks yet</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--ink-muted)' }}>
                         Add a webhook URL and task results will be pushed there automatically.
                     </div>
                 </div>
@@ -227,24 +227,24 @@ export function TaskWebhookSetupCard({ workspaceId }: TaskWebhookSetupCardProps)
             {webhooks.length > 0 && (
                 <div style={{ display: 'grid', gap: '0.5rem' }}>
                     {webhooks.map((wh) => (
-                        <div key={wh.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.65rem 0.75rem', background: '#f9fafb', borderRadius: '0.4rem', border: '1px solid #e5e7eb' }}>
+                        <div key={wh.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.65rem 0.75rem', background: 'var(--bg)', borderRadius: '0.4rem', border: '1px solid var(--line)' }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.2rem', flexWrap: 'wrap' }}>
                                     <span style={{ padding: '0.1rem 0.4rem', borderRadius: 9999, background: wh.enabled ? 'rgba(26,122,74,0.08)' : '#f3f4f6', color: wh.enabled ? '#1a7a4a' : '#6b7280', fontSize: '0.7rem', fontWeight: 700 }}>
                                         {wh.enabled ? 'active' : 'disabled'}
                                     </span>
                                     {wh.failureCount > 0 && (
-                                        <span style={{ padding: '0.1rem 0.4rem', borderRadius: 9999, background: 'rgba(196,22,28,0.08)', color: '#c4161c', fontSize: '0.7rem', fontWeight: 700 }}>
+                                        <span style={{ padding: '0.1rem 0.4rem', borderRadius: 9999, background: 'var(--danger-bg)', color: 'var(--danger)', fontSize: '0.7rem', fontWeight: 700 }}>
                                             {wh.failureCount} failures
                                         </span>
                                     )}
                                 </div>
-                                <div style={{ fontSize: '0.83rem', color: '#1d1d1f', fontFamily: 'ui-monospace, monospace', wordBreak: 'break-all', marginBottom: '0.2rem' }}>
+                                <div style={{ fontSize: '0.83rem', color: 'var(--ink)', fontFamily: 'ui-monospace, monospace', wordBreak: 'break-all', marginBottom: '0.2rem' }}>
                                     {wh.url}
                                 </div>
                                 <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
                                     {wh.events.map((e) => (
-                                        <code key={e} style={{ fontSize: '0.7rem', background: '#e0f2fe', color: '#0369a1', padding: '0.1rem 0.3rem', borderRadius: '0.2rem' }}>
+                                        <code key={e} style={{ fontSize: '0.7rem', background: 'var(--info-bg)', color: 'var(--info)', padding: '0.1rem 0.3rem', borderRadius: '0.2rem' }}>
                                             {e}
                                         </code>
                                     ))}
@@ -254,7 +254,7 @@ export function TaskWebhookSetupCard({ workspaceId }: TaskWebhookSetupCardProps)
                                 type="button"
                                 onClick={() => void handleDelete(wh.id, wh.url)}
                                 disabled={deleting === wh.id}
-                                style={{ padding: '0.25rem 0.55rem', borderRadius: 6, border: '1px solid rgba(196,22,28,0.2)', background: 'rgba(196,22,28,0.05)', color: '#c4161c', fontSize: '0.75rem', cursor: 'pointer', flexShrink: 0 }}
+                                style={{ padding: '0.25rem 0.55rem', borderRadius: 6, border: '1px solid var(--danger-border)', background: 'rgba(196,22,28,0.05)', color: 'var(--danger)', fontSize: '0.75rem', cursor: 'pointer', flexShrink: 0 }}
                             >
                                 {deleting === wh.id ? '…' : 'Remove'}
                             </button>

@@ -99,7 +99,7 @@ export function BrandingSettingsCard() {
         return (
             <section className="card">
                 <h2>Portal Branding</h2>
-                <p style={{ margin: 0, fontSize: '0.83rem', color: '#78716c' }}>Loading…</p>
+                <p style={{ margin: 0, fontSize: '0.83rem', color: 'var(--ink-muted)' }}>Loading…</p>
             </section>
         );
     }
@@ -109,7 +109,7 @@ export function BrandingSettingsCard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                 <div>
                     <h2 style={{ margin: 0 }}>Portal Branding</h2>
-                    <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: '#57534e' }}>
+                    <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: 'var(--ink-muted)' }}>
                         Customize how the customer portal looks to your end users.
                     </p>
                 </div>
@@ -134,19 +134,19 @@ export function BrandingSettingsCard() {
                 </label>
 
                 <label style={{ display: 'grid', gap: '0.25rem', fontSize: '0.82rem', fontWeight: 600 }}>
-                    Portal heading <span style={{ fontWeight: 400, color: '#78716c' }}>(shown in portal header)</span>
+                    Portal heading <span style={{ fontWeight: 400, color: 'var(--ink-muted)' }}>(shown in portal header)</span>
                     <input type="text" value={portalTitle} onChange={(e) => setPortalTitle(e.target.value)}
                         placeholder="e.g. Acme AI Agents Portal" className="approval-input" />
                 </label>
 
                 <label style={{ display: 'grid', gap: '0.25rem', fontSize: '0.82rem', fontWeight: 600 }}>
-                    Logo URL <span style={{ fontWeight: 400, color: '#78716c' }}>(https:// recommended, PNG/SVG, ~32px tall)</span>
+                    Logo URL <span style={{ fontWeight: 400, color: 'var(--ink-muted)' }}>(https:// recommended, PNG/SVG, ~32px tall)</span>
                     <input type="url" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)}
                         placeholder="https://cdn.yourcompany.com/logo.png" className="approval-input" />
                 </label>
 
                 <label style={{ display: 'grid', gap: '0.25rem', fontSize: '0.82rem', fontWeight: 600 }}>
-                    Favicon URL <span style={{ fontWeight: 400, color: '#78716c' }}>(optional, 32×32 .ico or .png)</span>
+                    Favicon URL <span style={{ fontWeight: 400, color: 'var(--ink-muted)' }}>(optional, 32×32 .ico or .png)</span>
                     <input type="url" value={faviconUrl} onChange={(e) => setFaviconUrl(e.target.value)}
                         placeholder="https://cdn.yourcompany.com/favicon.ico" className="approval-input" />
                 </label>
@@ -174,7 +174,7 @@ export function BrandingSettingsCard() {
                                 type="color"
                                 value={primaryColor}
                                 onChange={(e) => setPrimaryColor(e.target.value)}
-                                style={{ width: 32, height: 32, borderRadius: 6, border: '1px solid #d2d2d7', cursor: 'pointer', padding: 2 }}
+                                style={{ width: 32, height: 32, borderRadius: 6, border: '1px solid var(--line)', cursor: 'pointer', padding: 2 }}
                             />
                             <input
                                 type="text"

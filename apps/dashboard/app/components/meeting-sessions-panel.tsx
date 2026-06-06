@@ -47,10 +47,10 @@ type MeetingSession = {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    joining: { bg: '#fef9c3', color: '#854d0e' },
-    active: { bg: '#dcfce7', color: '#166534' },
+    joining: { bg: '#fef9c3', color: 'var(--warn)' },
+    active: { bg: '#dcfce7', color: 'var(--ok)' },
     ended: { bg: '#f1f5f9', color: '#475569' },
-    deleted: { bg: '#fee2e2', color: '#991b1b' },
+    deleted: { bg: '#fee2e2', color: 'var(--danger)' },
 };
 
 const PLATFORM_BADGE: Record<string, { bg: string; color: string }> = {

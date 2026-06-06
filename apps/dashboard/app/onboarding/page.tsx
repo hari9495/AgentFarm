@@ -56,12 +56,12 @@ function ErrorBanner({ message }: { message: string }) {
     return (
         <div
             style={{
-                background: '#fee2e2',
-                border: '1px solid #fca5a5',
+                background: 'var(--danger-bg)',
+                border: '1px solid var(--danger-border)',
                 borderRadius: 8,
                 padding: '0.65rem 0.85rem',
                 fontSize: '0.875rem',
-                color: '#991b1b',
+                color: 'var(--danger)',
             }}
         >
             {message}
@@ -106,7 +106,7 @@ function Field({
                     fontSize: '0.9rem',
                     border: '1px solid var(--line)',
                     borderRadius: 8,
-                    background: '#fff',
+                    background: 'var(--card)',
                     color: 'var(--ink)',
                     outline: 'none',
                     fontFamily: 'inherit',

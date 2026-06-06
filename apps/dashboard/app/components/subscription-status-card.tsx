@@ -184,7 +184,7 @@ export function SubscriptionStatusCard({
                     style={{
                         margin: '0.25rem 0 0',
                         fontSize: '0.83rem',
-                        color: '#d97706',
+                        color: 'var(--warn)',
                         fontWeight: 600,
                     }}
                 >

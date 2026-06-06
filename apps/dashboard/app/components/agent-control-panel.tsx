@@ -95,22 +95,22 @@ export default function AgentControlPanel({ botId }: AgentControlPanelProps) {
 
     return (
         <section style={{
-            background: '#fff',
+            background: 'var(--card)',
             borderRadius: 10,
-            border: '1px solid #e5e7eb',
+            border: '1px solid var(--line)',
             padding: '1rem 1.25rem',
             marginTop: '1rem',
         }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#111827', margin: 0 }}>Agent Control</h3>
+                <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>Agent Control</h3>
                 {isLoading
-                    ? <span style={{ fontSize: '0.82rem', color: '#9ca3af' }}>...</span>
+                    ? <span style={{ fontSize: '0.82rem', color: 'var(--ink-muted)' }}>...</span>
                     : statusData && <StatusBadge status={currentStatus} />
                 }
             </div>
 
             {fetchError && (
-                <p style={{ fontSize: '0.82rem', color: '#dc2626', marginBottom: '0.75rem' }}>{fetchError}</p>
+                <p style={{ fontSize: '0.82rem', color: 'var(--danger)', marginBottom: '0.75rem' }}>{fetchError}</p>
             )}
 
             {message && (
@@ -130,7 +130,7 @@ export default function AgentControlPanel({ botId }: AgentControlPanelProps) {
                     style={{
                         padding: '6px 16px',
                         borderRadius: 6,
-                        border: '1px solid #e5e7eb',
+                        border: '1px solid var(--line)',
                         background: isActing || currentStatus === 'paused' ? '#f3f4f6' : '#fffbeb',
                         color: isActing || currentStatus === 'paused' ? '#9ca3af' : '#d97706',
                         fontSize: '0.82rem',
@@ -146,7 +146,7 @@ export default function AgentControlPanel({ botId }: AgentControlPanelProps) {
                     style={{
                         padding: '6px 16px',
                         borderRadius: 6,
-                        border: '1px solid #e5e7eb',
+                        border: '1px solid var(--line)',
                         background: isActing || currentStatus === 'active' ? '#f3f4f6' : '#f0fdf4',
                         color: isActing || currentStatus === 'active' ? '#9ca3af' : '#16a34a',
                         fontSize: '0.82rem',

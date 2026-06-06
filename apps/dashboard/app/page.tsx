@@ -1645,10 +1645,10 @@ export default async function HomePage({
                             {/* Disambiguation notice */}
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', borderRadius: 12, background: 'rgba(0,102,204,0.06)', border: '1px solid rgba(0,102,204,0.18)', marginBottom: 16 }}>
                                 <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>💡</span>
-                                <div style={{ fontSize: 13, color: '#424245', lineHeight: 1.55 }}>
-                                    <strong style={{ color: '#0066cc' }}>Not what you're looking for?</strong>
+                                <div style={{ fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.55 }}>
+                                    <strong style={{ color: 'var(--accent)' }}>Not what you're looking for?</strong>
                                     {' '}If you want to connect Slack, GitHub, Jira, or other external tools — those are <strong>Connectors</strong>, not skills.
-                                    {' '}<a href="/connectors" style={{ color: '#0066cc', fontWeight: 700, textDecoration: 'none' }}>Go to Connectors → Install Connectors tab →</a>
+                                    {' '}<a href="/connectors" style={{ color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}>Go to Connectors → Install Connectors tab →</a>
                                 </div>
                             </div>
 

@@ -70,7 +70,7 @@ export default function AgentMessagingToggle({
                         width: '18px',
                         height: '18px',
                         borderRadius: '50%',
-                        background: '#fff',
+                        background: 'var(--card)',
                         boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                         transition: 'left 0.2s',
                     }} />
@@ -84,7 +84,7 @@ export default function AgentMessagingToggle({
                 </span>
             </div>
             {error && (
-                <p style={{ margin: 0, fontSize: '12px', color: '#dc2626' }}>{error}</p>
+                <p style={{ margin: 0, fontSize: '12px', color: 'var(--danger)' }}>{error}</p>
             )}
         </div>
     );

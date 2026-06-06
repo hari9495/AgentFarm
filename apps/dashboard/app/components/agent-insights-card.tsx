@@ -74,13 +74,13 @@ async function fetchInsights(botId: string, tenantId: string): Promise<Insights 
 function Kpi({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
     return (
         <div style={{ display: 'grid', gap: '0.15rem' }}>
-            <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 {label}
             </div>
             <div style={{ fontSize: '1.25rem', fontWeight: 800, color: color ?? '#1d1d1f', lineHeight: 1 }}>
                 {value}
             </div>
-            {sub && <div style={{ fontSize: '0.72rem', color: '#78716c' }}>{sub}</div>}
+            {sub && <div style={{ fontSize: '0.72rem', color: 'var(--ink-muted)' }}>{sub}</div>}
         </div>
     );
 }
@@ -95,7 +95,7 @@ export default async function AgentInsightsCard({ botId }: { botId: string }) {
         return (
             <section className="card">
                 <h2>Insights — Last 30 Days</h2>
-                <p style={{ margin: 0, fontSize: '0.83rem', color: '#78716c' }}>
+                <p style={{ margin: 0, fontSize: '0.83rem', color: 'var(--ink-muted)' }}>
                     No task data available yet for this agent.
                 </p>
             </section>
@@ -136,11 +136,11 @@ export default async function AgentInsightsCard({ botId }: { botId: string }) {
             {/* Success bar */}
             {data.taskCount > 0 && (
                 <div style={{ marginBottom: '0.75rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#78716c', marginBottom: '0.25rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--ink-muted)', marginBottom: '0.25rem' }}>
                         <span>{data.successCount} succeeded</span>
                         <span>{data.failedCount} failed · {data.approvalQueuedCount} queued</span>
                     </div>
-                    <div style={{ height: 6, background: '#f3f4f6', borderRadius: 9999, overflow: 'hidden', display: 'flex' }}>
+                    <div style={{ height: 6, background: 'var(--bg)', borderRadius: 9999, overflow: 'hidden', display: 'flex' }}>
                         <div style={{ height: '100%', width: `${((data.successCount / data.taskCount) * 100).toFixed(1)}%`, background: '#1a7a4a', transition: 'width 0.4s' }} />
                         <div style={{ height: '100%', width: `${((data.approvalQueuedCount / data.taskCount) * 100).toFixed(1)}%`, background: '#b45309' }} />
                         <div style={{ height: '100%', width: `${((data.failedCount / data.taskCount) * 100).toFixed(1)}%`, background: '#c4161c' }} />
@@ -149,9 +149,9 @@ export default async function AgentInsightsCard({ botId }: { botId: string }) {
             )}
 
             {data.topModelProfile && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: '#57534e' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
                     <span style={{ fontWeight: 600 }}>Most-used model:</span>
-                    <code style={{ fontFamily: 'ui-monospace, monospace', background: '#f3f4f6', padding: '0.1rem 0.35rem', borderRadius: '0.2rem' }}>
+                    <code style={{ fontFamily: 'ui-monospace, monospace', background: 'var(--bg)', padding: '0.1rem 0.35rem', borderRadius: '0.2rem' }}>
                         {data.topModelProfile}
                     </code>
                 </div>

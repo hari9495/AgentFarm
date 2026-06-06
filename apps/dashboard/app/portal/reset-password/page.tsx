@@ -44,8 +44,8 @@ function ResetPasswordForm() {
     if (!token) {
         return (
             <div style={{ textAlign: 'center' }}>
-                <p style={{ fontSize: '0.88rem', color: '#dc2626', marginBottom: '1rem' }}>Invalid reset link — no token found.</p>
-                <Link href="/portal/forgot-password" style={{ color: '#2563eb', fontSize: '0.84rem' }}>Request a new reset link</Link>
+                <p style={{ fontSize: '0.88rem', color: 'var(--danger)', marginBottom: '1rem' }}>Invalid reset link — no token found.</p>
+                <Link href="/portal/forgot-password" style={{ color: 'var(--info)', fontSize: '0.84rem' }}>Request a new reset link</Link>
             </div>
         );
     }
@@ -54,8 +54,8 @@ function ResetPasswordForm() {
         return (
             <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✅</div>
-                <p style={{ fontSize: '0.9rem', fontWeight: 600, color: '#15803d' }}>Password updated successfully!</p>
-                <p style={{ fontSize: '0.82rem', color: '#6b7280', marginTop: '0.3rem' }}>Redirecting to sign in…</p>
+                <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ok)' }}>Password updated successfully!</p>
+                <p style={{ fontSize: '0.82rem', color: 'var(--ink-muted)', marginTop: '0.3rem' }}>Redirecting to sign in…</p>
             </div>
         );
     }
@@ -63,18 +63,18 @@ function ResetPasswordForm() {
     return (
         <>
             {error && (
-                <div style={{ padding: '0.6rem 0.8rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, marginBottom: '1rem', fontSize: '0.83rem', color: '#b91c1c' }}>{error}</div>
+                <div style={{ padding: '0.6rem 0.8rem', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: 6, marginBottom: '1rem', fontSize: '0.83rem', color: 'var(--danger)' }}>{error}</div>
             )}
             <form onSubmit={(e) => void handleSubmit(e)} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
-                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#374151', marginBottom: '0.3rem' }}>New Password</label>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.3rem' }}>New Password</label>
                     <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min. 8 characters" required autoComplete="new-password"
-                        style={{ width: '100%', padding: '0.5rem 0.7rem', fontSize: '0.9rem', border: '1px solid #d1d5db', borderRadius: 6, outline: 'none' }} />
+                        style={{ width: '100%', padding: '0.5rem 0.7rem', fontSize: '0.9rem', border: '1px solid var(--line)', borderRadius: 6, outline: 'none' }} />
                 </div>
                 <div>
-                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#374151', marginBottom: '0.3rem' }}>Confirm Password</label>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.3rem' }}>Confirm Password</label>
                     <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Re-enter password" required autoComplete="new-password"
-                        style={{ width: '100%', padding: '0.5rem 0.7rem', fontSize: '0.9rem', border: '1px solid #d1d5db', borderRadius: 6, outline: 'none' }} />
+                        style={{ width: '100%', padding: '0.5rem 0.7rem', fontSize: '0.9rem', border: '1px solid var(--line)', borderRadius: 6, outline: 'none' }} />
                 </div>
                 <button type="submit" disabled={loading || !password || !confirm} style={{ padding: '0.6rem 1rem', fontSize: '0.9rem', fontWeight: 600, background: loading ? '#93c5fd' : '#2563eb', color: '#fff', border: 'none', borderRadius: 6, cursor: loading ? 'not-allowed' : 'pointer' }}>
                     {loading ? 'Updating…' : 'Set New Password'}
@@ -86,14 +86,14 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
     return (
-        <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', fontFamily: 'Inter, system-ui, sans-serif' }}>
+        <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', fontFamily: 'Inter, system-ui, sans-serif' }}>
             <style>{`* { box-sizing: border-box; margin: 0; padding: 0; }`}</style>
-            <div style={{ background: '#fff', borderRadius: 12, padding: '2.5rem 2rem', boxShadow: '0 2px 16px rgba(0,0,0,0.08)', width: '100%', maxWidth: 400 }}>
+            <div style={{ background: 'var(--card)', borderRadius: 12, padding: '2.5rem 2rem', boxShadow: '0 2px 16px rgba(0,0,0,0.08)', width: '100%', maxWidth: 400 }}>
                 <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
                     <div style={{ fontSize: '1.6rem', marginBottom: '0.4rem' }}>🔐</div>
-                    <h1 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#111827' }}>Set new password</h1>
+                    <h1 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--ink)' }}>Set new password</h1>
                 </div>
-                <Suspense fallback={<p style={{ textAlign: 'center', color: '#6b7280', fontSize: '0.88rem' }}>Loading…</p>}>
+                <Suspense fallback={<p style={{ textAlign: 'center', color: 'var(--ink-muted)', fontSize: '0.88rem' }}>Loading…</p>}>
                     <ResetPasswordForm />
                 </Suspense>
             </div>

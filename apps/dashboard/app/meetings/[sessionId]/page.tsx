@@ -50,10 +50,10 @@ type MeetingAuditResponse = {
 // ── Badges ─────────────────────────────────────────────────────────────────────
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    joining: { bg: '#fef9c3', color: '#854d0e' },
-    active: { bg: '#dcfce7', color: '#166534' },
+    joining: { bg: '#fef9c3', color: 'var(--warn)' },
+    active: { bg: '#dcfce7', color: 'var(--ok)' },
     ended: { bg: '#f1f5f9', color: '#475569' },
-    deleted: { bg: '#fee2e2', color: '#991b1b' },
+    deleted: { bg: '#fee2e2', color: 'var(--danger)' },
 };
 
 const PLATFORM_BADGE: Record<string, { bg: string; color: string }> = {
@@ -556,10 +556,10 @@ function deriveSpeakerState(
 
 const SPEAKER_STATE_UI: Record<SpeakerState, { label: string; dot: string; bg: string; color: string }> = {
     'idle':                 { label: 'Idle',                   dot: '○', bg: '#f1f5f9', color: '#64748b' },
-    'agent-speaking':       { label: 'Agent speaking',         dot: '●', bg: '#dcfce7', color: '#166534' },
-    'agent-listening':      { label: 'Agent listening',        dot: '◉', bg: '#eff6ff', color: '#1d4ed8' },
-    'participant-speaking': { label: 'Participant speaking',   dot: '●', bg: '#fef9c3', color: '#854d0e' },
-    'transcribing':         { label: 'Transcribing',           dot: '◌', bg: '#f0fdf4', color: '#15803d' },
+    'agent-speaking':       { label: 'Agent speaking',         dot: '●', bg: '#dcfce7', color: 'var(--ok)' },
+    'agent-listening':      { label: 'Agent listening',        dot: '◉', bg: '#eff6ff', color: 'var(--info)' },
+    'participant-speaking': { label: 'Participant speaking',   dot: '●', bg: '#fef9c3', color: 'var(--warn)' },
+    'transcribing':         { label: 'Transcribing',           dot: '◌', bg: '#f0fdf4', color: 'var(--ok)' },
     'ended':                { label: 'Session ended',          dot: '■', bg: '#f1f5f9', color: '#475569' },
 };
 

@@ -105,7 +105,7 @@ function NavItem({
                     ? 'font-semibold'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
             ].join(' ')}
-            style={active ? { background: 'rgba(0,102,204,0.07)', color: '#0066cc' } : {}}
+            style={active ? { background: 'color-mix(in srgb, var(--accent) 7%, transparent)', color: 'var(--accent)' } : {}}
         >
             <span
                 className="inline-flex h-7 w-7 items-center justify-center rounded-lg shrink-0"
@@ -163,8 +163,8 @@ function SidebarLink({
             {badge && (
                 <span style={{
                     fontSize: '0.6rem', fontWeight: 700, padding: '1px 5px', borderRadius: 4,
-                    background: 'rgba(0,102,204,0.08)', color: '#0066cc',
-                    border: '1px solid rgba(0,102,204,0.2)', whiteSpace: 'nowrap',
+                    background: 'color-mix(in srgb, var(--accent) 8%, transparent)', color: 'var(--accent)',
+                    border: '1px solid color-mix(in srgb, var(--accent) 20%, transparent)', whiteSpace: 'nowrap',
                 }}>{badge}</span>
             )}
         </Link>
@@ -343,16 +343,16 @@ export function InternalSidebar({
                             <Link
                                 href="/billing"
                                 className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-                                style={{ color: '#94a3b8' }}
+                                style={{ color: 'var(--ink-muted)' }}
                             >
                                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg shrink-0" style={{ background: 'rgba(148,163,184,0.1)' }}>
-                                    <Lock className="w-3.5 h-3.5" style={{ color: '#94a3b8' }} />
+                                    <Lock className="w-3.5 h-3.5" style={{ color: 'var(--ink-muted)' }} />
                                 </span>
                                 <span className="flex-1 text-slate-400">Upgrade to unlock</span>
                                 <span style={{
                                     fontSize: '0.62rem', fontWeight: 700, padding: '1px 5px', borderRadius: 4,
-                                    background: 'rgba(0,102,204,0.08)', color: '#0066cc',
-                                    border: '1px solid rgba(0,102,204,0.2)', whiteSpace: 'nowrap',
+                                    background: 'color-mix(in srgb, var(--accent) 8%, transparent)', color: 'var(--accent)',
+                                    border: '1px solid color-mix(in srgb, var(--accent) 20%, transparent)', whiteSpace: 'nowrap',
                                 }}>Business+</span>
                             </Link>
                         )}

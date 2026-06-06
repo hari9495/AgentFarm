@@ -29,18 +29,18 @@ type Summary = { active: number; paused: number; failed: number; other: number }
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const STATUS_CFG: Record<BotStatus, { label: string; color: string; bg: string; border: string; Icon: React.ElementType }> = {
-    active:                   { label: 'Active',        color: '#16a34a', bg: '#dcfce7', border: '#bbf7d0', Icon: CheckCircle2 },
-    paused:                   { label: 'Paused',        color: '#d97706', bg: '#fef9c3', border: '#fde68a', Icon: PauseCircle  },
-    failed:                   { label: 'Failed',        color: '#dc2626', bg: '#fee2e2', border: '#fecaca', Icon: XCircle      },
-    bootstrapping:            { label: 'Bootstrapping', color: '#2563eb', bg: '#dbeafe', border: '#bfdbfe', Icon: RefreshCw    },
+    active:                   { label: 'Active',        color: 'var(--ok)', bg: '#dcfce7', border: '#bbf7d0', Icon: CheckCircle2 },
+    paused:                   { label: 'Paused',        color: 'var(--warn)', bg: '#fef9c3', border: '#fde68a', Icon: PauseCircle  },
+    failed:                   { label: 'Failed',        color: 'var(--danger)', bg: '#fee2e2', border: '#fecaca', Icon: XCircle      },
+    bootstrapping:            { label: 'Bootstrapping', color: 'var(--info)', bg: '#dbeafe', border: '#bfdbfe', Icon: RefreshCw    },
     created:                  { label: 'Created',       color: '#64748b', bg: '#f1f5f9', border: '#e2e8f0', Icon: Clock        },
     connector_setup_required: { label: 'Setup needed',  color: '#9333ea', bg: '#f3e8ff', border: '#e9d5ff', Icon: AlertCircle  },
 };
 
 const OUTCOME_CFG = {
-    success:         { color: '#16a34a', label: '✓ success' },
-    failed:          { color: '#dc2626', label: '✗ failed'  },
-    approval_queued: { color: '#d97706', label: '⏳ queued' },
+    success:         { color: 'var(--ok)', label: '✓ success' },
+    failed:          { color: 'var(--danger)', label: '✗ failed'  },
+    approval_queued: { color: 'var(--warn)', label: '⏳ queued' },
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -183,9 +183,9 @@ export default function AgentHealthClient() {
             {/* Table */}
             <div style={{ padding: '0 32px 48px', maxWidth: 1100, margin: '0 auto' }}>
                 {error && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 13, marginBottom: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 13, marginBottom: 16 }}>
                         <AlertCircle size={14} /> {error}
-                        <button onClick={() => void load()} style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer' }}>Retry</button>
+                        <button onClick={() => void load()} style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }}>Retry</button>
                     </div>
                 )}
 
@@ -283,14 +283,14 @@ export default function AgentHealthClient() {
                                                 {agent.status === 'active' && (
                                                     <button onClick={() => void handleAction(agent, 'pause')} disabled={!!row}
                                                         title="Pause agent"
-                                                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 9px', fontSize: 11, fontWeight: 600, borderRadius: 6, cursor: row ? 'not-allowed' : 'pointer', border: '1px solid #fde68a', background: '#fffbeb', color: '#92400e' }}>
+                                                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 9px', fontSize: 11, fontWeight: 600, borderRadius: 6, cursor: row ? 'not-allowed' : 'pointer', border: '1px solid var(--warn-border)', background: 'var(--warn-bg)', color: 'var(--warn)' }}>
                                                         <Pause size={11} /> {row === 'pause' ? '…' : 'Pause'}
                                                     </button>
                                                 )}
                                                 {agent.status === 'paused' && (
                                                     <button onClick={() => void handleAction(agent, 'resume')} disabled={!!row}
                                                         title="Resume agent"
-                                                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 9px', fontSize: 11, fontWeight: 600, borderRadius: 6, cursor: row ? 'not-allowed' : 'pointer', border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#166534' }}>
+                                                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 9px', fontSize: 11, fontWeight: 600, borderRadius: 6, cursor: row ? 'not-allowed' : 'pointer', border: '1px solid var(--ok-border)', background: 'var(--ok-bg)', color: 'var(--ok)' }}>
                                                         <Play size={11} /> {row === 'resume' ? '…' : 'Resume'}
                                                     </button>
                                                 )}

@@ -44,16 +44,16 @@ type TaskEntriesResponse = {
 type StatusFilter = 'all' | 'pending' | 'running' | 'done' | 'failed';
 
 const PRIORITY_BADGE: Record<string, { bg: string; color: string }> = {
-    high: { bg: '#fee2e2', color: '#991b1b' },
-    normal: { bg: '#dbeafe', color: '#1d4ed8' },
+    high: { bg: '#fee2e2', color: 'var(--danger)' },
+    normal: { bg: '#dbeafe', color: 'var(--info)' },
     low: { bg: '#f1f5f9', color: '#475569' },
 };
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    pending: { bg: '#fef9c3', color: '#854d0e' },
-    running: { bg: '#dbeafe', color: '#1d4ed8' },
-    done: { bg: '#dcfce7', color: '#166534' },
-    failed: { bg: '#fee2e2', color: '#991b1b' },
+    pending: { bg: '#fef9c3', color: 'var(--warn)' },
+    running: { bg: '#dbeafe', color: 'var(--info)' },
+    done: { bg: '#dcfce7', color: 'var(--ok)' },
+    failed: { bg: '#fee2e2', color: 'var(--danger)' },
     cancelled: { bg: '#f1f5f9', color: '#475569' },
 };
 
@@ -177,11 +177,11 @@ export default function TaskQueuePanel({ tenantId: _tenantId }: TaskQueuePanelPr
             {error && (
                 <div
                     style={{
-                        background: '#fef2f2',
-                        border: '1px solid #fecaca',
+                        background: 'var(--danger-bg)',
+                        border: '1px solid var(--danger-border)',
                         borderRadius: '6px',
                         padding: '0.65rem 0.9rem',
-                        color: '#dc2626',
+                        color: 'var(--danger)',
                         fontSize: '0.85rem',
                         marginBottom: '0.75rem',
                     }}
@@ -318,10 +318,10 @@ export default function TaskQueuePanel({ tenantId: _tenantId }: TaskQueuePanelPr
                                                     style={{
                                                         padding: '0.25rem 0.6rem',
                                                         fontSize: '0.75rem',
-                                                        border: '1px solid #fecaca',
+                                                        border: '1px solid var(--danger-border)',
                                                         borderRadius: '4px',
-                                                        background: '#fff',
-                                                        color: '#dc2626',
+                                                        background: 'var(--card)',
+                                                        color: 'var(--danger)',
                                                         cursor: cancelling === entry.id ? 'not-allowed' : 'pointer',
                                                         opacity: cancelling === entry.id ? 0.6 : 1,
                                                     }}

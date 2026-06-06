@@ -37,21 +37,21 @@ const TYPE_LABEL: Record<PlanType, string> = {
 
 const STATUS_STYLE: Record<PlanStatus, { bg: string; color: string }> = {
     draft:     { bg: '#f1f5f9', color: '#475569' },
-    in_review: { bg: '#fef9c3', color: '#854d0e' },
-    approved:  { bg: '#dcfce7', color: '#166534' },
+    in_review: { bg: '#fef9c3', color: 'var(--warn)' },
+    approved:  { bg: '#dcfce7', color: 'var(--ok)' },
     active:    { bg: '#eff6ff', color: '#1e40af' },
-    completed: { bg: '#f0fdf4', color: '#15803d' },
-    on_hold:   { bg: '#fef3c7', color: '#92400e' },
+    completed: { bg: '#f0fdf4', color: 'var(--ok)' },
+    on_hold:   { bg: '#fef3c7', color: 'var(--warn)' },
 };
 
 const RISK_STYLE: Record<string, { bg: string; color: string; icon: React.ElementType }> = {
-    low:    { bg: '#dcfce7', color: '#166534', icon: CheckCircle2 },
-    medium: { bg: '#fef9c3', color: '#854d0e', icon: AlertTriangle },
-    high:   { bg: '#fee2e2', color: '#991b1b', icon: AlertTriangle },
+    low:    { bg: '#dcfce7', color: 'var(--ok)', icon: CheckCircle2 },
+    medium: { bg: '#fef9c3', color: 'var(--warn)', icon: AlertTriangle },
+    high:   { bg: '#fee2e2', color: 'var(--danger)', icon: AlertTriangle },
 };
 
-const th: React.CSSProperties = { padding: '8px 12px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#94a3b8', background: '#f8fafc', textAlign: 'left' as const };
-const td: React.CSSProperties = { padding: '10px 12px', fontSize: 13, color: '#334155', verticalAlign: 'middle' };
+const th: React.CSSProperties = { padding: '8px 12px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: 'var(--ink-muted)', background: 'var(--bg)', textAlign: 'left' as const };
+const td: React.CSSProperties = { padding: '10px 12px', fontSize: 13, color: 'var(--ink-soft)', verticalAlign: 'middle' };
 
 export default function ProjectPlansPanel({ workspaceId }: { workspaceId: string }) {
     const [plans, setPlans] = useState<ProjectPlan[]>([]);
@@ -96,18 +96,18 @@ export default function ProjectPlansPanel({ workspaceId }: { workspaceId: string
                         </button>
                     ))}
                 </div>
-                <button type="button" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', fontSize: 12, color: '#64748b', cursor: 'pointer' }}><RefreshCw size={12} />Refresh</button>
+                <button type="button" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', fontSize: 12, color: '#64748b', cursor: 'pointer' }}><RefreshCw size={12} />Refresh</button>
             </div>
             {loading ? (
-                <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 13 }}>Loading plans…</div>
+                <div style={{ textAlign: 'center', padding: 40, color: 'var(--ink-muted)', fontSize: 13 }}>Loading plans…</div>
             ) : plans.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '48px 0', color: '#94a3b8' }}>
+                <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--ink-muted)' }}>
                     <Layers size={32} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
                     <p style={{ margin: 0, fontSize: 14 }}>No project plans yet.</p>
                     <p style={{ margin: '4px 0 0', fontSize: 12 }}>Sprint plans, roadmaps, and risk registers from your project manager will appear here.</p>
                 </div>
             ) : (
-                <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 12 }}>
+                <div style={{ overflowX: 'auto', border: '1px solid var(--line)', borderRadius: 12 }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead><tr>{['Title', 'Type', 'Team', 'Duration', 'Risk', 'Status', 'Actions'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
                         <tbody>
@@ -118,13 +118,13 @@ export default function ProjectPlansPanel({ workspaceId }: { workspaceId: string
                                 return (
                                     <tr key={p.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : '#fff' }}>
                                         <td style={{ ...td, fontWeight: 500 }}>{p.title}</td>
-                                        <td style={td}><span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 4, background: '#f1f5f9', color: '#475569' }}>{TYPE_LABEL[p.planType]}</span></td>
+                                        <td style={td}><span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 4, background: 'var(--bg)', color: '#475569' }}>{TYPE_LABEL[p.planType]}</span></td>
                                         <td style={{ ...td, color: '#64748b' }}>{p.teamSize}</td>
                                         <td style={{ ...td, color: '#64748b' }}>{p.durationDays}d</td>
                                         <td style={td}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, background: rk.bg, color: rk.color, fontSize: 11, fontWeight: 600 }}><RIcon size={10} />{p.riskLevel}</span></td>
                                         <td style={td}><span style={{ display: 'inline-flex', padding: '2px 8px', borderRadius: 20, background: st.bg, color: st.color, fontSize: 11, fontWeight: 600 }}>{p.status.replace('_', ' ')}</span></td>
                                         <td style={td}>
-                                            {p.status === 'in_review' && <button type="button" onClick={() => approve(p.id)} style={{ padding: '4px 10px', border: '1px solid #bbf7d0', borderRadius: 6, background: '#f0fdf4', cursor: 'pointer', fontSize: 11, color: '#16a34a', fontWeight: 600 }}>Approve</button>}
+                                            {p.status === 'in_review' && <button type="button" onClick={() => approve(p.id)} style={{ padding: '4px 10px', border: '1px solid var(--ok-border)', borderRadius: 6, background: 'var(--ok-bg)', cursor: 'pointer', fontSize: 11, color: 'var(--ok)', fontWeight: 600 }}>Approve</button>}
                                         </td>
                                     </tr>
                                 );

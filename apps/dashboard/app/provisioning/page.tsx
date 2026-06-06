@@ -131,12 +131,12 @@ export default async function ProvisioningPage({
             {isCompleted && (
                 <div
                     style={{
-                        background: '#dcfce7',
-                        border: '1px solid #86efac',
+                        background: 'var(--ok-bg)',
+                        border: '1px solid var(--ok-border)',
                         borderRadius: 10,
                         padding: '0.8rem 1rem',
                         marginBottom: '1.2rem',
-                        color: '#166534',
+                        color: 'var(--ok)',
                         fontWeight: 700,
                         fontSize: '0.95rem',
                     }}
@@ -145,7 +145,7 @@ export default async function ProvisioningPage({
                     {job?.completed_at &&
                         ` Completed at ${new Date(job.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}.`}
                     {' '}
-                    <a href="/" style={{ color: '#15803d', textDecoration: 'underline' }}>
+                    <a href="/" style={{ color: 'var(--ok)', textDecoration: 'underline' }}>
                         Go to Dashboard →
                     </a>
                 </div>
@@ -154,14 +154,14 @@ export default async function ProvisioningPage({
             {isFailed && (
                 <div
                     style={{
-                        background: '#fee2e2',
-                        border: '1px solid #fca5a5',
+                        background: 'var(--danger-bg)',
+                        border: '1px solid var(--danger-border)',
                         borderRadius: 10,
                         padding: '0.8rem 1rem',
                         marginBottom: '1.2rem',
                     }}
                 >
-                    <p style={{ margin: '0 0 0.3rem', fontWeight: 700, color: '#991b1b', fontSize: '0.92rem' }}>
+                    <p style={{ margin: '0 0 0.3rem', fontWeight: 700, color: 'var(--danger)', fontSize: '0.92rem' }}>
                         Provisioning failed
                     </p>
                     {job?.error_code && (
@@ -231,7 +231,7 @@ export default async function ProvisioningPage({
                     </ul>
                 </section>
             ) : (
-                <section className="card" style={{ marginBottom: '1.2rem', color: '#78716c' }}>
+                <section className="card" style={{ marginBottom: '1.2rem', color: 'var(--ink-muted)' }}>
                     {jobId
                         ? 'Could not load job details. The job may still be initialising — refresh in a moment.'
                         : 'No job ID provided. Arrive here from the signup page or paste a job ID in the URL (?jobId=...).'}
@@ -289,7 +289,7 @@ export default async function ProvisioningPage({
                                         style={{
                                             marginLeft: 'auto',
                                             fontSize: '0.78rem',
-                                            color: '#1d4ed8',
+                                            color: 'var(--info)',
                                             fontWeight: 600,
                                         }}
                                     >
@@ -301,7 +301,7 @@ export default async function ProvisioningPage({
                                         style={{
                                             marginLeft: 'auto',
                                             fontSize: '0.78rem',
-                                            color: '#166534',
+                                            color: 'var(--ok)',
                                         }}
                                     >
                                         Done
@@ -317,14 +317,14 @@ export default async function ProvisioningPage({
                         style={{
                             marginTop: '1rem',
                             fontSize: '0.82rem',
-                            color: '#78716c',
+                            color: 'var(--ink-muted)',
                             textAlign: 'center',
                         }}
                     >
                         Refresh the page to see the latest status.{' '}
                         <a
                             href={`/provisioning?jobId=${job.job_id}`}
-                            style={{ color: '#1d4ed8', textDecoration: 'underline' }}
+                            style={{ color: 'var(--info)', textDecoration: 'underline' }}
                         >
                             Refresh now
                         </a>
@@ -333,7 +333,7 @@ export default async function ProvisioningPage({
             </section>
 
             <p style={{ marginTop: '1.2rem', fontSize: '0.82rem', color: '#a8a29e', textAlign: 'center' }}>
-                <a href="/" style={{ color: '#78716c', textDecoration: 'underline' }}>
+                <a href="/" style={{ color: 'var(--ink-muted)', textDecoration: 'underline' }}>
                     ← Back to Dashboard
                 </a>
             </p>

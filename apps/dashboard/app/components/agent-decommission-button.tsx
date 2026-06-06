@@ -100,7 +100,7 @@ export default function AgentDecommissionButton({ botId }: Props) {
                         background: 'transparent',
                         border: '1px solid #334155',
                         borderRadius: '6px',
-                        color: '#94a3b8',
+                        color: 'var(--ink-muted)',
                         fontSize: '12px',
                         fontWeight: 600,
                         cursor: 'pointer',

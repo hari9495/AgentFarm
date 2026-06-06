@@ -35,9 +35,9 @@ type OrcRun = {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    running: { bg: '#dbeafe', color: '#1d4ed8' },
-    completed: { bg: '#dcfce7', color: '#166534' },
-    failed: { bg: '#fee2e2', color: '#991b1b' },
+    running: { bg: '#dbeafe', color: 'var(--info)' },
+    completed: { bg: '#dcfce7', color: 'var(--ok)' },
+    failed: { bg: '#fee2e2', color: 'var(--danger)' },
     cancelled: { bg: '#f1f5f9', color: '#475569' },
 };
 
@@ -443,7 +443,7 @@ export default function OrchestrationRunsPanel({ tenantId }: { tenantId: string 
                                             {run.failedCount > 0 && (
                                                 <span
                                                     style={{
-                                                        color: '#991b1b',
+                                                        color: 'var(--danger)',
                                                         marginLeft: '0.25rem',
                                                     }}
                                                 >
@@ -609,8 +609,8 @@ export default function OrchestrationRunsPanel({ tenantId }: { tenantId: string 
                                     style={{
                                         padding: '0.6rem 0.75rem',
                                         borderRadius: '4px',
-                                        background: '#fee2e2',
-                                        color: '#991b1b',
+                                        background: 'var(--danger-bg)',
+                                        color: 'var(--danger)',
                                         fontSize: '0.83rem',
                                     }}
                                 >

@@ -29,12 +29,12 @@ type ReproPackResult = {
 };
 
 const OUTCOME_STYLES: Record<string, { bg: string; color: string }> = {
-    success: { bg: '#dcfce7', color: '#166534' },
-    failed: { bg: '#fee2e2', color: '#991b1b' },
-    approval_queued: { bg: '#fef3c7', color: '#92400e' },
+    success: { bg: '#dcfce7', color: 'var(--ok)' },
+    failed: { bg: '#fee2e2', color: 'var(--danger)' },
+    approval_queued: { bg: '#fef3c7', color: 'var(--warn)' },
 };
 
-const DEFAULT_OUTCOME_STYLE = { bg: '#f3f4f6', color: '#374151' };
+const DEFAULT_OUTCOME_STYLE = { bg: '#f3f4f6', color: 'var(--ink)' };
 
 function OutcomeBadge({ outcome }: { outcome: string }) {
     const s = OUTCOME_STYLES[outcome] ?? DEFAULT_OUTCOME_STYLE;
@@ -61,7 +61,7 @@ function SkeletonRow() {
                     <div style={{
                         width: w,
                         height: 18,
-                        background: '#f3f4f6',
+                        background: 'var(--bg)',
                         borderRadius: 4,
                         animation: 'pulse 1.5s ease-in-out infinite',
                     }} />
@@ -159,16 +159,16 @@ export default function TaskRetryPanel({ botId, workspaceId }: Props) {
         const state = rowStates[task.id] ?? 'idle';
         if (task.outcome !== 'failed') return null;
         if (state === 'loading') {
-            return <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Retrying…</span>;
+            return <span style={{ fontSize: '0.8rem', color: 'var(--ink-muted)' }}>Retrying…</span>;
         }
         if (state === 'retried') {
-            return <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 600 }}>✓ Retried</span>;
+            return <span style={{ fontSize: '0.8rem', color: 'var(--ok)', fontWeight: 600 }}>✓ Retried</span>;
         }
         if (state === 'unrecoverable') {
-            return <span style={{ fontSize: '0.8rem', color: '#991b1b', fontWeight: 600 }}>✗ Unrecoverable</span>;
+            return <span style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: 600 }}>✗ Unrecoverable</span>;
         }
         if (state === 'error') {
-            return <span style={{ fontSize: '0.8rem', color: '#dc2626', fontWeight: 600 }}>✗ Failed</span>;
+            return <span style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: 600 }}>✗ Failed</span>;
         }
         return (
             <button
@@ -176,7 +176,7 @@ export default function TaskRetryPanel({ botId, workspaceId }: Props) {
                 style={{
                     padding: '3px 10px',
                     borderRadius: 6,
-                    border: '1px solid #fca5a5',
+                    border: '1px solid var(--danger-border)',
                     background: '#fff1f2',
                     color: '#be123c',
                     fontSize: '0.78rem',
@@ -191,7 +191,7 @@ export default function TaskRetryPanel({ botId, workspaceId }: Props) {
 
     return (
         <section style={{
-            border: '1px solid #e5e7eb',
+            border: '1px solid var(--line)',
             borderRadius: 8,
             padding: 20,
             marginTop: '1rem',
@@ -200,12 +200,12 @@ export default function TaskRetryPanel({ botId, workspaceId }: Props) {
 
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <h3 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: '#111827' }}>
+                <h3 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--ink)' }}>
                     Task History &amp; Retry
                 </h3>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     {reproPackResult && !reproPackResult.error && (
-                        <span style={{ fontSize: '0.78rem', color: '#374151' }}>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--ink)' }}>
                             Pack: <code style={{ fontSize: '0.75rem' }}>{reproPackResult.downloadRef}</code>
                             {reproPackResult.expiresAt && (
                                 <> · expires {formatDateTime(reproPackResult.expiresAt)}</>
@@ -213,7 +213,7 @@ export default function TaskRetryPanel({ botId, workspaceId }: Props) {
                         </span>
                     )}
                     {reproPackResult?.error && (
-                        <span style={{ fontSize: '0.78rem', color: '#dc2626' }}>{reproPackResult.error}</span>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--danger)' }}>{reproPackResult.error}</span>
                     )}
                     <button
                         onClick={() => void handleCreateReproPack()}
@@ -237,20 +237,20 @@ export default function TaskRetryPanel({ botId, workspaceId }: Props) {
 
             {/* Error */}
             {fetchError && (
-                <p style={{ color: '#dc2626', fontSize: '0.82rem', margin: '8px 0' }}>{fetchError}</p>
+                <p style={{ color: 'var(--danger)', fontSize: '0.82rem', margin: '8px 0' }}>{fetchError}</p>
             )}
 
             {/* Table */}
             <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                     <thead>
-                        <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+                        <tr style={{ borderBottom: '1px solid var(--line)' }}>
                             {['Task ID', 'Outcome', 'Time', 'Action'].map(h => (
                                 <th key={h} style={{
                                     padding: '6px 12px',
                                     textAlign: 'left',
                                     fontWeight: 600,
-                                    color: '#6b7280',
+                                    color: 'var(--ink-muted)',
                                     fontSize: '0.75rem',
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.04em',
@@ -265,19 +265,19 @@ export default function TaskRetryPanel({ botId, workspaceId }: Props) {
                             <>{[0, 1, 2].map(i => <SkeletonRow key={i} />)}</>
                         ) : tasks.length === 0 ? (
                             <tr>
-                                <td colSpan={4} style={{ padding: '20px 12px', color: '#9ca3af', textAlign: 'center' }}>
+                                <td colSpan={4} style={{ padding: '20px 12px', color: 'var(--ink-muted)', textAlign: 'center' }}>
                                     No tasks found for this agent
                                 </td>
                             </tr>
                         ) : tasks.map(task => (
-                            <tr key={task.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                                <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#374151' }}>
+                            <tr key={task.id} style={{ borderBottom: '1px solid var(--line)' }}>
+                                <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: 'var(--ink)' }}>
                                     {truncateId(task.taskId)}
                                 </td>
                                 <td style={{ padding: '10px 12px' }}>
                                     <OutcomeBadge outcome={task.outcome} />
                                 </td>
-                                <td style={{ padding: '10px 12px', color: '#6b7280', whiteSpace: 'nowrap' }}>
+                                <td style={{ padding: '10px 12px', color: 'var(--ink-muted)', whiteSpace: 'nowrap' }}>
                                     {formatDateTime(task.executedAt)}
                                 </td>
                                 <td style={{ padding: '10px 12px' }}>

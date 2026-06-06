@@ -410,7 +410,7 @@ export default function AgentDetailPanel({ agent, onStatusChange }: AgentDetailP
                                 />
                                 <label
                                     htmlFor="rate-limit-enabled"
-                                    style={{ fontSize: '13px', color: '#94a3b8', cursor: 'pointer' }}
+                                    style={{ fontSize: '13px', color: 'var(--ink-muted)', cursor: 'pointer' }}
                                 >
                                     Enabled
                                 </label>

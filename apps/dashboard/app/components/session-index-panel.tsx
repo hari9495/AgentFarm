@@ -12,10 +12,10 @@ type AgentSessionRow = {
 };
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    running: { bg: '#dbeafe', color: '#1d4ed8' },
-    active: { bg: '#dbeafe', color: '#1d4ed8' },
-    completed: { bg: '#dcfce7', color: '#166534' },
-    failed: { bg: '#fee2e2', color: '#dc2626' },
+    running: { bg: '#dbeafe', color: 'var(--info)' },
+    active: { bg: '#dbeafe', color: 'var(--info)' },
+    completed: { bg: '#dcfce7', color: 'var(--ok)' },
+    failed: { bg: '#fee2e2', color: 'var(--danger)' },
 };
 
 const fallbackBadge = { bg: '#f1f5f9', color: '#475569' };
@@ -53,7 +53,7 @@ export function SessionIndexPanel() {
 
     if (error) {
         return (
-            <div style={{ marginTop: '1rem', padding: '0.75rem 1rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 8, color: '#dc2626', fontSize: '0.875rem' }}>
+            <div style={{ marginTop: '1rem', padding: '0.75rem 1rem', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: 8, color: 'var(--danger)', fontSize: '0.875rem' }}>
                 {error}
             </div>
         );
@@ -127,7 +127,7 @@ export function SessionIndexPanel() {
                             <td style={{ padding: '0.6rem 0.75rem' }}>
                                 <Link
                                     href={`/audit/session-replay?sessionId=${encodeURIComponent(session.id)}`}
-                                    style={{ fontSize: '0.82rem', color: '#6366f1', textDecoration: 'none', fontWeight: 600 }}
+                                    style={{ fontSize: '0.82rem', color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}
                                 >
                                     Replay →
                                 </Link>

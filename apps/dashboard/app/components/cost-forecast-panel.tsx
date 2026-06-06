@@ -63,9 +63,9 @@ function ForecastChart({ data, today }: { data: DailyPoint[]; today: string }) {
                 {/* X axis */}
                 <line x1={0} y1={chartH} x2={totalW} y2={chartH} stroke="#e2e8f0" strokeWidth={1} />
             </svg>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#94a3b8', marginTop: 4, paddingRight: 2 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--ink-muted)', marginTop: 4, paddingRight: 2 }}>
                 <span>{data[0]?.date.slice(8)}</span>
-                <span style={{ color: '#2563eb', fontWeight: 700 }}>today</span>
+                <span style={{ color: 'var(--info)', fontWeight: 700 }}>today</span>
                 <span>{data[data.length - 1]?.date.slice(8)}</span>
             </div>
         </div>
@@ -118,7 +118,7 @@ export default function CostForecastPanel({ tenantId }: { tenantId: string }) {
             </div>
 
             {error && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, background: 'rgba(196,22,28,0.06)', border: '1px solid rgba(196,22,28,0.18)', color: '#c4161c', fontSize: 12, marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, background: 'var(--danger-bg)', border: '1px solid rgba(196,22,28,0.18)', color: 'var(--danger)', fontSize: 12, marginBottom: 16 }}>
                     <AlertCircle size={13} /> {error}
                 </div>
             )}

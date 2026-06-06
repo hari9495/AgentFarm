@@ -31,9 +31,9 @@ type BudgetDecision = {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const DECISION_BADGE: Record<string, { bg: string; color: string }> = {
-    allowed: { bg: '#dcfce7', color: '#166534' },
-    warning: { bg: '#fef9c3', color: '#854d0e' },
-    denied: { bg: '#fee2e2', color: '#991b1b' },
+    allowed: { bg: '#dcfce7', color: 'var(--ok)' },
+    warning: { bg: '#fef9c3', color: 'var(--warn)' },
+    denied: { bg: '#fee2e2', color: 'var(--danger)' },
 };
 
 function inlineBadge(label: string, map: Record<string, { bg: string; color: string }>) {
@@ -76,8 +76,8 @@ function SpendBar({ spent, limit }: { spent: number; limit: number }) {
                 <div title="90% — critical threshold" style={{ position: 'absolute', left: '90%', top: -3, width: 2, height: 14, background: '#991b1b', borderRadius: 1, zIndex: 1 }} />
             </div>
             <div style={{ display: 'flex', gap: 12, fontSize: 10, color: 'var(--ink-muted)', fontWeight: 500 }}>
-                <span style={{ color: '#b45309' }}>⚠ 80% warn</span>
-                <span style={{ color: '#991b1b' }}>🛑 90% critical</span>
+                <span style={{ color: 'var(--warn)' }}>⚠ 80% warn</span>
+                <span style={{ color: 'var(--danger)' }}>🛑 90% critical</span>
                 <span style={{ marginLeft: 'auto' }}>{pct.toFixed(1)}% used</span>
             </div>
         </div>
@@ -299,8 +299,8 @@ export default function BudgetPolicyPanel({ tenantId, workspaceId }: BudgetPolic
                                         borderRadius: '4px',
                                         fontSize: '13px',
                                         fontWeight: 700,
-                                        background: '#fee2e2',
-                                        color: '#991b1b',
+                                        background: 'var(--danger-bg)',
+                                        color: 'var(--danger)',
                                         letterSpacing: '0.05em',
                                     }}
                                 >
@@ -313,8 +313,8 @@ export default function BudgetPolicyPanel({ tenantId, workspaceId }: BudgetPolic
                                         borderRadius: '4px',
                                         fontSize: '13px',
                                         fontWeight: 700,
-                                        background: '#dcfce7',
-                                        color: '#166534',
+                                        background: 'var(--ok-bg)',
+                                        color: 'var(--ok)',
                                     }}
                                 >
                                     Normal
@@ -526,11 +526,11 @@ export default function BudgetPolicyPanel({ tenantId, workspaceId }: BudgetPolic
                             <div
                                 style={{
                                     padding: '0.5rem 0.8rem',
-                                    background: '#fef9c3',
-                                    border: '1px solid #fde68a',
+                                    background: 'var(--warn-bg)',
+                                    border: '1px solid var(--warn-border)',
                                     borderRadius: '4px',
                                     fontSize: '0.83rem',
-                                    color: '#854d0e',
+                                    color: 'var(--warn)',
                                 }}
                             >
                                 Denial reason: {evalResult.denialReason}

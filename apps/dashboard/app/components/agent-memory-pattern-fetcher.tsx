@@ -41,7 +41,7 @@ export default function AgentMemoryPatternFetcher({ botId }: { botId: string }) 
         return (
             <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {[1, 2, 3].map((i) => (
-                    <div key={i} style={{ height: 36, borderRadius: 8, background: '#f5f5f7' }} />
+                    <div key={i} style={{ height: 36, borderRadius: 8, background: 'var(--bg)' }} />
                 ))}
             </div>
         );
@@ -49,7 +49,7 @@ export default function AgentMemoryPatternFetcher({ botId }: { botId: string }) 
 
     if (error) {
         return (
-            <div style={{ padding: '12px 14px', borderRadius: 10, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 13 }}>
+            <div style={{ padding: '12px 14px', borderRadius: 10, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 13 }}>
                 {error}
             </div>
         );
@@ -57,7 +57,7 @@ export default function AgentMemoryPatternFetcher({ botId }: { botId: string }) 
 
     if (patterns.length === 0) {
         return (
-            <p style={{ color: '#6e6e73', fontSize: 13, margin: 0 }}>
+            <p style={{ color: 'var(--ink-muted)', fontSize: 13, margin: 0 }}>
                 No learned patterns yet for this agent.
             </p>
         );

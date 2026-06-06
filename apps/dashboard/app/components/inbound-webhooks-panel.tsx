@@ -40,22 +40,22 @@ const thStyle: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
     padding: '7px 11px',
     borderRadius: 9,
-    border: '1px solid #d2d2d7',
-    background: '#ffffff',
-    color: '#1d1d1f',
+    border: '1px solid var(--line)',
+    background: 'var(--card)',
+    color: 'var(--ink)',
     fontSize: '0.84rem',
     minWidth: '180px',
     outline: 'none',
 };
 
 const EVENT_STATUS_BADGE: Record<string, { bg: string; color: string; border: string }> = {
-    processed: { bg: 'rgba(26,122,74,0.08)',  color: '#1a7a4a', border: 'rgba(26,122,74,0.2)'  },
-    failed:    { bg: 'rgba(196,22,28,0.08)',  color: '#c4161c', border: 'rgba(196,22,28,0.2)'  },
-    pending:   { bg: 'rgba(180,83,9,0.08)',   color: '#b45309', border: 'rgba(180,83,9,0.2)'   },
+    processed: { bg: 'rgba(26,122,74,0.08)',  color: 'var(--ok)', border: 'rgba(26,122,74,0.2)'  },
+    failed:    { bg: 'rgba(196,22,28,0.08)',  color: 'var(--danger)', border: 'rgba(196,22,28,0.2)'  },
+    pending:   { bg: 'rgba(180,83,9,0.08)',   color: 'var(--warn)', border: 'rgba(180,83,9,0.2)'   },
 };
 
 function statusBadge(status: string) {
-    const s = EVENT_STATUS_BADGE[status] ?? { bg: '#f5f5f7', color: '#6e6e73', border: '#d2d2d7' };
+    const s = EVENT_STATUS_BADGE[status] ?? { bg: '#f5f5f7', color: 'var(--ink-muted)', border: '#d2d2d7' };
     return (
         <span style={{ padding: '2px 9px', borderRadius: 9999, fontSize: 11, fontWeight: 700, background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
             {status}
@@ -258,18 +258,18 @@ export default function InboundWebhooksPanel() {
                 <div>
                     {/* Secret reveal box */}
                     {newSecret && newSourceId && (
-                        <div style={{ background: 'rgba(26,122,74,0.06)', border: '1px solid rgba(26,122,74,0.25)', borderRadius: 14, padding: '14px 16px', marginBottom: 14 }}>
-                            <p style={{ fontSize: 13, fontWeight: 700, color: '#1a7a4a', margin: '0 0 8px' }}>
+                        <div style={{ background: 'var(--ok-bg)', border: '1px solid rgba(26,122,74,0.25)', borderRadius: 14, padding: '14px 16px', marginBottom: 14 }}>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ok)', margin: '0 0 8px' }}>
                                 ✓ Source created — save this secret now. It will not be shown again.
                             </p>
                             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                                <code style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#1d1d1f', background: '#f5f5f7', border: '1px solid #d2d2d7', padding: '6px 10px', borderRadius: 8, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                <code style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12, color: 'var(--ink)', background: 'var(--bg)', border: '1px solid var(--line)', padding: '6px 10px', borderRadius: 8, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {newSecret}
                                 </code>
                                 <button onClick={() => handleCopy(newSecret, 'secret')} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 9999, cursor: 'pointer', background: '#1a7a4a', color: '#fff', border: 'none', fontWeight: 600 }}>
                                     {copiedId === 'secret' ? '✓ Copied' : 'Copy Secret'}
                                 </button>
-                                <button onClick={() => { setNewSecret(null); setNewSourceId(null); }} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 9999, cursor: 'pointer', background: '#f5f5f7', border: '1px solid #d2d2d7', color: '#6e6e73' }}>
+                                <button onClick={() => { setNewSecret(null); setNewSourceId(null); }} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 9999, cursor: 'pointer', background: 'var(--bg)', border: '1px solid var(--line)', color: 'var(--ink-muted)' }}>
                                     Dismiss
                                 </button>
                             </div>
@@ -278,7 +278,7 @@ export default function InboundWebhooksPanel() {
 
                     {/* Error banner */}
                     {sourcesError && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', borderRadius: 10, color: '#c4161c', fontSize: 13, marginBottom: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: 10, color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>
                             ⚠ {sourcesError}
                         </div>
                     )}
@@ -294,26 +294,26 @@ export default function InboundWebhooksPanel() {
                     </div>
 
                     {showAddForm && (
-                        <div style={{ border: '1px solid rgba(0,102,204,0.25)', borderRadius: 16, background: '#fff', padding: '18px 20px', marginBottom: 14, boxShadow: '0 0 0 4px rgba(0,102,204,0.04)' }}>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: '#0066cc', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Register New Source</div>
+                        <div style={{ border: '1px solid rgba(0,102,204,0.25)', borderRadius: 16, background: 'var(--card)', padding: '18px 20px', marginBottom: 14, boxShadow: '0 0 0 4px rgba(0,102,204,0.04)' }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Register New Source</div>
                             <form onSubmit={e => void handleAddSource(e)} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                                     <div>
-                                        <label style={{ fontSize: 11, fontWeight: 700, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 5 }}>
-                                            Source Name <span style={{ color: '#c4161c' }}>*</span>
+                                        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 5 }}>
+                                            Source Name <span style={{ color: 'var(--danger)' }}>*</span>
                                         </label>
                                         <input type="text" placeholder="e.g. GitHub - Engineering" value={addName} onChange={e => setAddName(e.target.value)} required style={inputStyle} />
                                     </div>
                                     <div>
-                                        <label style={{ fontSize: 11, fontWeight: 700, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 5 }}>
+                                        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 5 }}>
                                             Description
                                         </label>
                                         <input type="text" placeholder="What service sends events here?" value={addDescription} onChange={e => setAddDescription(e.target.value)} style={inputStyle} />
                                     </div>
                                 </div>
-                                {addError && <div style={{ padding: '7px 12px', borderRadius: 9, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 12 }}>⚠ {addError}</div>}
+                                {addError && <div style={{ padding: '7px 12px', borderRadius: 9, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 12 }}>⚠ {addError}</div>}
                                 <div style={{ display: 'flex', gap: 8 }}>
-                                    <button type="button" onClick={() => setShowAddForm(false)} style={{ padding: '7px 16px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
+                                    <button type="button" onClick={() => setShowAddForm(false)} style={{ padding: '7px 16px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
                                     <button type="submit" disabled={adding} style={{ padding: '7px 20px', borderRadius: 9999, border: 'none', background: adding ? '#aeaeb2' : '#0066cc', color: '#fff', fontSize: 13, fontWeight: 700, cursor: adding ? 'not-allowed' : 'pointer' }}>
                                         {adding ? 'Creating…' : 'Create Source'}
                                     </button>
@@ -326,7 +326,7 @@ export default function InboundWebhooksPanel() {
                     {sourcesLoading ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                             {[0, 1, 2].map(i => (
-                                <div key={i} style={{ height: '4rem', background: '#f5f5f7', borderRadius: 14, border: '1px solid #e5e5ea', opacity: 0.6 }} />
+                                <div key={i} style={{ height: '4rem', background: 'var(--bg)', borderRadius: 14, border: '1px solid var(--line)', opacity: 0.6 }} />
                             ))}
                         </div>
                     ) : sources.length === 0 ? (
@@ -340,7 +340,7 @@ export default function InboundWebhooksPanel() {
                                 return (
                                     <div
                                         key={source.id}
-                                        style={{ background: '#fff', border: '1px solid #d2d2d7', borderRadius: 14, padding: '14px 16px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
+                                        style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 14, padding: '14px 16px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}
                                     >
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
                                             <div style={{ flex: 1, minWidth: '200px' }}>
@@ -348,12 +348,12 @@ export default function InboundWebhooksPanel() {
                                                     {source.name}
                                                 </p>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
-                                                    <code style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: '#0066cc', background: '#f5f5f7', border: '1px solid #d2d2d7', padding: '4px 8px', borderRadius: 7, maxWidth: '340px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    <code style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--accent)', background: 'var(--bg)', border: '1px solid var(--line)', padding: '4px 8px', borderRadius: 7, maxWidth: '340px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                         {source.inboundUrl}
                                                     </code>
                                                     <button
                                                         onClick={() => handleCopy(source.inboundUrl, `url-${source.id}`)}
-                                                        style={{ fontSize: 11, padding: '3px 9px', borderRadius: 9999, cursor: 'pointer', background: '#fff', color: '#0066cc', border: '1px solid rgba(0,102,204,0.3)', fontWeight: 600 }}
+                                                        style={{ fontSize: 11, padding: '3px 9px', borderRadius: 9999, cursor: 'pointer', background: 'var(--card)', color: 'var(--accent)', border: '1px solid rgba(0,102,204,0.3)', fontWeight: 600 }}
                                                     >
                                                         {copiedId === `url-${source.id}` ? '✓' : 'Copy URL'}
                                                     </button>
@@ -374,17 +374,17 @@ export default function InboundWebhooksPanel() {
                                                 <button
                                                     onClick={() => void handleTest(source.id)}
                                                     disabled={testingId === source.id}
-                                                    style={{ fontSize: 11, padding: '5px 11px', borderRadius: 9999, cursor: testingId === source.id ? 'not-allowed' : 'pointer', background: '#fff', color: '#424245', border: '1px solid #d2d2d7', fontWeight: 600 }}
+                                                    style={{ fontSize: 11, padding: '5px 11px', borderRadius: 9999, cursor: testingId === source.id ? 'not-allowed' : 'pointer', background: 'var(--card)', color: 'var(--ink-soft)', border: '1px solid var(--line)', fontWeight: 600 }}
                                                 >
                                                     {testingId === source.id ? 'Testing…' : 'Test'}
                                                 </button>
                                                 {confirmDeleteId === source.id ? (
                                                     <span style={{ display: 'inline-flex', gap: '0.3rem', alignItems: 'center' }}>
-                                                        <span style={{ fontSize: 12, color: '#c4161c', fontWeight: 600 }}>Delete?</span>
+                                                        <span style={{ fontSize: 12, color: 'var(--danger)', fontWeight: 600 }}>Delete?</span>
                                                         <button
                                                             onClick={() => void handleDelete(source.id)}
                                                             disabled={deletingId === source.id}
-                                                            style={{ fontSize: 11, padding: '4px 10px', borderRadius: 9999, cursor: 'pointer', background: 'rgba(196,22,28,0.08)', color: '#c4161c', border: '1px solid rgba(196,22,28,0.25)', fontWeight: 700 }}
+                                                            style={{ fontSize: 11, padding: '4px 10px', borderRadius: 9999, cursor: 'pointer', background: 'var(--danger-bg)', color: 'var(--danger)', border: '1px solid var(--danger-border)', fontWeight: 700 }}
                                                         >
                                                             {deletingId === source.id ? '…' : 'Yes'}
                                                         </button>
@@ -398,7 +398,7 @@ export default function InboundWebhooksPanel() {
                                                 ) : (
                                                     <button
                                                         onClick={() => setConfirmDeleteId(source.id)}
-                                                        style={{ fontSize: 11, padding: '5px 11px', borderRadius: 9999, cursor: 'pointer', color: '#c4161c', background: 'rgba(196,22,28,0.06)', border: '1px solid rgba(196,22,28,0.25)', fontWeight: 600 }}
+                                                        style={{ fontSize: 11, padding: '5px 11px', borderRadius: 9999, cursor: 'pointer', color: 'var(--danger)', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', fontWeight: 600 }}
                                                     >
                                                         Delete
                                                     </button>
@@ -445,7 +445,7 @@ export default function InboundWebhooksPanel() {
                     </div>
 
                     {eventsError && (
-                        <p style={{ padding: '8px 12px', background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', borderRadius: 10, color: '#c4161c', fontSize: 13, marginBottom: 12 }}>
+                        <p style={{ padding: '8px 12px', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: 10, color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>
                             {eventsError}
                         </p>
                     )}

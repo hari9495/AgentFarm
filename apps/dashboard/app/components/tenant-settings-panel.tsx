@@ -229,11 +229,11 @@ export default function TenantSettingsPanel() {
                 {langError && (
                     <div
                         style={{
-                            background: '#fef2f2',
-                            border: '1px solid #fecaca',
+                            background: 'var(--danger-bg)',
+                            border: '1px solid var(--danger-border)',
                             borderRadius: '6px',
                             padding: '0.65rem 0.9rem',
-                            color: '#dc2626',
+                            color: 'var(--danger)',
                             fontSize: '0.85rem',
                             marginBottom: '0.75rem',
                         }}
@@ -353,11 +353,11 @@ export default function TenantSettingsPanel() {
                 {mcpError && (
                     <div
                         style={{
-                            background: '#fef2f2',
-                            border: '1px solid #fecaca',
+                            background: 'var(--danger-bg)',
+                            border: '1px solid var(--danger-border)',
                             borderRadius: '6px',
                             padding: '0.65rem 0.9rem',
-                            color: '#dc2626',
+                            color: 'var(--danger)',
                             fontSize: '0.85rem',
                             marginBottom: '0.75rem',
                         }}
@@ -442,10 +442,10 @@ export default function TenantSettingsPanel() {
                                                     style={{
                                                         padding: '0.2rem 0.55rem',
                                                         fontSize: '0.75rem',
-                                                        border: '1px solid #fecaca',
+                                                        border: '1px solid var(--danger-border)',
                                                         borderRadius: '4px',
-                                                        background: '#fef2f2',
-                                                        color: '#dc2626',
+                                                        background: 'var(--danger-bg)',
+                                                        color: 'var(--danger)',
                                                         cursor: 'pointer',
                                                     }}
                                                 >
@@ -478,11 +478,11 @@ export default function TenantSettingsPanel() {
                     {addError && (
                         <div
                             style={{
-                                background: '#fef2f2',
-                                border: '1px solid #fecaca',
+                                background: 'var(--danger-bg)',
+                                border: '1px solid var(--danger-border)',
                                 borderRadius: '6px',
                                 padding: '0.55rem 0.8rem',
-                                color: '#dc2626',
+                                color: 'var(--danger)',
                                 fontSize: '0.82rem',
                             }}
                         >

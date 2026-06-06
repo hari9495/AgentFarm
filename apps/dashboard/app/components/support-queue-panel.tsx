@@ -35,23 +35,23 @@ const API_BASE = '';
 
 const STATUS_STYLE: Record<TicketStatus, { bg: string; color: string; icon: React.ElementType }> = {
     open:             { bg: '#eff6ff', color: '#1e40af', icon: Clock },
-    in_progress:      { bg: '#fef9c3', color: '#854d0e', icon: Clock },
+    in_progress:      { bg: '#fef9c3', color: 'var(--warn)', icon: Clock },
     pending_customer: { bg: '#f1f5f9', color: '#475569', icon: Clock },
-    resolved:         { bg: '#dcfce7', color: '#166534', icon: CheckCircle2 },
-    escalated:        { bg: '#fee2e2', color: '#991b1b', icon: AlertCircle },
+    resolved:         { bg: '#dcfce7', color: 'var(--ok)', icon: CheckCircle2 },
+    escalated:        { bg: '#fee2e2', color: 'var(--danger)', icon: AlertCircle },
 };
 
 const PRIORITY_STYLE: Record<TicketPriority, { color: string }> = {
-    low: { color: '#94a3b8' }, normal: { color: '#475569' },
-    high: { color: '#d97706' }, critical: { color: '#dc2626' },
+    low: { color: 'var(--ink-muted)' }, normal: { color: '#475569' },
+    high: { color: 'var(--warn)' }, critical: { color: 'var(--danger)' },
 };
 
 const CHANNEL_ICON: Record<string, string> = {
     email: '✉', chat: '💬', phone: '📞', portal: '🌐',
 };
 
-const th: React.CSSProperties = { padding: '8px 12px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#94a3b8', background: '#f8fafc', textAlign: 'left' as const };
-const td: React.CSSProperties = { padding: '10px 12px', fontSize: 13, color: '#334155', verticalAlign: 'middle' };
+const th: React.CSSProperties = { padding: '8px 12px', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: 'var(--ink-muted)', background: 'var(--bg)', textAlign: 'left' as const };
+const td: React.CSSProperties = { padding: '10px 12px', fontSize: 13, color: 'var(--ink-soft)', verticalAlign: 'middle' };
 
 export default function SupportQueuePanel({ workspaceId }: { workspaceId: string }) {
     const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -124,18 +124,18 @@ export default function SupportQueuePanel({ workspaceId }: { workspaceId: string
                         </button>
                     ))}
                 </div>
-                <button type="button" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', fontSize: 12, color: '#64748b', cursor: 'pointer' }}><RefreshCw size={12} />Refresh</button>
+                <button type="button" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', fontSize: 12, color: '#64748b', cursor: 'pointer' }}><RefreshCw size={12} />Refresh</button>
             </div>
             {loading ? (
-                <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 13 }}>Loading tickets…</div>
+                <div style={{ textAlign: 'center', padding: 40, color: 'var(--ink-muted)', fontSize: 13 }}>Loading tickets…</div>
             ) : tickets.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '48px 0', color: '#94a3b8' }}>
+                <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--ink-muted)' }}>
                     <HeadphonesIcon size={32} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
                     <p style={{ margin: 0, fontSize: 14 }}>No tickets in the queue.</p>
                     <p style={{ margin: '4px 0 0', fontSize: 12 }}>Customer support agent activity and escalations will appear here.</p>
                 </div>
             ) : (
-                <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 12 }}>
+                <div style={{ overflowX: 'auto', border: '1px solid var(--line)', borderRadius: 12 }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead><tr>{['#', 'Subject', 'Customer', 'Channel', 'Priority', 'Draft', 'Status', 'Actions'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
                         <tbody>
@@ -147,25 +147,25 @@ export default function SupportQueuePanel({ workspaceId }: { workspaceId: string
                                 return (
                                     <React.Fragment key={t.id}>
                                     <tr style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : '#fff' }}>
-                                        <td style={{ ...td, fontSize: 11, color: '#94a3b8', fontFamily: 'monospace' }}>{t.ticketNumber}</td>
+                                        <td style={{ ...td, fontSize: 11, color: 'var(--ink-muted)', fontFamily: 'monospace' }}>{t.ticketNumber}</td>
                                         <td style={td}>
                                             <div style={{ fontWeight: 500 }}>{t.subject}</div>
-                                            {isBreaching && <div style={{ fontSize: 10, color: '#dc2626', marginTop: 2 }}>⚠ SLA at risk</div>}
+                                            {isBreaching && <div style={{ fontSize: 10, color: 'var(--danger)', marginTop: 2 }}>⚠ SLA at risk</div>}
                                         </td>
                                         <td style={{ ...td, color: '#64748b' }}>{t.customerName}</td>
                                         <td style={{ ...td, fontSize: 14 }}>{CHANNEL_ICON[t.channel] ?? t.channel}</td>
                                         <td style={{ ...td, fontWeight: 700, fontSize: 11, color: pr.color }}>{t.priority.toUpperCase()}</td>
                                         <td style={td}>
                                             {t.agentDraftReady
-                                                ? <span style={{ display: 'inline-flex', padding: '2px 8px', borderRadius: 20, background: '#dcfce7', color: '#166534', fontSize: 11, fontWeight: 600 }}>Ready</span>
-                                                : <span style={{ fontSize: 11, color: '#94a3b8' }}>—</span>}
+                                                ? <span style={{ display: 'inline-flex', padding: '2px 8px', borderRadius: 20, background: 'var(--ok-bg)', color: 'var(--ok)', fontSize: 11, fontWeight: 600 }}>Ready</span>
+                                                : <span style={{ fontSize: 11, color: 'var(--ink-muted)' }}>—</span>}
                                         </td>
                                         <td style={td}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, background: st.bg, color: st.color, fontSize: 11, fontWeight: 600 }}><StIcon size={10} />{t.status.replace('_', ' ')}</span></td>
                                         <td style={td}>
                                             <div style={{ display: 'flex', gap: 4 }}>
-                                                {t.agentDraftReady && <button type="button" style={{ padding: '4px 8px', border: '1px solid #bfdbfe', borderRadius: 6, background: '#eff6ff', cursor: 'pointer', fontSize: 11, color: '#1d4ed8', fontWeight: 600 }}>Review</button>}
-                                                {['open', 'in_progress'].includes(t.status) && <button type="button" onClick={() => resolve(t.id)} style={{ padding: '4px 8px', border: '1px solid #bbf7d0', borderRadius: 6, background: '#f0fdf4', cursor: 'pointer', fontSize: 11, color: '#16a34a', fontWeight: 600 }}>Resolve</button>}
-                                                {t.status !== 'escalated' && t.status !== 'resolved' && <button type="button" onClick={() => escalate(t.id)} title="Escalate" style={{ padding: '4px 8px', border: '1px solid #fecaca', borderRadius: 6, background: '#fef2f2', cursor: 'pointer', color: '#dc2626' }}><ArrowUpRight size={11} /></button>}
+                                                {t.agentDraftReady && <button type="button" style={{ padding: '4px 8px', border: '1px solid var(--info-border)', borderRadius: 6, background: 'var(--info-bg)', cursor: 'pointer', fontSize: 11, color: 'var(--info)', fontWeight: 600 }}>Review</button>}
+                                                {['open', 'in_progress'].includes(t.status) && <button type="button" onClick={() => resolve(t.id)} style={{ padding: '4px 8px', border: '1px solid var(--ok-border)', borderRadius: 6, background: 'var(--ok-bg)', cursor: 'pointer', fontSize: 11, color: 'var(--ok)', fontWeight: 600 }}>Resolve</button>}
+                                                {t.status !== 'escalated' && t.status !== 'resolved' && <button type="button" onClick={() => escalate(t.id)} title="Escalate" style={{ padding: '4px 8px', border: '1px solid var(--danger-border)', borderRadius: 6, background: 'var(--danger-bg)', cursor: 'pointer', color: 'var(--danger)' }}><ArrowUpRight size={11} /></button>}
                                                 <button type="button" onClick={() => openNotes(t)} title={t.operatorNotes ? 'Edit notes' : 'Add notes'} style={{ padding: '4px 8px', border: `1px solid ${t.operatorNotes ? '#e9d5ff' : '#e2e8f0'}`, borderRadius: 6, background: t.operatorNotes ? '#faf5ff' : '#fff', cursor: 'pointer', fontSize: 11, color: t.operatorNotes ? '#7c3aed' : '#64748b' }}>
                                                     📝{t.operatorNotes ? ' ✓' : ''}
                                                 </button>
@@ -183,14 +183,14 @@ export default function SupportQueuePanel({ workspaceId }: { workspaceId: string
                                                             value={notesDraft}
                                                             onChange={(e) => setNotesDraft(e.target.value)}
                                                             placeholder="Add internal notes visible only to operators…"
-                                                            style={{ width: '100%', padding: '6px 8px', fontSize: 12, border: '1px solid #e2e8f0', borderRadius: 6, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 }}
+                                                            style={{ width: '100%', padding: '6px 8px', fontSize: 12, border: '1px solid var(--line)', borderRadius: 6, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 }}
                                                         />
                                                     </div>
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                                        <button type="button" onClick={() => void saveNotes(t.id)} disabled={savingNotes} style={{ padding: '6px 14px', border: '1px solid #bfdbfe', borderRadius: 6, background: '#eff6ff', cursor: 'pointer', fontSize: 12, color: '#1d4ed8', fontWeight: 600 }}>
+                                                        <button type="button" onClick={() => void saveNotes(t.id)} disabled={savingNotes} style={{ padding: '6px 14px', border: '1px solid var(--info-border)', borderRadius: 6, background: 'var(--info-bg)', cursor: 'pointer', fontSize: 12, color: 'var(--info)', fontWeight: 600 }}>
                                                             {savingNotes ? 'Saving…' : 'Save'}
                                                         </button>
-                                                        <button type="button" onClick={() => setExpandedNotes(null)} style={{ padding: '6px 14px', border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 12, color: '#64748b' }}>
+                                                        <button type="button" onClick={() => setExpandedNotes(null)} style={{ padding: '6px 14px', border: '1px solid var(--line)', borderRadius: 6, background: 'var(--card)', cursor: 'pointer', fontSize: 12, color: '#64748b' }}>
                                                             Cancel
                                                         </button>
                                                     </div>

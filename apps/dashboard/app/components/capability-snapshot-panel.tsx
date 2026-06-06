@@ -31,8 +31,8 @@ type Snapshot = {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const SOURCE_BADGE: Record<string, { bg: string; color: string }> = {
-    runtime_freeze: { bg: '#dbeafe', color: '#1d4ed8' },
-    manual: { bg: '#dcfce7', color: '#166534' },
+    runtime_freeze: { bg: '#dbeafe', color: 'var(--info)' },
+    manual: { bg: '#dcfce7', color: 'var(--ok)' },
     migration: { bg: '#f3e8ff', color: '#7c3aed' },
 };
 
@@ -143,8 +143,8 @@ function SnapshotDetail({ snapshot, isHistorical, onBack }: { snapshot: Snapshot
                             borderRadius: '4px',
                             fontSize: '11px',
                             fontWeight: 700,
-                            background: '#fef9c3',
-                            color: '#854d0e',
+                            background: 'var(--warn-bg)',
+                            color: 'var(--warn)',
                         }}
                     >
                         HISTORICAL

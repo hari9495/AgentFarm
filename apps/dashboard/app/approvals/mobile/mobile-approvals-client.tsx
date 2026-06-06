@@ -31,9 +31,9 @@ type Metrics = {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const RISK_CONFIG: Record<RiskLevel, { label: string; bg: string; color: string; border: string }> = {
-    high:   { label: 'HIGH',   bg: '#fef2f2', color: '#991b1b', border: '#fecaca' },
-    medium: { label: 'MEDIUM', bg: '#fffbeb', color: '#92400e', border: '#fde68a' },
-    low:    { label: 'LOW',    bg: '#f0fdf4', color: '#166534', border: '#bbf7d0' },
+    high:   { label: 'HIGH',   bg: '#fef2f2', color: 'var(--danger)', border: '#fecaca' },
+    medium: { label: 'MEDIUM', bg: '#fffbeb', color: 'var(--warn)', border: '#fde68a' },
+    low:    { label: 'LOW',    bg: '#f0fdf4', color: 'var(--ok)', border: '#bbf7d0' },
 };
 
 function timeAgo(iso: string): string {
@@ -104,7 +104,7 @@ function ApprovalCard({
         <div style={{
             borderRadius: 16,
             border: `1px solid ${risk.border}`,
-            background: '#fff',
+            background: 'var(--card)',
             overflow: 'hidden',
             boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
         }}>
@@ -121,7 +121,7 @@ function ApprovalCard({
                     }}>
                         {risk.label}
                     </span>
-                    <span style={{ fontSize: 11, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 11, color: 'var(--ink-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
                         <Clock size={11} /> {timeAgo(approval.requested_at)}
                     </span>
                 </div>
@@ -147,7 +147,7 @@ function ApprovalCard({
                         onClick={() => setExpanded(e => !e)}
                         style={{
                             display: 'flex', alignItems: 'center', gap: 4,
-                            fontSize: 12, color: '#3b82f6', background: 'none',
+                            fontSize: 12, color: 'var(--info)', background: 'none',
                             border: 'none', padding: '6px 0 0', cursor: 'pointer', fontWeight: 600,
                         }}
                     >
@@ -166,9 +166,9 @@ function ApprovalCard({
                         rows={2}
                         style={{
                             width: '100%', padding: '9px 12px',
-                            borderRadius: 10, border: '1px solid #e2e8f0',
+                            borderRadius: 10, border: '1px solid var(--line)',
                             fontSize: 13, fontFamily: 'inherit', resize: 'none',
-                            background: '#f8fafc', boxSizing: 'border-box',
+                            background: 'var(--bg)', boxSizing: 'border-box',
                             color: '#0f172a',
                         }}
                     />
@@ -219,7 +219,7 @@ function ApprovalCard({
                         style={{
                             flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
                             minHeight: 52, borderRadius: 12,
-                            background: '#fff', color: '#dc2626',
+                            background: 'var(--card)', color: 'var(--danger)',
                             border: '2px solid #fecaca',
                             fontSize: 15, fontWeight: 700,
                             cursor: busy ? 'not-allowed' : 'pointer',
@@ -312,7 +312,7 @@ export default function MobileApprovalsClient({ workspaceIds }: { workspaceIds: 
     return (
         <div style={{
             minHeight: '100dvh',
-            background: '#f1f5f9',
+            background: 'var(--bg)',
             fontFamily: 'system-ui, -apple-system, sans-serif',
             maxWidth: 480, margin: '0 auto',
             // Respect iOS safe areas
@@ -358,7 +358,7 @@ export default function MobileApprovalsClient({ workspaceIds }: { workspaceIds: 
                             width: 40, height: 40, borderRadius: 10,
                             background: 'rgba(255,255,255,0.08)', border: 'none',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer', color: '#94a3b8',
+                            cursor: 'pointer', color: 'var(--ink-muted)',
                             WebkitTapHighlightColor: 'transparent',
                         }}
                     >
@@ -395,14 +395,14 @@ export default function MobileApprovalsClient({ workspaceIds }: { workspaceIds: 
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '12px 16px', borderRadius: 12,
-                        background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b',
+                        background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)',
                         fontSize: 13, fontWeight: 500,
                     }}>
                         <AlertTriangle size={16} />
                         <span>{error}</span>
                         <button
                             onClick={() => void load()}
-                            style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer' }}
+                            style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }}
                         >
                             Retry
                         </button>
@@ -413,12 +413,12 @@ export default function MobileApprovalsClient({ workspaceIds }: { workspaceIds: 
                 {loading && (
                     <>
                         {[1, 2, 3].map(i => (
-                            <div key={i} style={{ borderRadius: 16, background: '#fff', height: 180, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                                <div style={{ height: 4, background: '#e2e8f0' }} />
+                            <div key={i} style={{ borderRadius: 16, background: 'var(--card)', height: 180, border: '1px solid var(--line)', overflow: 'hidden' }}>
+                                <div style={{ height: 4, background: 'var(--line)' }} />
                                 <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                    <div style={{ height: 20, width: '30%', background: '#f1f5f9', borderRadius: 9999 }} />
-                                    <div style={{ height: 14, width: '90%', background: '#f1f5f9', borderRadius: 8 }} />
-                                    <div style={{ height: 14, width: '75%', background: '#f1f5f9', borderRadius: 8 }} />
+                                    <div style={{ height: 20, width: '30%', background: 'var(--bg)', borderRadius: 9999 }} />
+                                    <div style={{ height: 14, width: '90%', background: 'var(--bg)', borderRadius: 8 }} />
+                                    <div style={{ height: 14, width: '75%', background: 'var(--bg)', borderRadius: 8 }} />
                                 </div>
                             </div>
                         ))}
@@ -428,7 +428,7 @@ export default function MobileApprovalsClient({ workspaceIds }: { workspaceIds: 
                 {/* Empty state */}
                 {!loading && !error && pending.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '64px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-                        <div style={{ width: 64, height: 64, borderRadius: 9999, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: 64, height: 64, borderRadius: 9999, background: 'var(--ok-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <CheckCircle size={32} color="#16a34a" />
                         </div>
                         <div>
@@ -436,7 +436,7 @@ export default function MobileApprovalsClient({ workspaceIds }: { workspaceIds: 
                             <div style={{ fontSize: 13, color: '#64748b' }}>No pending approvals right now.</div>
                         </div>
                         {metrics.decision_count > 0 && (
-                            <div style={{ fontSize: 12, color: '#94a3b8' }}>
+                            <div style={{ fontSize: 12, color: 'var(--ink-muted)' }}>
                                 {metrics.decision_count} decision{metrics.decision_count !== 1 ? 's' : ''} made this session
                                 {metrics.p95_decision_latency_seconds != null && (
                                     <> · P95 {Math.round(metrics.p95_decision_latency_seconds)}s</>

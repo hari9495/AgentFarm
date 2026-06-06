@@ -33,16 +33,16 @@ type ReconcileResult = {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    clean: { bg: '#dcfce7', color: '#166534' },
-    drifted: { bg: '#fee2e2', color: '#991b1b' },
-    reconciling: { bg: '#dbeafe', color: '#1d4ed8' },
-    failed: { bg: '#fef9c3', color: '#854d0e' },
+    clean: { bg: '#dcfce7', color: 'var(--ok)' },
+    drifted: { bg: '#fee2e2', color: 'var(--danger)' },
+    reconciling: { bg: '#dbeafe', color: 'var(--info)' },
+    failed: { bg: '#fef9c3', color: 'var(--warn)' },
 };
 
 const TOOL_STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    ok: { bg: '#dcfce7', color: '#166534' },
-    missing: { bg: '#fee2e2', color: '#991b1b' },
-    version_mismatch: { bg: '#fef9c3', color: '#854d0e' },
+    ok: { bg: '#dcfce7', color: 'var(--ok)' },
+    missing: { bg: '#fee2e2', color: 'var(--danger)' },
+    version_mismatch: { bg: '#fef9c3', color: 'var(--warn)' },
     unknown: { bg: '#f1f5f9', color: '#475569' },
 };
 
@@ -206,7 +206,7 @@ export default function EnvReconcilerPanel({ tenantId, workspaceId }: EnvReconci
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                             {profile.source && inlineBadge(profile.source, {
                                 default: { bg: '#f1f5f9', color: '#475569' },
-                                persisted: { bg: '#dcfce7', color: '#166534' },
+                                persisted: { bg: '#dcfce7', color: 'var(--ok)' },
                             })}
                             <span>Reconcile status: {inlineBadge(profile.reconcileStatus, STATUS_BADGE)}</span>
                         </div>
@@ -224,11 +224,11 @@ export default function EnvReconcilerPanel({ tenantId, workspaceId }: EnvReconci
                             <div
                                 style={{
                                     padding: '0.4rem 0.65rem',
-                                    background: '#fef9c3',
-                                    border: '1px solid #fde68a',
+                                    background: 'var(--warn-bg)',
+                                    border: '1px solid var(--warn-border)',
                                     borderRadius: '4px',
                                     fontSize: '0.78rem',
-                                    color: '#854d0e',
+                                    color: 'var(--warn)',
                                 }}
                             >
                                 Using default profile. Edit and save toolchain to persist custom settings.
@@ -364,8 +364,8 @@ export default function EnvReconcilerPanel({ tenantId, workspaceId }: EnvReconci
                     <div className="card" style={{ margin: '0.75rem 0 0', padding: '0.75rem', display: 'grid', gap: '0.55rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.83rem' }}>
                             {reconcileResult.dryRun
-                                ? <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700, background: '#fef9c3', color: '#854d0e' }}>dry run</span>
-                                : <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700, background: '#dcfce7', color: '#166534' }}>applied</span>
+                                ? <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700, background: 'var(--warn-bg)', color: 'var(--warn)' }}>dry run</span>
+                                : <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700, background: 'var(--ok-bg)', color: 'var(--ok)' }}>applied</span>
                             }
                             <code style={{ fontSize: '0.78rem', color: 'var(--ink-muted)' }}>
                                 {reconcileResult.correlationId}
@@ -373,7 +373,7 @@ export default function EnvReconcilerPanel({ tenantId, workspaceId }: EnvReconci
                         </div>
 
                         {reconcileResult.drifted.length === 0 ? (
-                            <p style={{ margin: 0, fontSize: '0.83rem', color: '#166534', fontWeight: 600 }}>
+                            <p style={{ margin: 0, fontSize: '0.83rem', color: 'var(--ok)', fontWeight: 600 }}>
                                 ✓ No drift detected
                             </p>
                         ) : (

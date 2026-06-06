@@ -216,7 +216,7 @@ export function EvidenceViewer({ item }: { item: EvidenceViewerItem }) {
                 <p className="obs-section-title">DOM Evidence</p>
                 <div className="obs-log-console" style={{ padding: '0.55rem 0.75rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '0.68rem', color: '#78716c', flexShrink: 0 }}>hash</span>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--ink-muted)', flexShrink: 0 }}>hash</span>
                         <span style={{
                             fontFamily: 'var(--font-plex-mono, monospace)',
                             fontSize: '0.72rem', color: '#93c5fd',

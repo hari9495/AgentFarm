@@ -130,21 +130,21 @@ export function NotificationBell({ workspaceId }: { workspaceId?: string }) {
                 <div style={{
                     position: 'absolute', top: '110%', right: 0,
                     width: 'min(320px, 90vw)',
-                    background: '#fff',
+                    background: 'var(--card)',
                     borderRadius: '0.6rem',
                     boxShadow: '0 8px 32px rgba(15,23,42,0.18)',
-                    border: '1px solid #e2e8f0',
+                    border: '1px solid var(--line)',
                     zIndex: 9999,
                     overflow: 'hidden',
                 }}>
                     {/* Header */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.7rem 0.9rem', borderBottom: '1px solid #f1f5f9' }}>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1d1d1f' }}>Notifications</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--ink)' }}>Notifications</span>
                         {items.length > 0 && (
                             <button
                                 type="button"
                                 onClick={markAllRead}
-                                style={{ fontSize: '0.72rem', color: '#0052cc', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                style={{ fontSize: '0.72rem', color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                             >
                                 Mark all read
                             </button>
@@ -156,8 +156,8 @@ export function NotificationBell({ workspaceId }: { workspaceId?: string }) {
                         {items.length === 0 && (
                             <div style={{ padding: '2rem', textAlign: 'center' }}>
                                 <div style={{ fontSize: '1.4rem', marginBottom: '0.4rem' }}>🔔</div>
-                                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#1d1d1f' }}>All caught up</div>
-                                <div style={{ fontSize: '0.75rem', color: '#78716c', marginTop: '0.2rem' }}>No active alerts right now.</div>
+                                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ink)' }}>All caught up</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.2rem' }}>No active alerts right now.</div>
                             </div>
                         )}
                         {items.map((item) => {
@@ -180,10 +180,10 @@ export function NotificationBell({ workspaceId }: { workspaceId?: string }) {
                                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
                                         <span style={{ width: 7, height: 7, borderRadius: '50%', background: isUnread ? colors.dot : 'transparent', border: `1.5px solid ${isUnread ? colors.dot : '#e2e8f0'}`, flexShrink: 0, marginTop: 4 }} />
                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ fontSize: '0.8rem', fontWeight: isUnread ? 700 : 500, color: '#1d1d1f', marginBottom: '0.15rem' }}>
+                                            <div style={{ fontSize: '0.8rem', fontWeight: isUnread ? 700 : 500, color: 'var(--ink)', marginBottom: '0.15rem' }}>
                                                 {item.title}
                                             </div>
-                                            <div style={{ fontSize: '0.73rem', color: '#57534e', lineHeight: 1.4 }}>
+                                            <div style={{ fontSize: '0.73rem', color: 'var(--ink-muted)', lineHeight: 1.4 }}>
                                                 {item.body}
                                             </div>
                                         </div>
@@ -195,7 +195,7 @@ export function NotificationBell({ workspaceId }: { workspaceId?: string }) {
 
                     {/* Footer */}
                     <div style={{ padding: '0.55rem 0.9rem', borderTop: '1px solid #f1f5f9', textAlign: 'center' }}>
-                        <Link href="/notifications" onClick={() => setOpen(false)} style={{ fontSize: '0.75rem', color: '#0052cc', textDecoration: 'none', fontWeight: 600 }}>
+                        <Link href="/notifications" onClick={() => setOpen(false)} style={{ fontSize: '0.75rem', color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>
                             View delivery log →
                         </Link>
                     </div>

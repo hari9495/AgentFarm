@@ -32,9 +32,9 @@ const CHANNEL_COLORS: Record<string, { bg: string; color: string }> = {
 };
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    sent: { bg: '#dcfce7', color: '#166534' },
-    failed: { bg: '#fee2e2', color: '#991b1b' },
-    retrying: { bg: '#fef9c3', color: '#854d0e' },
+    sent: { bg: '#dcfce7', color: 'var(--ok)' },
+    failed: { bg: '#fee2e2', color: 'var(--danger)' },
+    retrying: { bg: '#fef9c3', color: 'var(--warn)' },
     suppressed: { bg: '#f1f5f9', color: '#475569' },
 };
 

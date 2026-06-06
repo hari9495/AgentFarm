@@ -58,10 +58,10 @@ function CodeBlock({ code, language, title }: { code: string; language: string; 
                             <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: c }} />
                         ))}
                     </div>
-                    {title && <span style={{ fontSize: '0.72rem', color: '#6e6e73', marginLeft: 2 }}>{title}</span>}
+                    {title && <span style={{ fontSize: '0.72rem', color: 'var(--ink-muted)', marginLeft: 2 }}>{title}</span>}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{language}</span>
+                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{language}</span>
                     <button
                         type="button"
                         onClick={copy}
@@ -81,7 +81,7 @@ function CodeBlock({ code, language, title }: { code: string; language: string; 
                 <button
                     type="button"
                     onClick={() => setExpanded(v => !v)}
-                    style={{ width: '100%', padding: '7px', background: '#1a1a1c', border: 'none', borderTop: '1px solid rgba(255,255,255,0.07)', color: '#6e6e73', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                    style={{ width: '100%', padding: '7px', background: '#1a1a1c', border: 'none', borderTop: '1px solid rgba(255,255,255,0.07)', color: 'var(--ink-muted)', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
                 >
                     {expanded ? <><ChevronUp size={11} /> Show less</> : <><ChevronDown size={11} /> Show {lines.length - 14} more lines</>}
                 </button>
@@ -186,7 +186,7 @@ export default function SseStreamPanel({ workspaceId }: { workspaceId?: string }
                 {/* Endpoint row */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem', marginTop: '1rem' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 0, border: '1px solid var(--line)', borderRadius: 8, overflow: 'hidden' }}>
-                        <span style={{ padding: '6px 10px', background: 'rgba(26,122,74,0.1)', color: '#1a7a4a', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.06em', borderRight: '1px solid var(--line)' }}>
+                        <span style={{ padding: '6px 10px', background: 'rgba(26,122,74,0.1)', color: 'var(--ok)', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.06em', borderRight: '1px solid var(--line)' }}>
                             GET
                         </span>
                         <code style={{ padding: '6px 12px', color: 'var(--ink)', fontSize: '0.82rem', fontFamily: 'var(--font-plex-mono), ui-monospace, monospace', background: 'var(--bg)' }}>

@@ -25,16 +25,16 @@ type KillSwitchRecord = {
 };
 
 const TYPE_CONFIG: Record<KillSwitchType, { label: string; color: string; bg: string; border: string }> = {
-    emergency:         { label: 'Emergency',        color: '#c4161c', bg: 'rgba(196,22,28,0.08)',   border: 'rgba(196,22,28,0.25)'  },
-    manual:            { label: 'Manual',           color: '#b45309', bg: 'rgba(180,83,9,0.08)',    border: 'rgba(180,83,9,0.25)'   },
-    threshold_breach:  { label: 'Threshold Breach', color: '#b45309', bg: 'rgba(180,83,9,0.08)',    border: 'rgba(180,83,9,0.25)'   },
+    emergency:         { label: 'Emergency',        color: 'var(--danger)', bg: 'rgba(196,22,28,0.08)',   border: 'rgba(196,22,28,0.25)'  },
+    manual:            { label: 'Manual',           color: 'var(--warn)', bg: 'rgba(180,83,9,0.08)',    border: 'rgba(180,83,9,0.25)'   },
+    threshold_breach:  { label: 'Threshold Breach', color: 'var(--warn)', bg: 'rgba(180,83,9,0.08)',    border: 'rgba(180,83,9,0.25)'   },
     security_incident: { label: 'Security Incident',color: '#7c2d92', bg: 'rgba(124,45,146,0.08)', border: 'rgba(124,45,146,0.25)' },
 };
 
 const STATUS_CONFIG: Record<KillSwitchStatus, { label: string; color: string; bg: string }> = {
-    active:  { label: 'Active',  color: '#c4161c', bg: 'rgba(196,22,28,0.08)'   },
-    resumed: { label: 'Resumed', color: '#1a7a4a', bg: 'rgba(26,122,74,0.08)'   },
-    expired: { label: 'Expired', color: '#6e6e73', bg: 'rgba(110,110,115,0.08)' },
+    active:  { label: 'Active',  color: 'var(--danger)', bg: 'rgba(196,22,28,0.08)'   },
+    resumed: { label: 'Resumed', color: 'var(--ok)', bg: 'rgba(26,122,74,0.08)'   },
+    expired: { label: 'Expired', color: 'var(--ink-muted)', bg: 'rgba(110,110,115,0.08)' },
 };
 
 function formatDate(iso: string) {
@@ -55,8 +55,8 @@ function ActivateModal({ onClose, onActivated }: { onClose: () => void; onActiva
 
     const inputStyle: React.CSSProperties = {
         width: '100%', padding: '8px 11px', borderRadius: 9,
-        border: '1px solid #d2d2d7', background: '#fff',
-        color: '#1d1d1f', fontSize: 13, outline: 'none',
+        border: '1px solid var(--line)', background: 'var(--card)',
+        color: 'var(--ink)', fontSize: 13, outline: 'none',
         fontFamily: 'inherit',
     };
 
@@ -86,24 +86,24 @@ function ActivateModal({ onClose, onActivated }: { onClose: () => void; onActiva
     return (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
             onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-            <div style={{ background: '#fff', borderRadius: 20, padding: 28, width: '100%', maxWidth: 460, border: '1px solid #d2d2d7', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.2)' }}>
+            <div style={{ background: 'var(--card)', borderRadius: 20, padding: 28, width: '100%', maxWidth: 460, border: '1px solid var(--line)', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.2)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(196,22,28,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <ShieldAlert size={17} color="#c4161c" />
                         </div>
                         <div>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: '#c4161c', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Danger Zone</div>
-                            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#1d1d1f' }}>Activate Kill Switch</h3>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--danger)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Danger Zone</div>
+                            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>Activate Kill Switch</h3>
                         </div>
                     </div>
-                    <button onClick={onClose} style={{ background: '#f5f5f7', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6e6e73' }}><X size={14} /></button>
+                    <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-muted)' }}><X size={14} /></button>
                 </div>
 
-                <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(196,22,28,0.06)', border: '1px solid rgba(196,22,28,0.2)', marginBottom: 18 }}>
+                <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', marginBottom: 18 }}>
                     <div style={{ display: 'flex', gap: 7, alignItems: 'flex-start' }}>
                         <AlertTriangle size={14} color="#c4161c" style={{ flexShrink: 0, marginTop: 1 }} />
-                        <p style={{ margin: 0, fontSize: 12, color: '#c4161c', lineHeight: 1.5 }}>
+                        <p style={{ margin: 0, fontSize: 12, color: 'var(--danger)', lineHeight: 1.5 }}>
                             Activating a kill switch immediately stops all agent task execution in the affected scope.
                             Use only in emergencies or confirmed security incidents.
                         </p>
@@ -112,7 +112,7 @@ function ActivateModal({ onClose, onActivated }: { onClose: () => void; onActiva
 
                 <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <div>
-                        <label style={{ fontSize: 11, fontWeight: 600, color: '#424245', display: 'block', marginBottom: 4 }}>Type</label>
+                        <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-soft)', display: 'block', marginBottom: 4 }}>Type</label>
                         <select value={switchType} onChange={e => setSwitchType(e.target.value as KillSwitchType)} style={{ ...inputStyle, cursor: 'pointer' }}>
                             <option value="manual">Manual — planned stop</option>
                             <option value="emergency">Emergency — immediate halt</option>
@@ -121,32 +121,32 @@ function ActivateModal({ onClose, onActivated }: { onClose: () => void; onActiva
                         </select>
                     </div>
                     <div>
-                        <label style={{ fontSize: 11, fontWeight: 600, color: '#424245', display: 'block', marginBottom: 4 }}>Reason <span style={{ color: '#c4161c' }}>*</span></label>
+                        <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-soft)', display: 'block', marginBottom: 4 }}>Reason <span style={{ color: 'var(--danger)' }}>*</span></label>
                         <input value={reason} onChange={e => setReason(e.target.value)} style={inputStyle} placeholder="Describe why this kill switch is being activated…" required />
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                         <div>
-                            <label style={{ fontSize: 11, fontWeight: 600, color: '#424245', display: 'block', marginBottom: 4 }}>Workspace ID <span style={{ color: '#6e6e73', fontWeight: 400 }}>(optional)</span></label>
+                            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-soft)', display: 'block', marginBottom: 4 }}>Workspace ID <span style={{ color: 'var(--ink-muted)', fontWeight: 400 }}>(optional)</span></label>
                             <input value={workspaceId} onChange={e => setWorkspaceId(e.target.value)} style={inputStyle} placeholder="ws_… or leave blank for all" />
                         </div>
                         <div>
-                            <label style={{ fontSize: 11, fontWeight: 600, color: '#424245', display: 'block', marginBottom: 4 }}>Bot ID <span style={{ color: '#6e6e73', fontWeight: 400 }}>(optional)</span></label>
+                            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-soft)', display: 'block', marginBottom: 4 }}>Bot ID <span style={{ color: 'var(--ink-muted)', fontWeight: 400 }}>(optional)</span></label>
                             <input value={botId} onChange={e => setBotId(e.target.value)} style={inputStyle} placeholder="bot_… scope to one bot" />
                         </div>
                     </div>
                     <div>
-                        <label style={{ fontSize: 11, fontWeight: 600, color: '#424245', display: 'block', marginBottom: 4 }}>Incident Ref <span style={{ color: '#6e6e73', fontWeight: 400 }}>(optional)</span></label>
+                        <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-soft)', display: 'block', marginBottom: 4 }}>Incident Ref <span style={{ color: 'var(--ink-muted)', fontWeight: 400 }}>(optional)</span></label>
                         <input value={incidentRef} onChange={e => setIncidentRef(e.target.value)} style={inputStyle} placeholder="INC-1234 or Jira ticket" />
                     </div>
 
                     {error && (
-                        <div style={{ padding: '8px 12px', borderRadius: 9, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 12 }}>
+                        <div style={{ padding: '8px 12px', borderRadius: 9, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 12 }}>
                             {error}
                         </div>
                     )}
 
                     <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                        <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
+                        <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
                         <button type="submit" disabled={busy} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: 'none', background: busy ? '#aeaeb2' : '#c4161c', color: '#fff', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer' }}>
                             {busy ? 'Activating…' : '⚡ Activate'}
                         </button>
@@ -214,7 +214,7 @@ export default function KillSwitchPanel() {
                     ))}
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={load} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                    <button onClick={load} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
                         <RefreshCw size={11} /> Refresh
                     </button>
                     <button onClick={() => setShowActivate(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 9999, border: 'none', background: '#c4161c', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
@@ -225,39 +225,39 @@ export default function KillSwitchPanel() {
 
             {/* Active switches alert */}
             {active.length > 0 && (
-                <div style={{ padding: '12px 16px', borderRadius: 14, background: 'rgba(196,22,28,0.07)', border: '2px solid rgba(196,22,28,0.3)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ padding: '12px 16px', borderRadius: 14, background: 'var(--danger-bg)', border: '2px solid rgba(196,22,28,0.3)', display: 'flex', alignItems: 'center', gap: 10 }}>
                     <ShieldAlert size={18} color="#c4161c" style={{ flexShrink: 0 }} />
                     <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: '#c4161c' }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--danger)' }}>
                             {active.length} kill switch{active.length !== 1 ? 'es' : ''} currently active
                         </div>
-                        <div style={{ fontSize: 12, color: '#c4161c', opacity: 0.8 }}>Agent task execution is halted in the affected scopes.</div>
+                        <div style={{ fontSize: 12, color: 'var(--danger)', opacity: 0.8 }}>Agent task execution is halted in the affected scopes.</div>
                     </div>
                 </div>
             )}
 
             {active.length === 0 && !loading && (
-                <div style={{ padding: '12px 16px', borderRadius: 14, background: 'rgba(26,122,74,0.07)', border: '1px solid rgba(26,122,74,0.2)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ padding: '12px 16px', borderRadius: 14, background: 'var(--ok-bg)', border: '1px solid var(--ok-border)', display: 'flex', alignItems: 'center', gap: 10 }}>
                     <ShieldCheck size={16} color="#1a7a4a" />
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#1a7a4a' }}>All clear — no active kill switches</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ok)' }}>All clear — no active kill switches</span>
                 </div>
             )}
 
             {/* Error */}
             {error && (
-                <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 13 }}>{error}</div>
+                <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 13 }}>{error}</div>
             )}
 
             {/* Loading skeletons */}
             {loading && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {[1, 2].map(i => <div key={i} style={{ height: 80, borderRadius: 14, background: '#f5f5f7' }} />)}
+                    {[1, 2].map(i => <div key={i} style={{ height: 80, borderRadius: 14, background: 'var(--bg)' }} />)}
                 </div>
             )}
 
             {/* Switch list */}
             {!loading && displayed.length === 0 && !error && (
-                <div style={{ padding: '32px', textAlign: 'center', color: '#6e6e73', fontSize: 13, border: '1px dashed #d2d2d7', borderRadius: 14 }}>
+                <div style={{ padding: '32px', textAlign: 'center', color: 'var(--ink-muted)', fontSize: 13, border: '1px dashed #d2d2d7', borderRadius: 14 }}>
                     No kill switches {filter !== 'all' ? `with status "${filter}"` : ''} found.
                 </div>
             )}
@@ -269,7 +269,7 @@ export default function KillSwitchPanel() {
                     const isActive  = ks.status === 'active';
                     return (
                         <div key={ks.id} style={{
-                            background: '#fff', border: `1px solid ${isActive ? 'rgba(196,22,28,0.25)' : '#d2d2d7'}`,
+                            background: 'var(--card)', border: `1px solid ${isActive ? 'rgba(196,22,28,0.25)' : '#d2d2d7'}`,
                             borderRadius: 14, padding: '14px 16px',
                             boxShadow: isActive ? '0 0 0 3px rgba(196,22,28,0.06)' : '0 1px 3px rgba(0,0,0,0.05)',
                         }}>
@@ -284,32 +284,32 @@ export default function KillSwitchPanel() {
                                         <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 9999, background: statusCfg.bg, fontSize: 11, fontWeight: 600, color: statusCfg.color }}>
                                             {statusCfg.label}
                                         </span>
-                                        {ks.workspaceId && <span style={{ padding: '3px 8px', borderRadius: 9999, background: '#f5f5f7', fontSize: 11, color: '#6e6e73', fontFamily: 'monospace' }}>ws: {ks.workspaceId}</span>}
-                                        {ks.botId && <span style={{ padding: '3px 8px', borderRadius: 9999, background: '#f5f5f7', fontSize: 11, color: '#6e6e73', fontFamily: 'monospace' }}>bot: {ks.botId}</span>}
+                                        {ks.workspaceId && <span style={{ padding: '3px 8px', borderRadius: 9999, background: 'var(--bg)', fontSize: 11, color: 'var(--ink-muted)', fontFamily: 'monospace' }}>ws: {ks.workspaceId}</span>}
+                                        {ks.botId && <span style={{ padding: '3px 8px', borderRadius: 9999, background: 'var(--bg)', fontSize: 11, color: 'var(--ink-muted)', fontFamily: 'monospace' }}>bot: {ks.botId}</span>}
                                     </div>
                                     {/* Reason */}
-                                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f', marginBottom: 4 }}>{ks.reason}</div>
+                                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', marginBottom: 4 }}>{ks.reason}</div>
                                     {/* Meta */}
-                                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 11, color: '#6e6e73' }}>
-                                        <span>Activated by <strong style={{ color: '#424245' }}>{ks.activatedBy}</strong> on {formatDate(ks.activatedAt)}</span>
-                                        {ks.incidentRef && <span>Ref: <strong style={{ color: '#424245', fontFamily: 'monospace' }}>{ks.incidentRef}</strong></span>}
+                                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 11, color: 'var(--ink-muted)' }}>
+                                        <span>Activated by <strong style={{ color: 'var(--ink-soft)' }}>{ks.activatedBy}</strong> on {formatDate(ks.activatedAt)}</span>
+                                        {ks.incidentRef && <span>Ref: <strong style={{ color: 'var(--ink-soft)', fontFamily: 'monospace' }}>{ks.incidentRef}</strong></span>}
                                         {ks.expiresAt && <span>Expires {formatDate(ks.expiresAt)}</span>}
                                     </div>
                                     {/* Affected actions */}
                                     {ks.affectedActionTypes.length > 0 && (
                                         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 8 }}>
                                             {ks.affectedActionTypes.slice(0, 6).map(a => (
-                                                <span key={a} style={{ padding: '2px 7px', borderRadius: 5, background: '#f5f5f7', border: '1px solid #e5e5ea', fontSize: 10, fontWeight: 600, color: '#6e6e73', fontFamily: 'monospace' }}>{a}</span>
+                                                <span key={a} style={{ padding: '2px 7px', borderRadius: 5, background: 'var(--bg)', border: '1px solid var(--line)', fontSize: 10, fontWeight: 600, color: 'var(--ink-muted)', fontFamily: 'monospace' }}>{a}</span>
                                             ))}
                                             {ks.affectedActionTypes.length > 6 && (
-                                                <span style={{ padding: '2px 7px', borderRadius: 5, background: '#f5f5f7', fontSize: 10, color: '#aeaeb2' }}>+{ks.affectedActionTypes.length - 6} more</span>
+                                                <span style={{ padding: '2px 7px', borderRadius: 5, background: 'var(--bg)', fontSize: 10, color: 'var(--ink-muted)' }}>+{ks.affectedActionTypes.length - 6} more</span>
                                             )}
                                         </div>
                                     )}
                                 </div>
                                 {/* Resume button */}
                                 {isActive && (
-                                    <button onClick={() => handleResume(ks.id)} disabled={resumingId === ks.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 9999, border: '1px solid rgba(26,122,74,0.3)', background: 'rgba(26,122,74,0.07)', color: '#1a7a4a', fontSize: 12, fontWeight: 700, cursor: resumingId === ks.id ? 'not-allowed' : 'pointer', flexShrink: 0, transition: 'all 0.15s' }}>
+                                    <button onClick={() => handleResume(ks.id)} disabled={resumingId === ks.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 9999, border: '1px solid rgba(26,122,74,0.3)', background: 'var(--ok-bg)', color: 'var(--ok)', fontSize: 12, fontWeight: 700, cursor: resumingId === ks.id ? 'not-allowed' : 'pointer', flexShrink: 0, transition: 'all 0.15s' }}>
                                         <Play size={11} /> {resumingId === ks.id ? 'Resuming…' : 'Resume'}
                                     </button>
                                 )}

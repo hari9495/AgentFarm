@@ -126,7 +126,7 @@ export default function SsoSettingsClient() {
             </div>
 
             {error && (
-                <div style={{ display: 'flex', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 13, marginBottom: 20 }}>
+                <div style={{ display: 'flex', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 13, marginBottom: 20 }}>
                     <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} /> {error}
                 </div>
             )}
@@ -136,8 +136,8 @@ export default function SsoSettingsClient() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: config?.configured ? 16 : 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         {config?.configured && config.enabled
-                            ? <CheckCircle2 size={16} color="#16a34a" />
-                            : <AlertTriangle size={16} color={config?.configured ? '#d97706' : '#94a3b8'} />}
+                            ? <CheckCircle2 size={16} color="var(--ok)" />
+                            : <AlertTriangle size={16} color={config?.configured ? 'var(--warn)' : 'var(--ink-muted)'} />}
                         <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>
                             {config?.configured
                                 ? (config.enabled ? 'SSO Active' : 'SSO Configured but Disabled')
@@ -151,7 +151,7 @@ export default function SsoSettingsClient() {
                                 Test login <ExternalLink size={11} />
                             </a>
                             <button onClick={() => void handleDelete()} disabled={deleting}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', fontSize: 11, borderRadius: 6, border: '1px solid #fecaca', background: '#fff', color: '#dc2626', cursor: 'pointer' }}>
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', fontSize: 11, borderRadius: 6, border: '1px solid var(--danger-border)', background: 'var(--card)', color: 'var(--danger)', cursor: 'pointer' }}>
                                 <Trash2 size={11} /> {deleting ? '…' : 'Remove'}
                             </button>
                         </div>
@@ -190,7 +190,7 @@ export default function SsoSettingsClient() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                         <div>
                             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
-                                IdP SSO URL (Entry Point) <span style={{ color: '#dc2626' }}>*</span>
+                                IdP SSO URL (Entry Point) <span style={{ color: 'var(--danger)' }}>*</span>
                             </label>
                             <input type="url" value={entryPoint} onChange={e => setEntryPoint(e.target.value)} required
                                 placeholder="https://your-idp.okta.com/app/xxx/sso/saml"
@@ -199,7 +199,7 @@ export default function SsoSettingsClient() {
 
                         <div>
                             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
-                                Issuer / Entity ID <span style={{ color: '#dc2626' }}>*</span>
+                                Issuer / Entity ID <span style={{ color: 'var(--danger)' }}>*</span>
                             </label>
                             <input type="text" value={issuer} onChange={e => setIssuer(e.target.value)} required
                                 placeholder="http://www.okta.com/exkXXXXXXXX"
@@ -208,7 +208,7 @@ export default function SsoSettingsClient() {
 
                         <div>
                             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>
-                                IdP X.509 Certificate{config?.configured ? ' (leave blank to keep existing)' : <span style={{ color: '#dc2626' }}> *</span>}
+                                IdP X.509 Certificate{config?.configured ? ' (leave blank to keep existing)' : <span style={{ color: 'var(--danger)' }}> *</span>}
                             </label>
                             <textarea rows={5} value={cert} onChange={e => setCert(e.target.value)}
                                 placeholder="-----BEGIN CERTIFICATE-----&#10;MIIC...&#10;-----END CERTIFICATE-----"
@@ -233,12 +233,12 @@ export default function SsoSettingsClient() {
                         </div>
 
                         {saveErr && (
-                            <div style={{ display: 'flex', gap: 7, padding: '8px 12px', borderRadius: 8, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 12 }}>
+                            <div style={{ display: 'flex', gap: 7, padding: '8px 12px', borderRadius: 8, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 12 }}>
                                 <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1 }} /> {saveErr}
                             </div>
                         )}
                         {saveOk && (
-                            <div style={{ display: 'flex', gap: 7, padding: '8px 12px', borderRadius: 8, background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', fontSize: 12 }}>
+                            <div style={{ display: 'flex', gap: 7, padding: '8px 12px', borderRadius: 8, background: 'var(--ok-bg)', border: '1px solid var(--ok-border)', color: 'var(--ok)', fontSize: 12 }}>
                                 <CheckCircle2 size={13} style={{ flexShrink: 0, marginTop: 1 }} /> SSO configuration saved.
                             </div>
                         )}

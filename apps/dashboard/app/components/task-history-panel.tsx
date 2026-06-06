@@ -29,9 +29,9 @@ type TasksResponse = {
 };
 
 const OUTCOME_BADGE: Record<string, { bg: string; color: string }> = {
-    success: { bg: '#dcfce7', color: '#166534' },
-    failed: { bg: '#fee2e2', color: '#991b1b' },
-    approval_queued: { bg: '#fef9c3', color: '#854d0e' },
+    success: { bg: '#dcfce7', color: 'var(--ok)' },
+    failed: { bg: '#fee2e2', color: 'var(--danger)' },
+    approval_queued: { bg: '#fef9c3', color: 'var(--warn)' },
 };
 
 function formatCost(v: number | null): string {
@@ -268,7 +268,7 @@ export default function TaskHistoryPanel({ tenantId: _tenantId }: TaskHistoryPan
                             borderRadius: '4px',
                             fontSize: '0.72rem',
                             fontWeight: 600,
-                            background: '#f1f5f9',
+                            background: 'var(--bg)',
                             color: '#475569',
                         }}
                     >
@@ -281,11 +281,11 @@ export default function TaskHistoryPanel({ tenantId: _tenantId }: TaskHistoryPan
             {error && (
                 <div
                     style={{
-                        background: '#fef2f2',
-                        border: '1px solid #fecaca',
+                        background: 'var(--danger-bg)',
+                        border: '1px solid var(--danger-border)',
                         borderRadius: '6px',
                         padding: '0.65rem 0.9rem',
-                        color: '#dc2626',
+                        color: 'var(--danger)',
                         fontSize: '0.85rem',
                         marginBottom: '0.75rem',
                     }}

@@ -278,11 +278,11 @@ export default function OutboundWebhooksPanel({ tenantId: _tenantId }: OutboundW
             {error && (
                 <div
                     style={{
-                        background: '#fef2f2',
-                        border: '1px solid #fecaca',
+                        background: 'var(--danger-bg)',
+                        border: '1px solid var(--danger-border)',
                         borderRadius: '6px',
                         padding: '0.65rem 0.9rem',
-                        color: '#dc2626',
+                        color: 'var(--danger)',
                         fontSize: '0.85rem',
                         marginBottom: '0.75rem',
                     }}

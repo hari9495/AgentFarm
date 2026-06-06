@@ -12,17 +12,17 @@ export default async function PortalHomePage() {
 
     return (
         <main style={{
-            minHeight: 'calc(100vh - 52px)', background: '#f8fafc',
+            minHeight: 'calc(100vh - 52px)', background: 'var(--bg)',
             padding: '2.5rem 1.5rem', fontFamily: 'Inter, system-ui, sans-serif',
         }}>
             <div style={{ maxWidth: 760, margin: '0 auto' }}>
                 {/* Header */}
                 <div style={{ marginBottom: '2rem' }}>
-                    <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827', marginBottom: '0.3rem' }}>
+                    <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--ink)', marginBottom: '0.3rem' }}>
                         {greeting}
                     </h1>
-                    <p style={{ fontSize: '0.88rem', color: '#6b7280' }}>
-                        Tenant: <code style={{ background: '#e5e7eb', padding: '0.1rem 0.35rem', borderRadius: 4, fontSize: '0.82rem' }}>{session.tenantId}</code>
+                    <p style={{ fontSize: '0.88rem', color: 'var(--ink-muted)' }}>
+                        Tenant: <code style={{ background: 'var(--line)', padding: '0.1rem 0.35rem', borderRadius: 4, fontSize: '0.82rem' }}>{session.tenantId}</code>
                     </p>
                 </div>
 
@@ -65,8 +65,8 @@ export default async function PortalHomePage() {
                 {/* Status notice */}
                 <div style={{
                     marginTop: '2rem', padding: '0.9rem 1.1rem',
-                    background: '#eff6ff', border: '1px solid #bfdbfe',
-                    borderRadius: 8, fontSize: '0.84rem', color: '#1d4ed8',
+                    background: 'var(--info-bg)', border: '1px solid var(--info-border)',
+                    borderRadius: 8, fontSize: '0.84rem', color: 'var(--info)',
                 }}>
                     <strong>Platform Monitoring</strong> — Our AI support agent monitors your platform 24/7.
                     If a critical issue is detected, we will automatically diagnose and apply fixes.
@@ -84,15 +84,15 @@ function PortalCard({
 }) {
     return (
         <div style={{
-            background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10,
+            background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10,
             padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem',
             opacity: comingSoon ? 0.6 : 1,
         }}>
             <div style={{ fontSize: '1.6rem' }}>{icon}</div>
-            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', margin: 0 }}>{title}</h2>
-            <p style={{ fontSize: '0.82rem', color: '#6b7280', lineHeight: 1.5, flex: 1 }}>{description}</p>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>{title}</h2>
+            <p style={{ fontSize: '0.82rem', color: 'var(--ink-muted)', lineHeight: 1.5, flex: 1 }}>{description}</p>
             {comingSoon ? (
-                <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>Coming soon</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', fontStyle: 'italic' }}>Coming soon</span>
             ) : (
                 <Link
                     href={href}

@@ -54,13 +54,13 @@ type PrStatus = {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    draft: { bg: '#fef9c3', color: '#854d0e' },
-    published: { bg: '#dcfce7', color: '#166534' },
+    draft: { bg: '#fef9c3', color: 'var(--warn)' },
+    published: { bg: '#dcfce7', color: 'var(--ok)' },
 };
 
 const PR_STATE_BADGE: Record<string, { bg: string; color: string }> = {
-    open: { bg: '#dcfce7', color: '#166534' },
-    closed: { bg: '#fee2e2', color: '#991b1b' },
+    open: { bg: '#dcfce7', color: 'var(--ok)' },
+    closed: { bg: '#fee2e2', color: 'var(--danger)' },
     merged: { bg: '#f3e8ff', color: '#7c3aed' },
 };
 
@@ -323,7 +323,7 @@ export default function PrDraftsPanel({ tenantId, workspaceId }: PrDraftsPanelPr
                                 display: 'block',
                                 marginTop: '0.2rem',
                                 fontSize: '0.75rem',
-                                color: '#b45309',
+                                color: 'var(--warn)',
                             }}
                         >
                             ⚠ Summaries containing deploy/merge/force keywords will be blocked at publish.
@@ -361,11 +361,11 @@ export default function PrDraftsPanel({ tenantId, workspaceId }: PrDraftsPanelPr
                 <div
                     style={{
                         padding: '0.5rem 0.8rem',
-                        background: '#fef9c3',
-                        border: '1px solid #fde68a',
+                        background: 'var(--warn-bg)',
+                        border: '1px solid var(--warn-border)',
                         borderRadius: '4px',
                         fontSize: '0.8rem',
-                        color: '#854d0e',
+                        color: 'var(--warn)',
                         marginBottom: '0.75rem',
                     }}
                 >

@@ -66,7 +66,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 const SOURCE_STYLE: Record<string, { color: string; label: string }> = {
-    participant: { color: '#3b82f6', label: 'Participant' },
+    participant: { color: 'var(--info)', label: 'Participant' },
     agent: { color: '#8b5cf6', label: 'Agent' },
     system: { color: '#64748b', label: 'System' },
 };

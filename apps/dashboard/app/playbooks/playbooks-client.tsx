@@ -312,7 +312,7 @@ function DispatchModal({
                             <div key={field.name}>
                                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ink)', marginBottom: 6 }}>
                                     {field.label}
-                                    {field.required && <span style={{ color: '#c4161c' }}> *</span>}
+                                    {field.required && <span style={{ color: 'var(--danger)' }}> *</span>}
                                 </label>
                                 {field.type === 'textarea' ? (
                                     <textarea

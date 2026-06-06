@@ -29,19 +29,19 @@ type FeedItem = {
 // ── Visual config ─────────────────────────────────────────────────────────────
 
 const STATUS_DOT: Record<FeedStatus, { color: string; bg: string; Icon: React.ElementType }> = {
-    success: { color: '#16a34a', bg: '#dcfce7', Icon: CheckCircle2 },
-    failure: { color: '#dc2626', bg: '#fee2e2', Icon: XCircle },
-    pending: { color: '#2563eb', bg: '#dbeafe', Icon: Clock },
-    warning: { color: '#d97706', bg: '#fef9c3', Icon: AlertTriangle },
+    success: { color: 'var(--ok)', bg: '#dcfce7', Icon: CheckCircle2 },
+    failure: { color: 'var(--danger)', bg: '#fee2e2', Icon: XCircle },
+    pending: { color: 'var(--info)', bg: '#dbeafe', Icon: Clock },
+    warning: { color: 'var(--warn)', bg: '#fef9c3', Icon: AlertTriangle },
     info:    { color: '#64748b', bg: '#f1f5f9', Icon: Info },
 };
 
 const CATEGORY_CONFIG: Record<string, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
-    runtime:      { label: 'Runtime',      color: '#1d4ed8', bg: '#dbeafe', Icon: Zap },
-    approval:     { label: 'Approval',     color: '#854d0e', bg: '#fef9c3', Icon: ShieldCheck },
+    runtime:      { label: 'Runtime',      color: 'var(--info)', bg: '#dbeafe', Icon: Zap },
+    approval:     { label: 'Approval',     color: 'var(--warn)', bg: '#fef9c3', Icon: ShieldCheck },
     ci:           { label: 'CI',           color: '#7c3aed', bg: '#f3e8ff', Icon: GitPullRequest },
-    connector:    { label: 'Connector',    color: '#166534', bg: '#dcfce7', Icon: Plug },
-    provisioning: { label: 'Provisioning', color: '#991b1b', bg: '#fee2e2', Icon: Server },
+    connector:    { label: 'Connector',    color: 'var(--ok)', bg: '#dcfce7', Icon: Plug },
+    provisioning: { label: 'Provisioning', color: 'var(--danger)', bg: '#fee2e2', Icon: Server },
     security:     { label: 'Security',     color: '#7f1d1d', bg: '#fee2e2', Icon: Lock },
     system:       { label: 'System',       color: '#475569', bg: '#f1f5f9', Icon: Activity },
 };
@@ -273,7 +273,7 @@ export default function ActivityFeedClient({ workspaceIds }: { workspaceIds: str
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         {failureCount > 0 && (
-                            <span style={{ fontSize: 11, fontWeight: 700, background: '#fee2e2', color: '#dc2626', padding: '3px 10px', borderRadius: 9999, border: '1px solid #fecaca' }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, background: 'var(--danger-bg)', color: 'var(--danger)', padding: '3px 10px', borderRadius: 9999, border: '1px solid var(--danger-border)' }}>
                                 {failureCount} failure{failureCount !== 1 ? 's' : ''}
                             </span>
                         )}
@@ -325,9 +325,9 @@ export default function ActivityFeedClient({ workspaceIds }: { workspaceIds: str
             <div style={{ padding: '0 32px 48px', maxWidth: 860, margin: '0 auto' }}>
                 {/* Error */}
                 {error && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 13, margin: '16px 0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 13, margin: '16px 0' }}>
                         <AlertCircle size={14} /> {error}
-                        <button onClick={() => void load()} style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer' }}>Retry</button>
+                        <button onClick={() => void load()} style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }}>Retry</button>
                     </div>
                 )}
 

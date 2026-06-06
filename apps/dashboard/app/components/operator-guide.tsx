@@ -46,7 +46,7 @@ export default function OperatorGuide({ title = 'Operator Guide', intro, items, 
                         {items.filter(i => i.level === 'critical').length} critical · {items.filter(i => i.level === 'caution').length} caution
                     </span>
                 </span>
-                <span style={{ fontSize: 16, color: '#6366f1', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>▾</span>
+                <span style={{ fontSize: 16, color: 'var(--accent)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>▾</span>
             </button>
 
             {open && (

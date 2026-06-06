@@ -62,14 +62,14 @@ export function OperatorOnboardingBanner({
         }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.6rem' }}>
                 <div>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1d1d1f' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)' }}>
                         Getting started — {doneCount}/{steps.length} complete
                     </span>
-                    <div style={{ height: 4, background: '#e5e7eb', borderRadius: 9999, overflow: 'hidden', marginTop: '0.3rem', width: 200 }}>
+                    <div style={{ height: 4, background: 'var(--line)', borderRadius: 9999, overflow: 'hidden', marginTop: '0.3rem', width: 200 }}>
                         <div style={{ height: '100%', width: `${(doneCount / steps.length) * 100}%`, background: '#0052cc', borderRadius: 9999, transition: 'width 0.4s' }} />
                     </div>
                 </div>
-                <button type="button" onClick={dismiss} title="Dismiss" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#78716c', padding: 2 }}>
+                <button type="button" onClick={dismiss} title="Dismiss" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-muted)', padding: 2 }}>
                     <X size={14} />
                 </button>
             </div>

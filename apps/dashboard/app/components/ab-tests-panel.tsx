@@ -37,8 +37,8 @@ type AbTestResults = {
 };
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    active: { bg: '#dcfce7', color: '#166534' },
-    paused: { bg: '#fef9c3', color: '#854d0e' },
+    active: { bg: '#dcfce7', color: 'var(--ok)' },
+    paused: { bg: '#fef9c3', color: 'var(--warn)' },
     concluded: { bg: '#f1f5f9', color: '#475569' },
 };
 
@@ -251,7 +251,7 @@ export default function AbTestsPanel({ tenantId: _tenantId }: AbTestsPanelProps)
                         Traffic Split — A: {formSplit}% / B: {100 - formSplit}%
                         <input type="range" min={10} max={90} value={formSplit} onChange={(e) => setFormSplit(Number(e.target.value))} style={{ display: 'block', width: '100%', marginTop: '0.2rem' }} />
                     </label>
-                    {createError && <p style={{ color: '#dc2626', fontSize: '0.8rem', margin: '0 0 0.5rem' }}>{createError}</p>}
+                    {createError && <p style={{ color: 'var(--danger)', fontSize: '0.8rem', margin: '0 0 0.5rem' }}>{createError}</p>}
                     <button type="button" className="primary-action" disabled={creating} onClick={() => void handleCreate()} style={{ fontSize: '0.8rem', padding: '0.35rem 0.8rem' }}>
                         {creating ? 'Creating…' : 'Create Test'}
                     </button>
@@ -262,11 +262,11 @@ export default function AbTestsPanel({ tenantId: _tenantId }: AbTestsPanelProps)
             {error && (
                 <div
                     style={{
-                        background: '#fef2f2',
-                        border: '1px solid #fecaca',
+                        background: 'var(--danger-bg)',
+                        border: '1px solid var(--danger-border)',
                         borderRadius: '6px',
                         padding: '0.65rem 0.9rem',
-                        color: '#dc2626',
+                        color: 'var(--danger)',
                         fontSize: '0.85rem',
                         marginBottom: '0.75rem',
                     }}
@@ -369,10 +369,10 @@ export default function AbTestsPanel({ tenantId: _tenantId }: AbTestsPanelProps)
                                                     style={{
                                                         padding: '0.25rem 0.6rem',
                                                         fontSize: '0.75rem',
-                                                        border: '1px solid #fecaca',
+                                                        border: '1px solid var(--danger-border)',
                                                         borderRadius: '4px',
-                                                        background: '#fff',
-                                                        color: '#dc2626',
+                                                        background: 'var(--card)',
+                                                        color: 'var(--danger)',
                                                         cursor: 'pointer',
                                                     }}
                                                 >
@@ -480,8 +480,8 @@ export default function AbTestsPanel({ tenantId: _tenantId }: AbTestsPanelProps)
                     style={{
                         marginTop: '1rem',
                         padding: '1rem',
-                        background: '#fffbeb',
-                        border: '1px solid #fde68a',
+                        background: 'var(--warn-bg)',
+                        border: '1px solid var(--warn-border)',
                         borderRadius: '8px',
                     }}
                 >
@@ -489,7 +489,7 @@ export default function AbTestsPanel({ tenantId: _tenantId }: AbTestsPanelProps)
                         style={{
                             fontSize: '0.8rem',
                             fontWeight: 600,
-                            color: '#92400e',
+                            color: 'var(--warn)',
                             marginBottom: '0.75rem',
                         }}
                     >
@@ -528,10 +528,10 @@ export default function AbTestsPanel({ tenantId: _tenantId }: AbTestsPanelProps)
                                 style={{
                                     padding: '0.3rem 0.75rem',
                                     fontSize: '0.8rem',
-                                    border: '1px solid #fecaca',
+                                    border: '1px solid var(--danger-border)',
                                     borderRadius: '4px',
-                                    background: '#fff',
-                                    color: '#dc2626',
+                                    background: 'var(--card)',
+                                    color: 'var(--danger)',
                                     cursor: concluding === openConcludeId ? 'not-allowed' : 'pointer',
                                     opacity: concluding === openConcludeId ? 0.6 : 1,
                                 }}

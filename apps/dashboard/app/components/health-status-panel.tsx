@@ -81,22 +81,22 @@ function formatUptime(seconds: number): string {
 // ─── Badge colour maps ────────────────────────────────────────────────────────
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    ok: { bg: '#dcfce7', color: '#166534' },
-    degraded: { bg: '#fee2e2', color: '#991b1b' },
-    connected: { bg: '#dcfce7', color: '#166534' },
-    unreachable: { bg: '#fee2e2', color: '#991b1b' },
+    ok: { bg: '#dcfce7', color: 'var(--ok)' },
+    degraded: { bg: '#fee2e2', color: 'var(--danger)' },
+    connected: { bg: '#dcfce7', color: 'var(--ok)' },
+    unreachable: { bg: '#fee2e2', color: 'var(--danger)' },
 };
 
 const CIRCUIT_BADGE: Record<string, { bg: string; color: string }> = {
-    closed: { bg: '#dcfce7', color: '#166534' },
-    open: { bg: '#fee2e2', color: '#991b1b' },
-    'half-open': { bg: '#fef9c3', color: '#854d0e' },
+    closed: { bg: '#dcfce7', color: 'var(--ok)' },
+    open: { bg: '#fee2e2', color: 'var(--danger)' },
+    'half-open': { bg: '#fef9c3', color: 'var(--warn)' },
 };
 
 const CONNECTOR_BADGE: Record<string, { bg: string; color: string }> = {
-    healthy: { bg: '#dcfce7', color: '#166534' },
-    unhealthy: { bg: '#fee2e2', color: '#991b1b' },
-    error: { bg: '#fee2e2', color: '#991b1b' },
+    healthy: { bg: '#dcfce7', color: 'var(--ok)' },
+    unhealthy: { bg: '#fee2e2', color: 'var(--danger)' },
+    error: { bg: '#fee2e2', color: 'var(--danger)' },
     unknown: { bg: '#f1f5f9', color: '#475569' },
 };
 
@@ -104,7 +104,7 @@ function resolveBadge(
     map: Record<string, { bg: string; color: string }>,
     key: string,
 ): { bg: string; color: string } {
-    return map[key] ?? { bg: '#fef9c3', color: '#854d0e' };
+    return map[key] ?? { bg: '#fef9c3', color: 'var(--warn)' };
 }
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
@@ -288,8 +288,8 @@ export default function HealthStatusPanel() {
                     style={{
                         marginBottom: '1rem',
                         padding: '0.75rem',
-                        background: '#fee2e2',
-                        color: '#991b1b',
+                        background: 'var(--danger-bg)',
+                        color: 'var(--danger)',
                         borderRadius: '0.35rem',
                         fontSize: '0.875rem',
                     }}
@@ -392,7 +392,7 @@ export default function HealthStatusPanel() {
                             </div>
                         </div>
                     ) : (
-                        <p style={{ fontSize: '0.875rem', color: '#991b1b', margin: 0 }}>
+                        <p style={{ fontSize: '0.875rem', color: 'var(--danger)', margin: 0 }}>
                             Gateway unreachable
                         </p>
                     )}
@@ -405,8 +405,8 @@ export default function HealthStatusPanel() {
                         style={{
                             marginBottom: '0.75rem',
                             padding: '0.5rem 0.75rem',
-                            background: '#fef9c3',
-                            color: '#854d0e',
+                            background: 'var(--warn-bg)',
+                            color: 'var(--warn)',
                             borderRadius: '0.35rem',
                             fontSize: '0.75rem',
                         }}
@@ -521,7 +521,7 @@ export default function HealthStatusPanel() {
                                             label: 'High',
                                             priority: 'high',
                                             bg: '#fee2e2',
-                                            color: '#991b1b',
+                                            color: 'var(--danger)',
                                         },
                                         {
                                             label: 'Normal',
@@ -598,8 +598,8 @@ export default function HealthStatusPanel() {
                         <div
                             style={{
                                 padding: '0.5rem 0.75rem',
-                                background: '#fef9c3',
-                                color: '#854d0e',
+                                background: 'var(--warn-bg)',
+                                color: 'var(--warn)',
                                 borderRadius: '0.35rem',
                                 fontSize: '0.8rem',
                             }}
@@ -671,14 +671,14 @@ export default function HealthStatusPanel() {
                     {loading ? <PanelSkeleton /> : agentRuntime === null ? (
                         <p style={{ fontSize: '0.82rem', color: 'var(--ink-muted)' }}>No data</p>
                     ) : !agentRuntime.reachable ? (
-                        <div style={{ padding: '0.5rem 0.75rem', borderRadius: 8, background: '#fee2e2', border: '1px solid #fca5a5' }}>
-                            <p style={{ margin: 0, fontSize: '0.82rem', color: '#991b1b', fontWeight: 600 }}>⚠ Unreachable</p>
-                            <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#b91c1c' }}>Agent Runtime is not responding. Agents cannot execute tasks.</p>
+                        <div style={{ padding: '0.5rem 0.75rem', borderRadius: 8, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)' }}>
+                            <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--danger)', fontWeight: 600 }}>⚠ Unreachable</p>
+                            <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: 'var(--danger)' }}>Agent Runtime is not responding. Agents cannot execute tasks.</p>
                         </div>
                     ) : (
                         <>
                             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.6rem' }}>
-                                <InlineBadge badgeStyle={agentRuntime.ok ? { bg: '#dcfce7', color: '#166534' } : { bg: '#fee2e2', color: '#991b1b' }} label={agentRuntime.state ?? 'unknown'} />
+                                <InlineBadge badgeStyle={agentRuntime.ok ? { bg: '#dcfce7', color: 'var(--ok)' } : { bg: '#fee2e2', color: 'var(--danger)' }} label={agentRuntime.state ?? 'unknown'} />
                                 {agentRuntime.worker_loop_running && <InlineBadge badgeStyle={{ bg: '#dbeafe', color: '#1e40af' }} label="worker ✓" />}
                                 {agentRuntime.heartbeat_loop_running && <InlineBadge badgeStyle={{ bg: '#dbeafe', color: '#1e40af' }} label="heartbeat ✓" />}
                             </div>
@@ -717,14 +717,14 @@ export default function HealthStatusPanel() {
                     {loading ? <PanelSkeleton /> : triggerSvc === null ? (
                         <p style={{ fontSize: '0.82rem', color: 'var(--ink-muted)' }}>No data</p>
                     ) : !triggerSvc.reachable ? (
-                        <div style={{ padding: '0.5rem 0.75rem', borderRadius: 8, background: '#fee2e2', border: '1px solid #fca5a5' }}>
-                            <p style={{ margin: 0, fontSize: '0.82rem', color: '#991b1b', fontWeight: 600 }}>⚠ Unreachable</p>
-                            <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#b91c1c' }}>Inbound webhooks and email triggers are not being processed.</p>
+                        <div style={{ padding: '0.5rem 0.75rem', borderRadius: 8, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)' }}>
+                            <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--danger)', fontWeight: 600 }}>⚠ Unreachable</p>
+                            <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: 'var(--danger)' }}>Inbound webhooks and email triggers are not being processed.</p>
                         </div>
                     ) : (
                         <>
                             <div style={{ marginBottom: '0.6rem' }}>
-                                <InlineBadge badgeStyle={triggerSvc.status === 'ok' ? { bg: '#dcfce7', color: '#166534' } : { bg: '#fef9c3', color: '#854d0e' }} label={triggerSvc.status ?? 'unknown'} />
+                                <InlineBadge badgeStyle={triggerSvc.status === 'ok' ? { bg: '#dcfce7', color: 'var(--ok)' } : { bg: '#fef9c3', color: 'var(--warn)' }} label={triggerSvc.status ?? 'unknown'} />
                             </div>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                                 <tbody>
@@ -758,14 +758,14 @@ export default function HealthStatusPanel() {
                     {loading ? <PanelSkeleton /> : orchestrator === null ? (
                         <p style={{ fontSize: '0.82rem', color: 'var(--ink-muted)' }}>No data</p>
                     ) : !orchestrator.reachable ? (
-                        <div style={{ padding: '0.5rem 0.75rem', borderRadius: 8, background: '#fee2e2', border: '1px solid #fca5a5' }}>
-                            <p style={{ margin: 0, fontSize: '0.82rem', color: '#991b1b', fontWeight: 600 }}>⚠ Unreachable</p>
-                            <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: '#b91c1c' }}>Multi-agent workflows and scheduled routines are not running.</p>
+                        <div style={{ padding: '0.5rem 0.75rem', borderRadius: 8, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)' }}>
+                            <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--danger)', fontWeight: 600 }}>⚠ Unreachable</p>
+                            <p style={{ margin: '0.2rem 0 0', fontSize: '0.75rem', color: 'var(--danger)' }}>Multi-agent workflows and scheduled routines are not running.</p>
                         </div>
                     ) : (
                         <>
                             <div style={{ marginBottom: '0.6rem' }}>
-                                <InlineBadge badgeStyle={orchestrator.status === 'ok' ? { bg: '#dcfce7', color: '#166534' } : { bg: '#fef9c3', color: '#854d0e' }} label={orchestrator.status ?? 'unknown'} />
+                                <InlineBadge badgeStyle={orchestrator.status === 'ok' ? { bg: '#dcfce7', color: 'var(--ok)' } : { bg: '#fef9c3', color: 'var(--warn)' }} label={orchestrator.status ?? 'unknown'} />
                             </div>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                                 <tbody>

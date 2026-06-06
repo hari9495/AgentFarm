@@ -128,7 +128,7 @@ function MessageRow({
             }}
         >
             <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: '12px', color: '#94a3b8', fontFamily: 'monospace', marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ fontSize: '12px', color: 'var(--ink-muted)', fontFamily: 'monospace', marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {isInbox ? `from: ${counterpart}` : `to: ${counterpart}`}
                 </div>
                 <div style={{ fontSize: '13px', color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -253,10 +253,10 @@ function MessageDetail({
 
                 {/* Meta */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', color: '#64748b' }}>
-                    <div><span style={{ color: '#475569' }}>From:</span> <span style={{ fontFamily: 'monospace', color: '#94a3b8' }}>{message.fromBotId}</span></div>
-                    <div><span style={{ color: '#475569' }}>To:</span> <span style={{ fontFamily: 'monospace', color: '#94a3b8' }}>{message.toBotId}</span></div>
+                    <div><span style={{ color: '#475569' }}>From:</span> <span style={{ fontFamily: 'monospace', color: 'var(--ink-muted)' }}>{message.fromBotId}</span></div>
+                    <div><span style={{ color: '#475569' }}>To:</span> <span style={{ fontFamily: 'monospace', color: 'var(--ink-muted)' }}>{message.toBotId}</span></div>
                     <div><span style={{ color: '#475569' }}>Sent:</span> {ts}</div>
-                    {message.threadId && <div><span style={{ color: '#475569' }}>Thread:</span> <span style={{ fontFamily: 'monospace', color: '#94a3b8', fontSize: '11px' }}>{message.threadId}</span></div>}
+                    {message.threadId && <div><span style={{ color: '#475569' }}>Thread:</span> <span style={{ fontFamily: 'monospace', color: 'var(--ink-muted)', fontSize: '11px' }}>{message.threadId}</span></div>}
                 </div>
 
                 {/* Body */}
@@ -621,7 +621,7 @@ export default function AgentMessagesPanel({ botId }: { botId: string }) {
                 {loading ? (
                     <div style={{ padding: '24px', textAlign: 'center', color: '#475569', fontSize: '13px' }}>Loading…</div>
                 ) : messages.length === 0 ? (
-                    <div style={{ padding: '24px', textAlign: 'center', color: '#334155', fontSize: '13px' }}>
+                    <div style={{ padding: '24px', textAlign: 'center', color: 'var(--ink-soft)', fontSize: '13px' }}>
                         No {activeTab === 'inbox' ? 'inbox' : 'sent'} messages.
                     </div>
                 ) : (

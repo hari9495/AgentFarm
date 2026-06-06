@@ -32,9 +32,9 @@ type DailyPlan = {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const PRIORITY_BADGE: Record<string, { bg: string; color: string }> = {
-    high: { bg: '#fee2e2', color: '#991b1b' },
-    medium: { bg: '#fef9c3', color: '#854d0e' },
-    low: { bg: '#dcfce7', color: '#166534' },
+    high: { bg: '#fee2e2', color: 'var(--danger)' },
+    medium: { bg: '#fef9c3', color: 'var(--warn)' },
+    low: { bg: '#dcfce7', color: 'var(--ok)' },
 };
 
 function inlineBadge(label: string, map: Record<string, { bg: string; color: string }>) {

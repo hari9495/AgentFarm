@@ -669,7 +669,7 @@ export function LlmConfigPanel({ workspaceId }: Props) {
                             <p className="panel-muted">
                                 Optional profile routing: map task profiles to cheaper or stronger models.
                             </p>
-                            <p className="panel-inline-note" style={{ color: '#78716c' }}>
+                            <p className="panel-inline-note" style={{ color: 'var(--ink-muted)' }}>
                                 Recommended starting point: quality_first to gpt-4.1, speed_first to gpt-4o-mini,
                                 cost_balanced to gpt-4.1-mini, custom to your team preference.
                             </p>
@@ -780,7 +780,7 @@ export function LlmConfigPanel({ workspaceId }: Props) {
                                     <input value={autoCustomProviders} onChange={(event) => setAutoCustomProviders(event.target.value)} className="panel-control" />
                                 </label>
                             </div>
-                            <p className="panel-inline-note" style={{ color: '#78716c' }}>
+                            <p className="panel-inline-note" style={{ color: 'var(--ink-muted)' }}>
                                 Tip: keep at least two providers in each profile for resilient fallback.
                             </p>
                         </div>
@@ -1004,7 +1004,7 @@ export function LlmConfigPanel({ workspaceId }: Props) {
                             <p className="panel-muted">
                                 Optional profile routing: map task profiles to deployment names.
                             </p>
-                            <p className="panel-inline-note" style={{ color: '#78716c' }}>
+                            <p className="panel-inline-note" style={{ color: 'var(--ink-muted)' }}>
                                 Recommended starting point: set speed_first and cost_balanced to your cheaper deployment,
                                 and quality_first to your strongest deployment.
                             </p>
