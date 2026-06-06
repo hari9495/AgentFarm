@@ -28,18 +28,18 @@ type PlatformMcpData = {
 // ── Agent badge colours ────────────────────────────────────────────────────────
 
 const AGENT_COLORS: Record<string, string> = {
-    developer: 'rgba(0,102,204,0.08)',
+    developer: 'color-mix(in srgb, var(--accent) 8%, transparent)',
     fsd:       'rgba(124,45,146,0.08)',
-    devops:    'rgba(180,83,9,0.08)',
-    tester:    'rgba(26,122,74,0.08)',
-    pm:        'rgba(100,100,100,0.08)',
-    ba:        'rgba(100,100,100,0.08)',
-    tw:        'rgba(100,100,100,0.08)',
-    sales:     'rgba(196,22,28,0.08)',
-    marketing: 'rgba(196,22,28,0.08)',
-    cs:        'rgba(0,102,204,0.08)',
-    ca:        'rgba(0,102,204,0.08)',
-    recruiter: 'rgba(26,122,74,0.08)',
+    devops:    'color-mix(in srgb, var(--warn) 8%, transparent)',
+    tester:    'color-mix(in srgb, var(--ok) 8%, transparent)',
+    pm:        'var(--bg)',
+    ba:        'var(--bg)',
+    tw:        'var(--bg)',
+    sales:     'color-mix(in srgb, var(--danger) 8%, transparent)',
+    marketing: 'color-mix(in srgb, var(--danger) 8%, transparent)',
+    cs:        'color-mix(in srgb, var(--accent) 8%, transparent)',
+    ca:        'color-mix(in srgb, var(--accent) 8%, transparent)',
+    recruiter: 'color-mix(in srgb, var(--ok) 8%, transparent)',
     mobile:    'rgba(124,45,146,0.08)',
 };
 
@@ -56,7 +56,7 @@ function CopyBtn({ text }: { text: string }) {
     const [copied, setCopied] = useState(false);
     return (
         <button onClick={() => { void navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: copied ? '#1a7a4a' : '#424245', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}>
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: copied ? 'var(--ok)' : 'var(--ink-soft)', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}>
             {copied ? <Check size={11} /> : <Copy size={11} />}
             {copied ? 'Copied!' : 'Copy'}
         </button>
@@ -126,27 +126,27 @@ function AddCustomMcpModal({ onClose, onSaved }: { onClose: () => void; onSaved:
 
     const inp: React.CSSProperties = {
         width: '100%', padding: '9px 12px', borderRadius: 10,
-        border: '1px solid #d2d2d7', background: '#fff',
-        color: '#1d1d1f', fontSize: 13, outline: 'none', boxSizing: 'border-box',
+        border: '1px solid var(--line)', background: 'var(--card)',
+        color: 'var(--ink)', fontSize: 13, outline: 'none', boxSizing: 'border-box',
     };
     const lbl: React.CSSProperties = {
-        fontSize: 11, fontWeight: 700, color: '#6e6e73',
+        fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)',
         textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 5,
     };
 
     return (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
             onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-            <div style={{ background: '#fff', borderRadius: 20, padding: 28, width: '100%', maxWidth: 520, border: '1px solid #d2d2d7', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ background: 'var(--card)', borderRadius: 20, padding: 28, width: '100%', maxWidth: 520, border: '1px solid var(--line)', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
 
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
                     <div>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: '#0066cc', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Add Custom Platform MCP</div>
-                        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em' }}>Register any MCP server</h2>
-                        <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6e6e73' }}>No code changes needed — works immediately across all tenants.</p>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Add Custom Platform MCP</div>
+                        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>Register any MCP server</h2>
+                        <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--ink-muted)' }}>No code changes needed — works immediately across all tenants.</p>
                     </div>
-                    <button onClick={onClose} style={{ background: '#f5f5f7', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', color: '#6e6e73', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><X size={14} /></button>
+                    <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><X size={14} /></button>
                 </div>
 
                 <form onSubmit={save} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -154,30 +154,30 @@ function AddCustomMcpModal({ onClose, onSaved }: { onClose: () => void; onSaved:
                     {/* Name + auto ID */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                         <div>
-                            <label style={lbl}>Display Name <span style={{ color: '#c4161c' }}>*</span></label>
+                            <label style={lbl}>Display Name <span style={{ color: 'var(--danger)' }}>*</span></label>
                             <input value={name} onChange={e => handleNameChange(e.target.value)} style={inp} placeholder="e.g. Stripe Payments" required />
-                            <p style={{ fontSize: 11, color: '#aeaeb2', margin: '4px 0 0' }}>Human-readable label shown in the UI</p>
+                            <p style={{ fontSize: 11, color: 'var(--ink-muted)', margin: '4px 0 0' }}>Human-readable label shown in the UI</p>
                         </div>
                         <div>
                             <label style={lbl}>Connector ID</label>
-                            <input value={connectorId} onChange={e => setId(e.target.value)} style={{ ...inp, fontFamily: 'ui-monospace, monospace', background: '#f5f5f7', color: '#6e6e73' }} placeholder="auto-generated" readOnly />
-                            <p style={{ fontSize: 11, color: '#aeaeb2', margin: '4px 0 0' }}>Auto-generated from name</p>
+                            <input value={connectorId} onChange={e => setId(e.target.value)} style={{ ...inp, fontFamily: 'ui-monospace, monospace', background: 'var(--bg)', color: 'var(--ink-muted)' }} placeholder="auto-generated" readOnly />
+                            <p style={{ fontSize: 11, color: 'var(--ink-muted)', margin: '4px 0 0' }}>Auto-generated from name</p>
                         </div>
                     </div>
 
                     {/* URL */}
                     <div>
-                        <label style={lbl}>MCP Server URL <span style={{ color: '#c4161c' }}>*</span></label>
+                        <label style={lbl}>MCP Server URL <span style={{ color: 'var(--danger)' }}>*</span></label>
                         <input value={url} onChange={e => setUrl(e.target.value)} type="url" style={{ ...inp, fontFamily: 'ui-monospace, monospace' }} placeholder="http://mcp-stripe:3100" required />
-                        <p style={{ fontSize: 11, color: '#aeaeb2', margin: '4px 0 0' }}>
+                        <p style={{ fontSize: 11, color: 'var(--ink-muted)', margin: '4px 0 0' }}>
                             The URL of your MCP server. Must be reachable from the agent-runtime network.
                         </p>
                     </div>
 
                     {/* Agent roles */}
                     <div>
-                        <label style={lbl}>Which agents get access? <span style={{ color: '#c4161c' }}>*</span></label>
-                        <p style={{ fontSize: 12, color: '#6e6e73', margin: '0 0 8px', lineHeight: 1.5 }}>
+                        <label style={lbl}>Which agents get access? <span style={{ color: 'var(--danger)' }}>*</span></label>
+                        <p style={{ fontSize: 12, color: 'var(--ink-muted)', margin: '0 0 8px', lineHeight: 1.5 }}>
                             Select the agent roles that should automatically receive this MCP server. All agents of these types, across all tenants, will have access.
                         </p>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -187,9 +187,9 @@ function AddCustomMcpModal({ onClose, onSaved }: { onClose: () => void; onSaved:
                                     <button key={id} type="button" onClick={() => toggleRole(id)}
                                         style={{
                                             padding: '5px 12px', borderRadius: 9999, cursor: 'pointer', fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
-                                            border: `1px solid ${selected ? '#0066cc' : '#d2d2d7'}`,
-                                            background: selected ? 'rgba(0,102,204,0.08)' : '#fff',
-                                            color: selected ? '#0066cc' : '#424245',
+                                            border: `1px solid ${selected ? 'var(--accent)' : 'var(--line)'}`,
+                                            background: selected ? 'color-mix(in srgb, var(--accent) 8%, transparent)' : 'var(--card)',
+                                            color: selected ? 'var(--accent)' : 'var(--ink-soft)',
                                         }}>
                                         {selected && '✓ '}{label}
                                     </button>
@@ -197,34 +197,34 @@ function AddCustomMcpModal({ onClose, onSaved }: { onClose: () => void; onSaved:
                             })}
                         </div>
                         <button type="button" onClick={() => setRoles(selectedRoles.length === ALL_AGENT_ROLES.length ? [] : ALL_AGENT_ROLES.map(r => r.id))}
-                            style={{ marginTop: 8, fontSize: 11, fontWeight: 600, color: '#0066cc', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                            style={{ marginTop: 8, fontSize: 11, fontWeight: 600, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                             {selectedRoles.length === ALL_AGENT_ROLES.length ? 'Deselect all' : 'Select all roles'}
                         </button>
                     </div>
 
                     {/* Preview */}
                     {name && url && selectedRoles.length > 0 && (
-                        <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(0,102,204,0.04)', border: '1px solid rgba(0,102,204,0.15)', fontSize: 13, color: '#424245', lineHeight: 1.6 }}>
-                            <strong style={{ color: '#0066cc' }}>Preview:</strong> <strong>{name}</strong> will be available
+                        <div style={{ padding: '12px 14px', borderRadius: 12, background: 'color-mix(in srgb, var(--accent) 4%, transparent)', border: '1px solid color-mix(in srgb, var(--accent) 15%, transparent)', fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.6 }}>
+                            <strong style={{ color: 'var(--accent)' }}>Preview:</strong> <strong>{name}</strong> will be available
                             to every <strong>{selectedRoles.map(r => ALL_AGENT_ROLES.find(a => a.id === r)?.label ?? r).join(', ')}</strong> agent
                             across all tenants at <code style={{ fontFamily: 'monospace', background: 'rgba(0,0,0,0.05)', padding: '1px 4px', borderRadius: 4 }}>{url}</code>
                         </div>
                     )}
 
                     {error && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 12 }}>
                             <AlertCircle size={13} /> {error}
                         </div>
                     )}
                     {saved && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: 'rgba(26,122,74,0.07)', border: '1px solid rgba(26,122,74,0.2)', color: '#1a7a4a', fontSize: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: 'var(--ok-bg)', border: '1px solid var(--ok-border)', color: 'var(--ok)', fontSize: 12 }}>
                             <CheckCircle2 size={13} /> Saved! {name} is now available to all selected agents across all tenants.
                         </div>
                     )}
 
                     <div style={{ display: 'flex', gap: 8, paddingTop: 4 }}>
-                        <button type="button" onClick={onClose} style={{ flex: 1, padding: '10px 0', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
-                        <button type="submit" disabled={saving || saved} style={{ flex: 1, padding: '10px 0', borderRadius: 9999, border: 'none', background: saving || saved ? '#aeaeb2' : '#0066cc', color: '#fff', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
+                        <button type="button" onClick={onClose} style={{ flex: 1, padding: '10px 0', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
+                        <button type="submit" disabled={saving || saved} style={{ flex: 1, padding: '10px 0', borderRadius: 9999, border: 'none', background: saving || saved ? 'var(--ink-muted)' : 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
                             {saving ? 'Adding…' : saved ? '✓ Added' : 'Add MCP Server'}
                         </button>
                     </div>
@@ -271,62 +271,62 @@ function ConfigureModal({
     return (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
             onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-            <div style={{ background: '#fff', borderRadius: 20, padding: 28, width: '100%', maxWidth: 480, border: '1px solid #d2d2d7', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.2)' }}>
+            <div style={{ background: 'var(--card)', borderRadius: 20, padding: 28, width: '100%', maxWidth: 480, border: '1px solid var(--line)', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.2)' }}>
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
                     <div>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: '#0066cc', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Configure Platform MCP</div>
-                        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em' }}>{connector.label}</h2>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Configure Platform MCP</div>
+                        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>{connector.label}</h2>
                     </div>
-                    <button onClick={onClose} style={{ background: '#f5f5f7', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', color: '#6e6e73', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} /></button>
+                    <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} /></button>
                 </div>
 
                 {/* What this does */}
-                <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(0,102,204,0.05)', border: '1px solid rgba(0,102,204,0.15)', marginBottom: 18, fontSize: 12, color: '#424245', lineHeight: 1.55 }}>
-                    <strong style={{ color: '#0066cc' }}>Platform-wide:</strong> Setting this URL makes <strong>{connector.label}</strong> available to
+                <div style={{ padding: '10px 14px', borderRadius: 10, background: 'color-mix(in srgb, var(--accent) 5%, transparent)', border: '1px solid color-mix(in srgb, var(--accent) 15%, transparent)', marginBottom: 18, fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.55 }}>
+                    <strong style={{ color: 'var(--accent)' }}>Platform-wide:</strong> Setting this URL makes <strong>{connector.label}</strong> available to
                     every <strong>{connector.agents.map(a => AGENT_LABELS[a] ?? a).join(', ')}</strong> agent across all tenants automatically.
                     No per-tenant registration needed.
                 </div>
 
                 <form onSubmit={save} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 5 }}>
-                            MCP Server URL <span style={{ color: '#c4161c' }}>*</span>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 5 }}>
+                            MCP Server URL <span style={{ color: 'var(--danger)' }}>*</span>
                         </label>
                         <input
                             value={url}
                             onChange={e => setUrl(e.target.value)}
                             type="url"
                             placeholder={`http://mcp-${connector.id.replace(/_/g, '-')}:3100`}
-                            style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1px solid #d2d2d7', background: '#fff', color: '#1d1d1f', fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'ui-monospace, monospace' }}
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'ui-monospace, monospace' }}
                             required
                         />
-                        <p style={{ margin: '5px 0 0', fontSize: 11, color: '#aeaeb2' }}>
+                        <p style={{ margin: '5px 0 0', fontSize: 11, color: 'var(--ink-muted)' }}>
                             The URL of your {connector.label} MCP server. Stored securely and used by the agent-runtime.
                         </p>
                     </div>
 
                     {/* Env var reference */}
-                    <div style={{ padding: '10px 14px', borderRadius: 10, background: '#f5f5f7', border: '1px solid #e5e5ea', fontSize: 12 }}>
-                        <div style={{ fontWeight: 700, color: '#424245', marginBottom: 3 }}>Or set via environment variable:</div>
-                        <code style={{ fontFamily: 'ui-monospace, monospace', color: '#0066cc' }}>{connector.envVar}=http://your-mcp-server:3100</code>
-                        <div style={{ color: '#aeaeb2', marginTop: 3 }}>Both methods work. The database entry (set here) takes precedence over the env var.</div>
+                    <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--bg)', border: '1px solid var(--line)', fontSize: 12 }}>
+                        <div style={{ fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 3 }}>Or set via environment variable:</div>
+                        <code style={{ fontFamily: 'ui-monospace, monospace', color: 'var(--accent)' }}>{connector.envVar}=http://your-mcp-server:3100</code>
+                        <div style={{ color: 'var(--ink-muted)', marginTop: 3 }}>Both methods work. The database entry (set here) takes precedence over the env var.</div>
                     </div>
 
                     {error && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 12 }}>
                             <AlertCircle size={13} /> {error}
                         </div>
                     )}
                     {saved && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: 'rgba(26,122,74,0.07)', border: '1px solid rgba(26,122,74,0.2)', color: '#1a7a4a', fontSize: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: 'var(--ok-bg)', border: '1px solid var(--ok-border)', color: 'var(--ok)', fontSize: 12 }}>
                             <CheckCircle2 size={13} /> Saved! {connector.label} is now configured for all agents.
                         </div>
                     )}
 
                     <div style={{ display: 'flex', gap: 8 }}>
-                        <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
-                        <button type="submit" disabled={saving || saved} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: 'none', background: saving || saved ? '#aeaeb2' : '#0066cc', color: '#fff', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
+                        <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
+                        <button type="submit" disabled={saving || saved} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: 'none', background: saving || saved ? 'var(--ink-muted)' : 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
                             {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save URL'}
                         </button>
                     </div>
@@ -379,7 +379,7 @@ export default function PlatformMcpPage() {
     })).filter(g => g.connectors.length > 0);
 
     return (
-        <div style={{ minHeight: '100vh', background: '#f5f5f7', fontFamily: "var(--font-inter), -apple-system, sans-serif" }}>
+        <div style={{ minHeight: '100vh', background: 'var(--bg)', fontFamily: "var(--font-inter), -apple-system, sans-serif" }}>
             {/* Add custom MCP modal */}
             {showAddCustom && (
                 <AddCustomMcpModal
@@ -397,21 +397,21 @@ export default function PlatformMcpPage() {
             )}
 
             {/* Header */}
-            <header style={{ height: 56, background: '#fff', borderBottom: '1px solid #d2d2d7', display: 'flex', alignItems: 'center', padding: '0 24px', gap: 12, position: 'sticky', top: 0, zIndex: 10, flexShrink: 0 }}>
-                <Link href="/" style={{ color: '#6e6e73', fontSize: 13, textDecoration: 'none', fontWeight: 500 }}>← Dashboard</Link>
-                <span style={{ color: '#d2d2d7' }}>|</span>
+            <header style={{ height: 56, background: 'var(--card)', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', padding: '0 24px', gap: 12, position: 'sticky', top: 0, zIndex: 10, flexShrink: 0 }}>
+                <Link href="/" style={{ color: 'var(--ink-muted)', fontSize: 13, textDecoration: 'none', fontWeight: 500 }}>← Dashboard</Link>
+                <span style={{ color: 'var(--line-strong)' }}>|</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(0,102,204,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Cpu size={14} color="#0066cc" />
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'color-mix(in srgb, var(--accent) 10%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Cpu size={14} color="var(--accent)" />
                     </div>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em' }}>Platform MCP Configuration</span>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>Platform MCP Configuration</span>
                 </div>
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-                    <button onClick={load} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#424245', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                    <button onClick={load} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
                         <RefreshCw size={11} /> Refresh
                     </button>
                     <CopyBtn text={envTemplate} />
-                    <button onClick={() => setShowAddCustom(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 16px', borderRadius: 9999, border: 'none', background: '#0066cc', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                    <button onClick={() => setShowAddCustom(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 16px', borderRadius: 9999, border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                         <Plus size={12} /> Add Custom MCP
                     </button>
                 </div>
@@ -420,23 +420,23 @@ export default function PlatformMcpPage() {
             <div style={{ maxWidth: 1100, margin: '0 auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
 
                 {/* Explainer */}
-                <div style={{ background: '#fff', border: '1px solid #d2d2d7', borderRadius: 18, padding: '20px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 18, padding: '20px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-                        <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(0,102,204,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: 12, background: 'color-mix(in srgb, var(--accent) 8%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <Cpu size={18} color="#0066cc" />
                         </div>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 15, fontWeight: 700, color: '#1d1d1f', marginBottom: 6 }}>Platform-wide MCP Servers</div>
-                            <p style={{ margin: 0, fontSize: 13, color: '#424245', lineHeight: 1.6, maxWidth: 640 }}>
+                            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>Platform-wide MCP Servers</div>
+                            <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.6, maxWidth: 640 }}>
                                 These are <strong>generic MCP connections that work across the entire product</strong> — every agent,
                                 every tenant, every workspace. Set the environment variable once in your deployment config
                                 and all agents automatically get access. No per-tenant registration needed.
                             </p>
                             <div style={{ marginTop: 14, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                <div style={{ padding: '8px 14px', borderRadius: 10, background: '#f5f5f7', border: '1px solid #e5e5ea', fontSize: 12 }}>
-                                    <span style={{ fontWeight: 700, color: '#1d1d1f' }}>How it works: </span>
-                                    <code style={{ fontFamily: 'ui-monospace, monospace', color: '#0066cc' }}>MCP_GITHUB_URL=http://mcp-github:3100</code>
-                                    <span style={{ color: '#6e6e73' }}> → every developer agent across all tenants gets GitHub MCP</span>
+                                <div style={{ padding: '8px 14px', borderRadius: 10, background: 'var(--bg)', border: '1px solid var(--line)', fontSize: 12 }}>
+                                    <span style={{ fontWeight: 700, color: 'var(--ink)' }}>How it works: </span>
+                                    <code style={{ fontFamily: 'ui-monospace, monospace', color: 'var(--accent)' }}>MCP_GITHUB_URL=http://mcp-github:3100</code>
+                                    <span style={{ color: 'var(--ink-muted)' }}> → every developer agent across all tenants gets GitHub MCP</span>
                                 </div>
                             </div>
                         </div>
@@ -446,13 +446,13 @@ export default function PlatformMcpPage() {
                     {data && (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 16 }}>
                             {[
-                                { label: 'Total MCP connectors', value: data.total, color: '#1d1d1f' },
-                                { label: 'Configured (env var set)', value: data.configured, color: '#1a7a4a' },
-                                { label: 'Not configured', value: data.total - data.configured, color: data.configured < data.total ? '#b45309' : '#aeaeb2' },
+                                { label: 'Total MCP connectors', value: data.total, color: 'var(--ink)' },
+                                { label: 'Configured (env var set)', value: data.configured, color: 'var(--ok)' },
+                                { label: 'Not configured', value: data.total - data.configured, color: data.configured < data.total ? 'var(--warn)' : 'var(--ink-muted)' },
                             ].map(({ label, value, color }) => (
-                                <div key={label} style={{ padding: '12px 16px', background: '#f5f5f7', borderRadius: 12, border: '1px solid #e5e5ea' }}>
+                                <div key={label} style={{ padding: '12px 16px', background: 'var(--bg)', borderRadius: 12, border: '1px solid var(--line)' }}>
                                     <div style={{ fontSize: 24, fontWeight: 800, color, letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</div>
-                                    <div style={{ fontSize: 12, color: '#6e6e73', marginTop: 4 }}>{label}</div>
+                                    <div style={{ fontSize: 12, color: 'var(--ink-muted)', marginTop: 4 }}>{label}</div>
                                 </div>
                             ))}
                         </div>
@@ -460,9 +460,9 @@ export default function PlatformMcpPage() {
                 </div>
 
                 {/* How to configure callout */}
-                <div style={{ padding: '14px 18px', background: 'rgba(180,83,9,0.05)', border: '1px solid rgba(180,83,9,0.2)', borderRadius: 14 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#b45309', marginBottom: 6 }}>⚙️ How to configure</div>
-                    <div style={{ fontSize: 13, color: '#424245', lineHeight: 1.6 }}>
+                <div style={{ padding: '14px 18px', background: 'var(--warn-bg)', border: '1px solid var(--warn-border)', borderRadius: 14 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--warn)', marginBottom: 6 }}>⚙️ How to configure</div>
+                    <div style={{ fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.6 }}>
                         Add env vars to your <code style={{ fontFamily: 'monospace', background: 'rgba(0,0,0,0.06)', padding: '1px 5px', borderRadius: 4 }}>.env</code> file
                         or deployment config (Docker Compose / Kubernetes secrets / Azure App Settings), then restart the
                         <code style={{ fontFamily: 'monospace', background: 'rgba(0,0,0,0.06)', padding: '1px 5px', borderRadius: 4 }}>agent-runtime</code> service.
@@ -475,9 +475,9 @@ export default function PlatformMcpPage() {
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                     <input value={search} onChange={e => setSearch(e.target.value)}
                         placeholder="Search connectors…"
-                        style={{ flex: 1, maxWidth: 320, padding: '8px 12px', borderRadius: 9999, border: '1px solid #d2d2d7', background: '#fff', color: '#1d1d1f', fontSize: 13, outline: 'none' }} />
+                        style={{ flex: 1, maxWidth: 320, padding: '8px 12px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: 13, outline: 'none' }} />
                     <button onClick={() => setFilterUnconfigured(v => !v)}
-                        style={{ padding: '7px 14px', borderRadius: 9999, border: `1px solid ${filterUnconfigured ? 'rgba(180,83,9,0.4)' : '#d2d2d7'}`, background: filterUnconfigured ? 'rgba(180,83,9,0.08)' : '#fff', color: filterUnconfigured ? '#b45309' : '#424245', fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}>
+                        style={{ padding: '7px 14px', borderRadius: 9999, border: `1px solid ${filterUnconfigured ? 'var(--warn-border)' : 'var(--line)'}`, background: filterUnconfigured ? 'var(--warn-bg)' : 'var(--card)', color: filterUnconfigured ? 'var(--warn)' : 'var(--ink-soft)', fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}>
                         {filterUnconfigured ? '✓ Showing unconfigured only' : 'Show unconfigured only'}
                     </button>
                 </div>
@@ -485,63 +485,63 @@ export default function PlatformMcpPage() {
                 {/* Groups */}
                 {loading ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        {[1,2,3,4].map(i => <div key={i} style={{ height: 120, borderRadius: 16, background: '#f5f5f7' }} />)}
+                        {[1,2,3,4].map(i => <div key={i} style={{ height: 120, borderRadius: 16, background: 'var(--bg)' }} />)}
                     </div>
                 ) : (
                     filtered?.map(group => {
                         const isExpanded = expanded[group.group] !== false;
                         const configuredCount = group.connectors.filter(c => c.configured).length;
                         return (
-                            <div key={group.group} style={{ background: '#fff', border: '1px solid #d2d2d7', borderRadius: 18, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                            <div key={group.group} style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 18, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                                 {/* Group header */}
                                 <button type="button"
                                     onClick={() => setExpanded(p => ({ ...p, [group.group]: !isExpanded }))}
                                     style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
                                     <div style={{ flex: 1 }}>
-                                        <span style={{ fontSize: 14, fontWeight: 700, color: '#1d1d1f' }}>{group.group}</span>
-                                        <span style={{ fontSize: 12, color: '#6e6e73', marginLeft: 10 }}>
+                                        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{group.group}</span>
+                                        <span style={{ fontSize: 12, color: 'var(--ink-muted)', marginLeft: 10 }}>
                                             {configuredCount}/{group.connectors.length} configured
                                         </span>
                                     </div>
                                     {/* Mini progress */}
-                                    <div style={{ width: 80, height: 4, borderRadius: 9999, background: '#f0f0f2', overflow: 'hidden' }}>
-                                        <div style={{ height: '100%', borderRadius: 9999, background: configuredCount === group.connectors.length ? '#1a7a4a' : configuredCount > 0 ? '#b45309' : '#aeaeb2', width: `${group.connectors.length > 0 ? (configuredCount / group.connectors.length) * 100 : 0}%`, transition: 'width 0.5s ease' }} />
+                                    <div style={{ width: 80, height: 4, borderRadius: 9999, background: 'var(--bg)', overflow: 'hidden' }}>
+                                        <div style={{ height: '100%', borderRadius: 9999, background: configuredCount === group.connectors.length ? 'var(--ok)' : configuredCount > 0 ? 'var(--warn)' : 'var(--ink-muted)', width: `${group.connectors.length > 0 ? (configuredCount / group.connectors.length) * 100 : 0}%`, transition: 'width 0.5s ease' }} />
                                     </div>
-                                    {isExpanded ? <ChevronUp size={15} color="#6e6e73" /> : <ChevronDown size={15} color="#6e6e73" />}
+                                    {isExpanded ? <ChevronUp size={15} color="var(--ink-muted)" /> : <ChevronDown size={15} color="var(--ink-muted)" />}
                                 </button>
 
                                 {/* Connectors grid */}
                                 {isExpanded && (
-                                    <div style={{ borderTop: '1px solid #f0f0f2', padding: '14px 18px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 10 }}>
+                                    <div style={{ borderTop: '1px solid var(--line)', padding: '14px 18px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 10 }}>
                                         {group.connectors.map(c => (
                                             <div key={c.id} style={{
                                                 padding: '12px 14px', borderRadius: 12,
-                                                border: `1px solid ${c.configured ? 'rgba(26,122,74,0.25)' : '#e5e5ea'}`,
-                                                background: c.configured ? 'rgba(26,122,74,0.04)' : '#f9f9f9',
+                                                border: `1px solid ${c.configured ? 'var(--ok-border)' : 'var(--line)'}`,
+                                                background: c.configured ? 'var(--ok-bg)' : 'var(--bg)',
                                             }}>
                                                 {/* Name + status */}
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.configured ? '#1a7a4a' : '#aeaeb2', flexShrink: 0 }} />
-                                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#1d1d1f', flex: 1 }}>{c.label}</span>
+                                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.configured ? 'var(--ok)' : 'var(--ink-muted)', flexShrink: 0 }} />
+                                                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', flex: 1 }}>{c.label}</span>
                                                     {/* SET URL / CONFIGURED button */}
                                                     {c.configured ? (
                                                         <button onClick={() => setConfiguring(c)}
-                                                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 9999, border: '1px solid rgba(26,122,74,0.35)', background: 'rgba(26,122,74,0.07)', color: '#1a7a4a', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
+                                                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 9999, border: '1px solid var(--ok-border)', background: 'var(--ok-bg)', color: 'var(--ok)', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
                                                             <CheckCircle2 size={10} /> Configured
                                                         </button>
                                                     ) : (
                                                         <button onClick={() => setConfiguring(c)}
-                                                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 9999, border: '1px solid rgba(0,102,204,0.35)', background: 'rgba(0,102,204,0.07)', color: '#0066cc', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
+                                                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 9999, border: '1px solid color-mix(in srgb, var(--accent) 35%, transparent)', background: 'color-mix(in srgb, var(--accent) 7%, transparent)', color: 'var(--accent)', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
                                                             <Settings2 size={10} /> Set URL
                                                         </button>
                                                     )}
                                                 </div>
-                                                <code style={{ fontSize: 11, fontFamily: 'ui-monospace, monospace', color: '#6e6e73', display: 'block', marginBottom: 7 }}>
+                                                <code style={{ fontSize: 11, fontFamily: 'ui-monospace, monospace', color: 'var(--ink-muted)', display: 'block', marginBottom: 7 }}>
                                                     {c.envVar}
                                                 </code>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                                                     {c.agents.map(a => (
-                                                        <span key={a} style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 9999, background: AGENT_COLORS[a] ?? 'rgba(0,0,0,0.05)', color: '#424245' }}>
+                                                        <span key={a} style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 9999, background: AGENT_COLORS[a] ?? 'rgba(0,0,0,0.05)', color: 'var(--ink-soft)' }}>
                                                             {AGENT_LABELS[a] ?? a}
                                                         </span>
                                                     ))}

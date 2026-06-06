@@ -68,7 +68,7 @@ function TelemetryTab({ botId, workspaceId }: { botId: string; workspaceId: stri
             </div>
 
             {error && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 10, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 13 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 10, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 13 }}>
                     <AlertCircle size={13} /> {error}
                 </div>
             )}
@@ -95,7 +95,7 @@ function TelemetryTab({ botId, workspaceId }: { botId: string; workspaceId: stri
                         </thead>
                         <tbody>
                             {skills.map(s => {
-                                const successColor = s.success_rate >= 0.9 ? '#1a7a4a' : s.success_rate >= 0.7 ? '#b45309' : '#c4161c';
+                                const successColor = s.success_rate >= 0.9 ? 'var(--ok)' : s.success_rate >= 0.7 ? 'var(--warn)' : 'var(--danger)';
                                 return (
                                     <tr key={s.skill_id} style={{ borderBottom: '1px solid var(--bg)' }}>
                                         <td style={{ padding: '10px 14px', fontFamily: 'ui-monospace, monospace', fontWeight: 600, color: 'var(--ink)' }}>{s.skill_id}</td>
@@ -110,7 +110,7 @@ function TelemetryTab({ botId, workspaceId }: { botId: string; workspaceId: stri
                                         </td>
                                         <td style={{ padding: '10px 14px', color: 'var(--ink-soft)', fontVariantNumeric: 'tabular-nums' }}>{s.avg_latency_ms}ms</td>
                                         <td style={{ padding: '10px 14px' }}>
-                                            <span style={{ fontSize: 12, fontWeight: 700, color: s.error_count > 0 ? '#c4161c' : 'var(--ink-muted)' }}>{s.error_count}</span>
+                                            <span style={{ fontSize: 12, fontWeight: 700, color: s.error_count > 0 ? 'var(--danger)' : 'var(--ink-muted)' }}>{s.error_count}</span>
                                         </td>
                                         <td style={{ padding: '10px 14px', fontSize: 12, color: 'var(--ink-muted)' }}>
                                             {s.last_used_at ? new Date(s.last_used_at).toLocaleString() : '—'}
@@ -133,7 +133,7 @@ function RolesTab() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ padding: '16px 18px', background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 16, boxShadow: 'var(--shadow-sm)' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(0,102,204,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'color-mix(in srgb, var(--accent) 8%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <Users size={16} color="#0066cc" />
                     </div>
                     <div style={{ flex: 1 }}>
@@ -172,7 +172,7 @@ function RolesTab() {
                         </div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                             {skills.map(s => (
-                                <span key={s} style={{ fontSize: 10, fontWeight: 600, fontFamily: 'ui-monospace, monospace', padding: '2px 7px', borderRadius: 6, background: 'rgba(0,102,204,0.07)', border: '1px solid rgba(0,102,204,0.18)', color: '#0066cc' }}>{s}</span>
+                                <span key={s} style={{ fontSize: 10, fontWeight: 600, fontFamily: 'ui-monospace, monospace', padding: '2px 7px', borderRadius: 6, background: 'color-mix(in srgb, var(--accent) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--accent) 18%, transparent)', color: 'var(--accent)' }}>{s}</span>
                             ))}
                         </div>
                     </div>
@@ -190,7 +190,7 @@ function TabShell({ title, icon: Icon, description, children }: {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(0,102,204,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'color-mix(in srgb, var(--accent) 8%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
                     <Icon size={16} color="#0066cc" />
                 </div>
                 <div>
@@ -222,14 +222,14 @@ export default function SkillsHubClient({
                 <Link href="/" style={{ color: 'var(--ink-muted)', fontSize: 13, textDecoration: 'none', fontWeight: 500 }}>← Dashboard</Link>
                 <span style={{ color: 'var(--line-strong)' }}>|</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(0,102,204,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'color-mix(in srgb, var(--accent) 10%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <ShoppingBag size={14} color="#0066cc" />
                     </div>
                     <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>Skill Marketplace</span>
                 </div>
                 <div style={{ marginLeft: 8, display: 'flex', gap: 6 }}>
-                    <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 9999, background: 'rgba(0,102,204,0.07)', border: '1px solid rgba(0,102,204,0.2)', color: '#0066cc', fontWeight: 600, fontFamily: 'monospace' }}>ws: {workspaceId.slice(0, 18)}</span>
-                    <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 9999, background: 'rgba(0,102,204,0.07)', border: '1px solid rgba(0,102,204,0.2)', color: '#0066cc', fontWeight: 600, fontFamily: 'monospace' }}>bot: {botId.slice(0, 14)}</span>
+                    <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 9999, background: 'color-mix(in srgb, var(--accent) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--accent) 20%, transparent)', color: 'var(--accent)', fontWeight: 600, fontFamily: 'monospace' }}>ws: {workspaceId.slice(0, 18)}</span>
+                    <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 9999, background: 'color-mix(in srgb, var(--accent) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--accent) 20%, transparent)', color: 'var(--accent)', fontWeight: 600, fontFamily: 'monospace' }}>bot: {botId.slice(0, 14)}</span>
                 </div>
             </header>
 
@@ -238,7 +238,7 @@ export default function SkillsHubClient({
                 {TABS.map(({ key, label, icon: Icon }) => {
                     const active = activeTab === key;
                     return (
-                        <button key={key} type="button" onClick={() => setActiveTab(key)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '13px 14px', background: 'transparent', border: 'none', borderBottom: `2px solid ${active ? '#0066cc' : 'transparent'}`, cursor: 'pointer', color: active ? '#0066cc' : 'var(--ink-muted)', fontSize: 13, fontWeight: active ? 600 : 500, transition: 'all 0.15s', marginBottom: -1, whiteSpace: 'nowrap' }}>
+                        <button key={key} type="button" onClick={() => setActiveTab(key)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '13px 14px', background: 'transparent', border: 'none', borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`, cursor: 'pointer', color: active ? 'var(--accent)' : 'var(--ink-muted)', fontSize: 13, fontWeight: active ? 600 : 500, transition: 'all 0.15s', marginBottom: -1, whiteSpace: 'nowrap' }}>
                             <Icon size={13} />
                             {label}
                         </button>
