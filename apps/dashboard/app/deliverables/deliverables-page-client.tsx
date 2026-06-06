@@ -24,15 +24,15 @@ type Props = {
 };
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-    completed: { bg: 'rgba(26,122,74,0.08)', color: '#1a7a4a' },
-    failed: { bg: 'rgba(196,22,28,0.08)', color: '#c4161c' },
-    rejected: { bg: 'rgba(180,83,9,0.08)', color: '#b45309' },
+    completed: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    failed: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    rejected: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
 };
 
 const riskColor = (level: string) => {
-    if (level === 'high') return '#c4161c';
-    if (level === 'medium') return '#b45309';
-    return '#57534e';
+    if (level === 'high') return 'var(--danger)';
+    if (level === 'medium') return 'var(--warn)';
+    return 'var(--ink-muted)';
 };
 
 const formatDate = (iso: string | null) => {
@@ -198,7 +198,7 @@ export default function DeliverablesPageClient({ workspaceIds }: Props) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                 <div>
                     <h1 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 700 }}>Deliverables Inbox</h1>
-                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.83rem', color: '#57534e' }}>
+                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.83rem', color: 'var(--ink-muted)' }}>
                         Completed agent actions — what was asked, what was produced.
                         {total > 0 && <> <strong>{total}</strong> total records.</>}
                     </p>
@@ -221,7 +221,7 @@ export default function DeliverablesPageClient({ workspaceIds }: Props) {
             <div className="card" style={{ marginBottom: '1.1rem', padding: '0.9rem 1rem' }}>
                 <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: '1 1 160px', minWidth: 120 }}>
-                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#57534e' }}>Status</label>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--ink-muted)' }}>Status</label>
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
@@ -233,7 +233,7 @@ export default function DeliverablesPageClient({ workspaceIds }: Props) {
                         </select>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: '1 1 160px', minWidth: 120 }}>
-                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#57534e' }}>Agent Bot ID</label>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--ink-muted)' }}>Agent Bot ID</label>
                         <input
                             type="text"
                             value={botIdFilter}
@@ -243,7 +243,7 @@ export default function DeliverablesPageClient({ workspaceIds }: Props) {
                         />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: '1 1 160px', minWidth: 120 }}>
-                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#57534e' }}>From date</label>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--ink-muted)' }}>From date</label>
                         <input
                             type="date"
                             value={fromFilter}
@@ -252,7 +252,7 @@ export default function DeliverablesPageClient({ workspaceIds }: Props) {
                         />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: '1 1 160px', minWidth: 120 }}>
-                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#57534e' }}>To date</label>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--ink-muted)' }}>To date</label>
                         <input
                             type="date"
                             value={toFilter}
@@ -285,7 +285,7 @@ export default function DeliverablesPageClient({ workspaceIds }: Props) {
 
             {/* Error */}
             {error && (
-                <p className="message-inline" style={{ color: '#c4161c', marginBottom: '0.75rem' }}>
+                <p style={{ margin: '0 0 0.75rem', padding: '0.6rem 1rem', borderRadius: 8, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: '0.82rem' }}>
                     {error}
                 </p>
             )}
@@ -293,22 +293,22 @@ export default function DeliverablesPageClient({ workspaceIds }: Props) {
             {/* Feed */}
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 {loading && deliverables.length === 0 && (
-                    <div style={{ padding: '2.5rem', textAlign: 'center', color: '#78716c', fontSize: '0.85rem' }}>
+                    <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--ink-muted)', fontSize: '0.85rem' }}>
                         Loading deliverables…
                     </div>
                 )}
                 {!loading && filteredDeliverables.length === 0 && (
                     <div style={{ padding: '2.5rem', textAlign: 'center' }}>
                         <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>📭</div>
-                        <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#1d1d1f' }}>No deliverables yet</div>
-                        <div style={{ fontSize: '0.8rem', color: '#78716c', marginTop: '0.25rem' }}>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ink)' }}>No deliverables yet</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--ink-muted)', marginTop: '0.25rem' }}>
                             Completed agent actions will appear here once agents have run tasks.
                         </div>
                     </div>
                 )}
                 {filteredDeliverables.map((d, idx) => {
                     const expanded = expandedIds.has(d.id);
-                    const statusStyle = STATUS_COLORS[d.status] ?? { bg: '#f5f5f7', color: '#1d1d1f' };
+                    const statusStyle = STATUS_COLORS[d.status] ?? { bg: 'var(--bg)', color: 'var(--ink)' };
                     const isLast = idx === filteredDeliverables.length - 1;
 
                     return (
@@ -316,8 +316,8 @@ export default function DeliverablesPageClient({ workspaceIds }: Props) {
                             key={d.id}
                             style={{
                                 padding: '0.9rem 1.1rem',
-                                borderBottom: isLast ? 'none' : '1px solid #f0f0f0',
-                                background: expanded ? '#fafaf9' : '#fff',
+                                borderBottom: isLast ? 'none' : '1px solid var(--line)',
+                                background: expanded ? 'var(--bg)' : 'var(--card)',
                                 transition: 'background 0.1s',
                             }}
                         >
@@ -326,16 +326,16 @@ export default function DeliverablesPageClient({ workspaceIds }: Props) {
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.3rem' }}>
                                         {/* Agent badge */}
-                                        <span style={{ padding: '0.15rem 0.5rem', borderRadius: 9999, background: 'rgba(0,102,204,0.08)', color: '#0052cc', fontSize: '0.73rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                        <span style={{ padding: '0.15rem 0.5rem', borderRadius: 9999, background: 'color-mix(in srgb, var(--accent) 8%, transparent)', color: 'var(--accent)', fontSize: '0.73rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                                             {d.bot_role ?? d.bot_id.slice(0, 12)}
                                         </span>
                                         {/* Action type */}
-                                        <span style={{ padding: '0.15rem 0.5rem', borderRadius: 9999, background: '#f3f4f6', color: '#374151', fontSize: '0.73rem', fontWeight: 600 }}>
+                                        <span style={{ padding: '0.15rem 0.5rem', borderRadius: 9999, background: 'var(--bg)', color: 'var(--ink)', fontSize: '0.73rem', fontWeight: 600 }}>
                                             {d.action_type}
                                         </span>
                                         {/* Connector */}
                                         {d.connector_type && (
-                                            <span style={{ padding: '0.15rem 0.5rem', borderRadius: 9999, background: '#f0fdf4', color: '#166534', fontSize: '0.73rem', fontWeight: 600 }}>
+                                            <span style={{ padding: '0.15rem 0.5rem', borderRadius: 9999, background: 'var(--ok-bg)', color: 'var(--ok)', fontSize: '0.73rem', fontWeight: 600 }}>
                                                 {d.connector_type}
                                             </span>
                                         )}
@@ -345,7 +345,7 @@ export default function DeliverablesPageClient({ workspaceIds }: Props) {
                                         </span>
                                     </div>
                                     {/* Input summary */}
-                                    <p style={{ margin: 0, fontSize: '0.88rem', color: '#1d1d1f', fontWeight: 500, lineHeight: 1.4 }}>
+                                    <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--ink)', fontWeight: 500, lineHeight: 1.4 }}>
                                         {truncate(d.input_summary, 180)}
                                     </p>
                                 </div>
@@ -353,7 +353,7 @@ export default function DeliverablesPageClient({ workspaceIds }: Props) {
                                     <span style={{ padding: '0.2rem 0.55rem', borderRadius: 9999, background: statusStyle.bg, color: statusStyle.color, fontSize: '0.73rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                                         {d.status}
                                     </span>
-                                    <span style={{ fontSize: '0.75rem', color: '#78716c' }}>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
                                         {formatDate(d.completed_at ?? d.created_at)}
                                     </span>
                                 </div>
@@ -364,15 +364,15 @@ export default function DeliverablesPageClient({ workspaceIds }: Props) {
                                 <div style={{ marginTop: '0.55rem' }}>
                                     {!expanded ? (
                                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                                            <p style={{ margin: 0, fontSize: '0.82rem', color: '#44403c', lineHeight: 1.5, flex: 1 }}>
-                                                <span style={{ color: '#78716c', fontWeight: 600, marginRight: '0.3rem' }}>→</span>
+                                            <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--ink-soft)', lineHeight: 1.5, flex: 1 }}>
+                                                <span style={{ color: 'var(--ink-muted)', fontWeight: 600, marginRight: '0.3rem' }}>→</span>
                                                 {truncate(d.output_summary, 220)}
                                             </p>
                                             {d.output_summary.length > 220 && (
                                                 <button
                                                     type="button"
                                                     onClick={() => toggleExpand(d.id)}
-                                                    style={{ flexShrink: 0, padding: '0.2rem 0.5rem', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#374151', fontSize: '0.73rem', cursor: 'pointer', fontWeight: 600 }}
+                                                    style={{ flexShrink: 0, padding: '0.2rem 0.5rem', borderRadius: 6, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: '0.73rem', cursor: 'pointer', fontWeight: 600 }}
                                                 >
                                                     Show all
                                                 </button>
@@ -380,14 +380,14 @@ export default function DeliverablesPageClient({ workspaceIds }: Props) {
                                         </div>
                                     ) : (
                                         <div>
-                                            <div style={{ background: '#f5f5f7', borderRadius: '0.4rem', padding: '0.65rem 0.75rem', fontSize: '0.82rem', color: '#1d1d1f', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: '18rem', overflowY: 'auto' }}>
-                                                <span style={{ color: '#78716c', fontWeight: 600, marginRight: '0.3rem' }}>→</span>
+                                            <div style={{ background: 'var(--bg)', borderRadius: '0.4rem', padding: '0.65rem 0.75rem', fontSize: '0.82rem', color: 'var(--ink)', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: '18rem', overflowY: 'auto' }}>
+                                                <span style={{ color: 'var(--ink-muted)', fontWeight: 600, marginRight: '0.3rem' }}>→</span>
                                                 {d.output_summary}
                                             </div>
                                             <button
                                                 type="button"
                                                 onClick={() => toggleExpand(d.id)}
-                                                style={{ marginTop: '0.35rem', padding: '0.2rem 0.5rem', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#374151', fontSize: '0.73rem', cursor: 'pointer', fontWeight: 600 }}
+                                                style={{ marginTop: '0.35rem', padding: '0.2rem 0.5rem', borderRadius: 6, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: '0.73rem', cursor: 'pointer', fontWeight: 600 }}
                                             >
                                                 Collapse
                                             </button>
@@ -397,13 +397,13 @@ export default function DeliverablesPageClient({ workspaceIds }: Props) {
                             )}
 
                             {!d.output_summary && d.status === 'completed' && (
-                                <p style={{ margin: '0.4rem 0 0', fontSize: '0.78rem', color: '#a8a29e', fontStyle: 'italic' }}>
+                                <p style={{ margin: '0.4rem 0 0', fontSize: '0.78rem', color: 'var(--ink-muted)', fontStyle: 'italic' }}>
                                     No output recorded for this action.
                                 </p>
                             )}
 
                             {/* Correlation ID */}
-                            <div style={{ marginTop: '0.4rem', fontSize: '0.72rem', color: '#a8a29e', fontFamily: 'ui-monospace, monospace' }}>
+                            <div style={{ marginTop: '0.4rem', fontSize: '0.72rem', color: 'var(--ink-muted)', fontFamily: 'ui-monospace, monospace' }}>
                                 {d.correlation_id}
                             </div>
                         </div>
@@ -413,7 +413,7 @@ export default function DeliverablesPageClient({ workspaceIds }: Props) {
 
             {/* Pagination */}
             {(cursors.length > 0 || hasMore) && (
-                <div style={{ marginTop: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: '#57534e' }}>
+                <div style={{ marginTop: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--ink-muted)' }}>
                     <span>Page {pageNum} · {filteredDeliverables.length} shown of {total} total</span>
                     <div style={{ display: 'flex', gap: '0.4rem' }}>
                         <button
