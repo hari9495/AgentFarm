@@ -29,9 +29,9 @@ function PortalChatPanel() {
     const [messages, setMessages] = useState<ChatEntry[]>([]);
     const [input, setInput] = useState('');
     const [connected, setConnected] = useState(false);
+    const [reconnecting, setReconnecting] = useState(false);
     const [processing, setProcessing] = useState(false);
     const [issueId, setIssueId] = useState<string | null>(null);
-    const [wsError, setWsError] = useState<string | null>(null);
     const wsRef = useRef<WebSocket | null>(null);
     const issueIdRef = useRef<string | null>(null); // stays current inside stale closures
     const bottomRef = useRef<HTMLDivElement>(null);
@@ -47,13 +47,14 @@ function PortalChatPanel() {
         const ws = new WebSocket(url);
         wsRef.current = ws;
 
-        ws.onopen = () => { setConnected(true); setWsError(null); };
+        ws.onopen = () => { setConnected(true); setReconnecting(false); };
         ws.onclose = () => {
             setConnected(false);
             setProcessing(false);
+            setReconnecting(true);
             setTimeout(() => { if (wsRef.current?.readyState !== WebSocket.OPEN) connect(); }, 4_000);
         };
-        ws.onerror = () => setWsError('Connection error — retrying…');
+        ws.onerror = () => { /* close handler fires next and sets reconnecting */ };
         ws.onmessage = (e: MessageEvent) => {
             let frame: ChatFrame;
             try { frame = JSON.parse(e.data as string) as ChatFrame; } catch { return; }
@@ -103,14 +104,19 @@ function PortalChatPanel() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes pulse-o{0%,100%{opacity:1}50%{opacity:.5}}`}</style>
 
             <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span style={{ flex: 1, fontWeight: 600, fontSize: '0.95rem' }}>Chat Support</span>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: connected ? '#16a34a' : '#dc2626', flexShrink: 0 }} title={connected ? 'Connected' : 'Disconnected'} />
             </div>
 
-            {wsError && <p style={{ margin: 0, padding: '0.35rem 1rem', fontSize: '0.76rem', color: '#dc2626' }}>{wsError}</p>}
+            {reconnecting && !connected && (
+                <div style={{ padding: '0.4rem 1rem', background: '#fffbeb', borderBottom: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: '#92400e', animation: 'pulse-o 1.5s ease infinite' }}>
+                    <span style={{ width: 7, height: 7, border: '1.5px solid #d97706', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block', flexShrink: 0 }} />
+                    Reconnecting… your session will resume automatically
+                </div>
+            )}
             {issueId && (
                 <div style={{ padding: '0.25rem 1rem', background: 'rgba(0,102,204,0.05)', borderBottom: '1px solid var(--line)', fontSize: '0.72rem', color: '#0066cc' }}>
                     Ticket #{issueId.slice(0, 8)}
@@ -184,10 +190,20 @@ type VoiceFrameType = 'connected' | 'transcript_partial' | 'transcript_final' | 
 type VoiceFrame = { type: VoiceFrameType; text?: string; languageCode?: string; issueId?: string };
 type TranscriptEntry = { id: string; kind: 'partial' | 'final' | 'reply'; text: string; languageCode?: string };
 
+const LANG_OPTIONS = [
+    { code: '', label: 'Auto-detect' },
+    { code: 'hi-IN', label: 'Hindi' },
+    { code: 'en-IN', label: 'English' },
+    { code: 'ta-IN', label: 'Tamil' },
+    { code: 'te-IN', label: 'Telugu' },
+];
+
 function PortalVoicePanel() {
     const [callActive, setCallActive] = useState(false);
     const [connected, setConnected] = useState(false);
+    const [reconnecting, setReconnecting] = useState(false);
     const [muted, setMuted] = useState(false);
+    const [langPref, setLangPref] = useState('');
     const [transcripts, setTranscripts] = useState<TranscriptEntry[]>([]);
     const [detectedLang, setDetectedLang] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -259,14 +275,17 @@ function PortalVoicePanel() {
         streamRef.current = stream;
 
         const voiceBase = `${getApiWsBase()}/v1/support/voice-session`;
-        const voiceUrl = issueIdRef.current ? `${voiceBase}?issueId=${encodeURIComponent(issueIdRef.current)}` : voiceBase;
+        const params = new URLSearchParams();
+        if (issueIdRef.current) params.set('issueId', issueIdRef.current);
+        if (langPref) params.set('lang', langPref);
+        const voiceUrl = params.toString() ? `${voiceBase}?${params.toString()}` : voiceBase;
         const ws = new WebSocket(voiceUrl);
         wsRef.current = ws;
         ws.binaryType = 'arraybuffer';
 
-        ws.onopen = () => setConnected(true);
-        ws.onclose = () => { setConnected(false); setCallActive(false); stopMicCapture(); };
-        ws.onerror = () => setError('Voice connection error. Please try again.');
+        ws.onopen = () => { setConnected(true); setReconnecting(false); };
+        ws.onclose = () => { setConnected(false); setCallActive(false); setReconnecting(true); stopMicCapture(); };
+        ws.onerror = () => { /* close handler fires next */ };
         ws.onmessage = (e: MessageEvent) => {
             if (e.data instanceof ArrayBuffer) { audioQueueRef.current.push(e.data); void drainAudioQueue(); return; }
             let frame: VoiceFrame;
@@ -323,6 +342,12 @@ function PortalVoicePanel() {
             </div>
 
             {error && <p style={{ margin: 0, padding: '0.35rem 1rem', fontSize: '0.76rem', color: '#dc2626', background: '#fef2f2' }}>{error}</p>}
+            {reconnecting && !callActive && (
+                <div style={{ padding: '0.4rem 1rem', background: '#fffbeb', borderBottom: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: '#92400e', animation: 'pulse-o 1.5s ease infinite' }}>
+                    <span style={{ width: 7, height: 7, border: '1.5px solid #d97706', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block', flexShrink: 0 }} />
+                    Disconnected — start a new call when ready
+                </div>
+            )}
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', minHeight: 0 }}>
                 {transcripts.length === 0 && !callActive && (
@@ -359,7 +384,20 @@ function PortalVoicePanel() {
                 <div ref={bottomRef} />
             </div>
 
-            <div style={{ borderTop: '1px solid var(--line)', padding: '0.5rem 0.65rem', display: 'flex', gap: '0.5rem' }}>
+            <div style={{ borderTop: '1px solid var(--line)', padding: '0.5rem 0.65rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {!callActive && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <label style={{ fontSize: '0.76rem', color: 'var(--ink-soft)', flexShrink: 0 }}>Language:</label>
+                        <select
+                            value={langPref}
+                            onChange={(e) => setLangPref(e.target.value)}
+                            style={{ flex: 1, padding: '0.25rem 0.4rem', fontSize: '0.8rem', border: '1px solid var(--line)', borderRadius: 4, background: 'var(--bg)', color: 'var(--ink)', cursor: 'pointer' }}
+                        >
+                            {LANG_OPTIONS.map((o) => <option key={o.code} value={o.code}>{o.label}</option>)}
+                        </select>
+                    </div>
+                )}
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
                 {!callActive
                     ? <button type="button" className="primary-action" onClick={() => void beginCall()} style={{ flex: 1 }}>📞 Begin Call</button>
                     : <>
@@ -371,6 +409,7 @@ function PortalVoicePanel() {
                         </button>
                     </>
                 }
+                </div>
             </div>
         </div>
     );
@@ -406,7 +445,7 @@ export default function PortalSupportPage() {
     }
 
     return (
-        <main style={{ minHeight: '100vh', background: 'var(--bg)', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <main className="portal-support-main" style={{ minHeight: '100vh', background: 'var(--bg)', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <style>{`
                 :root { --bg: #fff; --ink: #0f172a; --ink-soft: #64748b; --line: #e2e8f0; }
                 @media (prefers-color-scheme: dark) {
@@ -419,10 +458,19 @@ export default function PortalSupportPage() {
                     background: #2563eb; color: #fff; border: none; border-radius: 4px; cursor: pointer;
                 }
                 .primary-action:disabled { opacity: 0.45; cursor: not-allowed; }
+                @keyframes pulse-o { 0%,100%{opacity:1} 50%{opacity:.5} }
+                @media (max-width: 640px) {
+                    .portal-support-main { padding: 1rem 0.75rem !important; }
+                    .portal-support-header { margin-bottom: 0.75rem !important; }
+                    .portal-support-header h1 { font-size: 1.15rem !important; }
+                    .portal-tab-bar { gap: 0.15rem !important; margin-bottom: 0.5rem !important; }
+                    .portal-tab-bar button { padding: 0.32rem 0.7rem !important; font-size: 0.8rem !important; }
+                    .portal-panel { min-height: 420px !important; border-radius: 6px !important; }
+                }
             `}</style>
 
             {/* Header */}
-            <div style={{ width: '100%', maxWidth: 680, marginBottom: '1.5rem' }}>
+            <div className="portal-support-header" style={{ width: '100%', maxWidth: 680, marginBottom: '1.5rem' }}>
                 <h1 style={{ fontSize: '1.45rem', fontWeight: 700, marginBottom: '0.25rem' }}>Support</h1>
                 <p style={{ fontSize: '0.88rem', color: 'var(--ink-soft)' }}>
                     Our AI support agent diagnoses platform issues and applies fixes automatically.
@@ -430,7 +478,7 @@ export default function PortalSupportPage() {
             </div>
 
             {/* Tab bar */}
-            <div style={{ width: '100%', maxWidth: 680, display: 'flex', gap: '0.25rem', marginBottom: '0.75rem' }}>
+            <div className="portal-tab-bar" style={{ width: '100%', maxWidth: 680, display: 'flex', gap: '0.25rem', marginBottom: '0.75rem' }}>
                 {(['chat', 'voice'] as Tab[]).map((t) => (
                     <button
                         key={t}
@@ -450,7 +498,7 @@ export default function PortalSupportPage() {
             </div>
 
             {/* Panel */}
-            <div style={{
+            <div className="portal-panel" style={{
                 width: '100%', maxWidth: 680,
                 border: '1px solid var(--line)', borderRadius: 10,
                 background: 'var(--bg)',

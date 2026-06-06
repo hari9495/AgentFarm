@@ -176,6 +176,57 @@ export const issueStore = new WriteThroughIssueStore();
 export const stepStore = new WriteThroughStepStore();
 
 // ---------------------------------------------------------------------------
+// Chat message store — write-through to Prisma (graceful if table not yet migrated)
+// ---------------------------------------------------------------------------
+
+export interface SupportChatMessageRecord {
+    id: string;
+    issueId: string;
+    role: 'user' | 'agent' | 'step' | 'fix' | 'error';
+    content: string;
+    metadata: Record<string, unknown>;
+    createdAt: string;
+}
+
+class WriteThroughMessageStore {
+    private mem = new Map<string, SupportChatMessageRecord[]>(); // key: issueId
+
+    /** Append a message and fire-and-forget persist. */
+    push(msg: SupportChatMessageRecord): void {
+        const list = this.mem.get(msg.issueId) ?? [];
+        list.push(msg);
+        this.mem.set(msg.issueId, list);
+        if (_prisma) void this._persist(msg).catch(() => {/* table may not exist yet */});
+    }
+
+    get(issueId: string): SupportChatMessageRecord[] {
+        return this.mem.get(issueId) ?? [];
+    }
+
+    clear(): void { this.mem.clear(); }
+
+    private async _persist(msg: SupportChatMessageRecord): Promise<void> {
+        if (!_prisma) return;
+        // Access via dynamic key — gracefully absent before migration is applied
+        const model = (_prisma as unknown as Record<string, unknown>)['supportChatMessage'] as
+            { create: (args: { data: unknown }) => Promise<unknown> } | undefined;
+        if (!model) return;
+        await model.create({
+            data: {
+                id: msg.id,
+                issueId: msg.issueId,
+                role: msg.role,
+                content: msg.content,
+                metadata: JSON.parse(JSON.stringify(msg.metadata)) as Prisma.InputJsonValue,
+                createdAt: new Date(msg.createdAt),
+            },
+        });
+    }
+}
+
+export const messageStore = new WriteThroughMessageStore();
+
+// ---------------------------------------------------------------------------
 // SSE helpers — push issue-list updates to connected clients
 // ---------------------------------------------------------------------------
 
@@ -312,7 +363,8 @@ export async function registerSupportIssueRoutes(
             if (issue.tenantId !== session.tenantId) return reply.code(403).send({ error: 'forbidden' });
 
             const steps = stepStore.get(issue.id) ?? [];
-            return reply.send({ ...issue, steps });
+            const messages = messageStore.get(issue.id);
+            return reply.send({ ...issue, steps, messages });
         },
     );
 

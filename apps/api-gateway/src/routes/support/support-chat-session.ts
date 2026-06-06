@@ -22,7 +22,7 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import type { IncomingMessage } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { issueStore, addDiagnosisStep, updateIssueStatus, pushIssueUpdate, type SupportIssueRecord } from './support-issue.js';
+import { issueStore, messageStore, addDiagnosisStep, updateIssueStatus, pushIssueUpdate, type SupportIssueRecord } from './support-issue.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -99,6 +99,9 @@ async function handleChatMessage(
     gatewayBaseUrl: string,
     serviceToken: string,
 ): Promise<void> {
+    // Persist the user's message
+    messageStore.push({ id: randomUUID(), issueId, role: 'user', content: text, metadata: {}, createdAt: new Date().toISOString() });
+
     // Step 1: run diagnosis
     addDiagnosisStep(issueId, {
         issueId,
@@ -203,16 +206,21 @@ async function handleChatMessage(
     if (replyResult.ok && replyResult.output) {
         try {
             const parsed = JSON.parse(replyResult.output) as { text?: string };
-            sendFrame(ws, { type: 'reply', text: parsed.text ?? replyResult.output });
+            const replyText = parsed.text ?? replyResult.output;
+            sendFrame(ws, { type: 'reply', text: replyText });
+            messageStore.push({ id: randomUUID(), issueId, role: 'agent', content: replyText, metadata: {}, createdAt: new Date().toISOString() });
         } catch {
             sendFrame(ws, { type: 'reply', text: replyResult.output });
+            messageStore.push({ id: randomUUID(), issueId, role: 'agent', content: replyResult.output, metadata: {}, createdAt: new Date().toISOString() });
         }
     } else {
         // Fallback: compose a basic reply from diagnosis summary
         const summary = diagnosisReport
             ? ((diagnosisReport['summary'] as string[]) ?? []).join('; ') || 'Diagnosis completed.'
             : 'I was unable to fully diagnose the issue right now.';
-        sendFrame(ws, { type: 'reply', text: `I've analysed your platform. ${summary} I've applied available automatic fixes. Please let me know if the issue persists.` });
+        const fallbackText = `I've analysed your platform. ${summary} I've applied available automatic fixes. Please let me know if the issue persists.`;
+        sendFrame(ws, { type: 'reply', text: fallbackText });
+        messageStore.push({ id: randomUUID(), issueId, role: 'agent', content: fallbackText, metadata: {}, createdAt: new Date().toISOString() });
     }
 }
 

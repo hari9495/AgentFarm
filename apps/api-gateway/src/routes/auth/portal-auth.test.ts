@@ -574,3 +574,134 @@ test('POST /portal/auth/change-password — no session cookie → 401', async ()
 
     assert.equal(res.statusCode, 401);
 });
+
+// ---------------------------------------------------------------------------
+// Extra coverage: login validation + change-password edge cases
+// ---------------------------------------------------------------------------
+
+test('POST /portal/auth/login — missing email → 400', async () => {
+    const { repo } = createMockRepo();
+    const { app, register } = buildApp(repo);
+    await register();
+
+    const res = await app.inject({
+        method: 'POST',
+        url: '/portal/auth/login',
+        body: { tenantId: 't-1', password: 'securePass1' },
+    });
+
+    assert.equal(res.statusCode, 400);
+    assert.equal(res.json<{ field: string }>().field, 'email');
+});
+
+test('POST /portal/auth/login — missing password → 400', async () => {
+    const { repo } = createMockRepo();
+    const { app, register } = buildApp(repo);
+    await register();
+
+    const res = await app.inject({
+        method: 'POST',
+        url: '/portal/auth/login',
+        body: { tenantId: 't-1', email: 'x@y.com' },
+    });
+
+    assert.equal(res.statusCode, 400);
+    assert.equal(res.json<{ field: string }>().field, 'password');
+});
+
+test('POST /portal/auth/login — missing tenantId → 400', async () => {
+    const { repo } = createMockRepo();
+    const { app, register } = buildApp(repo);
+    await register();
+
+    const res = await app.inject({
+        method: 'POST',
+        url: '/portal/auth/login',
+        body: { email: 'x@y.com', password: 'securePass1' },
+    });
+
+    assert.equal(res.statusCode, 400);
+    assert.equal(res.json<{ field: string }>().field, 'tenantId');
+});
+
+test('POST /portal/auth/change-password — new password too short → 400', async () => {
+    const oldPw = 'oldPassword1';
+    const oldHash = await hashPassword(oldPw);
+    const { repo, accounts, sessions } = createMockRepo();
+    const account: PortalAccountRecord = {
+        id: 'acc-short',
+        tenantId: 't-1',
+        email: 'short@corp.io',
+        passwordHash: oldHash,
+        displayName: null,
+        role: 'VIEWER',
+        isActive: true,
+    };
+    accounts.set('t-1:short@corp.io', account);
+    sessions.set('short-token', { id: 'sess-s', accountId: 'acc-short', tenantId: 't-1', token: 'short-token', expiresAt: new Date(Date.now() + 3_600_000), account });
+    const { app, register } = buildApp(repo);
+    await register();
+
+    const res = await app.inject({
+        method: 'POST',
+        url: '/portal/auth/change-password',
+        headers: { cookie: 'portal_session=short-token' },
+        body: { currentPassword: oldPw, newPassword: 'abc' },
+    });
+
+    assert.equal(res.statusCode, 400);
+    assert.equal(res.json<{ field: string }>().field, 'newPassword');
+});
+
+test('POST /portal/auth/change-password — expired session → 401', async () => {
+    const { repo, accounts, sessions } = createMockRepo();
+    const account: PortalAccountRecord = {
+        id: 'acc-exp',
+        tenantId: 't-1',
+        email: 'exp@corp.io',
+        passwordHash: 'dummy',
+        displayName: null,
+        role: 'VIEWER',
+        isActive: true,
+    };
+    accounts.set('t-1:exp@corp.io', account);
+    sessions.set('exp-cp-token', { id: 'sess-exp', accountId: 'acc-exp', tenantId: 't-1', token: 'exp-cp-token', expiresAt: new Date(Date.now() - 1_000), account });
+    const { app, register } = buildApp(repo);
+    await register();
+
+    const res = await app.inject({
+        method: 'POST',
+        url: '/portal/auth/change-password',
+        headers: { cookie: 'portal_session=exp-cp-token' },
+        body: { currentPassword: 'old', newPassword: 'newPassword99' },
+    });
+
+    assert.equal(res.statusCode, 401);
+});
+
+test('GET /portal/auth/me — lastSeenAt is updated on valid session', async () => {
+    const { repo, accounts, sessions, lastSeens } = createMockRepo();
+    const account: PortalAccountRecord = {
+        id: 'acc-seen',
+        tenantId: 't-1',
+        email: 'seen@corp.io',
+        passwordHash: 'dummy',
+        displayName: null,
+        role: 'VIEWER',
+        isActive: true,
+    };
+    accounts.set('t-1:seen@corp.io', account);
+    sessions.set('seen-token', { id: 'sess-seen', accountId: 'acc-seen', tenantId: 't-1', token: 'seen-token', expiresAt: new Date(Date.now() + 3_600_000), account });
+    const { app, register } = buildApp(repo);
+    await register();
+
+    const before = lastSeens.get('sess-seen');
+    const res = await app.inject({
+        method: 'GET',
+        url: '/portal/auth/me',
+        headers: { cookie: 'portal_session=seen-token' },
+    });
+
+    assert.equal(res.statusCode, 200);
+    assert.notEqual(lastSeens.get('sess-seen'), before, 'lastSeenAt should be updated');
+});

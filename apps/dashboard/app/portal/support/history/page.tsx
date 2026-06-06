@@ -7,6 +7,8 @@ import Link from 'next/link';
 type IssueStatus = 'open' | 'diagnosing' | 'fixing' | 'escalated' | 'resolved';
 type IssueSeverity = 'critical' | 'high' | 'medium' | 'low';
 
+type ChatMessage = { id: string; role: string; content: string; createdAt: string };
+
 type Issue = {
     id: string;
     title: string;
@@ -18,6 +20,7 @@ type Issue = {
     escalatedTo: string | null;
     createdAt: string;
     resolvedAt: string | null;
+    messages?: ChatMessage[];
 };
 
 const STATUS_LABEL: Record<IssueStatus, string> = {
@@ -53,6 +56,7 @@ export default function IssueHistoryPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [filter, setFilter] = useState<IssueStatus | 'all'>('all');
+    const [expanded, setExpanded] = useState<string | null>(null);
 
     useEffect(() => {
         fetch('/api/portal/auth/me', { credentials: 'same-origin' })
@@ -128,7 +132,8 @@ export default function IssueHistoryPage() {
                         {filtered.map((issue) => {
                             const sc = STATUS_COLOR[issue.status];
                             return (
-                                <div key={issue.id} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: '1rem 1.1rem', display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                                <div key={issue.id} style={{ display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: '1rem 1.1rem', display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
                                     {/* Severity dot */}
                                     <div style={{ width: 9, height: 9, borderRadius: '50%', background: SEVERITY_DOT[issue.severity], marginTop: 5, flexShrink: 0 }} title={issue.severity} />
 
@@ -157,7 +162,7 @@ export default function IssueHistoryPage() {
                                         </p>
                                     </div>
 
-                                    {/* Meta */}
+                                    {/* Meta + expand */}
                                     <div style={{ flexShrink: 0, textAlign: 'right', fontSize: '0.75rem', color: '#9ca3af' }}>
                                         <div>{formatDate(issue.createdAt)}</div>
                                         {issue.resolvedAt && (
@@ -168,7 +173,39 @@ export default function IssueHistoryPage() {
                                         {issue.tierReached && (
                                             <div style={{ marginTop: '0.15rem' }}>Tier {issue.tierReached}</div>
                                         )}
+                                        {(issue.messages?.length ?? 0) > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setExpanded((prev) => prev === issue.id ? null : issue.id)}
+                                                style={{ marginTop: '0.3rem', fontSize: '0.72rem', color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                            >
+                                                {expanded === issue.id ? '▲ Hide chat' : `▼ ${issue.messages!.length} messages`}
+                                            </button>
+                                        )}
                                     </div>
+                                </div>
+
+                                {/* Expanded chat thread */}
+                                {expanded === issue.id && issue.messages && issue.messages.length > 0 && (
+                                    <div style={{ marginTop: '0.75rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: 300, overflowY: 'auto' }}>
+                                        {issue.messages.map((msg) => (
+                                            <div key={msg.id} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                                                <div style={{
+                                                    maxWidth: '80%', padding: '0.3rem 0.6rem', fontSize: '0.8rem', lineHeight: 1.45,
+                                                    borderRadius: msg.role === 'user' ? '8px 8px 2px 8px' : '8px 8px 8px 2px',
+                                                    background: msg.role === 'user' ? '#334155' : msg.role === 'agent' ? '#e2e8f0' : '#f8fafc',
+                                                    color: msg.role === 'user' ? '#f8fafc' : '#1e293b',
+                                                    border: msg.role === 'step' || msg.role === 'fix' ? '1px solid #e2e8f0' : 'none',
+                                                    fontStyle: msg.role === 'step' ? 'italic' : undefined,
+                                                }}>
+                                                    {msg.role === 'step' && <span style={{ color: '#16a34a', marginRight: '0.3rem' }}>✓</span>}
+                                                    {msg.role === 'fix' && <span style={{ color: '#15803d', fontWeight: 600, marginRight: '0.3rem' }}>Fix:</span>}
+                                                    {msg.content}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                                 </div>
                             );
                         })}

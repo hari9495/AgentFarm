@@ -2421,9 +2421,23 @@ model SupportIssue {
   createdAt        DateTime                @default(now())
   resolvedAt       DateTime?
   steps            SupportDiagnosisStep[]
+  messages         SupportChatMessage[]
 
   @@index([tenantId])
   @@index([tenantId, status])
+}
+
+model SupportChatMessage {
+  id        String   @id @default(cuid())
+  issueId   String
+  role      String   // 'user' | 'agent' | 'step' | 'fix' | 'error'
+  content   String
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now())
+  issue     SupportIssue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@index([issueId])
+  @@index([issueId, createdAt])
 }
 
 model SupportDiagnosisStep {

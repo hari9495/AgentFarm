@@ -191,6 +191,12 @@ export async function registerSupportVoiceSessionRoutes(
 
         // Resume existing issue if ?issueId= was provided and belongs to this tenant;
         // otherwise create a fresh issue for this voice session.
+        // Honour a preferred language passed by the client (e.g. ?lang=ta-IN)
+        const langParam = upgradeUrl.searchParams.get('lang');
+        if (langParam && /^[a-z]{2}-[A-Z]{2}$/.test(langParam)) {
+            currentLanguageCode = langParam;
+        }
+
         const resumable = resumeIssueId && issueStore.has(resumeIssueId)
             ? issueStore.get(resumeIssueId)!
             : null;
