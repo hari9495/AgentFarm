@@ -1,10 +1,13 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function PortalLoginPage() {
+function PortalLoginForm() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const justRegistered = searchParams.get('registered') === '1';
     const [tenantId, setTenantId] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -74,6 +77,11 @@ export default function PortalLoginPage() {
                     <p style={{ fontSize: '0.83rem', color: '#6b7280', marginTop: '0.25rem' }}>Sign in to get support for your platform</p>
                 </div>
 
+                {justRegistered && (
+                    <div style={{ padding: '0.6rem 0.8rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 6, marginBottom: '1rem', fontSize: '0.83rem', color: '#15803d' }}>
+                        ✓ Account created! Sign in below.
+                    </div>
+                )}
                 {error && (
                     <div style={{
                         padding: '0.6rem 0.8rem', background: '#fef2f2', border: '1px solid #fecaca',
@@ -137,9 +145,18 @@ export default function PortalLoginPage() {
 
                 <p style={{ marginTop: '1.25rem', textAlign: 'center', fontSize: '0.78rem', color: '#9ca3af' }}>
                     <a href="/portal/forgot-password" style={{ color: '#2563eb', textDecoration: 'none' }}>Forgot password?</a>
-                    {' · '}Don&apos;t have an account? Contact your administrator.
+                    {' · '}
+                    <a href="/portal/signup" style={{ color: '#2563eb', textDecoration: 'none' }}>Create account</a>
                 </p>
             </div>
         </main>
+    );
+}
+
+export default function PortalLoginPage() {
+    return (
+        <Suspense fallback={null}>
+            <PortalLoginForm />
+        </Suspense>
     );
 }

@@ -98,3 +98,8 @@ export async function POST(request: NextRequest, { params }: RouteContext): Prom
     const { path } = await params;
     return proxyRequest(request, path);
 }
+
+export async function PATCH(request: NextRequest, { params }: RouteContext): Promise<Response> {
+    const { path } = await params;
+    return proxyRequest(request, path);
+}

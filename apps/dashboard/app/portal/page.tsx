@@ -56,10 +56,9 @@ export default async function PortalHomePage() {
                         href="/portal/account"
                         icon="⚙️"
                         title="Account"
-                        description="Manage your account settings and change your password."
+                        description="Manage your profile, change your password, and sign out."
                         cta="Manage Account"
                         accent="#d97706"
-                        comingSoon
                     />
                 </div>
 

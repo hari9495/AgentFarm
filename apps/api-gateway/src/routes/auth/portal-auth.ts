@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { hashPassword, verifyPassword } from '../../lib/password.js';
+import { sendPasswordResetEmail } from '../../lib/portal-email.js';
 
 // ── Repo types ────────────────────────────────────────────────────────────────
 
@@ -45,6 +46,7 @@ export type PortalAuthRepo = {
     deleteSession(id: string): Promise<void>;
     updateSessionLastSeen(id: string): Promise<void>;
     updateAccountPassword(accountId: string, passwordHash: string): Promise<void>;
+    updateProfile(accountId: string, data: { displayName?: string }): Promise<void>;
     // Password reset
     createResetToken(data: { accountId: string; tenantId: string; token: string; expiresAt: Date }): Promise<void>;
     findResetToken(token: string): Promise<{ id: string; accountId: string; tenantId: string; expiresAt: Date; usedAt: Date | null } | null>;
@@ -108,6 +110,12 @@ const getPrismaRepo = async (): Promise<PortalAuthRepo> => {
             await prisma.tenantPortalAccount.update({
                 where: { id: accountId },
                 data: { passwordHash },
+            });
+        },
+        async updateProfile(accountId, data) {
+            await prisma.tenantPortalAccount.update({
+                where: { id: accountId },
+                data: { displayName: data.displayName },
             });
         },
         async createResetToken({ accountId, tenantId, token, expiresAt }) {
@@ -438,23 +446,15 @@ export const registerPortalAuthRoutes = async (
         const appBaseUrl = process.env['PORTAL_APP_BASE_URL'] ?? 'http://localhost:3001';
         const resetUrl = `${appBaseUrl}/portal/reset-password?token=${encodeURIComponent(token)}`;
 
-        // In dev: log the link so developers can test without email infrastructure
-        if (process.env['NODE_ENV'] !== 'production') {
-            console.info(`[portal] Password reset link for ${normalizedEmail}: ${resetUrl}`);
-        }
+        // Send via Resend / webhook / console — fire-and-forget
+        void sendPasswordResetEmail({
+            to: normalizedEmail,
+            tenantId: account.tenantId,
+            resetUrl,
+            expiresAt: expiresAt.toISOString(),
+        }).catch(() => {/* best-effort */});
 
-        // Production hook: if PORTAL_RESET_WEBHOOK_URL is set, POST the reset URL there
-        const webhookUrl = process.env['PORTAL_RESET_WEBHOOK_URL'];
-        if (webhookUrl) {
-            void fetch(webhookUrl, {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ to: normalizedEmail, tenantId, resetUrl, expiresAt: expiresAt.toISOString() }),
-                signal: AbortSignal.timeout(5_000),
-            }).catch(() => { /* best-effort */ });
-        }
-
-        // Dev convenience: return the reset URL so the dashboard can direct the user
+        // Dev convenience: return the reset URL so the dashboard can surface it for testing
         const extra = process.env['NODE_ENV'] !== 'production' ? { resetUrl } : {};
         return reply.send({ ok: true, ...extra });
     });
@@ -493,5 +493,30 @@ export const registerPortalAuthRoutes = async (
         await repo.markResetTokenUsed(resetToken.id);
 
         return reply.send({ ok: true });
+    });
+
+    // ── PATCH /portal/auth/profile ────────────────────────────────────────────
+    app.patch<{
+        Body: { displayName?: string };
+    }>('/portal/auth/profile', async (request, reply) => {
+        const token = readPortalCookie(request);
+        if (!token) return reply.code(401).send({ error: 'unauthorized' });
+
+        const session = await repo.findSessionByToken(token);
+        if (!session) return reply.code(401).send({ error: 'unauthorized' });
+        if (session.expiresAt < new Date()) {
+            await repo.deleteSession(session.id);
+            return reply.code(401).send({ error: 'session_expired' });
+        }
+
+        const { displayName } = request.body ?? {};
+        if (typeof displayName !== 'string' && displayName !== undefined) {
+            return reply.code(400).send({ error: 'validation_failed', field: 'displayName', message: 'displayName must be a string.' });
+        }
+
+        await repo.updateProfile(session.accountId, { displayName: displayName?.trim() || undefined });
+        await repo.updateSessionLastSeen(session.id);
+
+        return reply.send({ ok: true, displayName: displayName?.trim() || null });
     });
 };

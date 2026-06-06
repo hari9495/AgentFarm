@@ -87,6 +87,7 @@ const createMockRepo = () => {
         async updateSessionLastSeen(id) {
             lastSeens.set(id, new Date());
         },
+        async updateProfile() { /* no-op in tests */ },
         async createResetToken() { /* no-op in tests */ },
         async findResetToken() { return null; },
         async markResetTokenUsed() { /* no-op in tests */ },

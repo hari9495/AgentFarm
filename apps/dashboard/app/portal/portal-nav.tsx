@@ -26,6 +26,7 @@ export function PortalNav() {
         { href: '/portal', label: 'Home' },
         { href: '/portal/support', label: 'Support' },
         { href: '/portal/support/history', label: 'History' },
+        { href: '/portal/account', label: 'Account' },
     ];
 
     // Don't render nav on the login page
