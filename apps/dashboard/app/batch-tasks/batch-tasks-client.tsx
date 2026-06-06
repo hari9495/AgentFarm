@@ -229,7 +229,7 @@ export default function BatchTasksClient({ workspaceIds }: { workspaceIds: strin
             )}
 
             {/* Step tabs */}
-            <div style={{ display: 'flex', gap: '0.25rem', borderBottom: '2px solid #f1f5f9' }}>
+            <div style={{ display: 'flex', gap: '0.25rem', borderBottom: '2px solid var(--line)' }}>
                 {([
                     [1, '1. Agent & Template'],
                     [2, '2. Upload CSV'],
@@ -243,9 +243,9 @@ export default function BatchTasksClient({ workspaceIds }: { workspaceIds: strin
                         style={{
                             padding: '0.5rem 1rem',
                             border: 'none',
-                            borderBottom: step === s ? '2px solid #0052cc' : '2px solid transparent',
+                            borderBottom: step === s ? '2px solid var(--accent)' : '2px solid transparent',
                             background: 'transparent',
-                            color: step === s ? '#0052cc' : '#57534e',
+                            color: step === s ? 'var(--accent)' : 'var(--ink-muted)',
                             fontWeight: step === s ? 700 : 500,
                             fontSize: '0.84rem',
                             cursor: 'pointer',
@@ -275,7 +275,7 @@ export default function BatchTasksClient({ workspaceIds }: { workspaceIds: strin
                     </label>
 
                     <label style={{ display: 'grid', gap: '0.35rem', fontSize: '0.82rem', fontWeight: 600 }}>
-                        Batch name <span style={{ fontWeight: 400, color: '#78716c' }}>(optional)</span>
+                        Batch name <span style={{ fontWeight: 400, color: 'var(--ink-muted)' }}>(optional)</span>
                         <input
                             type="text"
                             value={batchName}
@@ -287,23 +287,23 @@ export default function BatchTasksClient({ workspaceIds }: { workspaceIds: strin
 
                     <label style={{ display: 'grid', gap: '0.35rem', fontSize: '0.82rem', fontWeight: 600 }}>
                         Task template
-                        <div style={{ fontSize: '0.75rem', color: '#78716c', fontWeight: 400 }}>
-                            Use <code style={{ fontFamily: 'ui-monospace, monospace', background: '#f3f4f6', padding: '0 3px', borderRadius: 3 }}>{'{{column_name}}'}</code> to insert CSV values.
+                        <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', fontWeight: 400 }}>
+                            Use <code style={{ fontFamily: 'ui-monospace, monospace', background: 'var(--bg)', padding: '0 3px', borderRadius: 3 }}>{'{{column_name}}'}</code> to insert CSV values.
                         </div>
                         <textarea
                             value={template}
                             onChange={(e) => setTemplate(e.target.value)}
                             rows={4}
                             placeholder={`e.g. Research prospect {{name}} at {{company}} (email: {{email}}). Find their LinkedIn, key interests, and draft a personalised outreach email.`}
-                            style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: '0.4rem', border: '1px solid #d2d2d7', fontSize: '0.85rem', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5, boxSizing: 'border-box', outline: 'none' }}
+                            style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: '0.4rem', border: '1px solid var(--line)', fontSize: '0.85rem', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5, boxSizing: 'border-box', outline: 'none' }}
                         />
                     </label>
 
                     {variables.length > 0 && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', fontSize: '0.78rem' }}>
-                            <span style={{ color: '#57534e', fontWeight: 600 }}>Variables detected:</span>
+                            <span style={{ color: 'var(--ink-muted)', fontWeight: 600 }}>Variables detected:</span>
                             {variables.map((v) => (
-                                <code key={v} style={{ background: '#e0f2fe', color: '#0369a1', padding: '0.1rem 0.4rem', borderRadius: '0.2rem', fontFamily: 'ui-monospace, monospace' }}>
+                                <code key={v} style={{ background: 'var(--info-bg)', color: 'var(--info)', padding: '0.1rem 0.4rem', borderRadius: '0.2rem', fontFamily: 'ui-monospace, monospace' }}>
                                     {'{{'}{v}{'}}'}
                                 </code>
                             ))}
@@ -327,7 +327,7 @@ export default function BatchTasksClient({ workspaceIds }: { workspaceIds: strin
                     <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Upload your CSV</h3>
 
                     {variables.length > 0 && (
-                        <div style={{ padding: '0.65rem 0.75rem', background: 'rgba(0,82,204,0.05)', borderRadius: '0.4rem', border: '1px solid rgba(0,82,204,0.15)', fontSize: '0.8rem', color: '#0369a1' }}>
+                        <div style={{ padding: '0.65rem 0.75rem', background: 'color-mix(in srgb, var(--accent) 5%, transparent)', borderRadius: '0.4rem', border: '1px solid color-mix(in srgb, var(--accent) 15%, transparent)', fontSize: '0.8rem', color: 'var(--info)' }}>
                             Your template expects columns: <strong>{variables.join(', ')}</strong>
                         </div>
                     )}
@@ -343,19 +343,19 @@ export default function BatchTasksClient({ workspaceIds }: { workspaceIds: strin
                         />
                     </label>
 
-                    <div style={{ textAlign: 'center', color: '#78716c', fontSize: '0.78rem' }}>— or paste CSV text below —</div>
+                    <div style={{ textAlign: 'center', color: 'var(--ink-muted)', fontSize: '0.78rem' }}>— or paste CSV text below —</div>
 
                     <textarea
                         rows={6}
                         placeholder={`name,company,email\nAlice Smith,Acme Corp,alice@acme.com\nBob Jones,Widgets Inc,bob@widgets.com`}
                         onChange={(e) => handleManualRows(e.target.value)}
-                        style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: '0.4rem', border: '1px solid #d2d2d7', fontSize: '0.82rem', fontFamily: 'ui-monospace, monospace', lineHeight: 1.5, boxSizing: 'border-box', resize: 'vertical', outline: 'none' }}
+                        style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: '0.4rem', border: '1px solid var(--line)', fontSize: '0.82rem', fontFamily: 'ui-monospace, monospace', lineHeight: 1.5, boxSizing: 'border-box', resize: 'vertical', outline: 'none' }}
                     />
 
-                    {csvError && <p style={{ margin: 0, color: '#c4161c', fontSize: '0.82rem' }}>⚠ {csvError}</p>}
+                    {csvError && <p style={{ margin: 0, color: 'var(--danger)', fontSize: '0.82rem' }}>⚠ {csvError}</p>}
 
                     {hasRows && (
-                        <div style={{ padding: '0.6rem 0.75rem', background: 'rgba(26,122,74,0.06)', borderRadius: '0.4rem', border: '1px solid rgba(26,122,74,0.2)', fontSize: '0.82rem', color: '#1a7a4a' }}>
+                        <div style={{ padding: '0.6rem 0.75rem', background: 'var(--ok-bg)', borderRadius: '0.4rem', border: '1px solid var(--ok-border)', fontSize: '0.82rem', color: 'var(--ok)' }}>
                             ✓ <strong>{rows.length} rows</strong> loaded with columns: <strong>{cols.join(', ')}</strong>
                         </div>
                     )}
@@ -375,19 +375,19 @@ export default function BatchTasksClient({ workspaceIds }: { workspaceIds: strin
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <h3 style={{ margin: 0, fontSize: '0.95rem' }}>
                             Preview — {rows.length} task{rows.length !== 1 ? 's' : ''} for{' '}
-                            <span style={{ color: '#0052cc' }}>{selectedBotRole || toAgentId}</span>
+                            <span style={{ color: 'var(--accent)' }}>{selectedBotRole || toAgentId}</span>
                         </h3>
                     </div>
-                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#78716c' }}>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--ink-muted)' }}>
                         Showing first {Math.min(preview.length, 5)} expanded tasks. All {rows.length} will be dispatched.
                     </p>
                     <div style={{ display: 'grid', gap: '0.5rem' }}>
                         {preview.map((p) => (
-                            <div key={p.index} style={{ padding: '0.65rem 0.75rem', background: '#f9fafb', borderRadius: '0.4rem', border: '1px solid #e5e7eb' }}>
-                                <div style={{ fontSize: '0.72rem', color: '#78716c', fontWeight: 700, marginBottom: '0.2rem' }}>
+                            <div key={p.index} style={{ padding: '0.65rem 0.75rem', background: 'var(--bg)', borderRadius: '0.4rem', border: '1px solid var(--line)' }}>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--ink-muted)', fontWeight: 700, marginBottom: '0.2rem' }}>
                                     Task #{p.index + 1}
                                 </div>
-                                <div style={{ fontSize: '0.83rem', color: '#1d1d1f', lineHeight: 1.5 }}>
+                                <div style={{ fontSize: '0.83rem', color: 'var(--ink)', lineHeight: 1.5 }}>
                                     {p.task_description}
                                 </div>
                             </div>
@@ -406,13 +406,13 @@ export default function BatchTasksClient({ workspaceIds }: { workspaceIds: strin
             {step === 4 && (
                 <div className="card" style={{ display: 'grid', gap: '0.85rem' }}>
                     <h3 style={{ margin: 0, fontSize: '0.95rem' }}>Ready to submit</h3>
-                    <div style={{ display: 'grid', gap: '0.4rem', fontSize: '0.83rem', color: '#44403c' }}>
+                    <div style={{ display: 'grid', gap: '0.4rem', fontSize: '0.83rem', color: 'var(--ink-soft)' }}>
                         <div><strong>Agent:</strong> {selectedBotRole || toAgentId}</div>
                         <div><strong>Tasks:</strong> {rows.length}</div>
                         {batchName && <div><strong>Batch name:</strong> {batchName}</div>}
-                        <div><strong>Template:</strong> <em style={{ color: '#78716c' }}>{template.slice(0, 120)}{template.length > 120 ? '…' : ''}</em></div>
+                        <div><strong>Template:</strong> <em style={{ color: 'var(--ink-muted)' }}>{template.slice(0, 120)}{template.length > 120 ? '…' : ''}</em></div>
                     </div>
-                    {submitError && <p style={{ margin: 0, color: '#c4161c', fontSize: '0.82rem' }}>⚠ {submitError}</p>}
+                    {submitError && <p style={{ margin: 0, color: 'var(--danger)', fontSize: '0.82rem' }}>⚠ {submitError}</p>}
                     <div style={{ display: 'flex', gap: '0.4rem' }}>
                         <button type="button" className="chip-button" onClick={() => setStep(3)} disabled={submitting}>← Back</button>
                         <button
@@ -434,28 +434,28 @@ export default function BatchTasksClient({ workspaceIds }: { workspaceIds: strin
                         <h3 style={{ margin: 0, fontSize: '0.9rem' }}>{selectedBatch.batch_name}</h3>
                         <button type="button" className="chip-button" onClick={() => setSelectedBatch(null)}>Close</button>
                     </div>
-                    <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: '#57534e', flexWrap: 'wrap', marginBottom: '0.6rem' }}>
+                    <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: 'var(--ink-muted)', flexWrap: 'wrap', marginBottom: '0.6rem' }}>
                         <span>Total: <strong>{selectedBatch.total}</strong></span>
-                        <span style={{ color: '#1a7a4a' }}>✓ {selectedBatch.completed} done</span>
-                        {selectedBatch.failed > 0 && <span style={{ color: '#c4161c' }}>✗ {selectedBatch.failed} failed</span>}
+                        <span style={{ color: 'var(--ok)' }}>✓ {selectedBatch.completed} done</span>
+                        {selectedBatch.failed > 0 && <span style={{ color: 'var(--danger)' }}>✗ {selectedBatch.failed} failed</span>}
                         {selectedBatch.queued > 0 && <span>⏳ {selectedBatch.queued} queued</span>}
                     </div>
-                    <div style={{ height: 8, background: '#f3f4f6', borderRadius: 9999, overflow: 'hidden', marginBottom: '0.75rem', display: 'flex' }}>
-                        <div style={{ height: '100%', width: `${(selectedBatch.completed / selectedBatch.total * 100).toFixed(1)}%`, background: '#1a7a4a', transition: 'width 0.4s' }} />
-                        <div style={{ height: '100%', width: `${(selectedBatch.failed / selectedBatch.total * 100).toFixed(1)}%`, background: '#c4161c' }} />
+                    <div style={{ height: 8, background: 'var(--bg)', borderRadius: 9999, overflow: 'hidden', marginBottom: '0.75rem', display: 'flex' }}>
+                        <div style={{ height: '100%', width: `${(selectedBatch.completed / selectedBatch.total * 100).toFixed(1)}%`, background: 'var(--ok)', transition: 'width 0.4s' }} />
+                        <div style={{ height: '100%', width: `${(selectedBatch.failed / selectedBatch.total * 100).toFixed(1)}%`, background: 'var(--danger)' }} />
                     </div>
                     <div style={{ maxHeight: 240, overflowY: 'auto', display: 'grid', gap: '0.3rem' }}>
                         {selectedBatch.tasks.slice(0, 20).map((t) => (
-                            <div key={t.dispatch_id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', fontSize: '0.78rem', padding: '0.3rem 0', borderBottom: '1px solid #f3f4f6' }}>
-                                <span style={{ minWidth: 22, color: '#78716c', fontFamily: 'ui-monospace, monospace' }}>#{t.index + 1}</span>
-                                <span style={{ flex: 1, color: '#44403c' }}>{t.task_description.slice(0, 100)}{t.task_description.length > 100 ? '…' : ''}</span>
-                                <span style={{ color: t.status === 'completed' ? '#1a7a4a' : t.status === 'failed' ? '#c4161c' : '#78716c', fontWeight: 600, flexShrink: 0 }}>
+                            <div key={t.dispatch_id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', fontSize: '0.78rem', padding: '0.3rem 0', borderBottom: '1px solid var(--line)' }}>
+                                <span style={{ minWidth: 22, color: 'var(--ink-muted)', fontFamily: 'ui-monospace, monospace' }}>#{t.index + 1}</span>
+                                <span style={{ flex: 1, color: 'var(--ink-soft)' }}>{t.task_description.slice(0, 100)}{t.task_description.length > 100 ? '…' : ''}</span>
+                                <span style={{ color: t.status === 'completed' ? 'var(--ok)' : t.status === 'failed' ? 'var(--danger)' : 'var(--ink-muted)', fontWeight: 600, flexShrink: 0 }}>
                                     {t.status}
                                 </span>
                             </div>
                         ))}
                     </div>
-                    {batchLoading && <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#78716c' }}>Updating…</p>}
+                    {batchLoading && <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Updating…</p>}
                 </div>
             )}
 
@@ -473,17 +473,17 @@ export default function BatchTasksClient({ workspaceIds }: { workspaceIds: strin
                                     tabIndex={0}
                                     onClick={() => { void pollBatch(b.batch_id); }}
                                     onKeyDown={(e) => { if (e.key === 'Enter') void pollBatch(b.batch_id); }}
-                                    style={{ padding: '0.65rem 0.75rem', background: '#f9fafb', borderRadius: '0.4rem', border: '1px solid #e5e7eb', cursor: 'pointer' }}
+                                    style={{ padding: '0.65rem 0.75rem', background: 'var(--bg)', borderRadius: '0.4rem', border: '1px solid var(--line)', cursor: 'pointer' }}
                                 >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.83rem', marginBottom: '0.25rem', flexWrap: 'wrap', gap: '0.3rem' }}>
                                         <span style={{ fontWeight: 600 }}>{b.batch_name}</span>
-                                        <span style={{ fontSize: '0.75rem', color: '#78716c' }}>{fmtDate(b.dispatched_at)}</span>
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{fmtDate(b.dispatched_at)}</span>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                                        <div style={{ flex: 1, height: 5, background: '#e5e7eb', borderRadius: 9999, overflow: 'hidden' }}>
-                                            <div style={{ height: '100%', width: `${pct}%`, background: b.status === 'failed' ? '#c4161c' : '#1a7a4a', transition: 'width 0.4s' }} />
+                                        <div style={{ flex: 1, height: 5, background: 'var(--line)', borderRadius: 9999, overflow: 'hidden' }}>
+                                            <div style={{ height: '100%', width: `${pct}%`, background: b.status === 'failed' ? 'var(--danger)' : 'var(--ok)', transition: 'width 0.4s' }} />
                                         </div>
-                                        <span style={{ fontSize: '0.75rem', color: '#57534e', flexShrink: 0 }}>
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', flexShrink: 0 }}>
                                             {b.total} tasks · {b.status}
                                         </span>
                                     </div>

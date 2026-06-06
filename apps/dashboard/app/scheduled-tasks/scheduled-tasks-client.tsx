@@ -318,7 +318,7 @@ export default function ScheduledTasksClient() {
         <div style={{ display: 'grid', gap: '1.5rem' }}>
             {/* Toolbar */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <p style={{ margin: 0, fontSize: '0.83rem', color: '#57534e' }}>
+                <p style={{ margin: 0, fontSize: '0.83rem', color: 'var(--ink-muted)' }}>
                     {jobs.length} schedule{jobs.length !== 1 ? 's' : ''} configured
                     {jobs.filter((j) => j.enabled).length > 0 && (
                         <> · <strong>{jobs.filter((j) => j.enabled).length} active</strong></>
@@ -331,7 +331,7 @@ export default function ScheduledTasksClient() {
 
             {/* Global message */}
             {message && (
-                <p className="message-inline" style={{ color: message.ok ? '#1a7a4a' : '#c4161c' }}>
+                <p style={{ margin: 0, padding: '0.5rem 0.85rem', borderRadius: 8, fontSize: '0.82rem', background: message.ok ? 'var(--ok-bg)' : 'var(--danger-bg)', border: `1px solid ${message.ok ? 'var(--ok-border)' : 'var(--danger-border)'}`, color: message.ok ? 'var(--ok)' : 'var(--danger)' }}>
                     {message.text}
                 </p>
             )}
@@ -345,7 +345,7 @@ export default function ScheduledTasksClient() {
                     style={{ position: 'fixed', inset: 0, background: 'rgba(12,18,28,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '1rem' }}
                     onClick={(e) => { if (e.target === e.currentTarget) closeBuilder(); }}
                 >
-                    <div style={{ width: 'min(36rem, 100%)', maxHeight: '90vh', overflowY: 'auto', background: '#fff', borderRadius: '0.75rem', padding: '1.5rem', boxShadow: '0 24px 48px rgba(15,23,42,0.22)', display: 'grid', gap: '1.25rem' }}>
+                    <div style={{ width: 'min(36rem, 100%)', maxHeight: '90vh', overflowY: 'auto', background: 'var(--card)', borderRadius: '0.75rem', padding: '1.5rem', boxShadow: '0 24px 48px rgba(15,23,42,0.22)', display: 'grid', gap: '1.25rem' }}>
 
                         {/* Header */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -353,7 +353,7 @@ export default function ScheduledTasksClient() {
                                 <h2 style={{ margin: 0, fontSize: '1.1rem' }}>
                                     {editingJob ? 'Edit Schedule' : 'New Scheduled Task'}
                                 </h2>
-                                <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#57534e' }}>
+                                <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: 'var(--ink-muted)' }}>
                                     Your agent will run this task automatically on the schedule you choose.
                                 </p>
                             </div>
@@ -370,7 +370,7 @@ export default function ScheduledTasksClient() {
                                 onChange={(e) => setGoal(e.target.value)}
                                 rows={3}
                                 placeholder="e.g. Summarise open Jira tickets and post to #standup in Slack"
-                                style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: '0.4rem', border: '1px solid #d2d2d7', fontSize: '0.88rem', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5, boxSizing: 'border-box', outline: 'none' }}
+                                style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: '0.4rem', border: '1px solid var(--line)', fontSize: '0.88rem', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5, boxSizing: 'border-box', outline: 'none' }}
                             />
                         </section>
 
@@ -421,9 +421,9 @@ export default function ScheduledTasksClient() {
                                         style={{
                                             padding: '0.3rem 0.75rem',
                                             borderRadius: 9999,
-                                            border: `1px solid ${scheduleMode === mode ? '#0052cc' : '#d2d2d7'}`,
-                                            background: scheduleMode === mode ? 'rgba(0,82,204,0.08)' : '#f9f9f9',
-                                            color: scheduleMode === mode ? '#0052cc' : '#374151',
+                                            border: `1px solid ${scheduleMode === mode ? 'var(--accent)' : 'var(--line)'}`,
+                                            background: scheduleMode === mode ? 'color-mix(in srgb, var(--accent) 8%, transparent)' : 'var(--bg)',
+                                            color: scheduleMode === mode ? 'var(--accent)' : 'var(--ink)',
                                             fontSize: '0.78rem',
                                             fontWeight: scheduleMode === mode ? 700 : 400,
                                             cursor: 'pointer',
@@ -439,7 +439,7 @@ export default function ScheduledTasksClient() {
                                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.6rem' }}>
                                     {scheduleMode === 'weekly' && (
                                         <div>
-                                            <div style={{ fontSize: '0.73rem', fontWeight: 600, color: '#57534e', marginBottom: '0.2rem' }}>Day</div>
+                                            <div style={{ fontSize: '0.73rem', fontWeight: 600, color: 'var(--ink-muted)', marginBottom: '0.2rem' }}>Day</div>
                                             <select
                                                 value={weekday}
                                                 onChange={(e) => setWeekday(e.target.value)}
@@ -453,7 +453,7 @@ export default function ScheduledTasksClient() {
                                     )}
                                     {scheduleMode === 'monthly' && (
                                         <div>
-                                            <div style={{ fontSize: '0.73rem', fontWeight: 600, color: '#57534e', marginBottom: '0.2rem' }}>Day of month</div>
+                                            <div style={{ fontSize: '0.73rem', fontWeight: 600, color: 'var(--ink-muted)', marginBottom: '0.2rem' }}>Day of month</div>
                                             <select
                                                 value={monthDay}
                                                 onChange={(e) => setMonthDay(Number(e.target.value))}
@@ -466,7 +466,7 @@ export default function ScheduledTasksClient() {
                                         </div>
                                     )}
                                     <div>
-                                        <div style={{ fontSize: '0.73rem', fontWeight: 600, color: '#57534e', marginBottom: '0.2rem' }}>Hour</div>
+                                        <div style={{ fontSize: '0.73rem', fontWeight: 600, color: 'var(--ink-muted)', marginBottom: '0.2rem' }}>Hour</div>
                                         <select
                                             value={hour}
                                             onChange={(e) => setHour(Number(e.target.value))}
@@ -478,7 +478,7 @@ export default function ScheduledTasksClient() {
                                         </select>
                                     </div>
                                     <div>
-                                        <div style={{ fontSize: '0.73rem', fontWeight: 600, color: '#57534e', marginBottom: '0.2rem' }}>Minute</div>
+                                        <div style={{ fontSize: '0.73rem', fontWeight: 600, color: 'var(--ink-muted)', marginBottom: '0.2rem' }}>Minute</div>
                                         <select
                                             value={minute}
                                             onChange={(e) => setMinute(Number(e.target.value))}
@@ -517,7 +517,7 @@ export default function ScheduledTasksClient() {
                                         className="approval-input"
                                         style={{ width: '100%', fontFamily: 'ui-monospace, monospace' }}
                                     />
-                                    <p style={{ margin: '0.3rem 0 0', fontSize: '0.75rem', color: '#57534e' }}>
+                                    <p style={{ margin: '0.3rem 0 0', fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
                                         5-field cron: minute hour day-of-month month day-of-week
                                     </p>
                                 </div>
@@ -525,11 +525,11 @@ export default function ScheduledTasksClient() {
 
                             {/* Human-readable summary + cron preview */}
                             {cronPreview && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', background: 'rgba(0,82,204,0.04)', borderRadius: '0.4rem', border: '1px solid rgba(0,82,204,0.12)' }}>
-                                    <span style={{ fontSize: '0.83rem', color: '#0052cc', flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', background: 'color-mix(in srgb, var(--accent) 4%, transparent)', borderRadius: '0.4rem', border: '1px solid color-mix(in srgb, var(--accent) 12%, transparent)' }}>
+                                    <span style={{ fontSize: '0.83rem', color: 'var(--accent)', flex: 1 }}>
                                         {scheduleMode !== 'custom' ? scheduleDesc : ''}
                                     </span>
-                                    <code style={{ fontSize: '0.78rem', fontFamily: 'ui-monospace, monospace', color: '#374151', background: '#f3f4f6', padding: '0.15rem 0.4rem', borderRadius: '0.25rem' }}>
+                                    <code style={{ fontSize: '0.78rem', fontFamily: 'ui-monospace, monospace', color: 'var(--ink)', background: 'var(--bg)', padding: '0.15rem 0.4rem', borderRadius: '0.25rem' }}>
                                         {cronPreview}
                                     </code>
                                 </div>
@@ -565,7 +565,7 @@ export default function ScheduledTasksClient() {
 
                         {/* Save / cancel */}
                         {message && (
-                            <p style={{ margin: 0, fontSize: '0.82rem', color: message.ok ? '#1a7a4a' : '#c4161c' }}>
+                            <p style={{ margin: 0, fontSize: '0.82rem', padding: '0.4rem 0.7rem', borderRadius: 7, background: message.ok ? 'var(--ok-bg)' : 'var(--danger-bg)', border: `1px solid ${message.ok ? 'var(--ok-border)' : 'var(--danger-border)'}`, color: message.ok ? 'var(--ok)' : 'var(--danger)' }}>
                                 {message.text}
                             </p>
                         )}
@@ -588,11 +588,13 @@ export default function ScheduledTasksClient() {
 
             {/* ── Schedule list ────────────────────────────────────────────── */}
             {error && (
-                <p className="message-inline" style={{ color: '#c4161c' }}>{error}</p>
+                <p style={{ margin: 0, padding: '0.6rem 1rem', borderRadius: 8, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: '0.82rem' }}>
+                    {error}
+                </p>
             )}
 
             {loading && jobs.length === 0 && (
-                <div className="card" style={{ padding: '2.5rem', textAlign: 'center', color: '#78716c', fontSize: '0.85rem' }}>
+                <div className="card" style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--ink-muted)', fontSize: '0.85rem' }}>
                     Loading schedules…
                 </div>
             )}
@@ -600,10 +602,10 @@ export default function ScheduledTasksClient() {
             {!loading && jobs.length === 0 && (
                 <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
                     <div style={{ fontSize: '1.75rem', marginBottom: '0.6rem' }}>🗓️</div>
-                    <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1d1d1f', marginBottom: '0.3rem' }}>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.3rem' }}>
                         No schedules yet
                     </div>
-                    <p style={{ margin: '0 0 1rem', fontSize: '0.83rem', color: '#78716c' }}>
+                    <p style={{ margin: '0 0 1rem', fontSize: '0.83rem', color: 'var(--ink-muted)' }}>
                         Create your first scheduled task and let agents work on autopilot.
                     </p>
                     <button type="button" className="primary-action" onClick={openCreate}>
@@ -626,29 +628,29 @@ export default function ScheduledTasksClient() {
                                     {/* Left: job info */}
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.3rem' }}>
-                                            <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1d1d1f' }}>
+                                            <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)' }}>
                                                 {job.name}
                                             </span>
                                             <span style={{
                                                 padding: '0.15rem 0.5rem', borderRadius: 9999, fontSize: '0.72rem', fontWeight: 700,
                                                 textTransform: 'uppercase', letterSpacing: '0.04em',
-                                                background: job.enabled ? 'rgba(26,122,74,0.08)' : '#f3f4f6',
-                                                color: job.enabled ? '#1a7a4a' : '#6b7280',
+                                                background: job.enabled ? 'var(--ok-bg)' : 'var(--bg)',
+                                                color: job.enabled ? 'var(--ok)' : 'var(--ink-muted)',
                                             }}>
                                                 {job.enabled ? 'active' : 'paused'}
                                             </span>
                                             {botRole && (
-                                                <span style={{ padding: '0.15rem 0.5rem', borderRadius: 9999, background: 'rgba(0,82,204,0.07)', color: '#0052cc', fontSize: '0.72rem', fontWeight: 600 }}>
+                                                <span style={{ padding: '0.15rem 0.5rem', borderRadius: 9999, background: 'color-mix(in srgb, var(--accent) 7%, transparent)', color: 'var(--accent)', fontSize: '0.72rem', fontWeight: 600 }}>
                                                     {botRole}
                                                 </span>
                                             )}
                                         </div>
-                                        <p style={{ margin: '0 0 0.45rem', fontSize: '0.83rem', color: '#44403c', lineHeight: 1.45 }}>
+                                        <p style={{ margin: '0 0 0.45rem', fontSize: '0.83rem', color: 'var(--ink-soft)', lineHeight: 1.45 }}>
                                             {job.goal}
                                         </p>
-                                        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: '#78716c', flexWrap: 'wrap' }}>
+                                        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: 'var(--ink-muted)', flexWrap: 'wrap' }}>
                                             <span>
-                                                <code style={{ fontFamily: 'ui-monospace, monospace', background: '#f3f4f6', padding: '0.1rem 0.35rem', borderRadius: '0.2rem' }}>
+                                                <code style={{ fontFamily: 'ui-monospace, monospace', background: 'var(--bg)', padding: '0.1rem 0.35rem', borderRadius: '0.2rem' }}>
                                                     {job.cronExpr}
                                                 </code>
                                             </span>
@@ -681,7 +683,7 @@ export default function ScheduledTasksClient() {
                                         <button
                                             type="button"
                                             onClick={() => void handleDelete(job)}
-                                            style={{ padding: '0.3rem 0.65rem', borderRadius: 9999, border: '1px solid rgba(196,22,28,0.25)', background: 'rgba(196,22,28,0.05)', color: '#c4161c', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600 }}
+                                            style={{ padding: '0.3rem 0.65rem', borderRadius: 9999, border: '1px solid var(--danger-border)', background: 'var(--danger-bg)', color: 'var(--danger)', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600 }}
                                         >
                                             Delete
                                         </button>
