@@ -470,6 +470,23 @@ export async function handleAgentfarmSupportAction(
                     gatewayBaseUrl,
                     serviceToken,
                 });
+
+                // Feed the lesson (episodic) flywheel — classify and store the resolution
+                // as a long-term lesson so future diagnoses benefit from this outcome.
+                const workspaceId = params.workspaceId ?? tenantId; // tenant-scoped fallback
+                const store = new GatewaySupportLessonStore(gatewayBaseUrl, serviceToken);
+                await ingestSupportFeedback(
+                    {
+                        tenantId,
+                        workspaceId,
+                        taskId: params.taskId,
+                        issueId,
+                        actionType: 'agentfarm_support_resolve',
+                        correlationId: issueId || params.taskId,
+                    },
+                    [{ body: resolutionNotes }],
+                    store,
+                );
             }
 
             return {

@@ -13,6 +13,8 @@
  */
 
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 
 // ---------------------------------------------------------------------------
@@ -58,11 +60,120 @@ export interface SupportDiagnosisStepRecord {
 }
 
 // ---------------------------------------------------------------------------
-// In-process store (replaced by Prisma once migration runs — see Sprint 20 notes)
+// Write-through store — in-memory Map backed by Prisma for persistence.
+// Synchronous get/set keep all WS-route callsites unchanged; Prisma writes
+// are fire-and-forget so they never block the hot path.
 // ---------------------------------------------------------------------------
 
-export const issueStore = new Map<string, SupportIssueRecord>();
-export const stepStore = new Map<string, SupportDiagnosisStepRecord[]>();
+let _prisma: PrismaClient | null = null;
+
+function prismaIssueToRecord(raw: {
+    id: string; tenantId: string; workspaceId: string | null; title: string; description: string;
+    status: string; severity: string; tierReached: number | null; fixApplied: boolean;
+    diagnosisReport: unknown; resolutionNotes: string | null; escalatedTo: string | null;
+    createdAt: Date; resolvedAt: Date | null;
+}): SupportIssueRecord {
+    return {
+        id: raw.id, tenantId: raw.tenantId, workspaceId: raw.workspaceId,
+        title: raw.title, description: raw.description,
+        status: raw.status as SupportIssueStatus, severity: raw.severity as SupportIssueSeverity,
+        tierReached: raw.tierReached, fixApplied: raw.fixApplied,
+        diagnosisReport: raw.diagnosisReport as Record<string, unknown> | null,
+        resolutionNotes: raw.resolutionNotes, escalatedTo: raw.escalatedTo,
+        createdAt: raw.createdAt.toISOString(),
+        resolvedAt: raw.resolvedAt ? raw.resolvedAt.toISOString() : null,
+    };
+}
+
+class WriteThroughIssueStore {
+    private mem = new Map<string, SupportIssueRecord>();
+
+    get(id: string): SupportIssueRecord | undefined { return this.mem.get(id); }
+    has(id: string): boolean { return this.mem.has(id); }
+    get size(): number { return this.mem.size; }
+    values(): IterableIterator<SupportIssueRecord> { return this.mem.values(); }
+    clear(): void { this.mem.clear(); }
+    delete(id: string): boolean { return this.mem.delete(id); }
+
+    set(id: string, issue: SupportIssueRecord): this {
+        this.mem.set(id, issue);
+        if (_prisma) {
+            void this._persist(issue).catch((err: unknown) =>
+                console.warn('[issueStore] Prisma write failed:', err instanceof Error ? err.message : String(err))
+            );
+        }
+        return this;
+    }
+
+    private async _persist(issue: SupportIssueRecord): Promise<void> {
+        if (!_prisma) return;
+        const diagnosisReport = issue.diagnosisReport
+            ? (JSON.parse(JSON.stringify(issue.diagnosisReport)) as Prisma.InputJsonValue)
+            : Prisma.JsonNull;
+        const data = {
+            tenantId: issue.tenantId,
+            workspaceId: issue.workspaceId ?? undefined,
+            title: issue.title,
+            description: issue.description,
+            status: issue.status as never,
+            severity: issue.severity as never,
+            tierReached: issue.tierReached ?? undefined,
+            fixApplied: issue.fixApplied,
+            diagnosisReport,
+            resolutionNotes: issue.resolutionNotes ?? undefined,
+            escalatedTo: issue.escalatedTo ?? undefined,
+            resolvedAt: issue.resolvedAt ? new Date(issue.resolvedAt) : undefined,
+        };
+        await _prisma.supportIssue.upsert({
+            where: { id: issue.id },
+            create: { id: issue.id, createdAt: new Date(issue.createdAt), ...data },
+            update: data,
+        });
+    }
+
+    async loadFromDb(): Promise<void> {
+        if (!_prisma) return;
+        try {
+            const rows = await _prisma.supportIssue.findMany({ orderBy: { createdAt: 'desc' }, take: 500 });
+            for (const row of rows) { this.mem.set(row.id, prismaIssueToRecord(row)); }
+        } catch (err) {
+            console.warn('[issueStore] loadFromDb failed:', err instanceof Error ? err.message : String(err));
+        }
+    }
+}
+
+class WriteThroughStepStore {
+    private mem = new Map<string, SupportDiagnosisStepRecord[]>();
+
+    get(id: string): SupportDiagnosisStepRecord[] | undefined { return this.mem.get(id); }
+    clear(): void { this.mem.clear(); }
+
+    set(id: string, steps: SupportDiagnosisStepRecord[]): this {
+        this.mem.set(id, steps);
+        if (_prisma && steps.length > 0) {
+            const last = steps[steps.length - 1]!;
+            void this._persistStep(last).catch(() => {/* best-effort */});
+        }
+        return this;
+    }
+
+    private async _persistStep(step: SupportDiagnosisStepRecord): Promise<void> {
+        if (!_prisma) return;
+        const metadata = JSON.parse(JSON.stringify(step.metadata)) as Prisma.InputJsonValue;
+        await _prisma.supportDiagnosisStep.upsert({
+            where: { id: step.id },
+            create: {
+                id: step.id, issueId: step.issueId, stepType: step.stepType,
+                description: step.description, status: step.status as never,
+                metadata, createdAt: new Date(step.createdAt),
+            },
+            update: { status: step.status as never, metadata },
+        });
+    }
+}
+
+export const issueStore = new WriteThroughIssueStore();
+export const stepStore = new WriteThroughStepStore();
 
 // ---------------------------------------------------------------------------
 // SSE helpers — push issue-list updates to connected clients
@@ -86,6 +197,8 @@ export function pushIssueUpdate(issue: SupportIssueRecord): void {
 
 export interface RegisterSupportIssueRoutesOptions {
     getSession: (req: FastifyRequest) => SessionContext | null;
+    /** Optional Prisma client — enables write-through persistence and startup load. */
+    prisma?: PrismaClient;
 }
 
 // ---------------------------------------------------------------------------
@@ -97,6 +210,12 @@ export async function registerSupportIssueRoutes(
     opts: RegisterSupportIssueRoutesOptions,
 ): Promise<void> {
     const { getSession } = opts;
+
+    // Wire up Prisma if provided, then load existing issues into the memory cache
+    if (opts.prisma) {
+        _prisma = opts.prisma;
+        await issueStore.loadFromDb();
+    }
 
     // ── POST /v1/support/issues ────────────────────────────────────────────
     app.post<{ Body: { title?: unknown; description?: unknown; severity?: unknown; workspaceId?: unknown } }>(
@@ -221,6 +340,22 @@ export async function registerSupportIssueRoutes(
             };
             issueStore.set(resolved.id, resolved);
             pushIssueUpdate(resolved);
+
+            // Fire-and-forget lesson ingestion — dispatch to agent-runtime so the
+            // support agent learns from every manually resolved issue.
+            if (notes && notes.length > 20) {
+                const gatewayBaseUrl = process.env['GATEWAY_BASE_URL'] ?? 'http://localhost:3000';
+                const serviceToken = process.env['RUNTIME_TASK_SHARED_TOKEN'] ?? '';
+                void fetch(`${gatewayBaseUrl.replace(/\/+$/, '')}/v1/runtime/actions/internal`, {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json', Authorization: `Bearer ${serviceToken}` },
+                    body: JSON.stringify({
+                        actionType: 'agentfarm_support_resolve',
+                        payload: { issueId: resolved.id, resolutionNotes: notes, tenantId: resolved.tenantId },
+                    }),
+                    signal: AbortSignal.timeout(10_000),
+                }).catch(() => {/* best-effort */});
+            }
 
             return reply.send(resolved);
         },

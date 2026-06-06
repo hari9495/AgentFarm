@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -368,7 +369,27 @@ function PortalVoicePanel() {
 type Tab = 'chat' | 'voice';
 
 export default function PortalSupportPage() {
+    const router = useRouter();
+    const [sessionReady, setSessionReady] = useState(false);
     const [tab, setTab] = useState<Tab>('chat');
+
+    // Guard: verify portal_session on mount — redirect to login if not authenticated
+    useEffect(() => {
+        fetch('/api/portal/auth/me', { credentials: 'same-origin' })
+            .then((res) => {
+                if (!res.ok) { router.replace('/portal/login'); return; }
+                setSessionReady(true);
+            })
+            .catch(() => router.replace('/portal/login'));
+    }, [router]);
+
+    if (!sessionReady) {
+        return (
+            <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>Loading…</p>
+            </main>
+        );
+    }
 
     return (
         <main style={{ minHeight: '100vh', background: 'var(--bg)', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>

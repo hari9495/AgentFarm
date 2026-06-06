@@ -321,7 +321,7 @@ export const registerAllRoutes = async (
         if (!data) return null;
         return { userId: data.accountId, tenantId: data.tenantId, workspaceIds: [], expiresAt: Date.now() + 3_600_000 };
     };
-    await registerSupportIssueRoutes(app, { getSession });
+    await registerSupportIssueRoutes(app, { getSession, prisma });
     await registerSupportChatSessionRoutes(app, { getSession, getPortalSession });
     await registerSupportVoiceSessionRoutes(app, { getSession, getPortalSession });
 
