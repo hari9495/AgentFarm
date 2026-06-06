@@ -19,6 +19,7 @@
  */
 
 import { WebSocketServer, type WebSocket } from 'ws';
+import type { IncomingMessage } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { issueStore, addDiagnosisStep, updateIssueStatus, pushIssueUpdate, type SupportIssueRecord } from './support-issue.js';
@@ -277,8 +278,20 @@ export async function registerSupportChatSessionRoutes(
         })();
     });
 
-    wss.on('connection', (ws: WebSocket, _req: unknown, session: SessionContext) => {
+    wss.on('connection', (ws: WebSocket, req: unknown, session: SessionContext) => {
+        // Read optional ?issueId= from the upgrade request URL for session resume
+        const httpReq = req as IncomingMessage;
+        const upgradeUrl = new URL(httpReq.url ?? '/', 'http://localhost');
+        const resumeIssueId = upgradeUrl.searchParams.get('issueId');
+
+        // If a valid issueId belonging to this tenant was provided, resume it
         let currentIssueId: string | null = null;
+        if (resumeIssueId && issueStore.has(resumeIssueId)) {
+            const existing = issueStore.get(resumeIssueId)!;
+            if (existing.tenantId === session.tenantId) {
+                currentIssueId = resumeIssueId;
+            }
+        }
 
         // Inactivity timer — resets on every message, fires if the client goes silent
         let inactivityTimer: NodeJS.Timeout | null = null;

@@ -33,6 +33,7 @@ function PortalChatPanel() {
     const [issueId, setIssueId] = useState<string | null>(null);
     const [wsError, setWsError] = useState<string | null>(null);
     const wsRef = useRef<WebSocket | null>(null);
+    const issueIdRef = useRef<string | null>(null); // stays current inside stale closures
     const bottomRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -40,7 +41,10 @@ function PortalChatPanel() {
     }, [messages.length]);
 
     const connect = useCallback(() => {
-        const ws = new WebSocket(`${getApiWsBase()}/v1/support/chat-session`);
+        // On reconnect, pass the existing issueId so the server resumes the same ticket
+        const base = `${getApiWsBase()}/v1/support/chat-session`;
+        const url = issueIdRef.current ? `${base}?issueId=${encodeURIComponent(issueIdRef.current)}` : base;
+        const ws = new WebSocket(url);
         wsRef.current = ws;
 
         ws.onopen = () => { setConnected(true); setWsError(null); };
@@ -55,7 +59,10 @@ function PortalChatPanel() {
             try { frame = JSON.parse(e.data as string) as ChatFrame; } catch { return; }
 
             if (frame.type === 'connected') {
-                if (frame.issueId) setIssueId(frame.issueId);
+                if (frame.issueId) {
+                    setIssueId(frame.issueId);
+                    issueIdRef.current = frame.issueId; // keep ref in sync for reconnect
+                }
                 return;
             }
             if (frame.type === 'step') {
@@ -186,6 +193,8 @@ function PortalVoicePanel() {
     const [error, setError] = useState<string | null>(null);
     const [playingAudio, setPlayingAudio] = useState(false);
 
+    const [issueId, setIssueId] = useState<string | null>(null);
+    const issueIdRef = useRef<string | null>(null);
     const wsRef = useRef<WebSocket | null>(null);
     const audioCtxRef = useRef<AudioContext | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
@@ -249,7 +258,9 @@ function PortalVoicePanel() {
         }
         streamRef.current = stream;
 
-        const ws = new WebSocket(`${getApiWsBase()}/v1/support/voice-session`);
+        const voiceBase = `${getApiWsBase()}/v1/support/voice-session`;
+        const voiceUrl = issueIdRef.current ? `${voiceBase}?issueId=${encodeURIComponent(issueIdRef.current)}` : voiceBase;
+        const ws = new WebSocket(voiceUrl);
         wsRef.current = ws;
         ws.binaryType = 'arraybuffer';
 
@@ -261,7 +272,10 @@ function PortalVoicePanel() {
             let frame: VoiceFrame;
             try { frame = JSON.parse(e.data as string) as VoiceFrame; } catch { return; }
 
-            if (frame.type === 'connected') { startMicCapture(stream, ws); return; }
+            if (frame.type === 'connected') {
+                if (frame.issueId) { setIssueId(frame.issueId); issueIdRef.current = frame.issueId; }
+                startMicCapture(stream, ws); return;
+            }
             if (frame.type === 'transcript_partial') {
                 setTranscripts((p) => {
                     const last = p[p.length - 1];

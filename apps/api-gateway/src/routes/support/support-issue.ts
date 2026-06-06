@@ -393,6 +393,34 @@ export async function registerSupportIssueRoutes(
             tier1AutoFixRate: tier1Rate,
         });
     });
+
+    // ── GET /v1/portal/support/issues — portal-scoped issue list ─────────────
+    // Auth: portal_session cookie verified against DB (via opts.prisma).
+    // Falls back to an empty list if prisma is not configured.
+    app.get('/v1/portal/support/issues', async (req, reply) => {
+        const rawCookie = req.headers['cookie'];
+        if (typeof rawCookie !== 'string') return reply.code(401).send({ error: 'unauthorized' });
+
+        const item = rawCookie.split(';').map((v) => v.trim()).find((v) => v.startsWith('portal_session='));
+        if (!item) return reply.code(401).send({ error: 'unauthorized' });
+
+        const token = decodeURIComponent(item.slice('portal_session='.length));
+
+        if (!opts.prisma) return reply.code(503).send({ error: 'not_configured' });
+
+        const { verifyPortalSession } = await import('../../lib/portal-session.js');
+        const portalSession = await verifyPortalSession(token, opts.prisma);
+        if (!portalSession) return reply.code(401).send({ error: 'unauthorized' });
+
+        const { searchParams } = new URL(req.url, 'http://localhost');
+        const status = searchParams.get('status') ?? undefined;
+
+        let issues = [...issueStore.values()].filter((i) => i.tenantId === portalSession.tenantId);
+        if (status) issues = issues.filter((i) => i.status === status);
+        issues.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        return reply.send({ issues });
+    });
 }
 
 // ---------------------------------------------------------------------------

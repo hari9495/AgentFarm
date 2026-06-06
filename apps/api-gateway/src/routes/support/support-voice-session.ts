@@ -17,6 +17,7 @@
  */
 
 import { WebSocketServer, type WebSocket } from 'ws';
+import type { IncomingMessage } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { SarvamRealtimeSttClient, SarvamRealtimeTtsClient } from '@agentfarm/meeting-agent';
@@ -164,7 +165,12 @@ export async function registerSupportVoiceSessionRoutes(
         })();
     });
 
-    wss.on('connection', (ws: WebSocket, _req: unknown, session: SessionContext) => {
+    wss.on('connection', (ws: WebSocket, req: unknown, session: SessionContext) => {
+        // Read optional ?issueId= from the upgrade request URL for session resume
+        const httpReq = req as IncomingMessage;
+        const upgradeUrl = new URL(httpReq.url ?? '/', 'http://localhost');
+        const resumeIssueId = upgradeUrl.searchParams.get('issueId');
+
         let currentIssueId: string | null = null;
         let currentLanguageCode = 'hi-IN';
 
@@ -183,26 +189,35 @@ export async function registerSupportVoiceSessionRoutes(
             }, sessionTimeoutMs);
         }
 
-        // Create or reuse an issue for this voice session
-        const issue: SupportIssueRecord = {
-            id: randomUUID(),
-            tenantId: session.tenantId,
-            workspaceId: null,
-            title: 'Voice support session',
-            description: 'Voice support session initiated',
-            status: 'open',
-            severity: 'medium',
-            tierReached: null,
-            fixApplied: false,
-            diagnosisReport: null,
-            resolutionNotes: null,
-            escalatedTo: null,
-            createdAt: new Date().toISOString(),
-            resolvedAt: null,
-        };
-        issueStore.set(issue.id, issue);
-        pushIssueUpdate(issue);
-        currentIssueId = issue.id;
+        // Resume existing issue if ?issueId= was provided and belongs to this tenant;
+        // otherwise create a fresh issue for this voice session.
+        const resumable = resumeIssueId && issueStore.has(resumeIssueId)
+            ? issueStore.get(resumeIssueId)!
+            : null;
+
+        if (resumable && resumable.tenantId === session.tenantId) {
+            currentIssueId = resumable.id;
+        } else {
+            const issue: SupportIssueRecord = {
+                id: randomUUID(),
+                tenantId: session.tenantId,
+                workspaceId: null,
+                title: 'Voice support session',
+                description: 'Voice support session initiated',
+                status: 'open',
+                severity: 'medium',
+                tierReached: null,
+                fixApplied: false,
+                diagnosisReport: null,
+                resolutionNotes: null,
+                escalatedTo: null,
+                createdAt: new Date().toISOString(),
+                resolvedAt: null,
+            };
+            issueStore.set(issue.id, issue);
+            pushIssueUpdate(issue);
+            currentIssueId = issue.id;
+        }
 
         sendFrame(ws, { type: 'connected', issueId: currentIssueId });
 
