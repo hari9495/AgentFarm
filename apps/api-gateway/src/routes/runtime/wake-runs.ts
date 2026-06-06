@@ -78,20 +78,25 @@ export const registerWakeRunRoutes = async (
             return reply.code(400).send({ error: 'invalid_request', message: 'bot_id is required.' });
         }
 
-        const response = await fetch(`${orchestratorBaseUrl}/v1/wake/schedule`, {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({
-                tenant_id: session.tenantId,
-                workspace_id: workspaceId,
-                bot_id: botId,
-                wake_source: wakeSource,
-                dedupe_key: request.body?.dedupe_key,
-                interval: request.body?.interval,
-                correlation_id: request.body?.correlation_id,
-                timestamp: request.body?.timestamp,
-            }),
-        });
+        let response: Response;
+        try {
+            response = await fetch(`${orchestratorBaseUrl}/v1/wake/schedule`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                    tenant_id: session.tenantId,
+                    workspace_id: workspaceId,
+                    bot_id: botId,
+                    wake_source: wakeSource,
+                    dedupe_key: request.body?.dedupe_key,
+                    interval: request.body?.interval,
+                    correlation_id: request.body?.correlation_id,
+                    timestamp: request.body?.timestamp,
+                }),
+            });
+        } catch {
+            return reply.code(503).send({ error: 'orchestrator_unavailable', message: 'Orchestrator service is not reachable.' });
+        }
 
         const body = await response.json().catch(() => ({
             error: 'upstream_error',
@@ -125,7 +130,12 @@ export const registerWakeRunRoutes = async (
         if (query.bot_id?.trim()) params.set('bot_id', query.bot_id.trim());
         if (query.status?.trim()) params.set('status', query.status.trim());
 
-        const response = await fetch(`${orchestratorBaseUrl}/v1/wake/runs?${params.toString()}`);
+        let response: Response;
+        try {
+            response = await fetch(`${orchestratorBaseUrl}/v1/wake/runs?${params.toString()}`);
+        } catch {
+            return reply.code(503).send({ error: 'orchestrator_unavailable', message: 'Orchestrator service is not reachable.', runs: [] });
+        }
 
         const body = await response.json().catch(() => ({
             error: 'upstream_error',

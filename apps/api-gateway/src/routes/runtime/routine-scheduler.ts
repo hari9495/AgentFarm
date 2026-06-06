@@ -36,6 +36,16 @@ export type RegisterRoutineSchedulerRoutesOptions = {
 
 const DEFAULT_ORCHESTRATOR_BASE_URL = process.env.ORCHESTRATOR_API_BASE_URL ?? 'http://localhost:3011';
 
+const ORCHESTRATOR_UNAVAILABLE = { error: 'orchestrator_unavailable', message: 'Orchestrator service is not reachable.' };
+
+async function safeFetch(url: string, init?: RequestInit): Promise<Response | null> {
+    try {
+        return await fetch(url, init);
+    } catch {
+        return null;
+    }
+}
+
 const normalizeBaseUrl = (value: string | undefined): string => {
     const candidate = value?.trim();
     if (!candidate) return DEFAULT_ORCHESTRATOR_BASE_URL;
@@ -81,10 +91,11 @@ export const registerRoutineSchedulerRoutes = async (
             return reply.code(400).send({ error: 'invalid_request', message: 'flagKey path param is required.' });
         }
 
-        const response = await fetch(`${orchestratorBaseUrl}/v1/feature-flags/${encodeURIComponent(flagKey)}/enable`, {
+        const response = await safeFetch(`${orchestratorBaseUrl}/v1/feature-flags/${encodeURIComponent(flagKey)}/enable`, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
         });
+        if (!response) return reply.code(503).send(ORCHESTRATOR_UNAVAILABLE);
 
         const body = await response.json().catch(() => ({
             error: 'upstream_error',
@@ -114,10 +125,11 @@ export const registerRoutineSchedulerRoutes = async (
             return reply.code(400).send({ error: 'invalid_request', message: 'flagKey path param is required.' });
         }
 
-        const response = await fetch(`${orchestratorBaseUrl}/v1/feature-flags/${encodeURIComponent(flagKey)}/disable`, {
+        const response = await safeFetch(`${orchestratorBaseUrl}/v1/feature-flags/${encodeURIComponent(flagKey)}/disable`, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
         });
+        if (!response) return reply.code(503).send(ORCHESTRATOR_UNAVAILABLE);
 
         const body = await response.json().catch(() => ({
             error: 'upstream_error',
@@ -190,7 +202,7 @@ export const registerRoutineSchedulerRoutes = async (
             });
         }
 
-        const response = await fetch(`${orchestratorBaseUrl}/v1/schedules`, {
+        const response = await safeFetch(`${orchestratorBaseUrl}/v1/schedules`, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({
@@ -211,6 +223,7 @@ export const registerRoutineSchedulerRoutes = async (
                 correlation_id: request.body?.correlation_id,
             }),
         });
+        if (!response) return reply.code(503).send(ORCHESTRATOR_UNAVAILABLE);
 
         const body = await response.json().catch(() => ({
             error: 'upstream_error',
@@ -229,7 +242,8 @@ export const registerRoutineSchedulerRoutes = async (
 
         const { id } = request.params as { id: string };
 
-        const response = await fetch(`${orchestratorBaseUrl}/v1/schedules/${encodeURIComponent(id)}`);
+        const response = await safeFetch(`${orchestratorBaseUrl}/v1/schedules/${encodeURIComponent(id)}`);
+        if (!response) return reply.code(503).send(ORCHESTRATOR_UNAVAILABLE);
 
         if (response.status === 404) {
             return reply.code(404).send({ error: 'not_found', message: 'Scheduled task not found.' });
@@ -260,7 +274,8 @@ export const registerRoutineSchedulerRoutes = async (
 
         const { botId } = request.params as { botId: string };
 
-        const response = await fetch(`${orchestratorBaseUrl}/v1/bots/${encodeURIComponent(botId)}/schedules`);
+        const response = await safeFetch(`${orchestratorBaseUrl}/v1/bots/${encodeURIComponent(botId)}/schedules`);
+        if (!response) return reply.code(503).send(ORCHESTRATOR_UNAVAILABLE);
 
         const body = await response.json().catch(() => ({
             error: 'upstream_error',
@@ -281,11 +296,12 @@ export const registerRoutineSchedulerRoutes = async (
 
         const { id } = request.params as { id: string };
 
-        const response = await fetch(`${orchestratorBaseUrl}/v1/schedules/${encodeURIComponent(id)}/runs`, {
+        const response = await safeFetch(`${orchestratorBaseUrl}/v1/schedules/${encodeURIComponent(id)}/runs`, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ correlation_id: request.body?.correlation_id }),
         });
+        if (!response) return reply.code(503).send(ORCHESTRATOR_UNAVAILABLE);
 
         const body = await response.json().catch(() => ({
             error: 'upstream_error',
@@ -306,7 +322,7 @@ export const registerRoutineSchedulerRoutes = async (
 
         const { id, runId } = request.params as { id: string; runId: string };
 
-        const response = await fetch(
+        const response = await safeFetch(
             `${orchestratorBaseUrl}/v1/schedules/${encodeURIComponent(id)}/runs/${encodeURIComponent(runId)}/complete`,
             {
                 method: 'POST',
@@ -317,6 +333,7 @@ export const registerRoutineSchedulerRoutes = async (
                 }),
             },
         );
+        if (!response) return reply.code(503).send(ORCHESTRATOR_UNAVAILABLE);
 
         const body = await response.json().catch(() => ({
             error: 'upstream_error',
@@ -345,7 +362,8 @@ export const registerRoutineSchedulerRoutes = async (
         const limitParam = query.limit ? Number(query.limit) : 10;
         const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.floor(limitParam) : 10;
 
-        const response = await fetch(`${orchestratorBaseUrl}/v1/scheduler/errors?limit=${limit}`);
+        const response = await safeFetch(`${orchestratorBaseUrl}/v1/scheduler/errors?limit=${limit}`);
+        if (!response) return reply.code(503).send(ORCHESTRATOR_UNAVAILABLE);
 
         const body = await response.json().catch(() => ({
             error: 'upstream_error',

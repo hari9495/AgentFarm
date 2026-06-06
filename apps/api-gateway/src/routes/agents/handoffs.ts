@@ -28,6 +28,16 @@ const parseCompletionStatus = (value: unknown): AgentHandoffStatus | null => {
 
 const DEFAULT_ORCHESTRATOR_BASE_URL = process.env.ORCHESTRATOR_API_BASE_URL ?? 'http://localhost:3011';
 
+const ORCHESTRATOR_UNAVAILABLE = { error: 'orchestrator_unavailable', message: 'Orchestrator service is not reachable.' };
+
+async function safeFetch(url: string, init?: RequestInit): Promise<Response | null> {
+    try {
+        return await fetch(url, init);
+    } catch {
+        return null;
+    }
+}
+
 const normalizeBaseUrl = (value: string | undefined): string => {
     const candidate = value?.trim();
     if (!candidate) {
@@ -69,7 +79,7 @@ export const registerHandoffRoutes = async (
             });
         }
 
-        const response = await fetch(`${orchestratorBaseUrl}/v1/agent-handoffs`, {
+        const response = await safeFetch(`${orchestratorBaseUrl}/v1/agent-handoffs`, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({
@@ -83,6 +93,7 @@ export const registerHandoffRoutes = async (
                 handoff_context: request.body?.handoff_context,
             }),
         });
+        if (!response) return reply.code(503).send(ORCHESTRATOR_UNAVAILABLE);
 
         const body = await response.json().catch(() => ({
             error: 'upstream_error',
@@ -122,7 +133,7 @@ export const registerHandoffRoutes = async (
 
             const status = parseCompletionStatus(request.body?.status) ?? 'completed';
 
-            const response = await fetch(`${orchestratorBaseUrl}/v1/agent-handoffs/${encodeURIComponent(request.params.handoffId)}/status`, {
+            const response = await safeFetch(`${orchestratorBaseUrl}/v1/agent-handoffs/${encodeURIComponent(request.params.handoffId)}/status`, {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({
@@ -138,6 +149,7 @@ export const registerHandoffRoutes = async (
                             : null,
                 }),
             });
+            if (!response) return reply.code(503).send(ORCHESTRATOR_UNAVAILABLE);
 
             const body = await response.json().catch(() => ({
                 error: 'upstream_error',

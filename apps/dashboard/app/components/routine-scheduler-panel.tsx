@@ -72,7 +72,7 @@ type Props = {
 
 export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId }: Props) {
     const [tasks, setTasks] = useState<ScheduledTaskRecord[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!!botId);
     const [error, setError] = useState<string | null>(null);
 
     // Create form state
@@ -91,6 +91,7 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
     const [triggerResult, setTriggerResult] = useState<{ taskId: string; message: string } | null>(null);
 
     const loadTasks = useCallback(async () => {
+        if (!botId) return;
         setLoading(true);
         setError(null);
         try {
@@ -304,7 +305,12 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
             )}
 
             {/* Task list */}
-            {!loading && tasks.length === 0 && !error && (
+            {!botId && (
+                <p style={{ fontSize: '0.85rem', color: 'var(--ink-muted)', textAlign: 'center', padding: '2rem 0' }}>
+                    No bot selected. Pass <code>?botId=&lt;id&gt;</code> in the URL to view routine tasks.
+                </p>
+            )}
+            {botId && !loading && tasks.length === 0 && !error && (
                 <p style={{ fontSize: '0.85rem', color: 'var(--ink-muted)', textAlign: 'center', padding: '2rem 0' }}>
                     No routine tasks scheduled for this bot.
                 </p>

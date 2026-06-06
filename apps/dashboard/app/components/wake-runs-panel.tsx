@@ -116,8 +116,12 @@ export default function WakeRunsPanel({ workspaceId }: { workspaceId: string }) 
         try {
             const params = new URLSearchParams({ workspace_id: workspaceId });
             const res = await fetch(`${API_BASE}/api/wake/runs?${params.toString()}`);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                setError(data?.message ?? `Failed to load wake runs (HTTP ${res.status})`);
+                setLoading(false);
+                return;
+            }
             setRuns(Array.isArray(data) ? data : (data.runs ?? []));
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Failed to load wake runs');
