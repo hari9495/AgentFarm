@@ -24,6 +24,7 @@ import { registerGovernanceKPIRoutes } from './governance/governance-kpis.js';
 import { registerQuestionRoutes } from './agents/questions.js';
 import { registerSupportIssueRoutes } from './support/support-issue.js';
 import { registerSupportVoiceSessionRoutes } from './support/support-voice-session.js';
+import { registerAuthRoutes, type AuthRepo } from './auth/auth.js';
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -465,5 +466,52 @@ describe('AUTH — support voice session (upgrade rejected without valid session
             'registerSupportVoiceSessionRoutes should register without error',
         );
         await app.close();
+    });
+});
+
+// ── 12. Auth profile & account management ────────────────────────────────────
+// GET /v1/auth/me, PATCH /v1/auth/profile, POST /v1/auth/change-password
+// all require a valid internal session — must return 401 when unauthenticated.
+
+process.env['API_SESSION_SECRET'] ??= 'test-secret-32-chars-minimum-ok!!';
+
+const stubAuthRepo: AuthRepo = {
+    async findUserByEmail() { throw new Error('should not be called'); },
+    async findUserById() { throw new Error('should not be called'); },
+    async updateUserName() { throw new Error('should not be called'); },
+    async updateUserPassword() { throw new Error('should not be called'); },
+    async runSignupTransaction() { throw new Error('should not be called'); },
+    async getWorkspacesForTenant() { throw new Error('should not be called'); },
+};
+
+describe('AUTH — auth profile routes return 401 without session', () => {
+    const buildApp = async () => {
+        const app = Fastify({ logger: false });
+        await registerAuthRoutes(app, { repo: stubAuthRepo, getSession: noSession });
+        return app;
+    };
+
+    it('GET /v1/auth/me → 401', async () => {
+        const app = await buildApp();
+        const res = await app.inject({ method: 'GET', url: '/v1/auth/me' });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('PATCH /v1/auth/profile → 401', async () => {
+        const app = await buildApp();
+        const res = await app.inject({
+            method: 'PATCH', url: '/v1/auth/profile',
+            payload: { name: 'Test User' },
+        });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('POST /v1/auth/change-password → 401', async () => {
+        const app = await buildApp();
+        const res = await app.inject({
+            method: 'POST', url: '/v1/auth/change-password',
+            payload: { currentPassword: 'oldpass123', newPassword: 'newpass123' },
+        });
+        assert.equal(res.statusCode, 401);
     });
 });
