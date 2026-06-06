@@ -367,7 +367,15 @@ export function EvidenceCompliancePanel({ workspaceId, initialEvents, focusedCor
                         events.map((event) => (
                             <tr key={event.event_id} className={focusedCorrelationId === event.correlation_id ? 'audit-table-row-highlight' : undefined}>
                                 <td>{new Date(event.created_at).toLocaleString('en-US')}</td>
-                                <td>{event.severity}</td>
+                                <td>
+                                    <span className={
+                                        event.severity === 'critical' || event.severity === 'error' || event.severity === 'high'
+                                            ? 'badge high'
+                                            : event.severity === 'warn' || event.severity === 'warning'
+                                                ? 'badge warn'
+                                                : 'badge ok'
+                                    }>{event.severity}</span>
+                                </td>
                                 <td>{event.event_type}</td>
                                 <td>
                                     <div className="audit-summary-cell">
