@@ -45,6 +45,10 @@ export type PortalAuthRepo = {
     deleteSession(id: string): Promise<void>;
     updateSessionLastSeen(id: string): Promise<void>;
     updateAccountPassword(accountId: string, passwordHash: string): Promise<void>;
+    // Password reset
+    createResetToken(data: { accountId: string; tenantId: string; token: string; expiresAt: Date }): Promise<void>;
+    findResetToken(token: string): Promise<{ id: string; accountId: string; tenantId: string; expiresAt: Date; usedAt: Date | null } | null>;
+    markResetTokenUsed(id: string): Promise<void>;
 };
 
 export type RegisterPortalAuthRoutesOptions = {
@@ -104,6 +108,22 @@ const getPrismaRepo = async (): Promise<PortalAuthRepo> => {
             await prisma.tenantPortalAccount.update({
                 where: { id: accountId },
                 data: { passwordHash },
+            });
+        },
+        async createResetToken({ accountId, tenantId, token, expiresAt }) {
+            await (prisma as unknown as Record<string, { create: (a: unknown) => Promise<unknown> }>)['tenantPasswordResetToken']!.create({
+                data: { accountId, tenantId, token, expiresAt },
+            });
+        },
+        async findResetToken(token) {
+            const model = (prisma as unknown as Record<string, { findUnique: (a: unknown) => Promise<unknown> }>)['tenantPasswordResetToken'];
+            if (!model) return null;
+            return model.findUnique({ where: { token } }) as Promise<{ id: string; accountId: string; tenantId: string; expiresAt: Date; usedAt: Date | null } | null>;
+        },
+        async markResetTokenUsed(id) {
+            await (prisma as unknown as Record<string, { update: (a: unknown) => Promise<unknown> }>)['tenantPasswordResetToken']!.update({
+                where: { id },
+                data: { usedAt: new Date() },
             });
         },
     };
@@ -383,6 +403,94 @@ export const registerPortalAuthRoutes = async (
 
         const newHash = await hashPassword(newPassword);
         await repo.updateAccountPassword(session.accountId, newHash);
+
+        return reply.send({ ok: true });
+    });
+
+    // ── POST /portal/auth/forgot-password ────────────────────────────────────
+    // Always returns { ok: true } — never reveals whether the email exists.
+    // In dev (NODE_ENV !== 'production') also returns resetUrl for easy testing.
+    app.post<{
+        Body: { tenantId?: string; email?: string };
+    }>('/portal/auth/forgot-password', async (request, reply) => {
+        const body = request.body ?? {};
+        const { tenantId, email } = body;
+
+        if (!tenantId || typeof tenantId !== 'string') {
+            return reply.code(400).send({ error: 'validation_failed', field: 'tenantId', message: 'tenantId is required.' });
+        }
+        if (!email || typeof email !== 'string' || !EMAIL_REGEX.test(email.trim())) {
+            return reply.code(400).send({ error: 'validation_failed', field: 'email', message: 'Valid email address is required.' });
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+        const account = await repo.findAccountByEmail(tenantId, normalizedEmail);
+
+        // Silently succeed — don't reveal whether the account exists
+        if (!account || !account.isActive) {
+            return reply.send({ ok: true });
+        }
+
+        const token = randomUUID();
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+        await repo.createResetToken({ accountId: account.id, tenantId: account.tenantId, token, expiresAt });
+
+        const appBaseUrl = process.env['PORTAL_APP_BASE_URL'] ?? 'http://localhost:3001';
+        const resetUrl = `${appBaseUrl}/portal/reset-password?token=${encodeURIComponent(token)}`;
+
+        // In dev: log the link so developers can test without email infrastructure
+        if (process.env['NODE_ENV'] !== 'production') {
+            console.info(`[portal] Password reset link for ${normalizedEmail}: ${resetUrl}`);
+        }
+
+        // Production hook: if PORTAL_RESET_WEBHOOK_URL is set, POST the reset URL there
+        const webhookUrl = process.env['PORTAL_RESET_WEBHOOK_URL'];
+        if (webhookUrl) {
+            void fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ to: normalizedEmail, tenantId, resetUrl, expiresAt: expiresAt.toISOString() }),
+                signal: AbortSignal.timeout(5_000),
+            }).catch(() => { /* best-effort */ });
+        }
+
+        // Dev convenience: return the reset URL so the dashboard can direct the user
+        const extra = process.env['NODE_ENV'] !== 'production' ? { resetUrl } : {};
+        return reply.send({ ok: true, ...extra });
+    });
+
+    // ── POST /portal/auth/reset-password ─────────────────────────────────────
+    app.post<{
+        Body: { token?: string; newPassword?: string };
+    }>('/portal/auth/reset-password', async (request, reply) => {
+        const body = request.body ?? {};
+        const { token, newPassword } = body;
+
+        if (!token || typeof token !== 'string') {
+            return reply.code(400).send({ error: 'validation_failed', field: 'token', message: 'token is required.' });
+        }
+        if (!newPassword || typeof newPassword !== 'string' || newPassword.length < MIN_PASSWORD_LEN) {
+            return reply.code(400).send({
+                error: 'validation_failed',
+                field: 'newPassword',
+                message: `newPassword must be at least ${MIN_PASSWORD_LEN} characters.`,
+            });
+        }
+
+        const resetToken = await repo.findResetToken(token);
+        if (!resetToken) {
+            return reply.code(400).send({ error: 'invalid_token', message: 'Reset token is invalid or has expired.' });
+        }
+        if (resetToken.usedAt) {
+            return reply.code(400).send({ error: 'token_already_used', message: 'This reset link has already been used.' });
+        }
+        if (resetToken.expiresAt < new Date()) {
+            return reply.code(400).send({ error: 'token_expired', message: 'Reset link has expired. Please request a new one.' });
+        }
+
+        const newHash = await hashPassword(newPassword);
+        await repo.updateAccountPassword(resetToken.accountId, newHash);
+        await repo.markResetTokenUsed(resetToken.id);
 
         return reply.send({ ok: true });
     });

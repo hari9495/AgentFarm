@@ -394,7 +394,7 @@ describe('SupportChatSession — full chat flow', () => {
             resolutionNotes: null,
             escalatedTo: null,
             createdAt: new Date().toISOString(),
-            resolvedAt: null,
+            prUrl: null, resolvedAt: null,
         });
 
         const { ws, frames } = await connectWs(portAuth);
@@ -424,7 +424,7 @@ describe('SupportChatSession — full chat flow', () => {
             resolutionNotes: null,
             escalatedTo: null,
             createdAt: new Date().toISOString(),
-            resolvedAt: null,
+            prUrl: null, resolvedAt: null,
         });
 
         const { ws, frames } = await connectWs(portAuth);

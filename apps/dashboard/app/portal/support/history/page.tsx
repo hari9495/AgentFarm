@@ -18,6 +18,7 @@ type Issue = {
     tierReached: number | null;
     fixApplied: boolean;
     escalatedTo: string | null;
+    prUrl: string | null;
     createdAt: string;
     resolvedAt: string | null;
     messages?: ChatMessage[];
@@ -153,8 +154,13 @@ export default function IssueHistoryPage() {
                                             )}
                                             {issue.escalatedTo && (
                                                 <span style={{ padding: '0.1rem 0.45rem', borderRadius: 12, fontSize: '0.72rem', fontWeight: 600, background: '#fef2f2', color: '#b91c1c', flexShrink: 0 }}>
-                                                    ↑ Escalated
+                                                    ↑ Tier {issue.tierReached ?? '?'} escalated
                                                 </span>
+                                            )}
+                                            {issue.prUrl && (
+                                                <a href={issue.prUrl} target="_blank" rel="noopener noreferrer" style={{ padding: '0.1rem 0.45rem', borderRadius: 12, fontSize: '0.72rem', fontWeight: 600, background: '#f0fdf4', color: '#15803d', textDecoration: 'none', flexShrink: 0 }}>
+                                                    🔀 PR raised
+                                                </a>
                                             )}
                                         </div>
                                         <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

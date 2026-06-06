@@ -165,13 +165,13 @@ describe('SupportIssue — GET /v1/support/issues (list)', () => {
             id: 'id1', tenantId: SESSION.tenantId, workspaceId: null, title: 'mine',
             description: 'a', status: 'open', severity: 'low', tierReached: null,
             fixApplied: false, diagnosisReport: null, resolutionNotes: null,
-            escalatedTo: null, createdAt: new Date().toISOString(), resolvedAt: null,
+            escalatedTo: null, createdAt: new Date().toISOString(), prUrl: null, resolvedAt: null,
         });
         issueStore.set('id2', {
             id: 'id2', tenantId: 'other_tenant', workspaceId: null, title: 'theirs',
             description: 'b', status: 'open', severity: 'low', tierReached: null,
             fixApplied: false, diagnosisReport: null, resolutionNotes: null,
-            escalatedTo: null, createdAt: new Date().toISOString(), resolvedAt: null,
+            escalatedTo: null, createdAt: new Date().toISOString(), prUrl: null, resolvedAt: null,
         });
 
         const res = await buildApp().inject({ method: 'GET', url: '/v1/support/issues' });
@@ -197,7 +197,7 @@ describe('SupportIssue — GET /v1/support/issues/:id', () => {
             id: 'foreign', tenantId: 'other_tenant', workspaceId: null, title: 't',
             description: 'd', status: 'open', severity: 'low', tierReached: null,
             fixApplied: false, diagnosisReport: null, resolutionNotes: null,
-            escalatedTo: null, createdAt: new Date().toISOString(), resolvedAt: null,
+            escalatedTo: null, createdAt: new Date().toISOString(), prUrl: null, resolvedAt: null,
         });
         const res = await buildApp().inject({ method: 'GET', url: '/v1/support/issues/foreign' });
         assert.equal(res.statusCode, 403);
@@ -208,7 +208,7 @@ describe('SupportIssue — GET /v1/support/issues/:id', () => {
             id: 'my1', tenantId: SESSION.tenantId, workspaceId: null, title: 'ok',
             description: 'desc', status: 'diagnosing', severity: 'medium', tierReached: null,
             fixApplied: false, diagnosisReport: null, resolutionNotes: null,
-            escalatedTo: null, createdAt: new Date().toISOString(), resolvedAt: null,
+            escalatedTo: null, createdAt: new Date().toISOString(), prUrl: null, resolvedAt: null,
         });
         const res = await buildApp().inject({ method: 'GET', url: '/v1/support/issues/my1' });
         assert.equal(res.statusCode, 200);
@@ -228,7 +228,7 @@ describe('SupportIssue — POST /v1/support/issues/:id/resolve', () => {
             id: 'r1', tenantId: SESSION.tenantId, workspaceId: null, title: 't',
             description: 'd', status: 'open', severity: 'medium', tierReached: 1,
             fixApplied: true, diagnosisReport: null, resolutionNotes: null,
-            escalatedTo: null, createdAt: new Date().toISOString(), resolvedAt: null,
+            escalatedTo: null, createdAt: new Date().toISOString(), prUrl: null, resolvedAt: null,
         });
 
         const res = await buildApp().inject({
@@ -271,7 +271,7 @@ describe('SupportIssue — POST /v1/support/issues/:id/resolve', () => {
             id: 'r3', tenantId: 'other', workspaceId: null, title: 't',
             description: 'd', status: 'open', severity: 'low', tierReached: null,
             fixApplied: false, diagnosisReport: null, resolutionNotes: null,
-            escalatedTo: null, createdAt: new Date().toISOString(), resolvedAt: null,
+            escalatedTo: null, createdAt: new Date().toISOString(), prUrl: null, resolvedAt: null,
         });
         const res = await buildApp().inject({
             method: 'POST', url: '/v1/support/issues/r3/resolve', payload: {},

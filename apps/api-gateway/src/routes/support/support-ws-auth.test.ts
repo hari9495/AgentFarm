@@ -121,7 +121,7 @@ describe('support chat-session — portal_session auth', () => {
             resolutionNotes: null,
             escalatedTo: null,
             createdAt: new Date().toISOString(),
-            resolvedAt: null,
+            prUrl: null, resolvedAt: null,
         });
 
         const frames: string[] = [];
@@ -160,7 +160,7 @@ describe('support chat-session — portal_session auth', () => {
             resolutionNotes: null,
             escalatedTo: null,
             createdAt: new Date().toISOString(),
-            resolvedAt: null,
+            prUrl: null, resolvedAt: null,
         });
 
         const frames: string[] = [];
@@ -247,7 +247,7 @@ describe('support voice-session — portal_session auth', () => {
             resolutionNotes: null,
             escalatedTo: null,
             createdAt: new Date().toISOString(),
-            resolvedAt: null,
+            prUrl: null, resolvedAt: null,
         });
 
         const frames: string[] = [];

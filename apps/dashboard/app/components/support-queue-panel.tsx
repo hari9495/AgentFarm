@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { HeadphonesIcon, AlertCircle, Clock, CheckCircle2, ArrowUpRight, RefreshCw } from 'lucide-react';
 import OperatorGuide from './operator-guide';
 
@@ -26,6 +26,7 @@ type SupportTicket = {
     status: TicketStatus;
     agentDraftReady: boolean;
     slaBreachAt?: string;
+    operatorNotes?: string;
     createdAt: string;
     updatedAt: string;
 };
@@ -56,6 +57,9 @@ export default function SupportQueuePanel({ workspaceId }: { workspaceId: string
     const [tickets, setTickets] = useState<SupportTicket[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<TicketStatus | 'all'>('open');
+    const [expandedNotes, setExpandedNotes] = useState<string | null>(null);
+    const [notesDraft, setNotesDraft] = useState('');
+    const [savingNotes, setSavingNotes] = useState(false);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -83,6 +87,26 @@ export default function SupportQueuePanel({ workspaceId }: { workspaceId: string
     const resolve = async (id: string) => {
         await fetch(`${API_BASE}/api/support-queue/${id}/resolve`, { method: 'POST' }).catch(() => null);
         await load();
+    };
+
+    const openNotes = (t: SupportTicket) => {
+        setExpandedNotes(t.id);
+        setNotesDraft(t.operatorNotes ?? '');
+    };
+
+    const saveNotes = async (id: string) => {
+        setSavingNotes(true);
+        try {
+            await fetch(`${API_BASE}/api/support-queue/${id}/notes`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ notes: notesDraft }),
+            });
+            setTickets((prev) => prev.map((t) => t.id === id ? { ...t, operatorNotes: notesDraft } : t));
+            setExpandedNotes(null);
+        } catch { /* ignore */ } finally {
+            setSavingNotes(false);
+        }
     };
 
     return (
@@ -121,7 +145,8 @@ export default function SupportQueuePanel({ workspaceId }: { workspaceId: string
                                 const pr = PRIORITY_STYLE[t.priority];
                                 const isBreaching = t.slaBreachAt && new Date(t.slaBreachAt) < new Date(Date.now() + 30 * 60 * 1000);
                                 return (
-                                    <tr key={t.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : '#fff' }}>
+                                    <React.Fragment key={t.id}>
+                                    <tr style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : '#fff' }}>
                                         <td style={{ ...td, fontSize: 11, color: '#94a3b8', fontFamily: 'monospace' }}>{t.ticketNumber}</td>
                                         <td style={td}>
                                             <div style={{ fontWeight: 500 }}>{t.subject}</div>
@@ -141,9 +166,39 @@ export default function SupportQueuePanel({ workspaceId }: { workspaceId: string
                                                 {t.agentDraftReady && <button type="button" style={{ padding: '4px 8px', border: '1px solid #bfdbfe', borderRadius: 6, background: '#eff6ff', cursor: 'pointer', fontSize: 11, color: '#1d4ed8', fontWeight: 600 }}>Review</button>}
                                                 {['open', 'in_progress'].includes(t.status) && <button type="button" onClick={() => resolve(t.id)} style={{ padding: '4px 8px', border: '1px solid #bbf7d0', borderRadius: 6, background: '#f0fdf4', cursor: 'pointer', fontSize: 11, color: '#16a34a', fontWeight: 600 }}>Resolve</button>}
                                                 {t.status !== 'escalated' && t.status !== 'resolved' && <button type="button" onClick={() => escalate(t.id)} title="Escalate" style={{ padding: '4px 8px', border: '1px solid #fecaca', borderRadius: 6, background: '#fef2f2', cursor: 'pointer', color: '#dc2626' }}><ArrowUpRight size={11} /></button>}
+                                                <button type="button" onClick={() => openNotes(t)} title={t.operatorNotes ? 'Edit notes' : 'Add notes'} style={{ padding: '4px 8px', border: `1px solid ${t.operatorNotes ? '#e9d5ff' : '#e2e8f0'}`, borderRadius: 6, background: t.operatorNotes ? '#faf5ff' : '#fff', cursor: 'pointer', fontSize: 11, color: t.operatorNotes ? '#7c3aed' : '#64748b' }}>
+                                                    📝{t.operatorNotes ? ' ✓' : ''}
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
+                                    {expandedNotes === t.id && (
+                                        <tr key={`${t.id}-notes`} style={{ background: '#fafafa' }}>
+                                            <td colSpan={8} style={{ padding: '10px 16px', borderTop: '1px solid #f1f5f9' }}>
+                                                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                                                    <div style={{ flex: 1 }}>
+                                                        <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#64748b', marginBottom: 4 }}>Operator notes for ticket #{t.ticketNumber}</label>
+                                                        <textarea
+                                                            rows={3}
+                                                            value={notesDraft}
+                                                            onChange={(e) => setNotesDraft(e.target.value)}
+                                                            placeholder="Add internal notes visible only to operators…"
+                                                            style={{ width: '100%', padding: '6px 8px', fontSize: 12, border: '1px solid #e2e8f0', borderRadius: 6, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 }}
+                                                        />
+                                                    </div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                                        <button type="button" onClick={() => void saveNotes(t.id)} disabled={savingNotes} style={{ padding: '6px 14px', border: '1px solid #bfdbfe', borderRadius: 6, background: '#eff6ff', cursor: 'pointer', fontSize: 12, color: '#1d4ed8', fontWeight: 600 }}>
+                                                            {savingNotes ? 'Saving…' : 'Save'}
+                                                        </button>
+                                                        <button type="button" onClick={() => setExpandedNotes(null)} style={{ padding: '6px 14px', border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 12, color: '#64748b' }}>
+                                                            Cancel
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                    </React.Fragment>
                                 );
                             })}
                         </tbody>

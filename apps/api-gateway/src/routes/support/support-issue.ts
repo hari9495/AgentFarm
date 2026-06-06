@@ -44,6 +44,7 @@ export interface SupportIssueRecord {
     diagnosisReport: Record<string, unknown> | null;
     resolutionNotes: string | null;
     escalatedTo: string | null;
+    prUrl?: string | null;
     createdAt: string;
     resolvedAt: string | null;
     steps?: SupportDiagnosisStepRecord[];
@@ -80,6 +81,7 @@ function prismaIssueToRecord(raw: {
         tierReached: raw.tierReached, fixApplied: raw.fixApplied,
         diagnosisReport: raw.diagnosisReport as Record<string, unknown> | null,
         resolutionNotes: raw.resolutionNotes, escalatedTo: raw.escalatedTo,
+        prUrl: (raw as Record<string, unknown>)['prUrl'] as string | null ?? null,
         createdAt: raw.createdAt.toISOString(),
         resolvedAt: raw.resolvedAt ? raw.resolvedAt.toISOString() : null,
     };
@@ -294,6 +296,7 @@ export async function registerSupportIssueRoutes(
                 diagnosisReport: null,
                 resolutionNotes: null,
                 escalatedTo: null,
+                prUrl: null,
                 createdAt: new Date().toISOString(),
                 resolvedAt: null,
             };
@@ -410,6 +413,36 @@ export async function registerSupportIssueRoutes(
             }
 
             return reply.send(resolved);
+        },
+    );
+
+    // ── PATCH /v1/support/issues/:id — partial update (prUrl, resolutionNotes, escalatedTo) ──
+    // Used internally by code-fix-dispatcher (notifyCustomerPrRaised) and by operators.
+    app.patch<{
+        Params: { id: string };
+        Body: { prUrl?: unknown; resolutionNotes?: unknown; escalatedTo?: unknown; tierReached?: unknown };
+    }>(
+        '/v1/support/issues/:id',
+        async (req, reply) => {
+            const session = getSession(req);
+            if (!session) return reply.code(401).send({ error: 'unauthorized' });
+
+            const issue = issueStore.get(req.params.id);
+            if (!issue) return reply.code(404).send({ error: 'not_found' });
+            if (issue.tenantId !== session.tenantId) return reply.code(403).send({ error: 'forbidden' });
+
+            const { prUrl, resolutionNotes, escalatedTo, tierReached } = req.body ?? {};
+            const updated: SupportIssueRecord = {
+                ...issue,
+                ...(typeof prUrl === 'string' ? { prUrl } : {}),
+                ...(typeof resolutionNotes === 'string' ? { resolutionNotes } : {}),
+                ...(typeof escalatedTo === 'string' ? { escalatedTo } : {}),
+                ...(typeof tierReached === 'number' ? { tierReached } : {}),
+            };
+            issueStore.set(updated.id, updated);
+            pushIssueUpdate(updated);
+
+            return reply.send(updated);
         },
     );
 

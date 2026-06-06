@@ -87,6 +87,9 @@ const createMockRepo = () => {
         async updateSessionLastSeen(id) {
             lastSeens.set(id, new Date());
         },
+        async createResetToken() { /* no-op in tests */ },
+        async findResetToken() { return null; },
+        async markResetTokenUsed() { /* no-op in tests */ },
         async updateAccountPassword(accountId, passwordHash) {
             const entry = [...accounts.entries()].find(([, a]) => a.id === accountId);
             if (entry) {

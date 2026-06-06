@@ -135,8 +135,9 @@ export default function PortalLoginPage() {
                     </button>
                 </form>
 
-                <p style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.78rem', color: '#9ca3af' }}>
-                    Don&apos;t have an account? Contact your AgentFarm administrator.
+                <p style={{ marginTop: '1.25rem', textAlign: 'center', fontSize: '0.78rem', color: '#9ca3af' }}>
+                    <a href="/portal/forgot-password" style={{ color: '#2563eb', textDecoration: 'none' }}>Forgot password?</a>
+                    {' · '}Don&apos;t have an account? Contact your administrator.
                 </p>
             </div>
         </main>

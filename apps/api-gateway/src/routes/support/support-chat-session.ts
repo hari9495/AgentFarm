@@ -356,7 +356,7 @@ export async function registerSupportChatSessionRoutes(
                         resolutionNotes: null,
                         escalatedTo: null,
                         createdAt: new Date().toISOString(),
-                        resolvedAt: null,
+                        prUrl: null, resolvedAt: null,
                     };
                     issueStore.set(issue.id, issue);
                     pushIssueUpdate(issue);
