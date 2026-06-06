@@ -366,8 +366,14 @@ describe('SupportChatSession — full chat flow', () => {
 
         ws.send(JSON.stringify({ type: 'message', text: 'Why is billing throttled?' }));
 
-        // Wait for at least: connected(issueId) + 2 step frames + reply
-        await waitFrames(frames, 5, 8_000);
+        // Wait for: connected(issueId) + 3 step frames + reply = 6 total (plus initial connected = 6)
+        // Frame 1: connected (initial)
+        // Frame 2: connected with issueId (new issue)
+        // Frame 3: step "Reading platform state..."
+        // Frame 4: step "Diagnosis complete"
+        // Frame 5: step "Applying Tier 1 config fixes..."
+        // Frame 6: reply
+        await waitFrames(frames, 6, 8_000);
 
         assert.ok(frames.some((f) => f.type === 'step'), 'expected at least one step frame');
         assert.ok(frames.some((f) => f.type === 'reply'), 'expected a reply frame');
