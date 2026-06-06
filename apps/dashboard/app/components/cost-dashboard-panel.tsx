@@ -230,7 +230,7 @@ export function CostDashboardPanel() {
     }, []);
 
     if (isLoading) {
-        return <div style={{ color: '#888', padding: '2rem', textAlign: 'center' }}>Loading cost data…</div>;
+        return <div style={{ color: 'var(--ink-muted)', padding: '2rem', textAlign: 'center' }}>Loading cost data…</div>;
     }
 
     if (!data) return null;
