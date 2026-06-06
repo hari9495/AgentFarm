@@ -314,21 +314,28 @@ export default function AgentsPage() {
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
 
                 {/* Left column — agent list */}
-                <div style={{ width: 260, flexShrink: 0, borderRight: '1px solid #d2d2d7', background: '#ffffff', overflowY: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <div style={{ width: 260, flexShrink: 0, borderRight: '1px solid var(--line)', background: 'var(--card)', overflowY: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {loading && (
                         <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
                             {[1, 2, 3].map((i) => (
-                                <div key={i} style={{ height: 56, borderRadius: 12, background: '#f5f5f7', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                                <div key={i} style={{ height: 56, borderRadius: 12, background: 'var(--line)', animation: 'pulse 1.5s ease-in-out infinite' }} />
                             ))}
                         </div>
                     )}
                     {!loading && error && (
-                        <div style={{ padding: 12, borderRadius: 10, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 13 }}>
-                            {error}
+                        <div style={{ padding: 12, borderRadius: 10, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 13, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <span>{error}</span>
+                            <button
+                                type="button"
+                                onClick={() => void loadAgents()}
+                                style={{ alignSelf: 'flex-start', fontSize: 12, fontWeight: 600, color: 'var(--danger)', background: 'transparent', border: '1px solid var(--danger-border)', borderRadius: 6, padding: '2px 10px', cursor: 'pointer' }}
+                            >
+                                Retry
+                            </button>
                         </div>
                     )}
                     {!loading && !error && agents.length === 0 && (
-                        <div style={{ padding: '20px 12px', textAlign: 'center', color: '#6e6e73', fontSize: 13 }}>
+                        <div style={{ padding: '20px 12px', textAlign: 'center', color: 'var(--ink-muted)', fontSize: 13 }}>
                             No agents yet
                         </div>
                     )}
