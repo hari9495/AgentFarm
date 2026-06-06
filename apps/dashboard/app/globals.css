@@ -472,6 +472,8 @@ body {
 .secondary-action:focus-visible,
 .danger-action:focus-visible,
 .warn-action:focus-visible,
+.ok-action:focus-visible,
+.info-action:focus-visible,
 .dashboard-drawer-toggle:focus-visible {
     outline: none;
     border-color: var(--brand);
@@ -1856,7 +1858,9 @@ textarea {
 .primary-action:disabled,
 .secondary-action:disabled,
 .danger-action:disabled,
-.warn-action:disabled {
+.warn-action:disabled,
+.ok-action:disabled,
+.info-action:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     box-shadow: none;
@@ -1902,6 +1906,35 @@ textarea {
     border: 1px solid var(--warn-border);
     background: var(--warn-bg);
     color: var(--warn);
+    border-radius: 8px;
+    padding: 0.35rem 0.7rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.15s ease;
+}
+
+.ok-action {
+    border: 1px solid var(--ok-border);
+    background: var(--ok-bg);
+    color: var(--ok);
+    border-radius: 8px;
+    padding: 0.35rem 0.7rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.15s ease;
+}
+
+.ok-action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.info-action {
+    border: 1px solid var(--info-border);
+    background: var(--info-bg);
+    color: var(--info);
     border-radius: 8px;
     padding: 0.35rem 0.7rem;
     cursor: pointer;

@@ -1130,7 +1130,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                     type="button"
                                                     disabled={busy}
                                                     onClick={() => void submitDecision(approval, 'approved')}
-                                                    className="secondary-action"
+                                                    className="ok-action"
                                                 >
                                                     Approve
                                                 </button>
@@ -1162,14 +1162,14 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                                         }, 150);
                                                     }}
-                                                    style={{ padding: '0.35rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(180,83,9,0.3)', background: 'rgba(180,83,9,0.07)', color: '#b45309', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                                                    className="warn-action"
                                                 >
                                                     ↑ Escalate
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => openDelegateModal(approval.approval_id)}
-                                                    style={{ padding: '0.35rem 0.7rem', borderRadius: 9999, border: '1px solid rgba(3,105,161,0.3)', background: 'rgba(3,105,161,0.07)', color: '#0369a1', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                                                    className="info-action"
                                                 >
                                                     → Delegate
                                                 </button>
