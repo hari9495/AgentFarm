@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
-type Role = 'viewer' | 'operator' | 'admin';
+type InviteRole = 'viewer' | 'operator' | 'admin';
+type Role = InviteRole | 'owner';
 
 type Member = {
     id: string;
@@ -12,12 +13,20 @@ type Member = {
     createdAt: string;
 };
 
-const ROLES: Role[] = ['viewer', 'operator', 'admin'];
+const INVITE_ROLES: InviteRole[] = ['viewer', 'operator', 'admin'];
 
 const roleBadgeClass: Record<Role, string> = {
     viewer: 'badge neutral',
     operator: 'badge low',
     admin: 'badge warn',
+    owner: 'badge high',
+};
+
+const ROLE_LABEL: Record<Role, string> = {
+    viewer: 'Viewer',
+    operator: 'Operator',
+    admin: 'Admin',
+    owner: 'Owner (Superadmin)',
 };
 
 export default function TeamPanel() {
@@ -31,7 +40,7 @@ export default function TeamPanel() {
     const [inviteEmail, setInviteEmail] = useState('');
     const [inviteName, setInviteName] = useState('');
     const [invitePassword, setInvitePassword] = useState('');
-    const [inviteRole, setInviteRole] = useState<Role>('viewer');
+    const [inviteRole, setInviteRole] = useState<InviteRole>('viewer');
     const [inviting, setInviting] = useState(false);
     const [inviteError, setInviteError] = useState<string | null>(null);
 
@@ -44,7 +53,7 @@ export default function TeamPanel() {
 
     // Roles tab (kept for backwards compat)
     const [assignUserId, setAssignUserId] = useState('');
-    const [assignRole, setAssignRole] = useState<Role>('viewer');
+    const [assignRole, setAssignRole] = useState<InviteRole>('viewer');
     const [assigning, setAssigning] = useState(false);
     const [assignError, setAssignError] = useState<string | null>(null);
     const [assignSuccess, setAssignSuccess] = useState<string | null>(null);
@@ -92,7 +101,7 @@ export default function TeamPanel() {
         }
     };
 
-    const handleRoleChange = async (userId: string, newRole: Role) => {
+    const handleRoleChange = async (userId: string, newRole: InviteRole) => {
         setChangingRoleId(userId);
         try {
             const res = await fetch(`/api/team/members/${encodeURIComponent(userId)}`, {
@@ -133,7 +142,7 @@ export default function TeamPanel() {
                 return;
             }
             setShowInvite(false);
-            setInviteEmail(''); setInviteName(''); setInvitePassword(''); setInviteRole('viewer');
+            setInviteEmail(''); setInviteName(''); setInvitePassword(''); setInviteRole('viewer' as InviteRole);
             await fetchMembers();
         } catch {
             setInviteError('Failed to invite member.');
@@ -229,6 +238,10 @@ export default function TeamPanel() {
                             style={{ marginBottom: '1.25rem' }}
                         >
                             <h3 className="panel-group-title">Invite new member</h3>
+                            <p className="panel-muted" style={{ marginBottom: '0.75rem', fontSize: '0.8rem' }}>
+                                Invited members can be assigned <strong>Viewer</strong>, <strong>Operator</strong>, or <strong>Admin</strong> access.
+                                The <strong>Owner (Superadmin)</strong> role is assigned automatically to the person who first signs up — it cannot be granted via invite.
+                            </p>
                             <div className="panel-form-grid">
                                 <label className="panel-field">
                                     <span className="panel-field-label">Full name <span className="required">*</span></span>
@@ -267,10 +280,12 @@ export default function TeamPanel() {
                                     <span className="panel-field-label">Access role</span>
                                     <select
                                         value={inviteRole}
-                                        onChange={e => setInviteRole(e.target.value as Role)}
+                                        onChange={e => setInviteRole(e.target.value as InviteRole)}
                                         className="panel-control"
                                     >
-                                        {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                                        {INVITE_ROLES.map(r => (
+                                            <option key={r} value={r}>{ROLE_LABEL[r]}</option>
+                                        ))}
                                     </select>
                                 </label>
                             </div>
@@ -335,12 +350,16 @@ export default function TeamPanel() {
                                                 <td style={{ padding: '0.55rem 0.6rem', color: 'var(--ink)', fontWeight: 500 }}>{m.name}</td>
                                                 <td style={{ padding: '0.55rem 0.6rem', color: 'var(--ink-muted)' }}>{m.email}</td>
                                                 <td style={{ padding: '0.55rem 0.6rem' }}>
-                                                    {changingRoleId === m.id ? (
+                                                    {m.role === 'owner' ? (
+                                                        <span className={roleBadgeClass['owner']} title="Owner role is fixed and cannot be changed">
+                                                            {ROLE_LABEL['owner']}
+                                                        </span>
+                                                    ) : changingRoleId === m.id ? (
                                                         <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>Saving…</span>
                                                     ) : (
                                                         <select
                                                             value={m.role}
-                                                            onChange={e => void handleRoleChange(m.id, e.target.value as Role)}
+                                                            onChange={e => void handleRoleChange(m.id, e.target.value as InviteRole)}
                                                             title="Change role"
                                                             style={{
                                                                 fontSize: '0.75rem', fontWeight: 700,
@@ -351,13 +370,17 @@ export default function TeamPanel() {
                                                                 cursor: 'pointer',
                                                             }}
                                                         >
-                                                            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                                                            {INVITE_ROLES.map(r => (
+                                                                <option key={r} value={r}>{ROLE_LABEL[r]}</option>
+                                                            ))}
                                                         </select>
                                                     )}
                                                 </td>
                                                 <td style={{ padding: '0.55rem 0.6rem', color: 'var(--ink-muted)' }}>{joined}</td>
                                                 <td style={{ padding: '0.55rem 0.6rem', textAlign: 'right' }}>
-                                                    {confirmDeleteId === m.id ? (
+                                                    {m.role === 'owner' ? (
+                                                        <span style={{ fontSize: '0.72rem', color: 'var(--ink-muted)', fontStyle: 'italic' }}>Protected</span>
+                                                    ) : confirmDeleteId === m.id ? (
                                                         <span style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}>
                                                             <span style={{ fontSize: '0.78rem', color: 'var(--ink-muted)' }}>Remove?</span>
                                                             <button
@@ -402,16 +425,29 @@ export default function TeamPanel() {
             {/* ── Roles tab ────────────────────────────────────────── */}
             {activeTab === 'roles' && (
                 <div>
-                    <p className="panel-muted" style={{ marginBottom: '1.25rem' }}>
-                        Assign dashboard access roles to team members.{' '}
-                        <strong>viewer</strong> can read,{' '}
-                        <strong>operator</strong> can approve/act,{' '}
-                        <strong>admin</strong> has full control.
-                    </p>
+                    {/* Role hierarchy reference */}
+                    <div className="panel-group" style={{ marginBottom: '1.25rem' }}>
+                        <h3 className="panel-group-title">Role Hierarchy</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            {([
+                                { role: 'owner' as Role, desc: 'Automatically assigned to the person who signs up. Cannot be removed or reassigned. Full superadmin control.' },
+                                { role: 'admin' as Role, desc: 'Full control: invite/remove members, change roles, manage billing, API keys, and all settings.' },
+                                { role: 'operator' as Role, desc: 'Can approve/reject agent actions, answer agent questions, and trigger task retries.' },
+                                { role: 'viewer' as Role, desc: 'Read-only access to the dashboard, agents, tasks, and audit log.' },
+                            ] as { role: Role; desc: string }[]).map(({ role, desc }) => (
+                                <div key={role} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
+                                    <span className={roleBadgeClass[role]} style={{ flexShrink: 0, marginTop: '0.05rem' }}>
+                                        {ROLE_LABEL[role]}
+                                    </span>
+                                    <span style={{ fontSize: '0.82rem', color: 'var(--ink-muted)' }}>{desc}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
 
                     {/* Assign role form */}
                     <form onSubmit={e => void handleAssignRole(e)} className="panel-group" style={{ marginBottom: '1.25rem' }}>
-                        <h3 className="panel-group-title">Assign Access Role</h3>
+                        <h3 className="panel-group-title">Change Member Role</h3>
                         <div className="panel-form-grid">
                             <label className="panel-field">
                                 <span className="panel-field-label">Member</span>
@@ -422,21 +458,23 @@ export default function TeamPanel() {
                                     className="panel-control"
                                 >
                                     <option value="">— select member —</option>
-                                    {members.map(m => (
+                                    {members.filter(m => m.role !== 'owner').map(m => (
                                         <option key={m.id} value={m.id}>
-                                            {m.name} ({m.email})
+                                            {m.name} ({m.email}) — {ROLE_LABEL[m.role]}
                                         </option>
                                     ))}
                                 </select>
                             </label>
                             <label className="panel-field">
-                                <span className="panel-field-label">Role</span>
+                                <span className="panel-field-label">New Role</span>
                                 <select
                                     value={assignRole}
-                                    onChange={e => setAssignRole(e.target.value as Role)}
+                                    onChange={e => setAssignRole(e.target.value as InviteRole)}
                                     className="panel-control"
                                 >
-                                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                                    {INVITE_ROLES.map(r => (
+                                        <option key={r} value={r}>{ROLE_LABEL[r]}</option>
+                                    ))}
                                 </select>
                             </label>
                         </div>
@@ -471,10 +509,12 @@ export default function TeamPanel() {
                                             <td style={{ padding: '0.55rem 0.6rem', color: 'var(--ink)', fontWeight: 500 }}>{m.name}</td>
                                             <td style={{ padding: '0.55rem 0.6rem', color: 'var(--ink-muted)' }}>{m.email}</td>
                                             <td style={{ padding: '0.55rem 0.6rem' }}>
-                                                <span className={roleBadgeClass[m.role]}>{m.role}</span>
+                                                <span className={roleBadgeClass[m.role]}>{ROLE_LABEL[m.role]}</span>
                                             </td>
                                             <td style={{ padding: '0.55rem 0.6rem', textAlign: 'right' }}>
-                                                {confirmDeleteId === m.id ? (
+                                                {m.role === 'owner' ? (
+                                                    <span style={{ fontSize: '0.72rem', color: 'var(--ink-muted)', fontStyle: 'italic' }}>Protected</span>
+                                                ) : confirmDeleteId === m.id ? (
                                                     <span style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}>
                                                         <span style={{ fontSize: '0.78rem', color: 'var(--ink-muted)' }}>Revoke?</span>
                                                         <button
