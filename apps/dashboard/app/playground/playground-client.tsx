@@ -146,7 +146,7 @@ const ENDPOINTS: EndpointDef[] = [
 const CATEGORIES = [...new Set(ENDPOINTS.map((e) => e.category))];
 
 const METHOD_COLORS: Record<string, string> = {
-    GET: '#1a7a4a', POST: '#0052cc', PUT: '#b45309', PATCH: '#b45309', DELETE: '#c4161c',
+    GET: 'var(--ok)', POST: 'var(--accent)', PUT: 'var(--warn)', PATCH: 'var(--warn)', DELETE: 'var(--danger)',
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -304,9 +304,9 @@ export default function PlaygroundClient({ tenantId, workspaceId }: { tenantId: 
     };
 
     const statusColor = response
-        ? response.status >= 200 && response.status < 300 ? '#1a7a4a'
-        : response.status >= 400 ? '#c4161c' : '#b45309'
-        : '#57534e';
+        ? response.status >= 200 && response.status < 300 ? 'var(--ok)'
+        : response.status >= 400 ? 'var(--danger)' : 'var(--warn)'
+        : 'var(--ink-muted)';
 
     const filteredEndpoints = activeCategory === 'all'
         ? ENDPOINTS
@@ -337,18 +337,18 @@ export default function PlaygroundClient({ tenantId, workspaceId }: { tenantId: 
                                 textAlign: 'left',
                                 padding: '0.45rem 0.6rem',
                                 borderRadius: '0.4rem',
-                                border: `1px solid ${selectedId === ep.id ? '#0052cc' : 'transparent'}`,
-                                background: selectedId === ep.id ? 'rgba(0,82,204,0.06)' : 'transparent',
+                                border: `1px solid ${selectedId === ep.id ? 'var(--accent)' : 'transparent'}`,
+                                background: selectedId === ep.id ? 'color-mix(in srgb, var(--accent) 6%, transparent)' : 'transparent',
                                 cursor: 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.4rem',
                             }}
                         >
-                            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: METHOD_COLORS[ep.method] ?? '#57534e', fontFamily: 'ui-monospace, monospace', flexShrink: 0, width: 38 }}>
+                            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: METHOD_COLORS[ep.method] ?? 'var(--ink-muted)', fontFamily: 'ui-monospace, monospace', flexShrink: 0, width: 38 }}>
                                 {ep.method}
                             </span>
-                            <span style={{ fontSize: '0.78rem', color: selectedId === ep.id ? '#0052cc' : '#1d1d1f', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: '0.78rem', color: selectedId === ep.id ? 'var(--accent)' : 'var(--ink)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {ep.summary}
                             </span>
                         </button>
@@ -362,10 +362,10 @@ export default function PlaygroundClient({ tenantId, workspaceId }: { tenantId: 
                 {/* URL bar */}
                 <div className="card" style={{ padding: '0.85rem 1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                        <span style={{ padding: '0.25rem 0.6rem', borderRadius: '0.3rem', background: METHOD_COLORS[endpoint.method] ?? '#57534e', color: '#fff', fontSize: '0.75rem', fontWeight: 800, fontFamily: 'ui-monospace, monospace', flexShrink: 0 }}>
+                        <span style={{ padding: '0.25rem 0.6rem', borderRadius: '0.3rem', background: METHOD_COLORS[endpoint.method] ?? 'var(--ink-muted)', color: '#fff', fontSize: '0.75rem', fontWeight: 800, fontFamily: 'ui-monospace, monospace', flexShrink: 0 }}>
                             {endpoint.method}
                         </span>
-                        <code style={{ flex: 1, fontFamily: 'ui-monospace, monospace', fontSize: '0.85rem', color: '#374151', background: '#f9fafb', padding: '0.25rem 0.5rem', borderRadius: '0.3rem', border: '1px solid #e5e7eb', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <code style={{ flex: 1, fontFamily: 'ui-monospace, monospace', fontSize: '0.85rem', color: 'var(--ink)', background: 'var(--bg)', padding: '0.25rem 0.5rem', borderRadius: '0.3rem', border: '1px solid var(--line)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {resolvedPath}
                         </code>
                         <button
@@ -383,11 +383,11 @@ export default function PlaygroundClient({ tenantId, workspaceId }: { tenantId: 
                             onClick={() => setShowCurl((v) => !v)}
                             style={{ flexShrink: 0 }}
                         >
-                            {showCurl ? 'Hide code' : '&lt;/&gt; Code'}
+                            {showCurl ? 'Hide code' : '</> Code'}
                         </button>
                     </div>
                     {endpoint.description && (
-                        <p style={{ margin: '0.4rem 0 0', fontSize: '0.78rem', color: '#57534e' }}>{endpoint.description}</p>
+                        <p style={{ margin: '0.4rem 0 0', fontSize: '0.78rem', color: 'var(--ink-muted)' }}>{endpoint.description}</p>
                     )}
                 </div>
 
@@ -410,8 +410,8 @@ export default function PlaygroundClient({ tenantId, workspaceId }: { tenantId: 
                                         style={{
                                             fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.7rem',
                                             borderRadius: '0.3rem', border: 'none', cursor: 'pointer',
-                                            background: snippetLang === lang ? '#374151' : 'transparent',
-                                            color: snippetLang === lang ? (LANG_COLORS[lang] ?? '#fff') : '#78716c',
+                                            background: snippetLang === lang ? 'var(--ink-soft)' : 'transparent',
+                                            color: snippetLang === lang ? (LANG_COLORS[lang] ?? '#fff') : 'var(--ink-muted)',
                                             textTransform: lang === 'typescript' ? 'none' : 'capitalize',
                                         }}>
                                         {lang === 'typescript' ? 'TypeScript' : lang === 'python' ? 'Python' : 'cURL'}
@@ -432,13 +432,13 @@ export default function PlaygroundClient({ tenantId, workspaceId }: { tenantId: 
                 {/* Parameters */}
                 {(endpoint.params.some((p) => p.in === 'path') || endpoint.params.some((p) => p.in === 'query')) && (
                     <div className="card" style={{ padding: '0.85rem 1rem' }}>
-                        <h3 style={{ margin: '0 0 0.65rem', fontSize: '0.83rem', fontWeight: 700, color: '#374151' }}>Parameters</h3>
+                        <h3 style={{ margin: '0 0 0.65rem', fontSize: '0.83rem', fontWeight: 700, color: 'var(--ink)' }}>Parameters</h3>
                         <div style={{ display: 'grid', gap: '0.5rem' }}>
                             {endpoint.params.filter((p) => p.in === 'path').map((p) => (
                                 <label key={p.name} style={{ display: 'grid', gap: '0.2rem', fontSize: '0.8rem' }}>
                                     <span style={{ fontWeight: 600, fontFamily: 'ui-monospace, monospace' }}>
-                                        :{p.name} <span style={{ background: '#fee2e2', color: '#b91c1c', fontSize: '0.65rem', padding: '0 3px', borderRadius: 3 }}>path</span>
-                                        {p.required && <span style={{ color: '#c4161c', marginLeft: 3 }}>*</span>}
+                                        :{p.name} <span style={{ background: 'var(--danger-bg)', color: 'var(--danger)', fontSize: '0.65rem', padding: '0 3px', borderRadius: 3 }}>path</span>
+                                        {p.required && <span style={{ color: 'var(--danger)', marginLeft: 3 }}>*</span>}
                                     </span>
                                     <input
                                         type="text"
@@ -452,9 +452,9 @@ export default function PlaygroundClient({ tenantId, workspaceId }: { tenantId: 
                             {endpoint.params.filter((p) => p.in === 'query').map((p) => (
                                 <label key={p.name} style={{ display: 'grid', gap: '0.2rem', fontSize: '0.8rem' }}>
                                     <span style={{ fontWeight: 600, fontFamily: 'ui-monospace, monospace' }}>
-                                        {p.name} <span style={{ background: '#e0f2fe', color: '#0369a1', fontSize: '0.65rem', padding: '0 3px', borderRadius: 3 }}>query</span>
-                                        {p.required && <span style={{ color: '#c4161c', marginLeft: 3 }}>*</span>}
-                                        {p.description && <span style={{ fontWeight: 400, color: '#78716c', fontSize: '0.73rem', marginLeft: 4 }}>{p.description}</span>}
+                                        {p.name} <span style={{ background: 'var(--info-bg)', color: 'var(--info)', fontSize: '0.65rem', padding: '0 3px', borderRadius: 3 }}>query</span>
+                                        {p.required && <span style={{ color: 'var(--danger)', marginLeft: 3 }}>*</span>}
+                                        {p.description && <span style={{ fontWeight: 400, color: 'var(--ink-muted)', fontSize: '0.73rem', marginLeft: 4 }}>{p.description}</span>}
                                     </span>
                                     <input
                                         type="text"
@@ -472,14 +472,14 @@ export default function PlaygroundClient({ tenantId, workspaceId }: { tenantId: 
                 {/* Body */}
                 {endpoint.method !== 'GET' && endpoint.method !== 'DELETE' && (
                     <div className="card" style={{ padding: '0.85rem 1rem' }}>
-                        <h3 style={{ margin: '0 0 0.5rem', fontSize: '0.83rem', fontWeight: 700, color: '#374151' }}>
-                            Request body <span style={{ fontWeight: 400, color: '#78716c' }}>(JSON)</span>
+                        <h3 style={{ margin: '0 0 0.5rem', fontSize: '0.83rem', fontWeight: 700, color: 'var(--ink)' }}>
+                            Request body <span style={{ fontWeight: 400, color: 'var(--ink-muted)' }}>(JSON)</span>
                         </h3>
                         <textarea
                             value={bodyText}
                             onChange={(e) => setBodyText(e.target.value)}
                             rows={Math.max(6, (bodyText.split('\n').length + 1))}
-                            style={{ width: '100%', fontFamily: 'ui-monospace, monospace', fontSize: '0.8rem', padding: '0.6rem 0.75rem', borderRadius: '0.4rem', border: '1px solid #d2d2d7', lineHeight: 1.6, resize: 'vertical', outline: 'none', boxSizing: 'border-box', background: '#f9fafb' }}
+                            style={{ width: '100%', fontFamily: 'ui-monospace, monospace', fontSize: '0.8rem', padding: '0.6rem 0.75rem', borderRadius: '0.4rem', border: '1px solid var(--line)', lineHeight: 1.6, resize: 'vertical', outline: 'none', boxSizing: 'border-box', background: 'var(--bg)', color: 'var(--ink)' }}
                             placeholder="{}"
                             spellCheck={false}
                         />
@@ -491,17 +491,17 @@ export default function PlaygroundClient({ tenantId, workspaceId }: { tenantId: 
                     <div className="card" style={{ padding: '0.85rem 1rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.4rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <span style={{ padding: '0.2rem 0.55rem', borderRadius: 9999, background: response.status >= 200 && response.status < 300 ? 'rgba(26,122,74,0.08)' : 'rgba(196,22,28,0.08)', color: statusColor, fontSize: '0.78rem', fontWeight: 800 }}>
+                                <span style={{ padding: '0.2rem 0.55rem', borderRadius: 9999, background: response.status >= 200 && response.status < 300 ? 'var(--ok-bg)' : response.status >= 400 ? 'var(--danger-bg)' : 'var(--warn-bg)', color: statusColor, fontSize: '0.78rem', fontWeight: 800 }}>
                                     {response.status} {response.status_text}
                                 </span>
-                                <span style={{ fontSize: '0.75rem', color: '#78716c' }}>{response.duration_ms}ms</span>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{response.duration_ms}ms</span>
                             </div>
                             <button type="button" className="chip-button" onClick={() => copyText(JSON.stringify(response.body, null, 2))}>
                                 {copied ? '✓ Copied' : 'Copy response'}
                             </button>
                         </div>
                         {response.error && (
-                            <p style={{ margin: '0 0 0.5rem', color: '#c4161c', fontSize: '0.82rem' }}>⚠ {response.error}</p>
+                            <p style={{ margin: '0 0 0.5rem', color: 'var(--danger)', fontSize: '0.82rem' }}>⚠ {response.error}</p>
                         )}
                         <pre style={{ margin: 0, fontSize: '0.78rem', fontFamily: 'ui-monospace, monospace', background: '#1d1d1f', color: '#e5e5e7', padding: '0.75rem', borderRadius: '0.4rem', overflowX: 'auto', maxHeight: 400, overflowY: 'auto', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                             {response.body !== null && response.body !== undefined
