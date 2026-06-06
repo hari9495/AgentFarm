@@ -162,6 +162,8 @@ test('POST /portal/auth/signup — duplicate email → 409', async () => {
         displayName: null,
         role: 'VIEWER',
         isActive: true,
+        isEmailVerified: true,
+        emailVerificationToken: null,
     });
     const { app, register } = buildApp(repo);
     await register();
@@ -270,6 +272,8 @@ test('POST /portal/auth/login — valid credentials → 200 + portal_session coo
         displayName: 'Login User',
         role: 'MANAGER',
         isActive: true,
+        isEmailVerified: true,
+        emailVerificationToken: null,
     });
     const { app, register } = buildApp(repo);
     await register();
@@ -305,6 +309,8 @@ test('POST /portal/auth/login — wrong password → 401', async () => {
         displayName: null,
         role: 'VIEWER',
         isActive: true,
+        isEmailVerified: true,
+        emailVerificationToken: null,
     });
     const { app, register } = buildApp(repo);
     await register();
@@ -348,6 +354,8 @@ test('POST /portal/auth/login — inactive account → 403', async () => {
         displayName: null,
         role: 'VIEWER',
         isActive: false,
+        isEmailVerified: true,
+        emailVerificationToken: null,
     });
     const { app, register } = buildApp(repo);
     await register();
