@@ -171,7 +171,7 @@ export default function HistoricalMetricsPage() {
                                         borderRadius: 6,
                                                         border: `1px solid ${metric === m ? 'var(--accent)' : 'var(--line)'}`,
                                         background: metric === m ? 'var(--accent)' : 'var(--card)',
-                                        color: metric === m ? '#fff' : 'var(--ink)',
+                                        color: metric === m ? 'var(--card)' : 'var(--ink)',
                                         fontSize: '0.78rem',
                                         fontWeight: 600,
                                         cursor: 'pointer',

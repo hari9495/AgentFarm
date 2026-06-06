@@ -12,13 +12,13 @@ type AgentSessionRow = {
 };
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    running: { bg: '#dbeafe', color: 'var(--info)' },
-    active: { bg: '#dbeafe', color: 'var(--info)' },
-    completed: { bg: '#dcfce7', color: 'var(--ok)' },
-    failed: { bg: '#fee2e2', color: 'var(--danger)' },
+    running: { bg: 'var(--info-bg)', color: 'var(--info)' },
+    active: { bg: 'var(--info-bg)', color: 'var(--info)' },
+    completed: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    failed: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
 };
 
-const fallbackBadge = { bg: '#f1f5f9', color: '#475569' };
+const fallbackBadge = { bg: 'var(--bg)', color: 'var(--ink-muted)' };
 
 function truncate(value: string, max: number): string {
     return value.length > max ? `${value.slice(0, max)}…` : value;

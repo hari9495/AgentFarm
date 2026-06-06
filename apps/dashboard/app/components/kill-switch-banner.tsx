@@ -181,7 +181,7 @@ export function KillSwitchBanner({ className }: Props) {
                             display: 'inline-flex', alignItems: 'center', gap: 6,
                             padding: '7px 16px',
                             background: resumingId === ks.id ? '#aeaeb2' : 'rgba(26,122,74,0.1)',
-                            color: resumingId === ks.id ? '#fff' : '#1a7a4a',
+                            color: resumingId === ks.id ? 'var(--card)' : '#1a7a4a',
                             border: '1px solid rgba(26,122,74,0.3)',
                             borderRadius: 9999,
                             fontSize: 12,

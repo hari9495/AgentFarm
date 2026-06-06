@@ -48,7 +48,7 @@ function UserBubble({ text }: { text: string }) {
             <div style={{
                 maxWidth: '75%', padding: '0.4rem 0.65rem',
                 borderRadius: '10px 10px 2px 10px',
-                background: '#334155', color: '#f8fafc',
+                background: 'var(--bg-deep)', color: 'var(--bg)',
                 fontSize: '0.83rem', lineHeight: 1.5,
             }}>
                 {text}
@@ -80,7 +80,7 @@ function StepBubble({ text, status }: { text: string; status?: string }) {
                 display: 'flex', alignItems: 'center', gap: '0.4rem',
                 padding: '0.3rem 0.6rem', borderRadius: 6,
                 background: 'var(--bg)', border: '1px solid var(--line)',
-                fontSize: '0.75rem', color: '#475569',
+                fontSize: '0.75rem', color: 'var(--ink-muted)',
             }}>
                 {isRunning ? (
                     <span style={{
@@ -226,7 +226,7 @@ export function SupportChatWidget() {
                 <h2 style={{ margin: 0, fontSize: '0.95rem', flex: 1 }}>Support Chat</h2>
                 <span style={{
                     width: 8, height: 8, borderRadius: '50%',
-                    background: connected ? '#16a34a' : '#dc2626',
+                    background: connected ? 'var(--ok)' : 'var(--danger)',
                     flexShrink: 0,
                 }} title={connected ? 'Connected' : 'Disconnected'} />
             </header>

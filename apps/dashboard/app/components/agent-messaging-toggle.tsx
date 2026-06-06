@@ -55,7 +55,7 @@ export default function AgentMessagingToggle({
                         borderRadius: '12px',
                         border: 'none',
                         cursor: saving ? 'not-allowed' : 'pointer',
-                        background: enabled ? '#16a34a' : '#d1d5db',
+                        background: enabled ? 'var(--ok)' : 'var(--line)',
                         transition: 'background 0.2s',
                         padding: 0,
                         flexShrink: 0,
@@ -78,7 +78,7 @@ export default function AgentMessagingToggle({
                 <span style={{
                     fontSize: '13px',
                     fontWeight: 600,
-                    color: enabled ? '#16a34a' : '#6b7280',
+                    color: enabled ? 'var(--ok)' : 'var(--ink-muted)',
                 }}>
                     {saving ? 'Saving…' : enabled ? 'Messaging enabled' : 'Messaging disabled'}
                 </span>

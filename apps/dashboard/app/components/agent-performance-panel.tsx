@@ -111,8 +111,8 @@ export default function AgentPerformancePanel() {
                                 padding: '3px 10px',
                                 borderRadius: 6,
                                 border: '1px solid var(--line)',
-                                background: days === d ? '#6366f1' : '#f9fafb',
-                                color: days === d ? '#fff' : '#374151',
+                                background: days === d ? 'var(--accent)' : 'var(--bg)',
+                                color: days === d ? 'var(--card)' : 'var(--ink-soft)',
                                 fontSize: '0.78rem',
                                 fontWeight: 600,
                                 cursor: 'pointer',
@@ -185,7 +185,7 @@ export default function AgentPerformancePanel() {
                                                 style={{
                                                     width: 24,
                                                     height: barHeight,
-                                                    background: '#6366f1',
+                                                    background: 'var(--accent)',
                                                     borderRadius: '3px 3px 0 0',
                                                 }}
                                                 title={`${w.weekStart}: ${w.taskCount} tasks`}

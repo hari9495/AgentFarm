@@ -25,10 +25,10 @@ type LoopRun = {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATE_BADGE: Record<string, { bg: string; color: string }> = {
-    pending: { bg: '#fef9c3', color: 'var(--warn)' },
-    running: { bg: '#dbeafe', color: 'var(--info)' },
-    success: { bg: '#dcfce7', color: 'var(--ok)' },
-    failed: { bg: '#fee2e2', color: 'var(--danger)' },
+    pending: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
+    running: { bg: 'var(--info-bg)', color: 'var(--info)' },
+    success: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    failed: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
 };
 
 function inlineBadge(label: string, map: Record<string, { bg: string; color: string }>) {
@@ -622,8 +622,8 @@ export default function AutonomousLoopsPanel() {
                                             margin: 0,
                                             padding: '0.75rem',
                                             borderRadius: '6px',
-                                            background: '#1e1e2e',
-                                            color: '#cdd6f4',
+                                            background: 'var(--bg-deep)',
+                                            color: 'var(--ink)',
                                             fontSize: '0.78rem',
                                             overflowX: 'auto',
                                             whiteSpace: 'pre-wrap',

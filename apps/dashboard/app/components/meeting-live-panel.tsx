@@ -54,15 +54,15 @@ const PLATFORM_MAP: Record<string, string> = {
 
 const STATUS_COLOR: Record<string, string> = {
     scheduled: '#64748b',
-    join_requested: '#f59e0b',
-    joining: '#f59e0b',
-    joined: '#22c55e',
-    listening: '#3b82f6',
+    join_requested: 'var(--warn)',
+    joining: 'var(--warn)',
+    joined: 'var(--ok)',
+    listening: 'var(--info)',
     speaking: '#8b5cf6',
-    paused: '#f59e0b',
-    escalation_required: '#ef4444',
+    paused: 'var(--warn)',
+    escalation_required: 'var(--danger)',
     completed: '#64748b',
-    failed: '#ef4444',
+    failed: 'var(--danger)',
 };
 
 const SOURCE_STYLE: Record<string, { color: string; label: string }> = {
@@ -270,7 +270,7 @@ export default function MeetingLivePanel({ gw }: MeetingLivePanelProps) {
                     <h3 style={{ margin: 0, fontSize: '0.97rem' }}>
                         Live Control
                         {isActive && (
-                            <span style={{ marginLeft: '0.5rem', fontSize: '0.72rem', color: '#22c55e', fontWeight: 500 }}>
+                            <span style={{ marginLeft: '0.5rem', fontSize: '0.72rem', color: 'var(--ok)', fontWeight: 500 }}>
                                 ● polling every 3s
                             </span>
                         )}

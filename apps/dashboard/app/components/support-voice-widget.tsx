@@ -260,7 +260,7 @@ export function SupportVoiceWidget() {
                 {callActive && (
                     <span style={{
                         width: 8, height: 8, borderRadius: '50%',
-                        background: connected ? '#16a34a' : '#f59e0b',
+                        background: connected ? 'var(--ok)' : 'var(--warn)',
                         flexShrink: 0,
                         animation: connected ? 'pulse-green 2s ease infinite' : undefined,
                     }} title={connected ? 'Connected' : 'Connecting…'} />
@@ -320,11 +320,11 @@ export function SupportVoiceWidget() {
                                 padding: '0.35rem 0.6rem',
                                 borderRadius: isUser ? '10px 10px 2px 10px' : '10px 10px 10px 2px',
                                 background: isUser
-                                    ? (t.kind === 'partial' ? '#e2e8f0' : '#334155')
+                                    ? (t.kind === 'partial' ? 'var(--bg)' : 'var(--bg-deep)')
                                     : '#f0fdf4',
                                 color: isUser
-                                    ? (t.kind === 'partial' ? '#64748b' : '#f8fafc')
-                                    : '#15803d',
+                                    ? (t.kind === 'partial' ? '#64748b' : 'var(--bg)')
+                                    : 'var(--ok)',
                                 fontSize: '0.82rem',
                                 lineHeight: 1.45,
                                 fontStyle: t.kind === 'partial' ? 'italic' : undefined,
@@ -383,7 +383,7 @@ export function SupportVoiceWidget() {
                                 border: '1px solid var(--line)',
                                 borderRadius: 4,
                                 background: muted ? '#fef2f2' : 'var(--bg)',
-                                color: muted ? '#dc2626' : 'var(--ink)',
+                                color: muted ? 'var(--danger)' : 'var(--ink)',
                                 cursor: 'pointer',
                             }}
                         >

@@ -30,12 +30,12 @@ export type AgentCardProps = {
 // ── Status badge ──────────────────────────────────────────────────────────────
 
 const STATUS_COLORS: Record<BotStatus, string> = {
-    active: '#16a34a',
-    created: '#2563eb',
-    bootstrapping: '#d97706',
-    connector_setup_required: '#f59e0b',
-    paused: '#6b7280',
-    failed: '#dc2626',
+    active: 'var(--ok)',
+    created: 'var(--info)',
+    bootstrapping: 'var(--warn)',
+    connector_setup_required: 'var(--warn)',
+    paused: 'var(--ink-muted)',
+    failed: 'var(--danger)',
 };
 
 const STATUS_LABELS: Record<BotStatus, string> = {
@@ -48,7 +48,7 @@ const STATUS_LABELS: Record<BotStatus, string> = {
 };
 
 function StatusBadge({ status }: { status: BotStatus }) {
-    const color = STATUS_COLORS[status] ?? '#6b7280';
+    const color = STATUS_COLORS[status] ?? 'var(--ink-muted)';
     const label = STATUS_LABELS[status] ?? status;
     return (
         <span
@@ -93,7 +93,7 @@ export default function AgentCard({ agent, selected, onClick }: AgentCardProps) 
                 width: '100%',
                 textAlign: 'left',
                 padding: '14px 16px',
-                background: selected ? '#1e293b' : 'transparent',
+                background: selected ? 'var(--bg-deep)' : 'transparent',
                 border: selected ? '1px solid #334155' : '1px solid transparent',
                 borderRadius: '8px',
                 cursor: 'pointer',
@@ -134,7 +134,7 @@ export default function AgentCard({ agent, selected, onClick }: AgentCardProps) 
                         style={{
                             fontSize: '13px',
                             fontWeight: 600,
-                            color: '#e2e8f0',
+                            color: 'var(--ink)',
                             marginBottom: '2px',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',

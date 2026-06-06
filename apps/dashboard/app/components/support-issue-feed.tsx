@@ -51,18 +51,18 @@ export function setSelectedIssueId(id: string | null): void {
 // ---------------------------------------------------------------------------
 
 const SEVERITY_COLORS: Record<SupportIssueSeverity, { bg: string; text: string }> = {
-    critical: { bg: '#fee2e2', text: '#991b1b' },
+    critical: { bg: 'var(--danger-bg)', text: 'var(--danger)' },
     high:     { bg: '#ffedd5', text: '#9a3412' },
-    medium:   { bg: '#fef9c3', text: '#854d0e' },
-    low:      { bg: '#f1f5f9', text: '#475569' },
+    medium:   { bg: 'var(--warn-bg)', text: '#854d0e' },
+    low:      { bg: 'var(--bg)', text: 'var(--ink-muted)' },
 };
 
 const STATUS_COLORS: Record<SupportIssueStatus, { bg: string; text: string; label: string }> = {
-    open:       { bg: '#f1f5f9', text: '#475569',  label: 'Open' },
-    diagnosing: { bg: '#dbeafe', text: '#1d4ed8',  label: 'Diagnosing' },
+    open:       { bg: 'var(--bg)', text: 'var(--ink-muted)',  label: 'Open' },
+    diagnosing: { bg: 'var(--info-bg)', text: 'var(--info)',  label: 'Diagnosing' },
     fixing:     { bg: '#ede9fe', text: '#6d28d9',  label: 'Fixing' },
-    escalated:  { bg: '#fee2e2', text: '#b91c1c',  label: 'Escalated' },
-    resolved:   { bg: '#dcfce7', text: '#15803d',  label: 'Resolved' },
+    escalated:  { bg: 'var(--danger-bg)', text: 'var(--danger)',  label: 'Escalated' },
+    resolved:   { bg: 'var(--ok-bg)', text: 'var(--ok)',  label: 'Resolved' },
 };
 
 function SeverityBadge({ severity }: { severity: SupportIssueSeverity }) {
@@ -178,7 +178,7 @@ export function SupportIssueFeed() {
                 <h2 style={{ margin: 0, fontSize: '0.95rem', flex: 1 }}>Issue Feed</h2>
                 <span style={{
                     width: 8, height: 8, borderRadius: '50%',
-                    background: connected ? '#16a34a' : '#dc2626',
+                    background: connected ? 'var(--ok)' : 'var(--danger)',
                     flexShrink: 0,
                 }} title={connected ? 'Live' : 'Disconnected'} />
             </header>

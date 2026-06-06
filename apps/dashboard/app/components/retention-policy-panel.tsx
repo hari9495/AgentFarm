@@ -29,21 +29,21 @@ type RetentionPolicy = {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const SCOPE_BADGE: Record<string, { bg: string; color: string }> = {
-    tenant: { bg: '#1e3a5f', color: '#bfdbfe' },
+    tenant: { bg: '#1e3a5f', color: 'var(--info-bg)' },
     workspace: { bg: '#1a3a6b', color: '#a5c8ff' },
     role: { bg: '#1e1b4b', color: '#c7d2fe' },
 };
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    active: { bg: '#dcfce7', color: 'var(--ok)' },
-    archived: { bg: '#f1f5f9', color: '#475569' },
-    expired: { bg: '#fee2e2', color: 'var(--danger)' },
+    active: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    archived: { bg: 'var(--bg)', color: 'var(--ink-muted)' },
+    expired: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
 };
 
 const ACTION_BADGE: Record<string, { bg: string; color: string }> = {
-    never_delete: { bg: '#dcfce7', color: 'var(--ok)' },
-    archive: { bg: '#fef9c3', color: 'var(--warn)' },
-    delete: { bg: '#fee2e2', color: 'var(--danger)' },
+    never_delete: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    archive: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
+    delete: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
     anonymize: { bg: '#f3e8ff', color: '#6b21a8' },
 };
 

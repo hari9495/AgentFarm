@@ -35,10 +35,10 @@ type OrcRun = {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    running: { bg: '#dbeafe', color: 'var(--info)' },
-    completed: { bg: '#dcfce7', color: 'var(--ok)' },
-    failed: { bg: '#fee2e2', color: 'var(--danger)' },
-    cancelled: { bg: '#f1f5f9', color: '#475569' },
+    running: { bg: 'var(--info-bg)', color: 'var(--info)' },
+    completed: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    failed: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    cancelled: { bg: 'var(--bg)', color: 'var(--ink-muted)' },
 };
 
 function inlineBadge(label: string, map: Record<string, { bg: string; color: string }>) {
@@ -583,7 +583,7 @@ export default function OrchestrationRunsPanel({ tenantId }: { tenantId: string 
                                         style={{
                                             color:
                                                 selectedRun.failedCount > 0
-                                                    ? '#991b1b'
+                                                    ? 'var(--danger)'
                                                     : 'var(--ink)',
                                         }}
                                     >
@@ -635,8 +635,8 @@ export default function OrchestrationRunsPanel({ tenantId }: { tenantId: string 
                                             margin: 0,
                                             padding: '0.75rem',
                                             borderRadius: '6px',
-                                            background: '#1e1e2e',
-                                            color: '#cdd6f4',
+                                            background: 'var(--bg-deep)',
+                                            color: 'var(--ink)',
                                             fontSize: '0.78rem',
                                             overflowX: 'auto',
                                             whiteSpace: 'pre-wrap',
@@ -746,7 +746,7 @@ export default function OrchestrationRunsPanel({ tenantId }: { tenantId: string 
                                                         style={{
                                                             padding: '0.3rem 0.5rem',
                                                             color: d.errorMessage
-                                                                ? '#991b1b'
+                                                                ? 'var(--danger)'
                                                                 : 'var(--ink-muted)',
                                                         }}
                                                     >

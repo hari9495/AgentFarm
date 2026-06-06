@@ -56,9 +56,9 @@ type KPIData = {
 type StatusBadge = 'healthy' | 'watch' | 'degraded';
 
 function statusColor(s: StatusBadge) {
-    if (s === 'healthy') return { bg: '#f0fdf4', text: '#15803d', border: '#bbf7d0' };
-    if (s === 'watch') return { bg: '#fefce8', text: '#854d0e', border: '#fde68a' };
-    return { bg: '#fef2f2', text: '#dc2626', border: '#fecaca' };
+    if (s === 'healthy') return { bg: 'var(--ok-bg)', text: 'var(--ok)', border: '#bbf7d0' };
+    if (s === 'watch') return { bg: '#fefce8', text: '#854d0e', border: 'var(--warn)' };
+    return { bg: 'var(--danger-bg)', text: 'var(--danger)', border: '#fecaca' };
 }
 
 function KPICard({ title, value, unit, status, sub }: {
@@ -160,11 +160,11 @@ function Metric({ label, value, sub, bar, barColor, why }: {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>{label}</span>
-                {why && <span style={{ fontSize: 10, color: '#d2d2d7', flexShrink: 0 }}>{why}</span>}
+                {why && <span style={{ fontSize: 10, color: 'var(--line)', flexShrink: 0 }}>{why}</span>}
             </div>
             <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--ink)', lineHeight: 1 }}>{value}</div>
             {sub && <div style={{ fontSize: 12, color: 'var(--ink-muted)', lineHeight: 1.4 }}>{sub}</div>}
-            {bar && <Bar value={bar.value} max={bar.max} color={barColor ?? '#0066cc'} />}
+            {bar && <Bar value={bar.value} max={bar.max} color={barColor ?? 'var(--accent)'} />}
         </div>
     );
 }
@@ -194,7 +194,7 @@ function Section({ title, accent, children, span2 }: {
 
 // ── Status dot ────────────────────────────────────────────────────────────────
 function StatusDot({ ok }: { ok: boolean }) {
-    return <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: ok ? '#1a7a4a' : '#c4161c', marginRight: 5, verticalAlign: 'middle' }} />;
+    return <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: ok ? 'var(--ok)' : 'var(--danger)', marginRight: 5, verticalAlign: 'middle' }} />;
 }
 
 type Props = { workspaceId?: string; language?: string };
@@ -245,7 +245,7 @@ export function GovernanceKPIPanel({ workspaceId, language = 'en' }: Props) {
     if (!kpis) return null;
 
     const sla = n(kpis.sla_compliance_pct);
-    const slaColor = sla >= 98 ? '#1a7a4a' : sla >= 90 ? '#b45309' : '#c4161c';
+    const slaColor = sla >= 98 ? '#1a7a4a' : sla >= 90 ? 'var(--warn)' : 'var(--danger)';
     const approvalRate = kpis.approvals
         ? n(kpis.approvals.total_approved) + n(kpis.approvals.total_rejected) > 0
             ? (n(kpis.approvals.total_approved) / (n(kpis.approvals.total_approved) + n(kpis.approvals.total_rejected))) * 100

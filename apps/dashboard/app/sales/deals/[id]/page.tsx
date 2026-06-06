@@ -318,7 +318,7 @@ export default function DealDetailPage({ params }: { params: Promise<{ id: strin
                                         borderRadius: 8,
                                         border: 'none',
                                         background: 'var(--brand)',
-                                        color: '#fff',
+                                        color: 'var(--card)',
                                         fontWeight: 600,
                                         fontSize: '0.875rem',
                                         cursor: submitting ? 'not-allowed' : 'pointer',
@@ -413,7 +413,7 @@ export default function DealDetailPage({ params }: { params: Promise<{ id: strin
                             <button
                                 onClick={() => void submitCloseLost()}
                                 disabled={submitting}
-                                style={{ padding: '0.5rem 1rem', borderRadius: 8, border: 'none', background: 'var(--danger)', color: '#fff', cursor: submitting ? 'not-allowed' : 'pointer', fontSize: '0.875rem', opacity: submitting ? 0.6 : 1 }}
+                                style={{ padding: '0.5rem 1rem', borderRadius: 8, border: 'none', background: 'var(--danger)', color: 'var(--card)', cursor: submitting ? 'not-allowed' : 'pointer', fontSize: '0.875rem', opacity: submitting ? 0.6 : 1 }}
                             >
                                 {submitting ? 'Saving…' : 'Mark Lost'}
                             </button>

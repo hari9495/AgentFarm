@@ -44,7 +44,7 @@ function TierBar({ label, count, total, color }: { label: string; count: number;
             <div style={{ flex: 1, height: 8, background: 'var(--bg)', borderRadius: 99, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 99, transition: 'width 0.4s ease' }} />
             </div>
-            <span style={{ width: 36, fontSize: 11, color: '#475569', textAlign: 'right' as const, flexShrink: 0 }}>{count}</span>
+            <span style={{ width: 36, fontSize: 11, color: 'var(--ink-muted)', textAlign: 'right' as const, flexShrink: 0 }}>{count}</span>
             <span style={{ width: 32, fontSize: 10, color: 'var(--ink-muted)', textAlign: 'right' as const, flexShrink: 0 }}>{pct}%</span>
         </div>
     );
@@ -81,10 +81,10 @@ export default function SupportStatsPanel() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--info-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <BarChart3 size={18} color="#0066cc" />
+                        <BarChart3 size={18} color="var(--accent)" />
                     </div>
                     <div>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Support Agent Stats</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>Support Agent Stats</div>
                         <div style={{ fontSize: 12, color: 'var(--ink-muted)' }}>Resolution metrics across all tiers</div>
                     </div>
                 </div>
@@ -133,17 +133,17 @@ export default function SupportStatsPanel() {
 
             {/* Tier breakdown */}
             <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: '16px 18px' }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 14, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>Resolution tier breakdown</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-muted)', marginBottom: 14, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>Resolution tier breakdown</div>
                 {loading ? (
                     <div style={{ color: 'var(--ink-muted)', fontSize: 12 }}>Loading…</div>
                 ) : tierTotal === 0 ? (
                     <div style={{ color: 'var(--ink-muted)', fontSize: 12 }}>No resolved issues yet.</div>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        <TierBar label="Tier 1" count={stats.tierBreakdown[1]} total={tierTotal} color="#0066cc" />
+                        <TierBar label="Tier 1" count={stats.tierBreakdown[1]} total={tierTotal} color="var(--accent)" />
                         <TierBar label="Tier 2" count={stats.tierBreakdown[2]} total={tierTotal} color="#7c3aed" />
                         <TierBar label="Tier 3" count={stats.tierBreakdown[3]} total={tierTotal} color="#d97706" />
-                        <TierBar label="Tier 4" count={stats.tierBreakdown[4]} total={tierTotal} color="#dc2626" />
+                        <TierBar label="Tier 4" count={stats.tierBreakdown[4]} total={tierTotal} color="var(--danger)" />
                     </div>
                 )}
                 {!loading && tierTotal > 0 && (

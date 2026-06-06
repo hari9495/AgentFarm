@@ -90,7 +90,7 @@ function ActivateModal({ onClose, onActivated }: { onClose: () => void; onActiva
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(196,22,28,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <ShieldAlert size={17} color="#c4161c" />
+                            <ShieldAlert size={17} color="var(--danger)" />
                         </div>
                         <div>
                             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--danger)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Danger Zone</div>
@@ -102,7 +102,7 @@ function ActivateModal({ onClose, onActivated }: { onClose: () => void; onActiva
 
                 <div style={{ padding: '10px 14px', borderRadius: 10, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', marginBottom: 18 }}>
                     <div style={{ display: 'flex', gap: 7, alignItems: 'flex-start' }}>
-                        <AlertTriangle size={14} color="#c4161c" style={{ flexShrink: 0, marginTop: 1 }} />
+                        <AlertTriangle size={14} color="var(--danger)" style={{ flexShrink: 0, marginTop: 1 }} />
                         <p style={{ margin: 0, fontSize: 12, color: 'var(--danger)', lineHeight: 1.5 }}>
                             Activating a kill switch immediately stops all agent task execution in the affected scope.
                             Use only in emergencies or confirmed security incidents.
@@ -147,7 +147,7 @@ function ActivateModal({ onClose, onActivated }: { onClose: () => void; onActiva
 
                     <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                         <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
-                        <button type="submit" disabled={busy} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: 'none', background: busy ? '#aeaeb2' : '#c4161c', color: '#fff', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer' }}>
+                        <button type="submit" disabled={busy} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: 'none', background: busy ? '#aeaeb2' : '#c4161c', color: 'var(--card)', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer' }}>
                             {busy ? 'Activating…' : '⚡ Activate'}
                         </button>
                     </div>
@@ -206,9 +206,9 @@ export default function KillSwitchPanel() {
                         <button key={key} onClick={() => setFilter(key as typeof filter)} style={{
                             padding: '5px 12px', borderRadius: 9999, border: '1px solid', cursor: 'pointer',
                             fontSize: 12, fontWeight: 600,
-                            background: filter === key ? '#1d1d1f' : '#fff',
-                            borderColor: filter === key ? '#1d1d1f' : '#d2d2d7',
-                            color: filter === key ? '#fff' : '#424245',
+                            background: filter === key ? 'var(--ink)' : 'var(--card)',
+                            borderColor: filter === key ? 'var(--ink)' : 'var(--line)',
+                            color: filter === key ? 'var(--card)' : '#424245',
                             transition: 'all 0.15s',
                         }}>{label}</button>
                     ))}
@@ -217,7 +217,7 @@ export default function KillSwitchPanel() {
                     <button onClick={load} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
                         <RefreshCw size={11} /> Refresh
                     </button>
-                    <button onClick={() => setShowActivate(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 9999, border: 'none', background: '#c4161c', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                    <button onClick={() => setShowActivate(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 9999, border: 'none', background: '#c4161c', color: 'var(--card)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                         <Plus size={12} /> Activate Kill Switch
                     </button>
                 </div>
@@ -226,7 +226,7 @@ export default function KillSwitchPanel() {
             {/* Active switches alert */}
             {active.length > 0 && (
                 <div style={{ padding: '12px 16px', borderRadius: 14, background: 'var(--danger-bg)', border: '2px solid rgba(196,22,28,0.3)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <ShieldAlert size={18} color="#c4161c" style={{ flexShrink: 0 }} />
+                    <ShieldAlert size={18} color="var(--danger)" style={{ flexShrink: 0 }} />
                     <div>
                         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--danger)' }}>
                             {active.length} kill switch{active.length !== 1 ? 'es' : ''} currently active
@@ -238,7 +238,7 @@ export default function KillSwitchPanel() {
 
             {active.length === 0 && !loading && (
                 <div style={{ padding: '12px 16px', borderRadius: 14, background: 'var(--ok-bg)', border: '1px solid var(--ok-border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <ShieldCheck size={16} color="#1a7a4a" />
+                    <ShieldCheck size={16} color="var(--ok)" />
                     <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ok)' }}>All clear — no active kill switches</span>
                 </div>
             )}
@@ -269,7 +269,7 @@ export default function KillSwitchPanel() {
                     const isActive  = ks.status === 'active';
                     return (
                         <div key={ks.id} style={{
-                            background: 'var(--card)', border: `1px solid ${isActive ? 'rgba(196,22,28,0.25)' : '#d2d2d7'}`,
+                            background: 'var(--card)', border: `1px solid ${isActive ? 'rgba(196,22,28,0.25)' : 'var(--line)'}`,
                             borderRadius: 14, padding: '14px 16px',
                             boxShadow: isActive ? '0 0 0 3px rgba(196,22,28,0.06)' : '0 1px 3px rgba(0,0,0,0.05)',
                         }}>

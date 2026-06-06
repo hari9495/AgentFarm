@@ -34,15 +34,15 @@ type SupportTicket = {
 const API_BASE = '';
 
 const STATUS_STYLE: Record<TicketStatus, { bg: string; color: string; icon: React.ElementType }> = {
-    open:             { bg: '#eff6ff', color: '#1e40af', icon: Clock },
-    in_progress:      { bg: '#fef9c3', color: 'var(--warn)', icon: Clock },
-    pending_customer: { bg: '#f1f5f9', color: '#475569', icon: Clock },
-    resolved:         { bg: '#dcfce7', color: 'var(--ok)', icon: CheckCircle2 },
-    escalated:        { bg: '#fee2e2', color: 'var(--danger)', icon: AlertCircle },
+    open:             { bg: 'var(--info-bg)', color: 'var(--info)', icon: Clock },
+    in_progress:      { bg: 'var(--warn-bg)', color: 'var(--warn)', icon: Clock },
+    pending_customer: { bg: 'var(--bg)', color: 'var(--ink-muted)', icon: Clock },
+    resolved:         { bg: 'var(--ok-bg)', color: 'var(--ok)', icon: CheckCircle2 },
+    escalated:        { bg: 'var(--danger-bg)', color: 'var(--danger)', icon: AlertCircle },
 };
 
 const PRIORITY_STYLE: Record<TicketPriority, { color: string }> = {
-    low: { color: 'var(--ink-muted)' }, normal: { color: '#475569' },
+    low: { color: 'var(--ink-muted)' }, normal: { color: 'var(--ink-muted)' },
     high: { color: 'var(--warn)' }, critical: { color: 'var(--danger)' },
 };
 
@@ -119,12 +119,12 @@ export default function SupportQueuePanel({ workspaceId }: { workspaceId: string
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                     {(['open', 'in_progress', 'escalated', 'resolved', 'all'] as const).map(k => (
-                        <button key={k} type="button" onClick={() => setFilter(k)} style={{ padding: '5px 12px', border: `1px solid ${filter === k ? '#0066cc' : '#e2e8f0'}`, borderRadius: 20, background: filter === k ? 'rgba(0,102,204,0.07)' : '#fff', color: filter === k ? '#0066cc' : '#64748b', fontSize: 12, fontWeight: filter === k ? 600 : 400, cursor: 'pointer' }}>
+                        <button key={k} type="button" onClick={() => setFilter(k)} style={{ padding: '5px 12px', border: `1px solid ${filter === k ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: filter === k ? 'rgba(0,102,204,0.07)' : 'var(--card)', color: filter === k ? 'var(--accent)' : '#64748b', fontSize: 12, fontWeight: filter === k ? 600 : 400, cursor: 'pointer' }}>
                             {k === 'all' ? 'All' : k.replace('_', ' ')}
                         </button>
                     ))}
                 </div>
-                <button type="button" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', fontSize: 12, color: '#64748b', cursor: 'pointer' }}><RefreshCw size={12} />Refresh</button>
+                <button type="button" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', fontSize: 12, color: 'var(--ink-muted)', cursor: 'pointer' }}><RefreshCw size={12} />Refresh</button>
             </div>
             {loading ? (
                 <div style={{ textAlign: 'center', padding: 40, color: 'var(--ink-muted)', fontSize: 13 }}>Loading tickets…</div>
@@ -146,13 +146,13 @@ export default function SupportQueuePanel({ workspaceId }: { workspaceId: string
                                 const isBreaching = t.slaBreachAt && new Date(t.slaBreachAt) < new Date(Date.now() + 30 * 60 * 1000);
                                 return (
                                     <React.Fragment key={t.id}>
-                                    <tr style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : '#fff' }}>
+                                    <tr style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : 'var(--card)' }}>
                                         <td style={{ ...td, fontSize: 11, color: 'var(--ink-muted)', fontFamily: 'monospace' }}>{t.ticketNumber}</td>
                                         <td style={td}>
                                             <div style={{ fontWeight: 500 }}>{t.subject}</div>
                                             {isBreaching && <div style={{ fontSize: 10, color: 'var(--danger)', marginTop: 2 }}>⚠ SLA at risk</div>}
                                         </td>
-                                        <td style={{ ...td, color: '#64748b' }}>{t.customerName}</td>
+                                        <td style={{ ...td, color: 'var(--ink-muted)' }}>{t.customerName}</td>
                                         <td style={{ ...td, fontSize: 14 }}>{CHANNEL_ICON[t.channel] ?? t.channel}</td>
                                         <td style={{ ...td, fontWeight: 700, fontSize: 11, color: pr.color }}>{t.priority.toUpperCase()}</td>
                                         <td style={td}>
@@ -166,18 +166,18 @@ export default function SupportQueuePanel({ workspaceId }: { workspaceId: string
                                                 {t.agentDraftReady && <button type="button" style={{ padding: '4px 8px', border: '1px solid var(--info-border)', borderRadius: 6, background: 'var(--info-bg)', cursor: 'pointer', fontSize: 11, color: 'var(--info)', fontWeight: 600 }}>Review</button>}
                                                 {['open', 'in_progress'].includes(t.status) && <button type="button" onClick={() => resolve(t.id)} style={{ padding: '4px 8px', border: '1px solid var(--ok-border)', borderRadius: 6, background: 'var(--ok-bg)', cursor: 'pointer', fontSize: 11, color: 'var(--ok)', fontWeight: 600 }}>Resolve</button>}
                                                 {t.status !== 'escalated' && t.status !== 'resolved' && <button type="button" onClick={() => escalate(t.id)} title="Escalate" style={{ padding: '4px 8px', border: '1px solid var(--danger-border)', borderRadius: 6, background: 'var(--danger-bg)', cursor: 'pointer', color: 'var(--danger)' }}><ArrowUpRight size={11} /></button>}
-                                                <button type="button" onClick={() => openNotes(t)} title={t.operatorNotes ? 'Edit notes' : 'Add notes'} style={{ padding: '4px 8px', border: `1px solid ${t.operatorNotes ? '#e9d5ff' : '#e2e8f0'}`, borderRadius: 6, background: t.operatorNotes ? '#faf5ff' : '#fff', cursor: 'pointer', fontSize: 11, color: t.operatorNotes ? '#7c3aed' : '#64748b' }}>
+                                                <button type="button" onClick={() => openNotes(t)} title={t.operatorNotes ? 'Edit notes' : 'Add notes'} style={{ padding: '4px 8px', border: `1px solid ${t.operatorNotes ? '#e9d5ff' : 'var(--bg)'}`, borderRadius: 6, background: t.operatorNotes ? '#faf5ff' : 'var(--card)', cursor: 'pointer', fontSize: 11, color: t.operatorNotes ? 'var(--accent)' : '#64748b' }}>
                                                     📝{t.operatorNotes ? ' ✓' : ''}
                                                 </button>
                                             </div>
                                         </td>
                                     </tr>
                                     {expandedNotes === t.id && (
-                                        <tr key={`${t.id}-notes`} style={{ background: '#fafafa' }}>
+                                        <tr key={`${t.id}-notes`} style={{ background: 'var(--bg)' }}>
                                             <td colSpan={8} style={{ padding: '10px 16px', borderTop: '1px solid #f1f5f9' }}>
                                                 <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
                                                     <div style={{ flex: 1 }}>
-                                                        <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#64748b', marginBottom: 4 }}>Operator notes for ticket #{t.ticketNumber}</label>
+                                                        <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--ink-muted)', marginBottom: 4 }}>Operator notes for ticket #{t.ticketNumber}</label>
                                                         <textarea
                                                             rows={3}
                                                             value={notesDraft}
@@ -190,7 +190,7 @@ export default function SupportQueuePanel({ workspaceId }: { workspaceId: string
                                                         <button type="button" onClick={() => void saveNotes(t.id)} disabled={savingNotes} style={{ padding: '6px 14px', border: '1px solid var(--info-border)', borderRadius: 6, background: 'var(--info-bg)', cursor: 'pointer', fontSize: 12, color: 'var(--info)', fontWeight: 600 }}>
                                                             {savingNotes ? 'Saving…' : 'Save'}
                                                         </button>
-                                                        <button type="button" onClick={() => setExpandedNotes(null)} style={{ padding: '6px 14px', border: '1px solid var(--line)', borderRadius: 6, background: 'var(--card)', cursor: 'pointer', fontSize: 12, color: '#64748b' }}>
+                                                        <button type="button" onClick={() => setExpandedNotes(null)} style={{ padding: '6px 14px', border: '1px solid var(--line)', borderRadius: 6, background: 'var(--card)', cursor: 'pointer', fontSize: 12, color: 'var(--ink-muted)' }}>
                                                             Cancel
                                                         </button>
                                                     </div>

@@ -33,18 +33,18 @@ const STATUS_LABEL: Record<IssueStatus, string> = {
 };
 
 const STATUS_COLOR: Record<IssueStatus, { bg: string; text: string }> = {
-    open: { bg: '#fef3c7', text: '#92400e' },
-    diagnosing: { bg: '#eff6ff', text: '#1d4ed8' },
-    fixing: { bg: '#f0fdf4', text: '#15803d' },
-    escalated: { bg: '#fef2f2', text: '#b91c1c' },
-    resolved: { bg: '#f1f5f9', text: '#475569' },
+    open: { bg: 'var(--warn-bg)', text: 'var(--warn)' },
+    diagnosing: { bg: 'var(--info-bg)', text: 'var(--info)' },
+    fixing: { bg: 'var(--ok-bg)', text: 'var(--ok)' },
+    escalated: { bg: 'var(--danger-bg)', text: 'var(--danger)' },
+    resolved: { bg: 'var(--bg)', text: 'var(--ink-muted)' },
 };
 
 const SEVERITY_DOT: Record<IssueSeverity, string> = {
-    critical: '#ef4444',
-    high: '#f97316',
-    medium: '#f59e0b',
-    low: '#22c55e',
+    critical: 'var(--danger)',
+    high: 'var(--warn)',
+    medium: 'var(--warn)',
+    low: 'var(--ok)',
 };
 
 function formatDate(iso: string): string {
@@ -90,7 +90,7 @@ export default function IssueHistoryPage() {
                         <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--ink)', marginBottom: '0.2rem' }}>Ticket History</h1>
                         <p style={{ fontSize: '0.84rem', color: 'var(--ink-muted)' }}>All support tickets for your account</p>
                     </div>
-                    <Link href="/portal/support" style={{ padding: '0.4rem 0.9rem', background: '#2563eb', color: '#fff', borderRadius: 6, fontSize: '0.83rem', fontWeight: 600, textDecoration: 'none' }}>
+                    <Link href="/portal/support" style={{ padding: '0.4rem 0.9rem', background: 'var(--info)', color: 'var(--card)', borderRadius: 6, fontSize: '0.83rem', fontWeight: 600, textDecoration: 'none' }}>
                         + New Ticket
                     </Link>
                 </div>
@@ -105,8 +105,8 @@ export default function IssueHistoryPage() {
                             style={{
                                 padding: '0.28rem 0.75rem', fontSize: '0.8rem', fontWeight: 600,
                                 border: '1px solid var(--line)', borderRadius: 20,
-                                background: filter === s ? '#1e293b' : '#fff',
-                                color: filter === s ? '#fff' : '#475569',
+                                background: filter === s ? 'var(--bg-deep)' : 'var(--card)',
+                                color: filter === s ? 'var(--card)' : 'var(--ink-muted)',
                                 cursor: 'pointer',
                             }}
                         >
@@ -199,8 +199,8 @@ export default function IssueHistoryPage() {
                                                 <div style={{
                                                     maxWidth: '80%', padding: '0.3rem 0.6rem', fontSize: '0.8rem', lineHeight: 1.45,
                                                     borderRadius: msg.role === 'user' ? '8px 8px 2px 8px' : '8px 8px 8px 2px',
-                                                    background: msg.role === 'user' ? '#334155' : msg.role === 'agent' ? '#e2e8f0' : '#f8fafc',
-                                                    color: msg.role === 'user' ? '#f8fafc' : '#1e293b',
+                                                    background: msg.role === 'user' ? 'var(--bg-deep)' : msg.role === 'agent' ? 'var(--bg)' : 'var(--bg)',
+                                                    color: msg.role === 'user' ? 'var(--card)' : 'var(--ink)',
                                                     border: msg.role === 'step' || msg.role === 'fix' ? '1px solid #e2e8f0' : 'none',
                                                     fontStyle: msg.role === 'step' ? 'italic' : undefined,
                                                 }}>

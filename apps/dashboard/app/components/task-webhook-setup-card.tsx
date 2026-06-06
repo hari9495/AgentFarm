@@ -128,7 +128,7 @@ export function TaskWebhookSetupCard({ workspaceId }: TaskWebhookSetupCardProps)
             </div>
 
             {message && (
-                <p style={{ margin: '0 0 0.65rem', fontSize: '0.82rem', color: message.ok ? '#1a7a4a' : '#c4161c' }}>
+                <p style={{ margin: '0 0 0.65rem', fontSize: '0.82rem', color: message.ok ? 'var(--ok)' : 'var(--danger)' }}>
                     {message.ok ? '✓ ' : '⚠ '}{message.text}
                 </p>
             )}
@@ -174,7 +174,7 @@ export function TaskWebhookSetupCard({ workspaceId }: TaskWebhookSetupCardProps)
                         <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>
                             Sample payload
                         </div>
-                        <pre style={{ margin: 0, background: '#1d1d1f', color: '#a8e6cf', padding: '0.65rem 0.75rem', borderRadius: '0.4rem', fontSize: '0.73rem', fontFamily: 'ui-monospace, monospace', lineHeight: 1.6, overflowX: 'auto' }}>
+                        <pre style={{ margin: 0, background: 'var(--bg-deep)', color: 'var(--ok)', padding: '0.65rem 0.75rem', borderRadius: '0.4rem', fontSize: '0.73rem', fontFamily: 'ui-monospace, monospace', lineHeight: 1.6, overflowX: 'auto' }}>
 {`{
   "eventType": "task_completed",
   "tenantId": "ten_abc123",
@@ -230,7 +230,7 @@ export function TaskWebhookSetupCard({ workspaceId }: TaskWebhookSetupCardProps)
                         <div key={wh.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.65rem 0.75rem', background: 'var(--bg)', borderRadius: '0.4rem', border: '1px solid var(--line)' }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.2rem', flexWrap: 'wrap' }}>
-                                    <span style={{ padding: '0.1rem 0.4rem', borderRadius: 9999, background: wh.enabled ? 'rgba(26,122,74,0.08)' : '#f3f4f6', color: wh.enabled ? '#1a7a4a' : '#6b7280', fontSize: '0.7rem', fontWeight: 700 }}>
+                                    <span style={{ padding: '0.1rem 0.4rem', borderRadius: 9999, background: wh.enabled ? 'rgba(26,122,74,0.08)' : 'var(--bg)', color: wh.enabled ? '#1a7a4a' : 'var(--ink-muted)', fontSize: '0.7rem', fontWeight: 700 }}>
                                         {wh.enabled ? 'active' : 'disabled'}
                                     </span>
                                     {wh.failureCount > 0 && (

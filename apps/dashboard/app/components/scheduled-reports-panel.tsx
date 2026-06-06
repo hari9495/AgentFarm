@@ -20,9 +20,9 @@ type ScheduledReport = {
 };
 
 const FREQ_BADGE: Record<string, { bg: string; color: string }> = {
-    daily: { bg: '#dbeafe', color: 'var(--info)' },
-    weekly: { bg: '#dcfce7', color: 'var(--ok)' },
-    monthly: { bg: '#f3e8ff', color: '#7c3aed' },
+    daily: { bg: 'var(--info-bg)', color: 'var(--info)' },
+    weekly: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    monthly: { bg: '#f3e8ff', color: 'var(--accent)' },
 };
 
 export default function ScheduledReportsPanel({ tenantId: _tenantId }: ScheduledReportsPanelProps) {
@@ -301,7 +301,7 @@ export default function ScheduledReportsPanel({ tenantId: _tenantId }: Scheduled
                         border: 'none',
                         borderRadius: '6px',
                         background: creating ? 'var(--ink-muted)' : 'var(--brand)',
-                        color: '#fff',
+                        color: 'var(--card)',
                         cursor: creating ? 'not-allowed' : 'pointer',
                         fontWeight: 600,
                     }}
@@ -397,7 +397,7 @@ export default function ScheduledReportsPanel({ tenantId: _tenantId }: Scheduled
                                             {report.enabled ? (
                                                 <span style={{ color: 'var(--ok)', fontWeight: 600, fontSize: '0.85rem' }}>✓ Active</span>
                                             ) : (
-                                                <span style={{ color: '#475569', fontWeight: 600, fontSize: '0.85rem' }}>✗ Paused</span>
+                                                <span style={{ color: 'var(--ink-muted)', fontWeight: 600, fontSize: '0.85rem' }}>✗ Paused</span>
                                             )}
                                         </td>
                                         <td style={TD_MUTED}>
@@ -601,7 +601,7 @@ export default function ScheduledReportsPanel({ tenantId: _tenantId }: Scheduled
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button
                             onClick={() => { void handleSave(); }}
-                            style={{ padding: '0.45rem 1.2rem', fontSize: '0.85rem', border: 'none', borderRadius: '6px', background: 'var(--brand)', color: '#fff', cursor: 'pointer', fontWeight: 600 }}
+                            style={{ padding: '0.45rem 1.2rem', fontSize: '0.85rem', border: 'none', borderRadius: '6px', background: 'var(--brand)', color: 'var(--card)', cursor: 'pointer', fontWeight: 600 }}
                         >
                             Save Changes
                         </button>

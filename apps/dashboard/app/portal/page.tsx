@@ -99,7 +99,7 @@ function PortalCard({
                     style={{
                         display: 'inline-block', marginTop: '0.25rem',
                         padding: '0.35rem 0.8rem', borderRadius: 5,
-                        background: accent, color: '#fff',
+                        background: accent, color: 'var(--card)',
                         fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none',
                     }}
                 >

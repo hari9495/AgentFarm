@@ -134,7 +134,7 @@ function PortalLoginForm() {
                         disabled={loading || !tenantId.trim() || !email.trim() || !password}
                         style={{
                             marginTop: '0.25rem', padding: '0.6rem 1rem', fontSize: '0.9rem', fontWeight: 600,
-                            background: loading ? '#93c5fd' : '#2563eb', color: '#fff',
+                            background: loading ? 'var(--info)' : 'var(--info)', color: 'var(--card)',
                             border: 'none', borderRadius: 6, cursor: loading ? 'not-allowed' : 'pointer',
                             transition: 'background 0.15s',
                         }}

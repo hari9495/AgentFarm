@@ -43,14 +43,14 @@ const TYPE_LABEL: Record<DraftType, string> = {
 };
 
 const STATUS_STYLE: Record<DraftStatus, { bg: string; color: string; icon: React.ElementType }> = {
-    pending_review: { bg: '#fef9c3', color: 'var(--warn)', icon: Clock },
-    approved:       { bg: '#dcfce7', color: 'var(--ok)', icon: CheckCircle2 },
-    rejected:       { bg: '#fee2e2', color: 'var(--danger)', icon: XCircle },
-    published:      { bg: '#eff6ff', color: '#1e40af', icon: CheckCircle2 },
+    pending_review: { bg: 'var(--warn-bg)', color: 'var(--warn)', icon: Clock },
+    approved:       { bg: 'var(--ok-bg)', color: 'var(--ok)', icon: CheckCircle2 },
+    rejected:       { bg: 'var(--danger-bg)', color: 'var(--danger)', icon: XCircle },
+    published:      { bg: 'var(--info-bg)', color: 'var(--info)', icon: CheckCircle2 },
 };
 
 const ROLE_BADGE: Record<string, { bg: string; color: string; label: string }> = {
-    content_writer:    { bg: '#fdf4ff', color: '#7c3aed', label: 'Content Writer' },
+    content_writer:    { bg: '#fdf4ff', color: 'var(--accent)', label: 'Content Writer' },
     technical_writer:  { bg: '#f0f9ff', color: 'var(--info)', label: 'Tech Writer' },
     corporate_assistant: { bg: '#fff7ed', color: '#c2410c', label: 'Corp. Assistant' },
 };
@@ -121,12 +121,12 @@ export default function ContentDraftsPanel({ workspaceId }: { workspaceId: strin
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                     {statusFilters.map(({ key, label }) => (
-                        <button key={key} type="button" onClick={() => setFilter(key)} style={{ padding: '5px 12px', border: `1px solid ${filter === key ? '#0066cc' : '#e2e8f0'}`, borderRadius: 20, background: filter === key ? 'rgba(0,102,204,0.07)' : '#fff', color: filter === key ? '#0066cc' : '#64748b', fontSize: 12, fontWeight: filter === key ? 600 : 400, cursor: 'pointer' }}>
+                        <button key={key} type="button" onClick={() => setFilter(key)} style={{ padding: '5px 12px', border: `1px solid ${filter === key ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: filter === key ? 'rgba(0,102,204,0.07)' : 'var(--card)', color: filter === key ? 'var(--accent)' : '#64748b', fontSize: 12, fontWeight: filter === key ? 600 : 400, cursor: 'pointer' }}>
                             {label}
                         </button>
                     ))}
                 </div>
-                <button type="button" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', fontSize: 12, color: '#64748b', cursor: 'pointer' }}>
+                <button type="button" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', fontSize: 12, color: 'var(--ink-muted)', cursor: 'pointer' }}>
                     <RefreshCw size={12} />Refresh
                 </button>
             </div>
@@ -151,16 +151,16 @@ export default function ContentDraftsPanel({ workspaceId }: { workspaceId: strin
                             {drafts.map((d, i) => {
                                 const st = STATUS_STYLE[d.status];
                                 const StIcon = st.icon;
-                                const rb = ROLE_BADGE[d.agentRole] ?? { bg: '#f1f5f9', color: '#475569', label: d.agentRole };
+                                const rb = ROLE_BADGE[d.agentRole] ?? { bg: 'var(--bg)', color: 'var(--ink-muted)', label: d.agentRole };
                                 return (
-                                    <tr key={d.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : '#fff' }}>
+                                    <tr key={d.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : 'var(--card)' }}>
                                         <td style={td}>
                                             <div style={{ fontWeight: 500, color: 'var(--ink-soft)' }}>{d.title}</div>
                                             <div style={{ fontSize: 11, color: 'var(--ink-muted)', marginTop: 2, maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.excerpt}</div>
                                         </td>
-                                        <td style={td}><span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 4, background: 'var(--bg)', color: '#475569' }}>{TYPE_LABEL[d.draftType] ?? d.draftType}</span></td>
+                                        <td style={td}><span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 4, background: 'var(--bg)', color: 'var(--ink-muted)' }}>{TYPE_LABEL[d.draftType] ?? d.draftType}</span></td>
                                         <td style={td}><span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 4, background: rb.bg, color: rb.color }}>{rb.label}</span></td>
-                                        <td style={{ ...td, color: '#64748b' }}>{d.wordCount.toLocaleString()}</td>
+                                        <td style={{ ...td, color: 'var(--ink-muted)' }}>{d.wordCount.toLocaleString()}</td>
                                         <td style={td}>
                                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, background: st.bg, color: st.color, fontSize: 11, fontWeight: 600 }}>
                                                 <StIcon size={10} />{d.status.replace('_', ' ')}
@@ -168,7 +168,7 @@ export default function ContentDraftsPanel({ workspaceId }: { workspaceId: strin
                                         </td>
                                         <td style={td}>
                                             <div style={{ display: 'flex', gap: 4 }}>
-                                                <button type="button" title="Preview" style={{ padding: '4px 8px', border: '1px solid var(--line)', borderRadius: 6, background: 'var(--card)', cursor: 'pointer', fontSize: 11, color: '#475569', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                                <button type="button" title="Preview" style={{ padding: '4px 8px', border: '1px solid var(--line)', borderRadius: 6, background: 'var(--card)', cursor: 'pointer', fontSize: 11, color: 'var(--ink-muted)', display: 'flex', alignItems: 'center', gap: 3 }}>
                                                     <Eye size={11} />
                                                 </button>
                                                 {d.status === 'pending_review' && (

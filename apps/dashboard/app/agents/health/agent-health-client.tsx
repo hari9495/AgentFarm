@@ -29,11 +29,11 @@ type Summary = { active: number; paused: number; failed: number; other: number }
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const STATUS_CFG: Record<BotStatus, { label: string; color: string; bg: string; border: string; Icon: React.ElementType }> = {
-    active:                   { label: 'Active',        color: 'var(--ok)', bg: '#dcfce7', border: '#bbf7d0', Icon: CheckCircle2 },
-    paused:                   { label: 'Paused',        color: 'var(--warn)', bg: '#fef9c3', border: '#fde68a', Icon: PauseCircle  },
-    failed:                   { label: 'Failed',        color: 'var(--danger)', bg: '#fee2e2', border: '#fecaca', Icon: XCircle      },
-    bootstrapping:            { label: 'Bootstrapping', color: 'var(--info)', bg: '#dbeafe', border: '#bfdbfe', Icon: RefreshCw    },
-    created:                  { label: 'Created',       color: '#64748b', bg: '#f1f5f9', border: '#e2e8f0', Icon: Clock        },
+    active:                   { label: 'Active',        color: 'var(--ok)', bg: 'var(--ok-bg)', border: '#bbf7d0', Icon: CheckCircle2 },
+    paused:                   { label: 'Paused',        color: 'var(--warn)', bg: 'var(--warn-bg)', border: 'var(--warn)', Icon: PauseCircle  },
+    failed:                   { label: 'Failed',        color: 'var(--danger)', bg: 'var(--danger-bg)', border: '#fecaca', Icon: XCircle      },
+    bootstrapping:            { label: 'Bootstrapping', color: 'var(--info)', bg: 'var(--info-bg)', border: 'var(--info-bg)', Icon: RefreshCw    },
+    created:                  { label: 'Created',       color: '#64748b', bg: 'var(--bg)', border: 'var(--bg)', Icon: Clock        },
     connector_setup_required: { label: 'Setup needed',  color: '#9333ea', bg: '#f3e8ff', border: '#e9d5ff', Icon: AlertCircle  },
 };
 
@@ -132,7 +132,7 @@ export default function AgentHealthClient() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Activity size={18} color="#fff" />
+                            <Activity size={18} color="var(--card)" />
                         </div>
                         <div>
                             <h1 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: 'var(--ink)' }}>Agent Health</h1>
@@ -157,7 +157,7 @@ export default function AgentHealthClient() {
                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 22 }}>
                     <SummaryCard count={summary.active}  label="Active"        color="#16a34a" bg="#f0fdf4" Icon={CheckCircle2} />
                     <SummaryCard count={summary.paused}  label="Paused"        color="#d97706" bg="#fffbeb" Icon={PauseCircle}  />
-                    <SummaryCard count={summary.failed}  label="Failed"        color="#dc2626" bg="#fef2f2" Icon={XCircle}      />
+                    <SummaryCard count={summary.failed}  label="Failed"        color="var(--danger)" bg="#fef2f2" Icon={XCircle}      />
                     <SummaryCard count={summary.other}   label="Other"         color="#64748b" bg="#f8fafc" Icon={Clock}        />
                     <SummaryCard count={agents.length}   label="Total agents"  color="#2563eb" bg="#eff6ff" Icon={Zap}          />
                 </div>

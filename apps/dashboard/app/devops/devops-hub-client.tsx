@@ -44,7 +44,7 @@ function TabShell({ title, icon: Icon, description, children }: {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: 'color-mix(in srgb, var(--accent) 8%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
-                    <Icon size={16} color="#0066cc" />
+                    <Icon size={16} color="var(--accent)" />
                 </div>
                 <div>
                     <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>{title}</h2>
@@ -76,7 +76,7 @@ export default function DevOpsHubClient({
                 <span style={{ color: 'var(--line-strong)' }}>|</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(0,102,204,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Wrench size={14} color="#0066cc" />
+                        <Wrench size={14} color="var(--accent)" />
                     </div>
                     <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>DevOps &amp; Developer Tools</span>
                 </div>
@@ -94,9 +94,9 @@ export default function DevOpsHubClient({
                             style={{
                                 display: 'flex', alignItems: 'center', gap: 6,
                                 padding: '13px 14px', background: 'transparent', border: 'none',
-                                borderBottom: `2px solid ${isActive ? '#0066cc' : 'transparent'}`,
+                                borderBottom: `2px solid ${isActive ? 'var(--accent)' : 'transparent'}`,
                                 cursor: 'pointer',
-                                color: isActive ? '#0066cc' : 'var(--ink-muted)',
+                                color: isActive ? 'var(--accent)' : 'var(--ink-muted)',
                                 fontSize: 13, fontWeight: isActive ? 600 : 500,
                                 transition: 'all 0.15s', marginBottom: -1, whiteSpace: 'nowrap',
                             }}

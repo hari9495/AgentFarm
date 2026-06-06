@@ -86,7 +86,7 @@ function KpiCard({
                         {label}
                     </span>
                 </div>
-                {href && <ArrowRight size={13} color="#aeaeb2" />}
+                {href && <ArrowRight size={13} color="var(--ink-muted)" />}
             </div>
 
             {/* Value */}
@@ -150,7 +150,7 @@ export function MissionHero({
                 {/* Left: workspace identity */}
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(0,102,204,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <Zap size={18} color="#0066cc" />
+                        <Zap size={18} color="var(--accent)" />
                     </div>
                     <div>
                         <div style={{ fontSize: 17, fontWeight: 700, color: "#1d1d1f", letterSpacing: "-0.02em", lineHeight: 1.2 }}>
@@ -184,7 +184,7 @@ export function MissionHero({
                                 background: "rgba(196,22,28,0.08)", border: "1px solid rgba(196,22,28,0.25)",
                                 cursor: "pointer",
                             }}>
-                                <AlertTriangle size={13} color="#c4161c" />
+                                <AlertTriangle size={13} color="var(--danger)" />
                                 <span style={{ fontSize: 12, fontWeight: 700, color: "#c4161c" }}>
                                     {pendingApprovals} pending approval{pendingApprovals !== 1 ? "s" : ""}
                                 </span>

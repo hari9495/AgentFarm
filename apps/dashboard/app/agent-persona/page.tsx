@@ -70,7 +70,7 @@ export default async function AgentPersonaPage({
                                     border: '1px solid var(--line)',
                                     textDecoration: 'none',
                                     background: activeBotId === b.id ? 'var(--brand)' : 'transparent',
-                                    color: activeBotId === b.id ? '#fff' : 'var(--ink)',
+                                    color: activeBotId === b.id ? 'var(--card)' : 'var(--ink)',
                                 }}
                             >
                                 {b.name}

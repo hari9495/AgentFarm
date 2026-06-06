@@ -50,7 +50,7 @@ function ForecastChart({ data, today }: { data: DailyPoint[]; today: string }) {
                     const x = i * (barW + 2);
                     const y = chartH - h;
                     const isToday = d.date === today;
-                    const fill = d.isProjected ? 'url(#hatch)' : isToday ? '#2563eb' : '#3b82f6';
+                    const fill = d.isProjected ? 'url(#hatch)' : isToday ? 'var(--info)' : 'var(--info)';
                     return (
                         <g key={d.date}>
                             <rect x={x} y={y} width={barW} height={h} rx={2} fill={fill} opacity={d.isProjected ? 0.55 : 0.85} />
@@ -97,7 +97,7 @@ export default function CostForecastPanel({ tenantId }: { tenantId: string }) {
 
     const pct = data?.percentChangeVsLastMonth;
     const TrendIcon = pct == null ? Minus : pct > 0 ? TrendingUp : TrendingDown;
-    const trendColor = pct == null ? '#94a3b8' : pct > 10 ? '#dc2626' : pct > 0 ? '#d97706' : '#16a34a';
+    const trendColor = pct == null ? 'var(--ink-muted)' : pct > 10 ? 'var(--danger)' : pct > 0 ? 'var(--warn)' : 'var(--ok)';
     const pctLabel = pct == null ? '—' : `${pct > 0 ? '+' : ''}${pct.toFixed(1)}% vs last month`;
 
     return (
@@ -176,7 +176,7 @@ export default function CostForecastPanel({ tenantId }: { tenantId: string }) {
                     <div>
                         <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-muted)', marginBottom: 8, display: 'flex', gap: 16 }}>
                             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                <span style={{ width: 10, height: 10, borderRadius: 2, background: '#3b82f6', display: 'inline-block' }} /> Actual
+                                <span style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--info)', display: 'inline-block' }} /> Actual
                             </span>
                             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                                 <span style={{ width: 10, height: 10, borderRadius: 2, background: 'repeating-linear-gradient(45deg, #94a3b8, #94a3b8 1px, transparent 1px, transparent 4px)', display: 'inline-block' }} /> Projected

@@ -9,9 +9,9 @@ type HealthRingProps = {
 
 const RING_COLORS: Record<HealthRingTone, string> = {
     ok: '#10b981',
-    warn: '#f59e0b',
-    danger: '#ef4444',
-    neutral: '#94a3b8',
+    warn: 'var(--warn)',
+    danger: 'var(--danger)',
+    neutral: 'var(--ink-muted)',
 };
 
 const RING_TRACK: Record<HealthRingTone, string> = {

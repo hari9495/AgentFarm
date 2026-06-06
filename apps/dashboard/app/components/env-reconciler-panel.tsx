@@ -33,17 +33,17 @@ type ReconcileResult = {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    clean: { bg: '#dcfce7', color: 'var(--ok)' },
-    drifted: { bg: '#fee2e2', color: 'var(--danger)' },
-    reconciling: { bg: '#dbeafe', color: 'var(--info)' },
-    failed: { bg: '#fef9c3', color: 'var(--warn)' },
+    clean: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    drifted: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    reconciling: { bg: 'var(--info-bg)', color: 'var(--info)' },
+    failed: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
 };
 
 const TOOL_STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    ok: { bg: '#dcfce7', color: 'var(--ok)' },
-    missing: { bg: '#fee2e2', color: 'var(--danger)' },
-    version_mismatch: { bg: '#fef9c3', color: 'var(--warn)' },
-    unknown: { bg: '#f1f5f9', color: '#475569' },
+    ok: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    missing: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    version_mismatch: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
+    unknown: { bg: 'var(--bg)', color: 'var(--ink-muted)' },
 };
 
 function inlineBadge(label: string, map: Record<string, { bg: string; color: string }>) {
@@ -205,8 +205,8 @@ export default function EnvReconcilerPanel({ tenantId, workspaceId }: EnvReconci
                     <div style={{ display: 'grid', gap: '0.55rem', fontSize: '0.86rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                             {profile.source && inlineBadge(profile.source, {
-                                default: { bg: '#f1f5f9', color: '#475569' },
-                                persisted: { bg: '#dcfce7', color: 'var(--ok)' },
+                                default: { bg: 'var(--bg)', color: 'var(--ink-muted)' },
+                                persisted: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
                             })}
                             <span>Reconcile status: {inlineBadge(profile.reconcileStatus, STATUS_BADGE)}</span>
                         </div>

@@ -56,16 +56,16 @@ const STATUS_ICON: Record<string, string> = {
 };
 
 const STATUS_COLOR: Record<string, string> = {
-    pending: '#555',
-    running: '#60a5fa',
-    done: '#22c55e',
-    failed: '#ef4444',
-    skipped: '#888',
+    pending: 'var(--ink-muted)',
+    running: 'var(--info)',
+    done: 'var(--ok)',
+    failed: 'var(--danger)',
+    skipped: 'var(--ink-muted)',
 };
 
 function TaskTimeline({ steps }: { steps: LoopStepRecord[] }) {
     return (
-        <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: '#0f0f1a', borderRadius: 8, border: '1px solid #222' }}>
+        <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--bg-deep)', borderRadius: 8, border: '1px solid #222' }}>
             <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginBottom: '0.5rem', fontWeight: 600 }}>TASK TIMELINE</p>
             <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                 {STEP_ORDER.map((step) => {
@@ -76,17 +76,17 @@ function TaskTimeline({ steps }: { steps: LoopStepRecord[] }) {
                         : null;
                     return (
                         <li key={step} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span style={{ color: STATUS_COLOR[status] ?? '#888', fontWeight: 700, fontSize: '0.85rem', minWidth: 14, textAlign: 'center' }}>
+                            <span style={{ color: STATUS_COLOR[status] ?? 'var(--ink-muted)', fontWeight: 700, fontSize: '0.85rem', minWidth: 14, textAlign: 'center' }}>
                                 {STATUS_ICON[status] ?? '○'}
                             </span>
-                            <span style={{ fontSize: '0.82rem', color: status === 'done' ? '#ccc' : status === 'running' ? '#93c5fd' : '#555', flex: 1 }}>
+                            <span style={{ fontSize: '0.82rem', color: status === 'done' ? 'var(--ink-muted)' : status === 'running' ? 'var(--info)' : 'var(--ink-muted)', flex: 1 }}>
                                 {STEP_LABELS[step]}
                             </span>
                             {durationMs !== null && (
-                                <span style={{ fontSize: '0.72rem', color: '#666' }}>{durationMs}ms</span>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--ink-muted)' }}>{durationMs}ms</span>
                             )}
                             {record?.error && (
-                                <span style={{ fontSize: '0.72rem', color: '#f87171' }}>{record.error}</span>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--danger)' }}>{record.error}</span>
                             )}
                         </li>
                     );
@@ -104,11 +104,11 @@ function ChatBubble({ message }: { message: LoopMessage }) {
                 maxWidth: '80%',
                 padding: '0.65rem 0.85rem',
                 borderRadius: isUser ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                background: isUser ? '#4f46e5' : '#1e2235',
+                background: isUser ? 'var(--accent)' : 'var(--bg-deep)',
                 border: isUser ? 'none' : '1px solid #2e3354',
                 fontSize: '0.875rem',
                 lineHeight: 1.5,
-                color: '#e8ecf8',
+                color: 'var(--ink)',
             }}>
                 {message.content}
             </div>
@@ -178,14 +178,14 @@ export function AgentChatPanel() {
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '70vh', background: '#0f1120', borderRadius: 12, border: '1px solid #2a2d45', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '70vh', background: 'var(--bg-deep)', borderRadius: 12, border: '1px solid var(--line)', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
             {/* Messages */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '1.2rem 1rem', display: 'flex', flexDirection: 'column' }}>
                 {messages.map((msg, i) => (
                     <ChatBubble key={i} message={msg} />
                 ))}
                 {isRunning && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', color: '#818cf8' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', color: 'var(--accent)' }}>
                         <span>⟳</span>
                         Agent is working…
                     </div>
@@ -193,20 +193,20 @@ export function AgentChatPanel() {
             </div>
 
             {/* Input */}
-            <div style={{ padding: '0.75rem 1rem', borderTop: '1px solid #2a2d45', display: 'flex', gap: '0.5rem', alignItems: 'flex-end', background: '#0c0e1c' }}>
+            <div style={{ padding: '0.75rem 1rem', borderTop: '1px solid #2a2d45', display: 'flex', gap: '0.5rem', alignItems: 'flex-end', background: 'var(--bg-deep)' }}>
                 <textarea
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                     rows={2}
                     placeholder="Describe a task… (Enter to send, Shift+Enter for newline)"
-                    style={{ flex: 1, padding: '0.5rem 0.7rem', borderRadius: 8, border: '1px solid #2a2d45', background: '#161929', color: '#e8ecf8', fontSize: '0.875rem', resize: 'none', lineHeight: 1.5 }}
+                    style={{ flex: 1, padding: '0.5rem 0.7rem', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--bg-deep)', color: 'var(--ink)', fontSize: '0.875rem', resize: 'none', lineHeight: 1.5 }}
                     disabled={isRunning}
                 />
                 <button
                     onClick={() => { void sendMessage(); }}
                     disabled={isRunning || input.trim().length === 0}
-                    style={{ padding: '0.55rem 1.2rem', borderRadius: 8, background: isRunning ? '#2a2d45' : '#4f46e5', color: isRunning ? '#6b7280' : '#fff', border: 'none', cursor: isRunning ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.875rem', height: 'fit-content', transition: 'background 0.15s' }}
+                    style={{ padding: '0.55rem 1.2rem', borderRadius: 8, background: isRunning ? 'var(--line)' : 'var(--accent)', color: isRunning ? 'var(--ink-muted)' : 'var(--card)', border: 'none', cursor: isRunning ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.875rem', height: 'fit-content', transition: 'background 0.15s' }}
                 >
                     Send
                 </button>

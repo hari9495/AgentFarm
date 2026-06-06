@@ -29,19 +29,19 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    unread: { bg: '#dbeafe', color: 'var(--info)' },
-    read: { bg: '#f1f5f9', color: '#475569' },
-    acked: { bg: '#dcfce7', color: 'var(--ok)' },
+    unread: { bg: 'var(--info-bg)', color: 'var(--info)' },
+    read: { bg: 'var(--bg)', color: 'var(--ink-muted)' },
+    acked: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
 };
 
 const CATEGORY_BADGE: Record<string, { bg: string; color: string }> = {
-    runtime: { bg: '#dbeafe', color: 'var(--info)' },
-    approval: { bg: '#fef9c3', color: 'var(--warn)' },
-    ci: { bg: '#f3e8ff', color: '#7c3aed' },
-    connector: { bg: '#dcfce7', color: 'var(--ok)' },
-    provisioning: { bg: '#fee2e2', color: 'var(--danger)' },
-    security: { bg: '#fee2e2', color: '#7f1d1d' },
-    system: { bg: '#f1f5f9', color: '#475569' },
+    runtime: { bg: 'var(--info-bg)', color: 'var(--info)' },
+    approval: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
+    ci: { bg: '#f3e8ff', color: 'var(--accent)' },
+    connector: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    provisioning: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    security: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    system: { bg: 'var(--bg)', color: 'var(--ink-muted)' },
 };
 
 const CATEGORIES = ['runtime', 'approval', 'ci', 'connector', 'provisioning', 'security', 'system'];

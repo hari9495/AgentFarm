@@ -44,7 +44,7 @@ function AdaptersTab({ workspaceId }: { workspaceId: string }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '16px 18px', background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                 <div style={{ width: 40, height: 40, borderRadius: 11, background: 'color-mix(in srgb, var(--accent) 8%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Layers size={18} color="#0066cc" />
+                    <Layers size={18} color="var(--accent)" />
                 </div>
                 <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em', marginBottom: 4 }}>Adapter Registry</div>
@@ -68,7 +68,7 @@ function AdaptersTab({ workspaceId }: { workspaceId: string }) {
                             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{title}</div>
                             <div style={{ fontSize: 12, color: 'var(--ink-muted)', marginTop: 2 }}>{desc}</div>
                         </div>
-                        <ExternalLink size={14} color="#aeaeb2" />
+                        <ExternalLink size={14} color="var(--ink-muted)" />
                     </Link>
                 ))}
             </div>
@@ -146,7 +146,7 @@ function McpTab() {
             {/* Compact explainer */}
             <div style={{ padding: '12px 16px', background: 'rgba(0,102,204,0.04)', border: '1px solid rgba(0,102,204,0.15)', borderRadius: 12 }}>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                    <Cpu size={15} color="#0066cc" style={{ flexShrink: 0, marginTop: 2 }} />
+                    <Cpu size={15} color="var(--accent)" style={{ flexShrink: 0, marginTop: 2 }} />
                     <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.55 }}>
                         <strong style={{ color: 'var(--accent)' }}>Model Context Protocol</strong> — register MCP servers to give agents
                         access to filesystems, browser automation, REST APIs, and custom tools.
@@ -167,7 +167,7 @@ function McpTab() {
                     <button onClick={load} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
                         <RefreshCw size={11} /> Refresh
                     </button>
-                    <button onClick={() => setShowForm(v => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 9999, border: 'none', background: showForm ? '#aeaeb2' : '#0066cc', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                    <button onClick={() => setShowForm(v => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 9999, border: 'none', background: showForm ? 'var(--ink-muted)' : 'var(--accent)', color: 'var(--card)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                         {showForm ? '✕ Cancel' : <><Plus size={12} /> Add MCP Server</>}
                     </button>
                 </div>
@@ -199,7 +199,7 @@ function McpTab() {
                         {addError && <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 9, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 12 }}><AlertCircle size={13} /> {addError}</div>}
                         <div style={{ display: 'flex', gap: 8 }}>
                             <button type="button" onClick={() => setShowForm(false)} style={{ padding: '8px 18px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
-                            <button type="submit" disabled={adding} style={{ padding: '8px 24px', borderRadius: 9999, border: 'none', background: adding ? '#aeaeb2' : '#0066cc', color: '#fff', fontSize: 13, fontWeight: 700, cursor: adding ? 'not-allowed' : 'pointer' }}>{adding ? 'Adding…' : 'Add Server'}</button>
+                            <button type="submit" disabled={adding} style={{ padding: '8px 24px', borderRadius: 9999, border: 'none', background: adding ? 'var(--ink-muted)' : 'var(--accent)', color: 'var(--card)', fontSize: 13, fontWeight: 700, cursor: adding ? 'not-allowed' : 'pointer' }}>{adding ? 'Adding…' : 'Add Server'}</button>
                         </div>
                     </form>
                 </div>
@@ -225,7 +225,7 @@ function McpTab() {
                             </div>
                         ))}
                     </div>
-                    <button onClick={() => setShowForm(true)} style={{ padding: '8px 20px', borderRadius: 9999, border: 'none', background: '#0066cc', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Add your first MCP server</button>
+                    <button onClick={() => setShowForm(true)} style={{ padding: '8px 20px', borderRadius: 9999, border: 'none', background: 'var(--accent)', color: 'var(--card)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Add your first MCP server</button>
                 </div>
             )}
 
@@ -234,7 +234,7 @@ function McpTab() {
                 {servers.map(server => {
                     const ps = pingStates[server.id];
                     return (
-                        <div key={server.id} style={{ background: 'var(--card)', border: `1px solid ${server.isActive ? 'rgba(26,122,74,0.25)' : '#d2d2d7'}`, borderRadius: 14, padding: '14px 16px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                        <div key={server.id} style={{ background: 'var(--card)', border: `1px solid ${server.isActive ? 'rgba(26,122,74,0.25)' : 'var(--line)'}`, borderRadius: 14, padding: '14px 16px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                                 <div style={{ width: 9, height: 9, borderRadius: '50%', background: server.isActive ? '#1a7a4a' : '#aeaeb2', flexShrink: 0, marginTop: 5 }} />
                                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -242,7 +242,7 @@ function McpTab() {
                                     <div style={{ fontSize: 12, fontFamily: 'ui-monospace, monospace', color: 'var(--accent)' }}>{server.url}</div>
                                     <div style={{ fontSize: 11, color: 'var(--ink-muted)', marginTop: 2 }}>{server.workspaceId ? `Workspace: ${server.workspaceId}` : 'Scope: All workspaces'}</div>
                                     {ps && !ps.loading && (
-                                        <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: ps.ok ? '#1a7a4a' : '#c4161c' }}>
+                                        <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: ps.ok ? 'var(--ok)' : 'var(--danger)' }}>
                                             {ps.ok ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
                                             {ps.ok ? `Reachable · ${ps.latencyMs ?? 0}ms` : 'Unreachable — check URL and confirm server is running'}
                                         </div>
@@ -274,7 +274,7 @@ function TabShell({ title, icon: Icon, description, children }: {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: 'color-mix(in srgb, var(--accent) 8%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
-                    <Icon size={16} color="#0066cc" />
+                    <Icon size={16} color="var(--accent)" />
                 </div>
                 <div>
                     <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>{title}</h2>
@@ -318,10 +318,10 @@ export default function ConnectorsHubClient({
                 <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--ink-muted)', fontSize: 13, textDecoration: 'none', fontWeight: 500, flexShrink: 0 }}>
                     ← Dashboard
                 </Link>
-                <span style={{ color: '#d2d2d7', flexShrink: 0 }}>|</span>
+                <span style={{ color: 'var(--line)', flexShrink: 0 }}>|</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(0,102,204,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Link2 size={14} color="#0066cc" />
+                        <Link2 size={14} color="var(--accent)" />
                     </div>
                     <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>Connectors & Integrations</span>
                 </div>
@@ -330,7 +330,7 @@ export default function ConnectorsHubClient({
                     {(() => {
                         const connected = initialConnectors.filter(c => c.status === 'connected').length;
                         const total     = initialConnectors.length;
-                        const color     = connected === total ? '#1a7a4a' : connected > 0 ? '#b45309' : '#c4161c';
+                        const color     = connected === total ? '#1a7a4a' : connected > 0 ? 'var(--warn)' : 'var(--danger)';
                         const bg        = connected === total ? 'rgba(26,122,74,0.07)' : connected > 0 ? 'rgba(180,83,9,0.07)' : 'rgba(196,22,28,0.07)';
                         const border    = connected === total ? 'rgba(26,122,74,0.2)' : connected > 0 ? 'rgba(180,83,9,0.2)' : 'rgba(196,22,28,0.2)';
                         return (
@@ -351,8 +351,8 @@ export default function ConnectorsHubClient({
                         <button key={key} type="button" onClick={() => setActiveTab(key)} style={{
                             display: 'flex', alignItems: 'center', gap: 6,
                             padding: '13px 14px', background: 'transparent', border: 'none',
-                            borderBottom: `2px solid ${active ? '#0066cc' : 'transparent'}`,
-                            cursor: 'pointer', color: active ? '#0066cc' : '#6e6e73',
+                            borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
+                            cursor: 'pointer', color: active ? 'var(--accent)' : '#6e6e73',
                             fontSize: 13, fontWeight: active ? 600 : 500,
                             transition: 'all 0.15s', marginBottom: -1, whiteSpace: 'nowrap',
                         }}>

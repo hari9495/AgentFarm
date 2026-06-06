@@ -49,7 +49,7 @@ function CodeBlock({ code, language, title }: { code: string; language: string; 
         <div style={{ borderRadius: '0 0 10px 10px', overflow: 'hidden', border: '1px solid var(--line)', borderTop: 'none' }}>
             <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '8px 14px', background: '#1a1a1c',
+                padding: '8px 14px', background: 'var(--bg-deep)',
                 borderBottom: '1px solid rgba(255,255,255,0.07)',
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -65,15 +65,15 @@ function CodeBlock({ code, language, title }: { code: string; language: string; 
                     <button
                         type="button"
                         onClick={copy}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: copied ? '#34d399' : '#98989d', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: copied ? 'var(--ok)' : 'var(--ink-muted)', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}
                     >
                         {copied ? <Check size={10} /> : <Copy size={10} />}
                         {copied ? 'Copied' : 'Copy'}
                     </button>
                 </div>
             </div>
-            <div style={{ background: '#111113', padding: '14px 18px', overflowX: 'auto' }}>
-                <pre style={{ margin: 0, fontSize: '0.8rem', lineHeight: 1.7, fontFamily: 'var(--font-plex-mono), ui-monospace, monospace', color: '#e5e5e7', whiteSpace: 'pre' }}>
+            <div style={{ background: 'var(--bg-deep)', padding: '14px 18px', overflowX: 'auto' }}>
+                <pre style={{ margin: 0, fontSize: '0.8rem', lineHeight: 1.7, fontFamily: 'var(--font-plex-mono), ui-monospace, monospace', color: 'var(--ink)', whiteSpace: 'pre' }}>
                     {visible}
                 </pre>
             </div>
@@ -81,7 +81,7 @@ function CodeBlock({ code, language, title }: { code: string; language: string; 
                 <button
                     type="button"
                     onClick={() => setExpanded(v => !v)}
-                    style={{ width: '100%', padding: '7px', background: '#1a1a1c', border: 'none', borderTop: '1px solid rgba(255,255,255,0.07)', color: 'var(--ink-muted)', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                    style={{ width: '100%', padding: '7px', background: 'var(--bg-deep)', border: 'none', borderTop: '1px solid rgba(255,255,255,0.07)', color: 'var(--ink-muted)', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
                 >
                     {expanded ? <><ChevronUp size={11} /> Show less</> : <><ChevronDown size={11} /> Show {lines.length - 14} more lines</>}
                 </button>
@@ -93,12 +93,12 @@ function CodeBlock({ code, language, title }: { code: string; language: string; 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
 const EVENT_TYPES = [
-    { type: 'task_queued',    icon: Clock,        colorVar: '#b45309', desc: 'A new task was accepted and placed in the execution queue.' },
-    { type: 'task_started',   icon: Zap,          colorVar: '#0066cc', desc: 'The runtime engine picked up the task and began execution.' },
-    { type: 'task_completed', icon: CheckCircle2, colorVar: '#1a7a4a', desc: 'Task finished successfully. Payload contains outcome and cost.' },
-    { type: 'task_failed',    icon: AlertCircle,  colorVar: '#c4161c', desc: 'Task terminated with an error. Check payload.errorMessage.' },
-    { type: 'task_cancelled', icon: XCircle,      colorVar: '#6e6e73', desc: 'Task was cancelled by an operator or a kill-switch trigger.' },
-    { type: 'heartbeat',      icon: Heart,        colorVar: '#94a3b8', desc: 'Sent every 30 s to keep the connection alive through proxies. Ignore in your handler.' },
+    { type: 'task_queued',    icon: Clock,        colorVar: 'var(--warn)', desc: 'A new task was accepted and placed in the execution queue.' },
+    { type: 'task_started',   icon: Zap,          colorVar: 'var(--accent)', desc: 'The runtime engine picked up the task and began execution.' },
+    { type: 'task_completed', icon: CheckCircle2, colorVar: 'var(--ok)', desc: 'Task finished successfully. Payload contains outcome and cost.' },
+    { type: 'task_failed',    icon: AlertCircle,  colorVar: 'var(--danger)', desc: 'Task terminated with an error. Check payload.errorMessage.' },
+    { type: 'task_cancelled', icon: XCircle,      colorVar: 'var(--ink-muted)', desc: 'Task was cancelled by an operator or a kill-switch trigger.' },
+    { type: 'heartbeat',      icon: Heart,        colorVar: 'var(--ink-muted)', desc: 'Sent every 30 s to keep the connection alive through proxies. Ignore in your handler.' },
 ];
 
 const SCHEMA_FIELDS = [
@@ -200,7 +200,7 @@ export default function SseStreamPanel({ workspaceId }: { workspaceId?: string }
                         <button
                             type="button"
                             onClick={copyUrl}
-                            style={{ padding: '6px 10px', background: 'var(--bg)', border: 'none', borderLeft: '1px solid var(--line)', color: urlCopied ? '#1a7a4a' : 'var(--ink-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', fontWeight: 600 }}
+                            style={{ padding: '6px 10px', background: 'var(--bg)', border: 'none', borderLeft: '1px solid var(--line)', color: urlCopied ? 'var(--ok)' : 'var(--ink-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', fontWeight: 600 }}
                         >
                             {urlCopied ? <Check size={11} /> : <Copy size={11} />}
                             {urlCopied ? 'Copied' : 'Copy'}

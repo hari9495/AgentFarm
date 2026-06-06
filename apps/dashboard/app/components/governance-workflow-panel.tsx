@@ -56,17 +56,17 @@ type Props = {
 };
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    pending: { bg: '#fef9c3', color: 'var(--warn)' },
-    in_review: { bg: '#dbeafe', color: 'var(--info)' },
-    approved: { bg: '#dcfce7', color: 'var(--ok)' },
-    rejected: { bg: '#fee2e2', color: 'var(--danger)' },
-    timed_out: { bg: '#f1f5f9', color: '#475569' },
+    pending: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
+    in_review: { bg: 'var(--info-bg)', color: 'var(--info)' },
+    approved: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    rejected: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    timed_out: { bg: 'var(--bg)', color: 'var(--ink-muted)' },
 };
 
 const RISK_BADGE: Record<string, { bg: string; color: string }> = {
-    low: { bg: '#dcfce7', color: 'var(--ok)' },
-    medium: { bg: '#fef9c3', color: 'var(--warn)' },
-    high: { bg: '#fee2e2', color: 'var(--danger)' },
+    low: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    medium: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
+    high: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
 };
 
 const Badge = ({ label, style }: { label: string; style: { bg: string; color: string } }) => (

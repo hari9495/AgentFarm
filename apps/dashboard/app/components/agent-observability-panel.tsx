@@ -62,9 +62,9 @@ type QualitySignal = {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const CIRCUIT_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-    closed: { bg: '#14532d', text: '#86efac', label: 'CLOSED' },
-    open: { bg: '#450a0a', text: '#fca5a5', label: 'OPEN' },
-    'half-open': { bg: '#431407', text: '#fdba74', label: 'HALF-OPEN' },
+    closed: { bg: 'var(--ok-bg)', text: 'var(--ok)', label: 'CLOSED' },
+    open: { bg: 'var(--danger-bg)', text: 'var(--danger)', label: 'OPEN' },
+    'half-open': { bg: 'color-mix(in srgb, var(--warn) 12%, transparent)', text: 'var(--warn)', label: 'HALF-OPEN' },
 };
 
 function fmtUsd(v: number | null): string {
@@ -88,8 +88,8 @@ function CardSkeleton() {
     return (
         <div
             style={{
-                background: '#0f172a',
-                border: '1px solid #1e293b',
+                background: 'var(--bg)',
+                border: '1px solid var(--line)',
                 borderRadius: '10px',
                 padding: '16px',
                 display: 'flex',
@@ -102,7 +102,7 @@ function CardSkeleton() {
                     key={i}
                     style={{
                         height: '12px',
-                        background: '#1e293b',
+                        background: 'var(--bg-deep)',
                         borderRadius: '4px',
                         width: `${w}%`,
                         animation: 'pulse 1.5s ease-in-out infinite',
@@ -119,8 +119,8 @@ function MetricCard({ title, children, error }: { title: string; children: React
     return (
         <div
             style={{
-                background: '#0f172a',
-                border: '1px solid #1e293b',
+                background: 'var(--bg)',
+                border: '1px solid var(--line)',
                 borderRadius: '10px',
                 padding: '16px',
             }}
@@ -131,14 +131,14 @@ function MetricCard({ title, children, error }: { title: string; children: React
                     fontWeight: 700,
                     textTransform: 'uppercase',
                     letterSpacing: '0.08em',
-                    color: '#475569',
+                    color: 'var(--ink-muted)',
                     marginBottom: '12px',
                 }}
             >
                 {title}
             </div>
             {error ? (
-                <p style={{ fontSize: '12px', color: '#fca5a5', margin: 0 }}>{error}</p>
+                <p style={{ fontSize: '12px', color: 'var(--danger)', margin: 0 }}>{error}</p>
             ) : (
                 children
             )}
@@ -151,8 +151,8 @@ function MetricCard({ title, children, error }: { title: string; children: React
 function StatRow({ label, value }: { label: string; value: string }) {
     return (
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px' }}>
-            <span style={{ color: '#64748b' }}>{label}</span>
-            <span style={{ color: '#e2e8f0', fontFamily: 'monospace', fontWeight: 600 }}>{value}</span>
+            <span style={{ color: 'var(--ink-muted)' }}>{label}</span>
+            <span style={{ color: 'var(--ink)', fontFamily: 'monospace', fontWeight: 600 }}>{value}</span>
         </div>
     );
 }
@@ -340,26 +340,26 @@ export default function AgentObservabilityPanel({ botId }: AgentObservabilityPan
 
     // ── Status bar ─────────────────────────────────────────────────────────────
     const statusColors: Record<string, { bg: string; text: string }> = {
-        active: { bg: '#14532d', text: '#86efac' },
-        paused: { bg: '#422006', text: '#fde68a' },
-        failed: { bg: '#450a0a', text: '#fca5a5' },
-        created: { bg: '#172554', text: '#bfdbfe' },
-        bootstrapping: { bg: '#1c1917', text: '#e7e5e4' },
+        active: { bg: 'var(--ok-bg)', text: 'var(--ok)' },
+        paused: { bg: 'color-mix(in srgb, var(--warn) 12%, transparent)', text: 'var(--warn)' },
+        failed: { bg: 'var(--danger-bg)', text: 'var(--danger)' },
+        created: { bg: 'var(--info-bg)', text: 'var(--info)' },
+        bootstrapping: { bg: 'var(--bg-deep)', text: 'var(--ink-muted)' },
     };
-    const sc = (statusData?.status ? (statusColors[statusData.status] ?? { bg: '#1e293b', text: '#94a3b8' }) : { bg: '#1e293b', text: '#94a3b8' });
+    const sc = (statusData?.status ? (statusColors[statusData.status] ?? { bg: 'var(--bg-deep)', text: 'var(--ink-muted)' }) : { bg: 'var(--bg-deep)', text: 'var(--ink-muted)' });
 
     // ── Rate-limit progress bar ────────────────────────────────────────────────
     function rateLimitBar(rpm: number, burst: number) {
         // Estimate headroom as burst/rpm ratio (higher = more headroom per minute)
         const pct = Math.min(100, Math.round((burst / Math.max(rpm, 1)) * 100));
-        const barColor = pct >= 50 ? '#16a34a' : pct >= 20 ? '#d97706' : '#dc2626';
+        const barColor = pct >= 50 ? 'var(--ok)' : pct >= 20 ? 'var(--warn)' : 'var(--danger)';
         return (
             <div style={{ marginTop: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--ink-muted)', marginBottom: '4px' }}>
                     <span>Burst / RPM headroom</span>
                     <span style={{ color: barColor, fontWeight: 700 }}>{pct}%</span>
                 </div>
-                <div style={{ height: '6px', background: '#1e293b', borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{ height: '6px', background: 'var(--bg-deep)', borderRadius: '3px', overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: '3px', transition: 'width 0.4s ease' }} />
                 </div>
             </div>
@@ -375,14 +375,14 @@ export default function AgentObservabilityPanel({ botId }: AgentObservabilityPan
                     alignItems: 'center',
                     gap: '12px',
                     padding: '12px 16px',
-                    background: '#060d1a',
-                    border: '1px solid #1e293b',
+                    background: 'var(--bg-deep)',
+                    border: '1px solid var(--line)',
                     borderRadius: '8px',
                     marginBottom: '20px',
                 }}
             >
                 {statusLoading ? (
-                    <span style={{ fontSize: '12px', color: '#475569' }}>Loading status…</span>
+                    <span style={{ fontSize: '12px', color: 'var(--ink-muted)' }}>Loading status…</span>
                 ) : statusData ? (
                     <>
                         <span
@@ -399,12 +399,12 @@ export default function AgentObservabilityPanel({ botId }: AgentObservabilityPan
                         >
                             {statusData.status}
                         </span>
-                        <span style={{ fontSize: '12px', color: '#64748b', fontFamily: 'monospace' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--ink-muted)', fontFamily: 'monospace' }}>
                             {botId}
                         </span>
                     </>
                 ) : (
-                    <span style={{ fontSize: '12px', color: '#475569' }}>Status unavailable</span>
+                    <span style={{ fontSize: '12px', color: 'var(--ink-muted)' }}>Status unavailable</span>
                 )}
             </div>
 
@@ -423,7 +423,7 @@ export default function AgentObservabilityPanel({ botId }: AgentObservabilityPan
                     <MetricCard title="Cost (30d)" error={costError}>
                         {costData && (
                             <>
-                                <div style={{ fontSize: '22px', fontWeight: 700, color: '#f1f5f9', marginBottom: '8px' }}>
+                                <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--ink)', marginBottom: '8px' }}>
                                     {fmtUsd(costData.totalCostUsd)}
                                 </div>
                                 <StatRow label="Avg / task" value={fmtUsd(costData.avgCostUsd)} />
@@ -441,7 +441,7 @@ export default function AgentObservabilityPanel({ botId }: AgentObservabilityPan
                     <MetricCard title="Performance (30d)" error={perfError}>
                         {perfData && (
                             <>
-                                <div style={{ fontSize: '22px', fontWeight: 700, color: '#f1f5f9', marginBottom: '8px' }}>
+                                <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--ink)', marginBottom: '8px' }}>
                                     {fmtPct(perfData.successRate)}
                                 </div>
                                 <StatRow label="Avg latency" value={fmtMs(perfData.avgLatencyMs)} />
@@ -458,16 +458,16 @@ export default function AgentObservabilityPanel({ botId }: AgentObservabilityPan
                 ) : (
                     <MetricCard title="Circuit Breakers" error={circuitError}>
                         {circuitData.length === 0 ? (
-                            <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>No circuits for this agent.</p>
+                            <p style={{ fontSize: '12px', color: 'var(--ink-muted)', margin: 0 }}>No circuits for this agent.</p>
                         ) : (
                             circuitData.slice(0, 3).map((c) => {
-                                const cs = CIRCUIT_COLORS[c.state] ?? { bg: '#1e293b', text: '#94a3b8', label: c.state.toUpperCase() };
+                                const cs = CIRCUIT_COLORS[c.state] ?? { bg: 'var(--bg-deep)', text: 'var(--ink-muted)', label: c.state.toUpperCase() };
                                 return (
                                     <div
                                         key={c.key}
                                         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}
                                     >
-                                        <span style={{ fontSize: '11px', color: '#64748b', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        <span style={{ fontSize: '11px', color: 'var(--ink-muted)', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                             {c.key.split(':').pop()}
                                         </span>
                                         <span
@@ -505,7 +505,7 @@ export default function AgentObservabilityPanel({ botId }: AgentObservabilityPan
                                 {rateLimitBar(rateLimitData.requestsPerMinute, rateLimitData.burstLimit)}
                             </>
                         ) : (
-                            <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>Not configured.</p>
+                            <p style={{ fontSize: '12px', color: 'var(--ink-muted)', margin: 0 }}>Not configured.</p>
                         )}
                     </MetricCard>
                 )}
@@ -516,11 +516,11 @@ export default function AgentObservabilityPanel({ botId }: AgentObservabilityPan
                 ) : (
                     <MetricCard title="A/B Tests" error={abError}>
                         {abTests.length === 0 ? (
-                            <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>No active tests.</p>
+                            <p style={{ fontSize: '12px', color: 'var(--ink-muted)', margin: 0 }}>No active tests.</p>
                         ) : (
                             abTests.slice(0, 2).map((t) => (
                                 <div key={t.id} style={{ marginBottom: '8px' }}>
-                                    <div style={{ fontSize: '12px', color: '#e2e8f0', fontWeight: 600, marginBottom: '2px' }}>
+                                    <div style={{ fontSize: '12px', color: 'var(--ink)', fontWeight: 600, marginBottom: '2px' }}>
                                         {t.name}
                                     </div>
                                     <div style={{ display: 'flex', gap: '6px' }}>
@@ -528,8 +528,8 @@ export default function AgentObservabilityPanel({ botId }: AgentObservabilityPan
                                             style={{
                                                 fontSize: '10px',
                                                 padding: '1px 6px',
-                                                background: '#172554',
-                                                color: '#93c5fd',
+                                                background: 'var(--info-bg)',
+                                                color: 'var(--info)',
                                                 borderRadius: '3px',
                                                 fontWeight: 600,
                                             }}
@@ -540,8 +540,8 @@ export default function AgentObservabilityPanel({ botId }: AgentObservabilityPan
                                             style={{
                                                 fontSize: '10px',
                                                 padding: '1px 6px',
-                                                background: '#1c2b3a',
-                                                color: '#7dd3fc',
+                                                background: 'var(--bg-deep)',
+                                                color: 'var(--info)',
                                                 borderRadius: '3px',
                                                 fontWeight: 600,
                                             }}
@@ -561,11 +561,11 @@ export default function AgentObservabilityPanel({ botId }: AgentObservabilityPan
                 ) : (
                     <MetricCard title="Quality Signals" error={signalsError}>
                         {signals.length === 0 ? (
-                            <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>No signals recorded.</p>
+                            <p style={{ fontSize: '12px', color: 'var(--ink-muted)', margin: 0 }}>No signals recorded.</p>
                         ) : (
                             signals.map((s, i) => {
                                 const score = s.score;
-                                const scoreColor = score === null ? '#475569' : score >= 0.7 ? '#16a34a' : score >= 0.4 ? '#d97706' : '#dc2626';
+                                const scoreColor = score === null ? 'var(--ink-muted)' : score >= 0.7 ? 'var(--ok)' : score >= 0.4 ? 'var(--warn)' : 'var(--danger)';
                                 return (
                                     <div
                                         key={s.id ?? i}

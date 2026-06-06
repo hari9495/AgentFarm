@@ -99,7 +99,7 @@ export function AuditUpgradeWall({ planName }: Props) {
                     padding: '0.6rem 1.5rem',
                     borderRadius: 9999,
                     background: 'var(--brand)',
-                    color: '#fff',
+                    color: 'var(--card)',
                     fontWeight: 600,
                     fontSize: '0.88rem',
                     textDecoration: 'none',

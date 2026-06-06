@@ -31,9 +31,9 @@ type Snapshot = {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const SOURCE_BADGE: Record<string, { bg: string; color: string }> = {
-    runtime_freeze: { bg: '#dbeafe', color: 'var(--info)' },
-    manual: { bg: '#dcfce7', color: 'var(--ok)' },
-    migration: { bg: '#f3e8ff', color: '#7c3aed' },
+    runtime_freeze: { bg: 'var(--info-bg)', color: 'var(--info)' },
+    manual: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    migration: { bg: '#f3e8ff', color: 'var(--accent)' },
 };
 
 function inlineBadge(label: string, map: Record<string, { bg: string; color: string }>) {
@@ -113,8 +113,8 @@ function CollapsibleJson({ label, value }: { label: string; value: unknown }) {
                     style={{
                         margin: '0.35rem 0 0',
                         padding: '0.6rem',
-                        background: '#1e1e2e',
-                        color: '#cdd6f4',
+                        background: 'var(--bg-deep)',
+                        color: 'var(--ink)',
                         borderRadius: '4px',
                         fontSize: '0.75rem',
                         overflow: 'auto',

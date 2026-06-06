@@ -81,8 +81,8 @@ function stepStatus(step: string, currentStep: string): 'completed' | 'active' |
 }
 
 const pillColor: Record<string, string> = {
-    completed: '#166534',
-    active: '#1d4ed8',
+    completed: 'var(--ok)',
+    active: 'var(--info)',
     pending: '#78716c',
 };
 
@@ -93,8 +93,8 @@ const pillBg: Record<string, string> = {
 };
 
 const pillBorder: Record<string, string> = {
-    completed: '#86efac',
-    active: '#93c5fd',
+    completed: 'var(--ok)',
+    active: 'var(--info)',
     pending: '#d6d3d1',
 };
 
@@ -165,12 +165,12 @@ export default async function ProvisioningPage({
                         Provisioning failed
                     </p>
                     {job?.error_code && (
-                        <p style={{ margin: '0 0 0.2rem', fontSize: '0.84rem', color: '#7f1d1d' }}>
+                        <p style={{ margin: '0 0 0.2rem', fontSize: '0.84rem', color: 'var(--danger)' }}>
                             Error: <code>{job.error_code}</code>
                         </p>
                     )}
                     {job?.error_message && (
-                        <p style={{ margin: 0, fontSize: '0.84rem', color: '#7f1d1d' }}>
+                        <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--danger)' }}>
                             Hint: {job.error_message}
                         </p>
                     )}
@@ -273,7 +273,7 @@ export default async function ProvisioningPage({
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        color: '#fff',
+                                        color: 'var(--card)',
                                         fontSize: '0.72rem',
                                         fontWeight: 700,
                                         flexShrink: 0,

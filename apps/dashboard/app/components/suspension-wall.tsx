@@ -60,10 +60,10 @@ export function SuspensionWall({ tenantId, children }: Props) {
                 >
                     <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔒</div>
                     <h2 style={{ margin: '0 0 8px' }}>Subscription Suspended</h2>
-                    <p style={{ margin: '0 0 8px', color: '#444' }}>
+                    <p style={{ margin: '0 0 8px', color: 'var(--ink-soft)' }}>
                         Your subscription has been suspended due to non-payment.
                     </p>
-                    <p style={{ margin: '0 0 24px', color: '#444' }}>
+                    <p style={{ margin: '0 0 24px', color: 'var(--ink-soft)' }}>
                         You can still access your audit reports below.
                     </p>
                     <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
@@ -73,7 +73,7 @@ export function SuspensionWall({ tenantId, children }: Props) {
                                 display: 'inline-block',
                                 padding: '10px 20px',
                                 background: '#111',
-                                color: '#fff',
+                                color: 'var(--card)',
                                 borderRadius: '6px',
                                 textDecoration: 'none',
                                 fontWeight: 600,

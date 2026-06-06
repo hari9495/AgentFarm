@@ -115,7 +115,7 @@ export default function SsoSettingsClient() {
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
                 <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Shield size={20} color="#fff" />
+                    <Shield size={20} color="var(--card)" />
                 </div>
                 <div>
                     <h1 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: 'var(--ink)' }}>SSO / SAML 2.0</h1>
@@ -245,7 +245,7 @@ export default function SsoSettingsClient() {
 
                         <div style={{ display: 'flex', gap: 10 }}>
                             <button type="submit" disabled={saving}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 10, background: saving ? 'var(--line)' : 'var(--accent)', color: saving ? 'var(--ink-muted)' : '#fff', border: 'none', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 10, background: saving ? 'var(--line)' : 'var(--accent)', color: saving ? 'var(--ink-muted)' : 'var(--card)', border: 'none', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
                                 {saving ? <><RefreshCw size={13} className="animate-spin" /> Saving…</> : (config?.configured ? 'Update Config' : 'Save & Enable SSO')}
                             </button>
                             <a href="/settings" style={{ display: 'inline-flex', alignItems: 'center', padding: '9px 16px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 13, textDecoration: 'none' }}>

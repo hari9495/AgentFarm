@@ -44,12 +44,12 @@ type ScheduledTaskRecord = {
 };
 
 const STATUS_STYLE: Record<ScheduledRunStatus, { bg: string; color: string }> = {
-    scheduled: { bg: '#eff6ff', color: '#1e40af' },
-    queued: { bg: '#fef9c3', color: 'var(--warn)' },
-    active: { bg: '#dcfce7', color: 'var(--ok)' },
-    completed: { bg: '#f0fdf4', color: 'var(--ok)' },
-    skipped: { bg: '#f5f5f5', color: '#737373' },
-    failed: { bg: '#fef2f2', color: 'var(--danger)' },
+    scheduled: { bg: 'var(--info-bg)', color: 'var(--info)' },
+    queued: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
+    active: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    completed: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    skipped: { bg: 'var(--bg)', color: 'var(--ink-muted)' },
+    failed: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
 };
 
 const SCHEDULE_TYPES: ScheduleType[] = ['once', 'hourly', 'daily', 'weekly', 'monthly'];
@@ -212,7 +212,7 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
                     <button
                         type="button"
                         onClick={() => setShowCreateForm((v) => !v)}
-                        style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', border: '1px solid #6366f1', borderRadius: 6, background: '#6366f1', color: '#fff', cursor: 'pointer' }}
+                        style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', border: '1px solid var(--accent)', borderRadius: 6, background: 'var(--accent)', color: 'var(--card)', cursor: 'pointer' }}
                     >
                         {showCreateForm ? 'Cancel' : '+ New Task'}
                     </button>
@@ -223,7 +223,7 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
 
             {/* Create form */}
             {showCreateForm && (
-                <div style={{ padding: '0.9rem', border: '1px solid #6366f1', borderRadius: 8, background: '#fafafa', marginBottom: '1rem' }}>
+                <div style={{ padding: '0.9rem', border: '1px solid var(--accent)', borderRadius: 8, background: 'var(--bg)', marginBottom: '1rem' }}>
                     <h3 style={{ margin: '0 0 0.6rem', fontSize: '0.95rem' }}>Schedule New Routine Task</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem 0.75rem' }}>
                         <div>
@@ -296,7 +296,7 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
                         type="button"
                         disabled={creating}
                         onClick={() => { void handleCreate(); }}
-                        style={{ marginTop: '0.75rem', padding: '0.45rem 1.1rem', background: creating ? '#d1d5db' : '#6366f1', color: '#fff', border: 'none', borderRadius: 6, fontSize: '0.85rem', fontWeight: 600, cursor: creating ? 'not-allowed' : 'pointer' }}
+                        style={{ marginTop: '0.75rem', padding: '0.45rem 1.1rem', background: creating ? 'var(--line)' : 'var(--accent)', color: 'var(--card)', border: 'none', borderRadius: 6, fontSize: '0.85rem', fontWeight: 600, cursor: creating ? 'not-allowed' : 'pointer' }}
                     >
                         {creating ? 'Creating…' : 'Create Task'}
                     </button>
@@ -313,7 +313,7 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
             {tasks.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {tasks.map((task) => {
-                        const statusStyle = STATUS_STYLE[task.status] ?? { bg: '#f5f5f5', color: '#737373' };
+                        const statusStyle = STATUS_STYLE[task.status] ?? { bg: 'var(--bg)', color: 'var(--ink-muted)' };
                         const isTriggeringThis = triggeringId === task.id;
                         const resultForThis = triggerResult?.taskId === task.id ? triggerResult.message : null;
 
@@ -324,7 +324,7 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
                                     border: '1px solid var(--line)',
                                     borderRadius: 8,
                                     padding: '0.75rem 1rem',
-                                    background: task.enabled ? '#fff' : '#fafafa',
+                                    background: task.enabled ? 'var(--card)' : 'var(--bg)',
                                     opacity: task.enabled ? 1 : 0.7,
                                 }}
                             >
@@ -346,12 +346,12 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
                                                 <span style={{ fontSize: '0.72rem', color: 'var(--ink-muted)', fontStyle: 'italic' }}>disabled</span>
                                             )}
                                             {task.isFeatureFlagged && (
-                                                <span style={{ fontSize: '0.7rem', background: '#ede9fe', color: '#6d28d9', padding: '1px 6px', borderRadius: 4 }}>
+                                                <span style={{ fontSize: '0.7rem', background: 'color-mix(in srgb, var(--accent) 12%, transparent)', color: 'var(--accent)', padding: '1px 6px', borderRadius: 4 }}>
                                                     flagged: {task.featureFlagKey}
                                                 </span>
                                             )}
                                         </div>
-                                        <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#1c1917' }}>
+                                        <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink-muted)' }}>
                                             {task.policy.dedupeKey}
                                         </p>
                                         <p style={{ margin: '0.1rem 0 0', fontSize: '0.77rem', color: 'var(--ink-muted)' }}>
@@ -382,8 +382,8 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
                                         onClick={() => { void handleTrigger(task.id); }}
                                         style={{
                                             padding: '0.35rem 0.9rem',
-                                            background: isTriggeringThis || !task.enabled ? '#d1d5db' : '#0f766e',
-                                            color: '#fff',
+                                            background: isTriggeringThis || !task.enabled ? 'var(--line)' : 'var(--ok)',
+                                            color: 'var(--card)',
                                             border: 'none',
                                             borderRadius: 6,
                                             fontSize: '0.78rem',
@@ -398,7 +398,7 @@ export function RoutineSchedulerPanel({ botId, workspaceId, tenantId: _tenantId 
                                     </button>
                                 </div>
                                 {resultForThis && (
-                                    <p style={{ margin: '0.4rem 0 0', fontSize: '0.75rem', color: '#0f766e', background: 'var(--ok-bg)', padding: '0.3rem 0.5rem', borderRadius: 4 }}>
+                                    <p style={{ margin: '0.4rem 0 0', fontSize: '0.75rem', color: 'var(--ok)', background: 'var(--ok-bg)', padding: '0.3rem 0.5rem', borderRadius: 4 }}>
                                         {resultForThis}
                                     </p>
                                 )}

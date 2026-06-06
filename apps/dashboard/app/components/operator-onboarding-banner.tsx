@@ -66,7 +66,7 @@ export function OperatorOnboardingBanner({
                         Getting started — {doneCount}/{steps.length} complete
                     </span>
                     <div style={{ height: 4, background: 'var(--line)', borderRadius: 9999, overflow: 'hidden', marginTop: '0.3rem', width: 200 }}>
-                        <div style={{ height: '100%', width: `${(doneCount / steps.length) * 100}%`, background: '#0052cc', borderRadius: 9999, transition: 'width 0.4s' }} />
+                        <div style={{ height: '100%', width: `${(doneCount / steps.length) * 100}%`, background: 'var(--accent)', borderRadius: 9999, transition: 'width 0.4s' }} />
                     </div>
                 </div>
                 <button type="button" onClick={dismiss} title="Dismiss" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-muted)', padding: 2 }}>
@@ -84,7 +84,7 @@ export function OperatorOnboardingBanner({
                             padding: '0.2rem 0.6rem', borderRadius: 9999,
                             fontSize: '0.75rem', fontWeight: 600, textDecoration: 'none',
                             background: s.done ? 'rgba(26,122,74,0.08)' : 'rgba(0,82,204,0.07)',
-                            color: s.done ? '#1a7a4a' : '#0052cc',
+                            color: s.done ? '#1a7a4a' : 'var(--accent)',
                             border: `1px solid ${s.done ? 'rgba(26,122,74,0.2)' : 'rgba(0,82,204,0.2)'}`,
                             opacity: s.done ? 0.7 : 1,
                         }}

@@ -47,10 +47,10 @@ type IntakeResponse = {
 };
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    queued: { bg: '#fef9c3', color: 'var(--warn)' },
-    triaging: { bg: '#dbeafe', color: 'var(--info)' },
-    complete: { bg: '#dcfce7', color: 'var(--ok)' },
-    failed: { bg: '#fee2e2', color: 'var(--danger)' },
+    queued: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
+    triaging: { bg: 'var(--info-bg)', color: 'var(--info)' },
+    complete: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    failed: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
 };
 
 function statusBadge(status: string) {
@@ -290,9 +290,9 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                                 placeholder="e.g. acme-corp/backend-api"
                                 value={intakeRepo}
                                 onChange={(e) => setIntakeRepo(e.target.value)}
-                                style={{ ...inputStyle, borderColor: intakeRepo && !intakeRepo.includes('/') ? '#fca5a5' : undefined }}
+                                style={{ ...inputStyle, borderColor: intakeRepo && !intakeRepo.includes('/') ? 'var(--danger)' : undefined }}
                             />
-                            <p style={{ fontSize: '10px', color: intakeRepo && !intakeRepo.includes('/') ? '#ef4444' : '#94a3b8', margin: '3px 0 0' }}>
+                            <p style={{ fontSize: '10px', color: intakeRepo && !intakeRepo.includes('/') ? 'var(--danger)' : 'var(--ink-muted)', margin: '3px 0 0' }}>
                                 Format: <strong>owner/repo-name</strong>. Find in your repo URL after github.com/
                             </p>
                         </div>
@@ -581,7 +581,7 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                                             padding: '8px 12px',
                                             marginBottom: '8px',
                                             fontSize: '11px',
-                                            color: '#fcd34d',
+                                            color: 'var(--warn)',
                                             display: 'flex',
                                             gap: '6px',
                                         }}
@@ -596,7 +596,7 @@ export default function CiTriagePanel({ workspaceId }: CiTriagePanelProps) {
                                             borderRadius: '6px',
                                             padding: '10px 12px',
                                             fontSize: '11px',
-                                            color: '#e2e8f0',
+                                            color: 'var(--ink)',
                                             whiteSpace: 'pre-wrap',
                                             wordBreak: 'break-word',
                                             margin: 0,

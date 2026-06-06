@@ -362,7 +362,7 @@ export default function PlaygroundClient({ tenantId, workspaceId }: { tenantId: 
                 {/* URL bar */}
                 <div className="card" style={{ padding: '0.85rem 1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                        <span style={{ padding: '0.25rem 0.6rem', borderRadius: '0.3rem', background: METHOD_COLORS[endpoint.method] ?? 'var(--ink-muted)', color: '#fff', fontSize: '0.75rem', fontWeight: 800, fontFamily: 'ui-monospace, monospace', flexShrink: 0 }}>
+                        <span style={{ padding: '0.25rem 0.6rem', borderRadius: '0.3rem', background: METHOD_COLORS[endpoint.method] ?? 'var(--ink-muted)', color: 'var(--card)', fontSize: '0.75rem', fontWeight: 800, fontFamily: 'ui-monospace, monospace', flexShrink: 0 }}>
                             {endpoint.method}
                         </span>
                         <code style={{ flex: 1, fontFamily: 'ui-monospace, monospace', fontSize: '0.85rem', color: 'var(--ink)', background: 'var(--bg)', padding: '0.25rem 0.5rem', borderRadius: '0.3rem', border: '1px solid var(--line)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -411,7 +411,7 @@ export default function PlaygroundClient({ tenantId, workspaceId }: { tenantId: 
                                             fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.7rem',
                                             borderRadius: '0.3rem', border: 'none', cursor: 'pointer',
                                             background: snippetLang === lang ? 'var(--ink-soft)' : 'transparent',
-                                            color: snippetLang === lang ? (LANG_COLORS[lang] ?? '#fff') : 'var(--ink-muted)',
+                                            color: snippetLang === lang ? (LANG_COLORS[lang] ?? 'var(--card)') : 'var(--ink-muted)',
                                             textTransform: lang === 'typescript' ? 'none' : 'capitalize',
                                         }}>
                                         {lang === 'typescript' ? 'TypeScript' : lang === 'python' ? 'Python' : 'cURL'}
@@ -422,7 +422,7 @@ export default function PlaygroundClient({ tenantId, workspaceId }: { tenantId: 
                                     {copied ? '✓ Copied' : 'Copy'}
                                 </button>
                             </div>
-                            <pre style={{ margin: 0, fontSize: '0.75rem', fontFamily: 'ui-monospace, monospace', background: '#1d1d1f', color: LANG_COLORS[snippetLang] ?? '#a8e6cf', padding: '0.75rem', borderRadius: '0.4rem', overflowX: 'auto', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                            <pre style={{ margin: 0, fontSize: '0.75rem', fontFamily: 'ui-monospace, monospace', background: 'var(--bg-deep)', color: LANG_COLORS[snippetLang] ?? '#a8e6cf', padding: '0.75rem', borderRadius: '0.4rem', overflowX: 'auto', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                                 {active}
                             </pre>
                         </div>
@@ -503,7 +503,7 @@ export default function PlaygroundClient({ tenantId, workspaceId }: { tenantId: 
                         {response.error && (
                             <p style={{ margin: '0 0 0.5rem', color: 'var(--danger)', fontSize: '0.82rem' }}>⚠ {response.error}</p>
                         )}
-                        <pre style={{ margin: 0, fontSize: '0.78rem', fontFamily: 'ui-monospace, monospace', background: '#1d1d1f', color: '#e5e5e7', padding: '0.75rem', borderRadius: '0.4rem', overflowX: 'auto', maxHeight: 400, overflowY: 'auto', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                        <pre style={{ margin: 0, fontSize: '0.78rem', fontFamily: 'ui-monospace, monospace', background: 'var(--bg-deep)', color: 'var(--ink)', padding: '0.75rem', borderRadius: '0.4rem', overflowX: 'auto', maxHeight: 400, overflowY: 'auto', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                             {response.body !== null && response.body !== undefined
                                 ? JSON.stringify(response.body, null, 2)
                                 : '(empty response)'}

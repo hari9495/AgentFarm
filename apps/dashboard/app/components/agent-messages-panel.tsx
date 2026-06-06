@@ -35,11 +35,11 @@ interface AgentMessage {
 // ── Badge helpers ─────────────────────────────────────────────────────────────
 
 const STATUS_COLORS: Record<AgentMessageStatus, { bg: string; text: string }> = {
-    PENDING: { bg: '#1e293b', text: '#94a3b8' },
-    DELIVERED: { bg: '#1e3a2f', text: '#6ee7b7' },
-    READ: { bg: '#172554', text: '#93c5fd' },
-    REPLIED: { bg: '#2d1b69', text: '#c4b5fd' },
-    EXPIRED: { bg: '#1c1917', text: '#78716c' },
+    PENDING: { bg: 'color-mix(in srgb, var(--ink-muted) 10%, transparent)', text: 'var(--ink-muted)' },
+    DELIVERED: { bg: 'var(--ok-bg)', text: 'var(--ok)' },
+    READ: { bg: 'var(--info-bg)', text: 'var(--info)' },
+    REPLIED: { bg: 'color-mix(in srgb, var(--accent) 10%, transparent)', text: 'var(--accent)' },
+    EXPIRED: { bg: 'var(--bg-deep)', text: 'var(--ink-muted)' },
 };
 
 const TYPE_LABEL: Record<AgentMessageType, string> = {
@@ -80,9 +80,9 @@ function TypeBadge({ type }: { type: AgentMessageType }) {
                 padding: '2px 7px',
                 borderRadius: '4px',
                 fontSize: '11px',
-                background: '#0f172a',
-                color: '#64748b',
-                border: '1px solid #1e293b',
+                background: 'var(--bg-deep)',
+                color: 'var(--ink-muted)',
+                border: '1px solid var(--line)',
                 whiteSpace: 'nowrap',
             }}
         >
@@ -116,28 +116,28 @@ function MessageRow({
                 gap: '12px',
                 alignItems: 'center',
                 padding: '10px 12px',
-                borderBottom: '1px solid #1e293b',
+                borderBottom: '1px solid var(--line)',
                 cursor: 'pointer',
-                background: message.status === 'PENDING' && isInbox ? '#0c1628' : 'transparent',
+                background: message.status === 'PENDING' && isInbox ? 'var(--info-bg)' : 'transparent',
                 transition: 'background 0.1s ease',
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = '#111827'; }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-deep)'; }}
             onMouseLeave={(e) => {
                 (e.currentTarget as HTMLDivElement).style.background =
-                    message.status === 'PENDING' && isInbox ? '#0c1628' : 'transparent';
+                    message.status === 'PENDING' && isInbox ? 'var(--info-bg)' : 'transparent';
             }}
         >
             <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: '12px', color: 'var(--ink-muted)', fontFamily: 'monospace', marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {isInbox ? `from: ${counterpart}` : `to: ${counterpart}`}
                 </div>
-                <div style={{ fontSize: '13px', color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ fontSize: '13px', color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {message.subject ?? message.body.slice(0, 80)}
                 </div>
             </div>
             <TypeBadge type={message.messageType} />
             <StatusBadge status={message.status} />
-            <div style={{ fontSize: '11px', color: '#475569', whiteSpace: 'nowrap' }}>{ts}</div>
+            <div style={{ fontSize: '11px', color: 'var(--ink-muted)', whiteSpace: 'nowrap' }}>{ts}</div>
         </div>
     );
 }
@@ -219,8 +219,8 @@ function MessageDetail({
         >
             <div
                 style={{
-                    background: '#0f172a',
-                    border: '1px solid #1e293b',
+                    background: 'var(--card)',
+                    border: '1px solid var(--line)',
                     borderRadius: '12px',
                     padding: '24px',
                     width: '560px',
@@ -235,7 +235,7 @@ function MessageDetail({
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                        <div style={{ fontSize: '15px', fontWeight: 600, color: '#f1f5f9', marginBottom: '4px' }}>
+                        <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--ink)', marginBottom: '4px' }}>
                             {message.subject ?? 'Message'}
                         </div>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -245,28 +245,28 @@ function MessageDetail({
                     </div>
                     <button
                         onClick={onClose}
-                        style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}
+                        style={{ background: 'none', border: 'none', color: 'var(--ink-muted)', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}
                     >
                         ×
                     </button>
                 </div>
 
                 {/* Meta */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', color: '#64748b' }}>
-                    <div><span style={{ color: '#475569' }}>From:</span> <span style={{ fontFamily: 'monospace', color: 'var(--ink-muted)' }}>{message.fromBotId}</span></div>
-                    <div><span style={{ color: '#475569' }}>To:</span> <span style={{ fontFamily: 'monospace', color: 'var(--ink-muted)' }}>{message.toBotId}</span></div>
-                    <div><span style={{ color: '#475569' }}>Sent:</span> {ts}</div>
-                    {message.threadId && <div><span style={{ color: '#475569' }}>Thread:</span> <span style={{ fontFamily: 'monospace', color: 'var(--ink-muted)', fontSize: '11px' }}>{message.threadId}</span></div>}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', color: 'var(--ink-muted)' }}>
+                    <div><span style={{ color: 'var(--ink-muted)' }}>From:</span> <span style={{ fontFamily: 'monospace', color: 'var(--ink-muted)' }}>{message.fromBotId}</span></div>
+                    <div><span style={{ color: 'var(--ink-muted)' }}>To:</span> <span style={{ fontFamily: 'monospace', color: 'var(--ink-muted)' }}>{message.toBotId}</span></div>
+                    <div><span style={{ color: 'var(--ink-muted)' }}>Sent:</span> {ts}</div>
+                    {message.threadId && <div><span style={{ color: 'var(--ink-muted)' }}>Thread:</span> <span style={{ fontFamily: 'monospace', color: 'var(--ink-muted)', fontSize: '11px' }}>{message.threadId}</span></div>}
                 </div>
 
                 {/* Body */}
                 <div
                     style={{
-                        background: '#1e293b',
+                        background: 'var(--bg)',
                         borderRadius: '8px',
                         padding: '14px',
                         fontSize: '13px',
-                        color: '#e2e8f0',
+                        color: 'var(--ink)',
                         lineHeight: 1.6,
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-word',
@@ -281,10 +281,10 @@ function MessageDetail({
                         onClick={() => void handleMarkRead()}
                         style={{
                             padding: '7px 14px',
-                            background: '#172554',
-                            border: '1px solid #1e3a8a',
+                            background: 'var(--info-bg)',
+                            border: '1px solid var(--info-border)',
                             borderRadius: '6px',
-                            color: '#93c5fd',
+                            color: 'var(--info)',
                             fontSize: '12px',
                             fontWeight: 600,
                             cursor: 'pointer',
@@ -298,11 +298,11 @@ function MessageDetail({
                 {/* Reply form */}
                 {isInbox && message.status !== 'EXPIRED' && (
                     <div>
-                        <div style={{ fontSize: '12px', color: '#475569', marginBottom: '8px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--ink-muted)', marginBottom: '8px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                             Reply
                         </div>
                         {replyDone ? (
-                            <div style={{ fontSize: '13px', color: '#6ee7b7', padding: '10px 12px', background: '#1e3a2f', borderRadius: '6px' }}>
+                            <div style={{ fontSize: '13px', color: 'var(--ok)', padding: '10px 12px', background: 'var(--ok-bg)', borderRadius: '6px' }}>
                                 Reply sent.
                             </div>
                         ) : (
@@ -314,10 +314,10 @@ function MessageDetail({
                                     rows={3}
                                     style={{
                                         width: '100%',
-                                        background: '#1e293b',
-                                        border: '1px solid #334155',
+                                        background: 'var(--bg-deep)',
+                                        border: '1px solid var(--line)',
                                         borderRadius: '6px',
-                                        color: '#e2e8f0',
+                                        color: 'var(--ink)',
                                         fontSize: '13px',
                                         padding: '10px 12px',
                                         resize: 'vertical',
@@ -326,7 +326,7 @@ function MessageDetail({
                                     }}
                                 />
                                 {replyError && (
-                                    <div style={{ fontSize: '12px', color: '#fca5a5', marginTop: '6px' }}>{replyError}</div>
+                                    <div style={{ fontSize: '12px', color: 'var(--danger)', marginTop: '6px' }}>{replyError}</div>
                                 )}
                                 <button
                                     onClick={() => void handleReply()}
@@ -334,10 +334,10 @@ function MessageDetail({
                                     style={{
                                         marginTop: '8px',
                                         padding: '7px 16px',
-                                        background: '#1e3a2f',
-                                        border: '1px solid #166534',
+                                        background: 'var(--ok-bg)',
+                                        border: '1px solid var(--ok-border)',
                                         borderRadius: '6px',
-                                        color: '#86efac',
+                                        color: 'var(--ok)',
                                         fontSize: '12px',
                                         fontWeight: 600,
                                         cursor: replying || !replyBody.trim() ? 'not-allowed' : 'pointer',
@@ -409,7 +409,7 @@ function ComposeForm({
     return (
         <div
             style={{
-                background: '#1e293b',
+                background: 'var(--bg-deep)',
                 borderRadius: '8px',
                 padding: '16px',
                 marginBottom: '16px',
@@ -418,20 +418,20 @@ function ComposeForm({
                 gap: '10px',
             }}
         >
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 New Message
             </div>
             <input
                 value={toBotId}
                 onChange={(e) => setToBotId(e.target.value)}
                 placeholder="Recipient Bot ID"
-                style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#e2e8f0', fontSize: '13px', padding: '8px 10px', fontFamily: 'monospace' }}
+                style={{ background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: '6px', color: 'var(--ink)', fontSize: '13px', padding: '8px 10px', fontFamily: 'monospace' }}
             />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <select
                     value={messageType}
                     onChange={(e) => setMessageType(e.target.value as AgentMessageType)}
-                    style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#e2e8f0', fontSize: '13px', padding: '8px 10px' }}
+                    style={{ background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: '6px', color: 'var(--ink)', fontSize: '13px', padding: '8px 10px' }}
                 >
                     {MESSAGE_TYPES.map((t) => (
                         <option key={t} value={t}>{TYPE_LABEL[t]}</option>
@@ -441,7 +441,7 @@ function ComposeForm({
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     placeholder="Subject (optional)"
-                    style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#e2e8f0', fontSize: '13px', padding: '8px 10px' }}
+                    style={{ background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: '6px', color: 'var(--ink)', fontSize: '13px', padding: '8px 10px' }}
                 />
             </div>
             <textarea
@@ -449,20 +449,20 @@ function ComposeForm({
                 onChange={(e) => setBody(e.target.value)}
                 placeholder="Message body…"
                 rows={3}
-                style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#e2e8f0', fontSize: '13px', padding: '8px 10px', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', width: '100%' }}
+                style={{ background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: '6px', color: 'var(--ink)', fontSize: '13px', padding: '8px 10px', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box', width: '100%' }}
             />
-            {error && <div style={{ fontSize: '12px', color: '#fca5a5' }}>{error}</div>}
+            {error && <div style={{ fontSize: '12px', color: 'var(--danger)' }}>{error}</div>}
             <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                     onClick={() => void handleSend()}
                     disabled={sending || !toBotId.trim() || !body.trim()}
-                    style={{ padding: '7px 16px', background: '#1e3a2f', border: '1px solid #166534', borderRadius: '6px', color: '#86efac', fontSize: '12px', fontWeight: 600, cursor: sending || !toBotId.trim() || !body.trim() ? 'not-allowed' : 'pointer', opacity: sending || !toBotId.trim() || !body.trim() ? 0.5 : 1 }}
+                    style={{ padding: '7px 16px', background: 'var(--ok-bg)', border: '1px solid var(--ok-border)', borderRadius: '6px', color: 'var(--ok)', fontSize: '12px', fontWeight: 600, cursor: sending || !toBotId.trim() || !body.trim() ? 'not-allowed' : 'pointer', opacity: sending || !toBotId.trim() || !body.trim() ? 0.5 : 1 }}
                 >
                     {sending ? 'Sending…' : 'Send'}
                 </button>
                 <button
                     onClick={onCancel}
-                    style={{ padding: '7px 14px', background: 'transparent', border: '1px solid #334155', borderRadius: '6px', color: '#64748b', fontSize: '12px', cursor: 'pointer' }}
+                    style={{ padding: '7px 14px', background: 'transparent', border: '1px solid var(--line)', borderRadius: '6px', color: 'var(--ink-muted)', fontSize: '12px', cursor: 'pointer' }}
                 >
                     Cancel
                 </button>
@@ -541,7 +541,7 @@ export default function AgentMessagesPanel({ botId }: { botId: string }) {
             {/* Toolbar */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 {/* Tabs */}
-                <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid #1e293b', paddingBottom: '0' }}>
+                <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--line)', paddingBottom: '0' }}>
                     {(['inbox', 'sent'] as const).map((tab) => (
                         <button
                             key={tab}
@@ -551,7 +551,7 @@ export default function AgentMessagesPanel({ botId }: { botId: string }) {
                                 background: 'transparent',
                                 border: 'none',
                                 borderBottom: activeTab === tab ? '2px solid #3b82f6' : '2px solid transparent',
-                                color: activeTab === tab ? '#3b82f6' : '#64748b',
+                                color: activeTab === tab ? 'var(--info)' : '#64748b',
                                 fontSize: '13px',
                                 fontWeight: activeTab === tab ? 600 : 400,
                                 cursor: 'pointer',
@@ -564,8 +564,8 @@ export default function AgentMessagesPanel({ botId }: { botId: string }) {
                                 <span
                                     style={{
                                         marginLeft: '6px',
-                                        background: '#3b82f6',
-                                        color: '#fff',
+                                        background: 'var(--info)',
+                                        color: 'var(--card)',
                                         borderRadius: '10px',
                                         padding: '1px 6px',
                                         fontSize: '10px',
@@ -583,13 +583,13 @@ export default function AgentMessagesPanel({ botId }: { botId: string }) {
                 <div style={{ display: 'flex', gap: '8px' }}>
                     <button
                         onClick={() => activeTab === 'inbox' ? void fetchInbox() : void fetchSent()}
-                        style={{ padding: '6px 12px', background: '#1e293b', border: '1px solid #334155', borderRadius: '6px', color: '#64748b', fontSize: '12px', cursor: 'pointer' }}
+                        style={{ padding: '6px 12px', background: 'var(--bg-deep)', border: '1px solid var(--line)', borderRadius: '6px', color: 'var(--ink-muted)', fontSize: '12px', cursor: 'pointer' }}
                     >
                         ↻
                     </button>
                     <button
                         onClick={() => setComposing(true)}
-                        style={{ padding: '6px 12px', background: '#1e3a2f', border: '1px solid #166534', borderRadius: '6px', color: '#86efac', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                        style={{ padding: '6px 12px', background: 'var(--ok-bg)', border: '1px solid var(--ok-border)', borderRadius: '6px', color: 'var(--ok)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
                     >
                         + Compose
                     </button>
@@ -611,15 +611,15 @@ export default function AgentMessagesPanel({ botId }: { botId: string }) {
 
             {/* Error */}
             {error && (
-                <div style={{ padding: '10px 12px', background: '#3b0d0d', border: '1px solid #7f1d1d', borderRadius: '6px', color: '#fca5a5', fontSize: '13px', marginBottom: '12px' }}>
+                <div style={{ padding: '10px 12px', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: '6px', color: 'var(--danger)', fontSize: '13px', marginBottom: '12px' }}>
                     {error}
                 </div>
             )}
 
             {/* Message list */}
-            <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #1e293b', borderRadius: '8px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', border: '1px solid var(--line)', borderRadius: '8px' }}>
                 {loading ? (
-                    <div style={{ padding: '24px', textAlign: 'center', color: '#475569', fontSize: '13px' }}>Loading…</div>
+                    <div style={{ padding: '24px', textAlign: 'center', color: 'var(--ink-muted)', fontSize: '13px' }}>Loading…</div>
                 ) : messages.length === 0 ? (
                     <div style={{ padding: '24px', textAlign: 'center', color: 'var(--ink-soft)', fontSize: '13px' }}>
                         No {activeTab === 'inbox' ? 'inbox' : 'sent'} messages.

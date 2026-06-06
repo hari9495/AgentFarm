@@ -348,7 +348,7 @@ export default function AuditPage() {
                         type="button"
                         onClick={() => { void handleExport('csv'); }}
                         disabled={exporting}
-                        style={{ ...btnBase, border: '1px solid var(--accent)', background: 'var(--accent)', color: '#fff', opacity: exporting ? 0.6 : 1 }}
+                        style={{ ...btnBase, border: '1px solid var(--accent)', background: 'var(--accent)', color: 'var(--card)', opacity: exporting ? 0.6 : 1 }}
                     >
                         {exporting ? 'Exporting…' : '↓ CSV'}
                     </button>
@@ -356,7 +356,7 @@ export default function AuditPage() {
                         type="button"
                         onClick={() => { void handleExport('json'); }}
                         disabled={exporting}
-                        style={{ ...btnBase, border: '1px solid #6366f1', background: 'var(--card)', color: 'var(--accent)', opacity: exporting ? 0.6 : 1 }}
+                        style={{ ...btnBase, border: '1px solid var(--accent)', background: 'var(--card)', color: 'var(--accent)', opacity: exporting ? 0.6 : 1 }}
                     >
                         ↓ JSON
                     </button>

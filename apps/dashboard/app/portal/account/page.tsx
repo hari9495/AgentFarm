@@ -8,7 +8,7 @@ type Me = { accountId: string; tenantId: string; email: string; displayName: str
 const inputStyle: React.CSSProperties = {
     width: '100%', padding: '0.5rem 0.7rem', fontSize: '0.88rem',
     border: '1px solid var(--line)', borderRadius: 6, outline: 'none', fontFamily: 'inherit',
-    background: 'var(--card)', color: '#0f172a',
+    background: 'var(--card)', color: 'var(--ink)',
 };
 const labelStyle: React.CSSProperties = { display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '0.3rem' };
 const sectionStyle: React.CSSProperties = { background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10, padding: '1.4rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' };
@@ -16,7 +16,7 @@ const sectionTitle: React.CSSProperties = { fontSize: '1rem', fontWeight: 700, c
 
 function StatusMsg({ text, ok }: { text: string; ok: boolean }) {
     return (
-        <div style={{ padding: '0.5rem 0.7rem', borderRadius: 6, fontSize: '0.81rem', fontWeight: 600, background: ok ? '#f0fdf4' : '#fef2f2', color: ok ? '#15803d' : '#b91c1c', border: `1px solid ${ok ? '#bbf7d0' : '#fecaca'}` }}>
+        <div style={{ padding: '0.5rem 0.7rem', borderRadius: 6, fontSize: '0.81rem', fontWeight: 600, background: ok ? '#f0fdf4' : '#fef2f2', color: ok ? 'var(--ok)' : 'var(--danger)', border: `1px solid ${ok ? '#bbf7d0' : '#fecaca'}` }}>
             {ok ? '✓ ' : '✗ '}{text}
         </div>
     );
@@ -153,7 +153,7 @@ export default function AccountSettingsPage() {
                                 style={inputStyle}
                             />
                         </div>
-                        <button type="submit" disabled={profileSaving} style={{ alignSelf: 'flex-start', padding: '0.4rem 1rem', fontSize: '0.84rem', fontWeight: 600, background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+                        <button type="submit" disabled={profileSaving} style={{ alignSelf: 'flex-start', padding: '0.4rem 1rem', fontSize: '0.84rem', fontWeight: 600, background: 'var(--info)', color: 'var(--card)', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
                             {profileSaving ? 'Saving…' : 'Save Changes'}
                         </button>
                     </form>
@@ -176,7 +176,7 @@ export default function AccountSettingsPage() {
                             <label style={labelStyle}>Confirm New Password</label>
                             <input type="password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} required autoComplete="new-password" style={inputStyle} />
                         </div>
-                        <button type="submit" disabled={pwSaving || !currentPw || newPw.length < 8 || newPw !== confirmPw} style={{ alignSelf: 'flex-start', padding: '0.4rem 1rem', fontSize: '0.84rem', fontWeight: 600, background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', opacity: (pwSaving || !currentPw || newPw.length < 8 || newPw !== confirmPw) ? 0.5 : 1 }}>
+                        <button type="submit" disabled={pwSaving || !currentPw || newPw.length < 8 || newPw !== confirmPw} style={{ alignSelf: 'flex-start', padding: '0.4rem 1rem', fontSize: '0.84rem', fontWeight: 600, background: 'var(--info)', color: 'var(--card)', border: 'none', borderRadius: 6, cursor: 'pointer', opacity: (pwSaving || !currentPw || newPw.length < 8 || newPw !== confirmPw) ? 0.5 : 1 }}>
                             {pwSaving ? 'Updating…' : 'Update Password'}
                         </button>
                     </form>

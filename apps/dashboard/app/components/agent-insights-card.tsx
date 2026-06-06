@@ -77,7 +77,7 @@ function Kpi({ label, value, sub, color }: { label: string; value: string; sub?:
             <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 {label}
             </div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: color ?? '#1d1d1f', lineHeight: 1 }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: color ?? 'var(--ink)', lineHeight: 1 }}>
                 {value}
             </div>
             {sub && <div style={{ fontSize: '0.72rem', color: 'var(--ink-muted)' }}>{sub}</div>}
@@ -127,7 +127,7 @@ export default async function AgentInsightsCard({ botId }: { botId: string }) {
                 <Kpi
                     label="Cost (30d)"
                     value={data.totalCostUsd < 0.01 ? '<$0.01' : `$${data.totalCostUsd.toFixed(2)}`}
-                    color="#b45309"
+                    color="var(--warn)"
                 />
                 <Kpi label="Failures" value={data.failedCount.toString()} color={data.failedCount > 0 ? '#c4161c' : '#1a7a4a'} />
                 <Kpi label="Pending approval" value={data.approvalQueuedCount.toString()} sub="in queue" />

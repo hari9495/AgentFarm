@@ -55,7 +55,7 @@ const EVENT_STATUS_BADGE: Record<string, { bg: string; color: string; border: st
 };
 
 function statusBadge(status: string) {
-    const s = EVENT_STATUS_BADGE[status] ?? { bg: '#f5f5f7', color: 'var(--ink-muted)', border: '#d2d2d7' };
+    const s = EVENT_STATUS_BADGE[status] ?? { bg: '#f5f5f7', color: 'var(--ink-muted)', border: 'var(--line)' };
     return (
         <span style={{ padding: '2px 9px', borderRadius: 9999, fontSize: 11, fontWeight: 700, background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
             {status}
@@ -266,7 +266,7 @@ export default function InboundWebhooksPanel() {
                                 <code style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12, color: 'var(--ink)', background: 'var(--bg)', border: '1px solid var(--line)', padding: '6px 10px', borderRadius: 8, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {newSecret}
                                 </code>
-                                <button onClick={() => handleCopy(newSecret, 'secret')} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 9999, cursor: 'pointer', background: '#1a7a4a', color: '#fff', border: 'none', fontWeight: 600 }}>
+                                <button onClick={() => handleCopy(newSecret, 'secret')} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 9999, cursor: 'pointer', background: '#1a7a4a', color: 'var(--card)', border: 'none', fontWeight: 600 }}>
                                     {copiedId === 'secret' ? '✓ Copied' : 'Copy Secret'}
                                 </button>
                                 <button onClick={() => { setNewSecret(null); setNewSourceId(null); }} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 9999, cursor: 'pointer', background: 'var(--bg)', border: '1px solid var(--line)', color: 'var(--ink-muted)' }}>
@@ -287,7 +287,7 @@ export default function InboundWebhooksPanel() {
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.75rem' }}>
                         <button
                             onClick={() => { setShowAddForm(v => !v); setAddError(null); }}
-                            style={{ fontSize: '0.85rem', padding: '0.3rem 0.75rem', borderRadius: '4px', cursor: 'pointer', background: 'var(--accent)', color: '#fff', border: 'none' }}
+                            style={{ fontSize: '0.85rem', padding: '0.3rem 0.75rem', borderRadius: '4px', cursor: 'pointer', background: 'var(--accent)', color: 'var(--card)', border: 'none' }}
                         >
                             {showAddForm ? 'Cancel' : '+ Add source'}
                         </button>
@@ -314,7 +314,7 @@ export default function InboundWebhooksPanel() {
                                 {addError && <div style={{ padding: '7px 12px', borderRadius: 9, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 12 }}>⚠ {addError}</div>}
                                 <div style={{ display: 'flex', gap: 8 }}>
                                     <button type="button" onClick={() => setShowAddForm(false)} style={{ padding: '7px 16px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
-                                    <button type="submit" disabled={adding} style={{ padding: '7px 20px', borderRadius: 9999, border: 'none', background: adding ? '#aeaeb2' : '#0066cc', color: '#fff', fontSize: 13, fontWeight: 700, cursor: adding ? 'not-allowed' : 'pointer' }}>
+                                    <button type="submit" disabled={adding} style={{ padding: '7px 20px', borderRadius: 9999, border: 'none', background: adding ? 'var(--ink-muted)' : 'var(--accent)', color: 'var(--card)', fontSize: 13, fontWeight: 700, cursor: adding ? 'not-allowed' : 'pointer' }}>
                                         {adding ? 'Creating…' : 'Create Source'}
                                     </button>
                                 </div>
@@ -367,7 +367,7 @@ export default function InboundWebhooksPanel() {
                                             </div>
                                             <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
                                                 {testResult && (
-                                                    <span style={{ fontSize: 12, color: testResult.ok ? '#1a7a4a' : '#c4161c', fontWeight: 600 }}>
+                                                    <span style={{ fontSize: 12, color: testResult.ok ? 'var(--ok)' : 'var(--danger)', fontWeight: 600 }}>
                                                         {testResult.ok ? `✓ reachable (${testResult.latencyMs}ms)` : `✗ unreachable (${testResult.latencyMs}ms)`}
                                                     </span>
                                                 )}

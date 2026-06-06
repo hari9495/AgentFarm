@@ -179,8 +179,8 @@ export default function SignupPage() {
                                         color: 'var(--ink)', outline: 'none', boxSizing: 'border-box',
                                         transition: 'border-color 180ms ease, box-shadow 180ms ease',
                                     }}
-                                    onFocus={(e) => { e.currentTarget.style.borderColor = '#0066cc'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,102,204,0.12)'; }}
-                                    onBlur={(e) => { e.currentTarget.style.borderColor = '#d2d2d7'; e.currentTarget.style.boxShadow = 'none'; }}
+                                    onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,102,204,0.12)'; }}
+                                    onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--line)'; e.currentTarget.style.boxShadow = 'none'; }}
                                 />
                             </div>
 
@@ -298,7 +298,7 @@ export default function SignupPage() {
                                                 {met
                                                     ? <CheckCircle2 style={{ width: 13, height: 13, color: '#34c759', flexShrink: 0 }} />
                                                     : <Circle style={{ width: 13, height: 13, color: '#c7c7cc', flexShrink: 0 }} />}
-                                                <span style={{ fontSize: '0.75rem', color: met ? '#1d1d1f' : '#8e8e93' }}>{label}</span>
+                                                <span style={{ fontSize: '0.75rem', color: met ? 'var(--ink)' : 'var(--ink-muted)' }}>{label}</span>
                                             </div>
                                         );
                                     })}
@@ -309,7 +309,7 @@ export default function SignupPage() {
                         <button type="submit" disabled={loading}
                             style={{ ...submitBtnStyle(loading), marginTop: '0.25rem' }}
                             onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = '#0071e3'; }}
-                            onMouseLeave={(e) => { if (!loading) e.currentTarget.style.background = '#0066cc'; }}>
+                            onMouseLeave={(e) => { if (!loading) e.currentTarget.style.background = 'var(--accent)'; }}>
                             {loading
                                 ? <><Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} /> Sending code…</>
                                 : 'Send verification code →'}
@@ -342,7 +342,7 @@ const brandBadge = (
         fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.03em',
         color: 'var(--accent)', textTransform: 'uppercase',
     }}>
-        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#0066cc', display: 'inline-block' }} aria-hidden />
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', display: 'inline-block' }} aria-hidden />
         AgentFarms Internal
     </span>
 );
@@ -387,8 +387,8 @@ function submitBtnStyle(disabled: boolean): React.CSSProperties {
     return {
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
         width: '100%', padding: '0.7rem 1.5rem',
-        background: disabled ? '#5599d8' : '#0066cc',
-        color: '#ffffff', border: 'none', borderRadius: '9999px',
+        background: disabled ? '#5599d8' : 'var(--accent)',
+        color: 'var(--card)', border: 'none', borderRadius: '9999px',
         fontSize: '1rem', fontWeight: 500, letterSpacing: '-0.01em',
         cursor: disabled ? 'not-allowed' : 'pointer',
         transition: 'background-color 180ms ease',
@@ -402,12 +402,12 @@ const ghostBtnStyle: React.CSSProperties = {
 };
 
 function onFocus(e: React.FocusEvent<HTMLInputElement>) {
-    e.currentTarget.style.borderColor = '#0066cc';
+    e.currentTarget.style.borderColor = 'var(--accent)';
     e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,102,204,0.12)';
 }
 
 function onBlur(e: React.FocusEvent<HTMLInputElement>) {
-    e.currentTarget.style.borderColor = '#d2d2d7';
+    e.currentTarget.style.borderColor = 'var(--line)';
     e.currentTarget.style.boxShadow = 'none';
 }
 

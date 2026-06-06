@@ -1976,16 +1976,19 @@ model NpsResponse {
 // ── Portal auth models ────────────────────────────────────────────────────────
 
 model TenantPortalAccount {
-  id           String    @id @default(cuid())
-  tenantId     String
-  email        String
-  passwordHash String
-  displayName  String?
-  role         String    @default("member")
-  isActive     Boolean   @default(true)
-  lastLoginAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id                     String    @id @default(cuid())
+  tenantId               String
+  email                  String
+  passwordHash           String
+  displayName            String?
+  role                   String    @default("member")
+  isActive               Boolean   @default(true)
+  lastLoginAt            DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  isEmailVerified        Boolean   @default(false)
+  emailVerificationToken String?   @unique
+  emailVerifiedAt        DateTime?
 
   sessions     TenantPortalSession[]
   resetTokens  TenantPasswordResetToken[]
@@ -2438,9 +2441,24 @@ model SupportIssue {
   resolvedAt       DateTime?
   steps            SupportDiagnosisStep[]
   messages         SupportChatMessage[]
+  csatResponse     SupportCsatResponse?
 
   @@index([tenantId])
   @@index([tenantId, status])
+}
+
+model SupportCsatResponse {
+  id          String    @id @default(cuid())
+  issueId     String    @unique
+  token       String    @unique
+  rating      Int?
+  comment     String?
+  respondedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  issue SupportIssue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@index([token])
 }
 
 model SupportChatMessage {

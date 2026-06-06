@@ -16,16 +16,16 @@ export type OperatorGuideProps = {
 };
 
 const LEVEL_STYLE: Record<GuideItem['level'], { dot: string; label: string; bg: string; border: string; text: string }> = {
-    verify:   { dot: '#16a34a', label: 'Verify',   bg: '#f0fdf4', border: '#bbf7d0', text: '#15803d' },
-    caution:  { dot: '#d97706', label: 'Caution',  bg: '#fffbeb', border: '#fde68a', text: '#92400e' },
-    critical: { dot: '#dc2626', label: 'Must check', bg: '#fef2f2', border: '#fecaca', text: '#991b1b' },
+    verify:   { dot: 'var(--ok)', label: 'Verify',   bg: 'var(--ok-bg)', border: '#bbf7d0', text: 'var(--ok)' },
+    caution:  { dot: 'var(--warn)', label: 'Caution',  bg: 'var(--warn-bg)', border: 'var(--warn)', text: 'var(--warn)' },
+    critical: { dot: 'var(--danger)', label: 'Must check', bg: 'var(--danger-bg)', border: '#fecaca', text: 'var(--danger)' },
 };
 
 export default function OperatorGuide({ title = 'Operator Guide', intro, items, defaultOpen = false }: OperatorGuideProps) {
     const [open, setOpen] = useState(defaultOpen);
 
     return (
-        <div style={{ border: '1px solid #e0e7ff', borderRadius: 10, overflow: 'hidden', marginBottom: 16, background: '#fafbff' }}>
+        <div style={{ border: '1px solid var(--info-border)', borderRadius: 10, overflow: 'hidden', marginBottom: 16, background: '#fafbff' }}>
             {/* Header toggle */}
             <button
                 type="button"
@@ -52,7 +52,7 @@ export default function OperatorGuide({ title = 'Operator Guide', intro, items, 
             {open && (
                 <div style={{ borderTop: '1px solid #e0e7ff', padding: '12px 14px' }}>
                     {intro && (
-                        <p style={{ margin: '0 0 12px', fontSize: 12, color: '#475569', lineHeight: 1.5 }}>{intro}</p>
+                        <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--ink-muted)', lineHeight: 1.5 }}>{intro}</p>
                     )}
                     <div style={{ display: 'grid', gap: 8 }}>
                         {items.map((item, i) => {
@@ -68,7 +68,7 @@ export default function OperatorGuide({ title = 'Operator Guide', intro, items, 
                                             {item.label}
                                             <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 500, opacity: 0.75 }}>[{s.label}]</span>
                                         </div>
-                                        <div style={{ fontSize: 11, color: '#475569', lineHeight: 1.5 }}>{item.hint}</div>
+                                        <div style={{ fontSize: 11, color: 'var(--ink-muted)', lineHeight: 1.5 }}>{item.hint}</div>
                                     </div>
                                 </div>
                             );

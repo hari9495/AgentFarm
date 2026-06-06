@@ -54,14 +54,14 @@ type PrStatus = {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    draft: { bg: '#fef9c3', color: 'var(--warn)' },
-    published: { bg: '#dcfce7', color: 'var(--ok)' },
+    draft: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
+    published: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
 };
 
 const PR_STATE_BADGE: Record<string, { bg: string; color: string }> = {
-    open: { bg: '#dcfce7', color: 'var(--ok)' },
-    closed: { bg: '#fee2e2', color: 'var(--danger)' },
-    merged: { bg: '#f3e8ff', color: '#7c3aed' },
+    open: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    closed: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    merged: { bg: '#f3e8ff', color: 'var(--accent)' },
 };
 
 function inlineBadge(label: string, map: Record<string, { bg: string; color: string }>) {
@@ -613,7 +613,7 @@ export default function PrDraftsPanel({ tenantId, workspaceId }: PrDraftsPanelPr
                                     </p>
                                     <p style={{ margin: 0 }}>
                                         <span style={{ color: 'var(--ink-muted)' }}>Approved: </span>
-                                        <span style={{ color: prStatus.reviewStatus.approved.length > 0 ? '#166534' : undefined }}>
+                                        <span style={{ color: prStatus.reviewStatus.approved.length > 0 ? 'var(--ok)' : undefined }}>
                                             {prStatus.reviewStatus.approved.length > 0
                                                 ? prStatus.reviewStatus.approved.join(', ')
                                                 : '—'}
@@ -621,7 +621,7 @@ export default function PrDraftsPanel({ tenantId, workspaceId }: PrDraftsPanelPr
                                     </p>
                                     <p style={{ margin: 0 }}>
                                         <span style={{ color: 'var(--ink-muted)' }}>Changes Requested: </span>
-                                        <span style={{ color: prStatus.reviewStatus.changes_requested.length > 0 ? '#991b1b' : undefined }}>
+                                        <span style={{ color: prStatus.reviewStatus.changes_requested.length > 0 ? 'var(--danger)' : undefined }}>
                                             {prStatus.reviewStatus.changes_requested.length > 0
                                                 ? prStatus.reviewStatus.changes_requested.join(', ')
                                                 : '—'}

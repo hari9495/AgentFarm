@@ -36,7 +36,7 @@ function BotIdInput({ botId, setBotId }: { botId: string; setBotId: (v: string) 
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'rgba(0,102,204,0.04)', border: '1px solid rgba(0,102,204,0.15)', borderRadius: 12, marginBottom: 16 }}>
             <div style={{ width: 30, height: 30, borderRadius: 9, background: 'rgba(0,102,204,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Bot size={14} color="#0066cc" />
+                <Bot size={14} color="var(--accent)" />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Bot ID required</div>
@@ -62,7 +62,7 @@ function TabShell({ title, icon: Icon, description, extra, children }: {
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                     <div style={{ width: 36, height: 36, borderRadius: 10, background: 'color-mix(in srgb, var(--accent) 8%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
-                        <Icon size={16} color="#0066cc" />
+                        <Icon size={16} color="var(--accent)" />
                     </div>
                     <div>
                         <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>{title}</h2>
@@ -109,7 +109,7 @@ export default function GovernanceHubClient({
                 <span style={{ color: 'var(--line-strong)' }}>|</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(0,102,204,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <ShieldCheck size={14} color="#0066cc" />
+                        <ShieldCheck size={14} color="var(--accent)" />
                     </div>
                     <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>Governance</span>
                 </div>
@@ -122,7 +122,7 @@ export default function GovernanceHubClient({
                 {/* Active bot pill */}
                 {botId.trim() && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 9999, background: 'color-mix(in srgb, var(--accent) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--accent) 20%, transparent)', fontSize: 12, color: 'var(--accent)', fontWeight: 600, fontFamily: 'monospace' }}>
-                        <Bot size={11} color="#0066cc" />
+                        <Bot size={11} color="var(--accent)" />
                         {botId.slice(0, 16)}{botId.length > 16 ? '…' : ''}
                         <button onClick={() => setBotId('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', padding: 0, lineHeight: 1, marginLeft: 2, fontSize: 13 }}>×</button>
                     </div>

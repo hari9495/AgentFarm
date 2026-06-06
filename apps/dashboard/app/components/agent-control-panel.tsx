@@ -11,11 +11,11 @@ type BotStatusData = {
 type ActionState = 'idle' | 'loading';
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
-    active: { bg: '#f0fdf4', text: '#15803d', dot: '#16a34a' },
-    paused: { bg: '#fffbeb', text: '#b45309', dot: '#d97706' },
+    active: { bg: 'var(--ok-bg)', text: 'var(--ok)', dot: 'var(--ok)' },
+    paused: { bg: 'var(--warn-bg)', text: 'var(--warn)', dot: 'var(--warn)' },
 };
 
-const DEFAULT_COLORS = { bg: '#f9fafb', text: '#374151', dot: '#9ca3af' };
+const DEFAULT_COLORS = { bg: 'var(--bg)', text: 'var(--ink-soft)', dot: 'var(--ink-muted)' };
 
 function StatusBadge({ status }: { status: string }) {
     const colors = STATUS_COLORS[status] ?? DEFAULT_COLORS;
@@ -116,7 +116,7 @@ export default function AgentControlPanel({ botId }: AgentControlPanelProps) {
             {message && (
                 <p style={{
                     fontSize: '0.82rem',
-                    color: message.type === 'success' ? '#16a34a' : '#dc2626',
+                    color: message.type === 'success' ? 'var(--ok)' : 'var(--danger)',
                     marginBottom: '0.75rem',
                 }}>
                     {message.text}
@@ -131,8 +131,8 @@ export default function AgentControlPanel({ botId }: AgentControlPanelProps) {
                         padding: '6px 16px',
                         borderRadius: 6,
                         border: '1px solid var(--line)',
-                        background: isActing || currentStatus === 'paused' ? '#f3f4f6' : '#fffbeb',
-                        color: isActing || currentStatus === 'paused' ? '#9ca3af' : '#d97706',
+                        background: isActing || currentStatus === 'paused' ? 'var(--bg)' : '#fffbeb',
+                        color: isActing || currentStatus === 'paused' ? 'var(--ink-muted)' : 'var(--warn)',
                         fontSize: '0.82rem',
                         fontWeight: 600,
                         cursor: isActing || currentStatus === 'paused' ? 'not-allowed' : 'pointer',
@@ -147,8 +147,8 @@ export default function AgentControlPanel({ botId }: AgentControlPanelProps) {
                         padding: '6px 16px',
                         borderRadius: 6,
                         border: '1px solid var(--line)',
-                        background: isActing || currentStatus === 'active' ? '#f3f4f6' : '#f0fdf4',
-                        color: isActing || currentStatus === 'active' ? '#9ca3af' : '#16a34a',
+                        background: isActing || currentStatus === 'active' ? 'var(--bg)' : '#f0fdf4',
+                        color: isActing || currentStatus === 'active' ? 'var(--ink-muted)' : 'var(--ok)',
                         fontSize: '0.82rem',
                         fontWeight: 600,
                         cursor: isActing || currentStatus === 'active' ? 'not-allowed' : 'pointer',

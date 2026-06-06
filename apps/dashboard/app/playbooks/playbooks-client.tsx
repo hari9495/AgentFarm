@@ -91,7 +91,7 @@ function CategoryPill({ label, active, onClick }: { label: string; active: boole
                 padding: '5px 12px', borderRadius: 9999,
                 border: `1px solid ${active ? 'var(--accent)' : 'var(--line)'}`,
                 background: active ? 'var(--accent)' : 'var(--card)',
-                color: active ? '#fff' : 'var(--ink-soft)',
+                color: active ? 'var(--card)' : 'var(--ink-soft)',
                 fontSize: 12, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap',
                 transition: 'all 0.15s',
             }}
@@ -351,7 +351,7 @@ function DispatchModal({
                                     flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
                                     padding: '10px 20px', borderRadius: 10,
                                     background: busy ? 'var(--line)' : 'var(--accent)',
-                                    color: busy ? 'var(--ink-muted)' : '#fff',
+                                    color: busy ? 'var(--ink-muted)' : 'var(--card)',
                                     border: 'none', fontSize: 13, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer',
                                 }}
                             >
@@ -425,7 +425,7 @@ export default function PlaybooksClient({
             <div style={{ padding: '32px 32px 0', maxWidth: 1200, margin: '0 auto' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
                     <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <BookOpen size={18} color="#fff" />
+                        <BookOpen size={18} color="var(--card)" />
                     </div>
                     <div>
                         <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--ink)' }}>Playbooks</h1>
@@ -548,7 +548,7 @@ export default function PlaybooksClient({
                             <a href="/agents" style={{
                                 flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 padding: '10px 16px', borderRadius: 10,
-                                background: 'var(--accent)', color: '#fff',
+                                background: 'var(--accent)', color: 'var(--card)',
                                 fontSize: 13, fontWeight: 700, textDecoration: 'none',
                             }}>
                                 Add Agent

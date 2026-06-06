@@ -20,11 +20,11 @@ type PendingHandoff = Record<string, unknown>;
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    pending: { bg: '#fef9c3', color: 'var(--warn)' },
-    accepted: { bg: '#dbeafe', color: 'var(--info)' },
-    completed: { bg: '#dcfce7', color: 'var(--ok)' },
-    failed: { bg: '#fee2e2', color: 'var(--danger)' },
-    timed_out: { bg: '#f1f5f9', color: '#475569' },
+    pending: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
+    accepted: { bg: 'var(--info-bg)', color: 'var(--info)' },
+    completed: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    failed: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    timed_out: { bg: 'var(--bg)', color: 'var(--ink-muted)' },
 };
 
 function inlineBadge(label: string, map: Record<string, { bg: string; color: string }>) {

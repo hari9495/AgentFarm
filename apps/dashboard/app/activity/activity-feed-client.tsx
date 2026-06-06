@@ -29,21 +29,21 @@ type FeedItem = {
 // ── Visual config ─────────────────────────────────────────────────────────────
 
 const STATUS_DOT: Record<FeedStatus, { color: string; bg: string; Icon: React.ElementType }> = {
-    success: { color: 'var(--ok)', bg: '#dcfce7', Icon: CheckCircle2 },
-    failure: { color: 'var(--danger)', bg: '#fee2e2', Icon: XCircle },
-    pending: { color: 'var(--info)', bg: '#dbeafe', Icon: Clock },
-    warning: { color: 'var(--warn)', bg: '#fef9c3', Icon: AlertTriangle },
-    info:    { color: '#64748b', bg: '#f1f5f9', Icon: Info },
+    success: { color: 'var(--ok)', bg: 'var(--ok-bg)', Icon: CheckCircle2 },
+    failure: { color: 'var(--danger)', bg: 'var(--danger-bg)', Icon: XCircle },
+    pending: { color: 'var(--info)', bg: 'var(--info-bg)', Icon: Clock },
+    warning: { color: 'var(--warn)', bg: 'var(--warn-bg)', Icon: AlertTriangle },
+    info:    { color: '#64748b', bg: 'var(--bg)', Icon: Info },
 };
 
 const CATEGORY_CONFIG: Record<string, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
-    runtime:      { label: 'Runtime',      color: 'var(--info)', bg: '#dbeafe', Icon: Zap },
-    approval:     { label: 'Approval',     color: 'var(--warn)', bg: '#fef9c3', Icon: ShieldCheck },
-    ci:           { label: 'CI',           color: '#7c3aed', bg: '#f3e8ff', Icon: GitPullRequest },
-    connector:    { label: 'Connector',    color: 'var(--ok)', bg: '#dcfce7', Icon: Plug },
-    provisioning: { label: 'Provisioning', color: 'var(--danger)', bg: '#fee2e2', Icon: Server },
-    security:     { label: 'Security',     color: '#7f1d1d', bg: '#fee2e2', Icon: Lock },
-    system:       { label: 'System',       color: '#475569', bg: '#f1f5f9', Icon: Activity },
+    runtime:      { label: 'Runtime',      color: 'var(--info)', bg: 'var(--info-bg)', Icon: Zap },
+    approval:     { label: 'Approval',     color: 'var(--warn)', bg: 'var(--warn-bg)', Icon: ShieldCheck },
+    ci:           { label: 'CI',           color: 'var(--accent)', bg: '#f3e8ff', Icon: GitPullRequest },
+    connector:    { label: 'Connector',    color: 'var(--ok)', bg: 'var(--ok-bg)', Icon: Plug },
+    provisioning: { label: 'Provisioning', color: 'var(--danger)', bg: 'var(--danger-bg)', Icon: Server },
+    security:     { label: 'Security',     color: 'var(--danger)', bg: 'var(--danger-bg)', Icon: Lock },
+    system:       { label: 'System',       color: 'var(--ink-muted)', bg: 'var(--bg)', Icon: Activity },
 };
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_CONFIG);
@@ -261,7 +261,7 @@ export default function ActivityFeedClient({ workspaceIds }: { workspaceIds: str
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Activity size={18} color="#fff" />
+                            <Activity size={18} color="var(--card)" />
                         </div>
                         <div>
                             <h1 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: 'var(--ink)' }}>Activity Feed</h1>

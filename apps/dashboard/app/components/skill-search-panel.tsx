@@ -156,18 +156,18 @@ export function SkillSearchPanel({ workspaceId, botId }: Props) {
                         onClick={() => { setSelectedSkill(skill); setInvokeResult(null); setInvokeError(null); }}
                         style={{
                             textAlign: 'left', padding: '0.75rem', border: '1px solid',
-                            borderColor: selectedSkill?.id === skill.id ? '#6366f1' : '#e2e8f0',
-                            borderRadius: 8, background: selectedSkill?.id === skill.id ? '#eef2ff' : '#fff',
+                            borderColor: selectedSkill?.id === skill.id ? 'var(--accent)' : 'var(--bg)',
+                            borderRadius: 8, background: selectedSkill?.id === skill.id ? '#eef2ff' : 'var(--card)',
                             cursor: 'pointer', transition: 'border-color 0.15s',
                         }}
                     >
                         <div style={{ fontWeight: 600, fontSize: '0.88rem', marginBottom: '0.25rem' }}>{skill.name}</div>
                         <div style={{ fontSize: '0.78rem', color: 'var(--ink-muted)', marginBottom: '0.35rem', lineHeight: 1.4, fontFamily: 'monospace' }}>{skill.id}</div>
                         <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: 99, background: 'var(--bg)', color: '#475569' }}>
+                            <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: 99, background: 'var(--bg)', color: 'var(--ink-muted)' }}>
                                 {skill.source}
                             </span>
-                            <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: 99, background: 'var(--bg)', color: '#475569' }}>
+                            <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: 99, background: 'var(--bg)', color: 'var(--ink-muted)' }}>
                                 v{skill.version}
                             </span>
                             {skill.verified && (
@@ -182,7 +182,7 @@ export function SkillSearchPanel({ workspaceId, botId }: Props) {
 
             {/* Invoke panel for selected skill */}
             {selectedSkill && (
-                <div style={{ marginTop: '1.25rem', padding: '1rem', border: '1px solid #6366f1', borderRadius: 8, background: '#fafafa' }}>
+                <div style={{ marginTop: '1.25rem', padding: '1rem', border: '1px solid var(--accent)', borderRadius: 8, background: 'var(--bg)' }}>
                     <h3 style={{ margin: '0 0 0.15rem', fontSize: '1rem' }}>{selectedSkill.name}</h3>
                     <p style={{ margin: '0 0 0.4rem', fontSize: '0.78rem', color: 'var(--ink-muted)', fontFamily: 'monospace' }}>{selectedSkill.id} · v{selectedSkill.version} · {selectedSkill.source}</p>
 
@@ -205,7 +205,7 @@ export function SkillSearchPanel({ workspaceId, botId }: Props) {
                     <button
                         onClick={() => void handleInvoke()}
                         disabled={invoking}
-                        style={{ marginTop: '0.5rem', padding: '0.4rem 1rem', background: invoking ? '#c7d2fe' : '#6366f1', color: '#fff', border: 'none', borderRadius: 6, cursor: invoking ? 'wait' : 'pointer', fontSize: '0.85rem' }}
+                        style={{ marginTop: '0.5rem', padding: '0.4rem 1rem', background: invoking ? '#c7d2fe' : 'var(--accent)', color: 'var(--card)', border: 'none', borderRadius: 6, cursor: invoking ? 'wait' : 'pointer', fontSize: '0.85rem' }}
                     >
                         {invoking ? 'Running…' : 'Run Skill'}
                     </button>
@@ -214,7 +214,7 @@ export function SkillSearchPanel({ workspaceId, botId }: Props) {
 
                     {invokeResult && (
                         <div style={{ marginTop: '0.6rem', padding: '0.6rem', background: invokeResult.ok ? '#f0fdf4' : '#fef2f2', borderRadius: 6, fontSize: '0.83rem' }}>
-                            <span style={{ fontWeight: 700, color: invokeResult.ok ? '#15803d' : '#dc2626' }}>{invokeResult.ok ? '✓ Success' : '✗ Failed'}</span>
+                            <span style={{ fontWeight: 700, color: invokeResult.ok ? 'var(--ok)' : 'var(--danger)' }}>{invokeResult.ok ? '✓ Success' : '✗ Failed'}</span>
                             <span style={{ marginLeft: '0.5rem', color: 'var(--ink-muted)' }}>{invokeResult.summary}</span>
                             <span style={{ marginLeft: '0.75rem', color: 'var(--ink-muted)' }}>{invokeResult.duration_ms}ms</span>
                         </div>

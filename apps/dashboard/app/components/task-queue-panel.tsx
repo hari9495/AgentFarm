@@ -44,17 +44,17 @@ type TaskEntriesResponse = {
 type StatusFilter = 'all' | 'pending' | 'running' | 'done' | 'failed';
 
 const PRIORITY_BADGE: Record<string, { bg: string; color: string }> = {
-    high: { bg: '#fee2e2', color: 'var(--danger)' },
-    normal: { bg: '#dbeafe', color: 'var(--info)' },
-    low: { bg: '#f1f5f9', color: '#475569' },
+    high: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    normal: { bg: 'var(--info-bg)', color: 'var(--info)' },
+    low: { bg: 'var(--bg)', color: 'var(--ink-muted)' },
 };
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    pending: { bg: '#fef9c3', color: 'var(--warn)' },
-    running: { bg: '#dbeafe', color: 'var(--info)' },
-    done: { bg: '#dcfce7', color: 'var(--ok)' },
-    failed: { bg: '#fee2e2', color: 'var(--danger)' },
-    cancelled: { bg: '#f1f5f9', color: '#475569' },
+    pending: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
+    running: { bg: 'var(--info-bg)', color: 'var(--info)' },
+    done: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    failed: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    cancelled: { bg: 'var(--bg)', color: 'var(--ink-muted)' },
 };
 
 export default function TaskQueuePanel({ tenantId: _tenantId }: TaskQueuePanelProps) {

@@ -22,10 +22,10 @@ export type EvidenceViewerItem = {
 
 function methodColor(method: string): string {
     const m = method.toUpperCase();
-    if (m === 'GET')    return '#0066cc';
+    if (m === 'GET')    return 'var(--accent)';
     if (m === 'POST')   return '#1a7a4a';
     if (m === 'PUT')    return '#b45309';
-    if (m === 'PATCH')  return '#7c3aed';
+    if (m === 'PATCH')  return 'var(--accent)';
     if (m === 'DELETE') return '#c4161c';
     return '#6e6e73';
 }
@@ -219,7 +219,7 @@ export function EvidenceViewer({ item }: { item: EvidenceViewerItem }) {
                         <span style={{ fontSize: '0.68rem', color: 'var(--ink-muted)', flexShrink: 0 }}>hash</span>
                         <span style={{
                             fontFamily: 'var(--font-plex-mono, monospace)',
-                            fontSize: '0.72rem', color: '#93c5fd',
+                            fontSize: '0.72rem', color: 'var(--info)',
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
                             {item.domSnapshotHash ?? 'not captured'}

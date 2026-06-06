@@ -40,15 +40,15 @@ const STEP_ICONS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<DiagnosisStepStatus, string> = {
-    pending: '#94a3b8',
-    running: '#2563eb',
-    done: '#16a34a',
-    failed: '#dc2626',
+    pending: 'var(--ink-muted)',
+    running: 'var(--info)',
+    done: 'var(--ok)',
+    failed: 'var(--danger)',
 };
 
 function StepRow({ step }: { step: DiagnosisStep }) {
     const icon = STEP_ICONS[step.stepType] ?? '•';
-    const color = STATUS_COLORS[step.status] ?? '#94a3b8';
+    const color = STATUS_COLORS[step.status] ?? 'var(--ink-muted)';
     const isRunning = step.status === 'running';
 
     return (

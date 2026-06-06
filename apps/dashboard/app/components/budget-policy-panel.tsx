@@ -31,9 +31,9 @@ type BudgetDecision = {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const DECISION_BADGE: Record<string, { bg: string; color: string }> = {
-    allowed: { bg: '#dcfce7', color: 'var(--ok)' },
-    warning: { bg: '#fef9c3', color: 'var(--warn)' },
-    denied: { bg: '#fee2e2', color: 'var(--danger)' },
+    allowed: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    warning: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
+    denied: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
 };
 
 function inlineBadge(label: string, map: Record<string, { bg: string; color: string }>) {
@@ -55,9 +55,9 @@ function inlineBadge(label: string, map: Record<string, { bg: string; color: str
 }
 
 function spendBarColor(ratio: number): string {
-    if (ratio < 0.5) return '#166534';
+    if (ratio < 0.5) return 'var(--ok)';
     if (ratio < 0.8) return '#b45309';
-    return '#991b1b';
+    return 'var(--danger)';
 }
 
 // ── SpendBar with 80% warn / 90% critical threshold markers ─────────────────
@@ -73,7 +73,7 @@ function SpendBar({ spent, limit }: { spent: number; limit: number }) {
                 {/* 80% warn marker */}
                 <div title="80% — warning threshold" style={{ position: 'absolute', left: '80%', top: -3, width: 2, height: 14, background: '#b45309', borderRadius: 1, zIndex: 1 }} />
                 {/* 90% critical marker */}
-                <div title="90% — critical threshold" style={{ position: 'absolute', left: '90%', top: -3, width: 2, height: 14, background: '#991b1b', borderRadius: 1, zIndex: 1 }} />
+                <div title="90% — critical threshold" style={{ position: 'absolute', left: '90%', top: -3, width: 2, height: 14, background: 'var(--danger)', borderRadius: 1, zIndex: 1 }} />
             </div>
             <div style={{ display: 'flex', gap: 12, fontSize: 10, color: 'var(--ink-muted)', fontWeight: 500 }}>
                 <span style={{ color: 'var(--warn)' }}>⚠ 80% warn</span>
@@ -327,8 +327,8 @@ export default function BudgetPolicyPanel({ tenantId, workspaceId }: BudgetPolic
                                 onClick={() => void toggleHardStop()}
                                 style={{
                                     background: budgetState.isHardStopActive ? '#fee2e2' : undefined,
-                                    borderColor: budgetState.isHardStopActive ? '#fca5a5' : undefined,
-                                    color: budgetState.isHardStopActive ? '#991b1b' : undefined,
+                                    borderColor: budgetState.isHardStopActive ? 'var(--danger)' : undefined,
+                                    color: budgetState.isHardStopActive ? 'var(--danger)' : undefined,
                                 }}
                             >
                                 {hardStopToggling ? 'Toggling…' : 'Toggle Hard Stop'}

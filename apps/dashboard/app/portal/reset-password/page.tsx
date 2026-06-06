@@ -76,7 +76,7 @@ function ResetPasswordForm() {
                     <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Re-enter password" required autoComplete="new-password"
                         style={{ width: '100%', padding: '0.5rem 0.7rem', fontSize: '0.9rem', border: '1px solid var(--line)', borderRadius: 6, outline: 'none' }} />
                 </div>
-                <button type="submit" disabled={loading || !password || !confirm} style={{ padding: '0.6rem 1rem', fontSize: '0.9rem', fontWeight: 600, background: loading ? '#93c5fd' : '#2563eb', color: '#fff', border: 'none', borderRadius: 6, cursor: loading ? 'not-allowed' : 'pointer' }}>
+                <button type="submit" disabled={loading || !password || !confirm} style={{ padding: '0.6rem 1rem', fontSize: '0.9rem', fontWeight: 600, background: loading ? 'var(--info)' : 'var(--info)', color: 'var(--card)', border: 'none', borderRadius: 6, cursor: loading ? 'not-allowed' : 'pointer' }}>
                     {loading ? 'Updating…' : 'Set New Password'}
                 </button>
             </form>

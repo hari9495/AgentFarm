@@ -40,15 +40,15 @@ type SchedulerHistoryEntry = Record<string, unknown>;
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const RUN_STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    success: { bg: '#dcfce7', color: 'var(--ok)' },
-    failed: { bg: '#fee2e2', color: 'var(--danger)' },
-    running: { bg: '#dbeafe', color: 'var(--info)' },
-    pending: { bg: '#fef9c3', color: 'var(--warn)' },
+    success: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    failed: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    running: { bg: 'var(--info-bg)', color: 'var(--info)' },
+    pending: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
 };
 
 const JOB_ENABLED_BADGE: Record<string, { bg: string; color: string }> = {
-    Active: { bg: '#dcfce7', color: 'var(--ok)' },
-    Paused: { bg: '#f1f5f9', color: '#475569' },
+    Active: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    Paused: { bg: 'var(--bg)', color: 'var(--ink-muted)' },
 };
 
 function inlineBadge(label: string, map: Record<string, { bg: string; color: string }>) {
@@ -330,7 +330,7 @@ export default function SkillPipelinesPanel() {
                             border: activeTab === tab ? '1px solid var(--accent)' : '1px solid var(--line)',
                             borderRadius: '4px',
                             background: activeTab === tab ? 'var(--accent)' : 'var(--bg)',
-                            color: activeTab === tab ? '#fff' : 'var(--ink)',
+                            color: activeTab === tab ? 'var(--card)' : 'var(--ink)',
                             cursor: 'pointer',
                             textTransform: 'capitalize',
                         }}
@@ -403,8 +403,8 @@ export default function SkillPipelinesPanel() {
                                 </div>
                                 <pre
                                     style={{
-                                        background: '#1e1e2e',
-                                        color: '#cdd6f4',
+                                        background: 'var(--bg-deep)',
+                                        color: 'var(--ink)',
                                         padding: '0.75rem',
                                         borderRadius: '4px',
                                         fontSize: '0.76rem',
@@ -577,8 +577,8 @@ export default function SkillPipelinesPanel() {
                                 {!runDetailLoading && selectedRun && (
                                     <pre
                                         style={{
-                                            background: '#1e1e2e',
-                                            color: '#cdd6f4',
+                                            background: 'var(--bg-deep)',
+                                            color: 'var(--ink)',
                                             padding: '0.75rem',
                                             borderRadius: '4px',
                                             fontSize: '0.76rem',
@@ -743,7 +743,7 @@ export default function SkillPipelinesPanel() {
                                                         <button
                                                             type="button"
                                                             className="secondary-action"
-                                                            style={{ fontSize: '0.76rem', padding: '0.2rem 0.5rem', color: 'var(--danger)', borderColor: '#fca5a5' }}
+                                                            style={{ fontSize: '0.76rem', padding: '0.2rem 0.5rem', color: 'var(--danger)', borderColor: 'var(--danger)' }}
                                                             disabled={deleting === job.id}
                                                             onClick={() => void deleteJob(job.id)}
                                                         >

@@ -256,16 +256,16 @@ source.addEventListener('error', () => {
 ];
 
 const METHOD_COLORS: Record<HttpMethod, CSSProperties> = {
-    GET:    { backgroundColor: '#3b82f6', color: '#ffffff' },
-    POST:   { backgroundColor: '#22c55e', color: '#ffffff' },
-    PATCH:  { backgroundColor: '#f59e0b', color: '#ffffff' },
-    DELETE: { backgroundColor: '#ef4444', color: '#ffffff' },
+    GET:    { backgroundColor: 'var(--info)', color: 'var(--card)' },
+    POST:   { backgroundColor: 'var(--ok)', color: 'var(--card)' },
+    PATCH:  { backgroundColor: 'var(--warn)', color: 'var(--card)' },
+    DELETE: { backgroundColor: 'var(--danger)', color: 'var(--card)' },
 };
 
 const AUTH_COLORS: Record<AuthLevel, CSSProperties> = {
-    'public':    { backgroundColor: '#e2e8f0', color: '#475569' },
+    'public':    { backgroundColor: 'var(--bg)', color: 'var(--ink-muted)' },
     'session':   { backgroundColor: '#dbeafe', color: 'var(--info)' },
-    'viewer+':   { backgroundColor: '#d1fae5', color: '#065f46' },
+    'viewer+':   { backgroundColor: '#d1fae5', color: 'var(--ok)' },
     'operator+': { backgroundColor: '#fef3c7', color: 'var(--warn)' },
     'admin+':    { backgroundColor: '#fee2e2', color: 'var(--danger)' },
 };
@@ -576,7 +576,7 @@ export default function ApiDocsPanel() {
                                 </h3>
                                 <span
                                     style={{
-                                        backgroundColor: '#334155',
+                                        backgroundColor: 'var(--bg-deep)',
                                         color: 'var(--ink-muted)',
                                         padding: '0.15rem 0.5rem',
                                         borderRadius: '0.25rem',
@@ -595,7 +595,7 @@ export default function ApiDocsPanel() {
                                         top: '0.5rem',
                                         right: '0.5rem',
                                         backgroundColor: 'rgba(255,255,255,0.1)',
-                                        color: '#cdd6f4',
+                                        color: 'var(--ink)',
                                         border: '1px solid rgba(255,255,255,0.2)',
                                         borderRadius: '0.25rem',
                                         padding: '0.25rem 0.6rem',
@@ -609,7 +609,7 @@ export default function ApiDocsPanel() {
                                 <pre
                                     style={{
                                         backgroundColor: '#1e1e2e',
-                                        color: '#cdd6f4',
+                                        color: 'var(--ink)',
                                         fontFamily: 'monospace',
                                         padding: '1rem',
                                         borderRadius: '0.5rem',

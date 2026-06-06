@@ -17,10 +17,10 @@ type TierRowProps = {
 
 function TierRow({ tier, label, reached, applied, detail }: TierRowProps) {
     const statusColor = !reached
-        ? '#94a3b8'
+        ? 'var(--ink-muted)'
         : applied
-            ? '#16a34a'
-            : '#dc2626';
+            ? 'var(--ok)'
+            : 'var(--danger)';
 
     const statusLabel = !reached ? 'not reached' : applied ? 'applied' : 'failed';
     const rowOpacity = reached ? 1 : 0.45;
@@ -35,7 +35,7 @@ function TierRow({ tier, label, reached, applied, detail }: TierRowProps) {
                 width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: reached ? statusColor : '#f1f5f9',
-                fontSize: 12, fontWeight: 700, color: reached ? '#fff' : '#94a3b8',
+                fontSize: 12, fontWeight: 700, color: reached ? 'var(--card)' : 'var(--ink-muted)',
             }}>
                 {tier}
             </div>

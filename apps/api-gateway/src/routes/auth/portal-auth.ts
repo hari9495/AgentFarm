@@ -1,7 +1,25 @@
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { hashPassword, verifyPassword } from '../../lib/password.js';
-import { sendPasswordResetEmail } from '../../lib/portal-email.js';
+import { sendPasswordResetEmail, sendVerificationEmail } from '../../lib/portal-email.js';
+
+// ── In-memory rate limiter for forgot-password (3 req/hr per email) ──────────
+const forgotPwRateLimitMap = new Map<string, { count: number; resetAt: number }>();
+function checkForgotPasswordRate(key: string): { allowed: boolean; retryAfterSeconds: number } {
+    const now = Date.now();
+    const WINDOW_MS = 60 * 60 * 1_000; // 1 hour
+    const MAX = 3;
+    const entry = forgotPwRateLimitMap.get(key);
+    if (!entry || entry.resetAt < now) {
+        forgotPwRateLimitMap.set(key, { count: 1, resetAt: now + WINDOW_MS });
+        return { allowed: true, retryAfterSeconds: 0 };
+    }
+    if (entry.count >= MAX) {
+        return { allowed: false, retryAfterSeconds: Math.ceil((entry.resetAt - now) / 1_000) };
+    }
+    entry.count++;
+    return { allowed: true, retryAfterSeconds: 0 };
+}
 
 // ── Repo types ────────────────────────────────────────────────────────────────
 
@@ -15,6 +33,8 @@ type PortalAccountRecord = {
     displayName: string | null;
     role: string;
     isActive: boolean;
+    isEmailVerified: boolean;
+    emailVerificationToken: string | null;
 };
 
 type PortalSessionRecord = {
@@ -51,6 +71,10 @@ export type PortalAuthRepo = {
     createResetToken(data: { accountId: string; tenantId: string; token: string; expiresAt: Date }): Promise<void>;
     findResetToken(token: string): Promise<{ id: string; accountId: string; tenantId: string; expiresAt: Date; usedAt: Date | null } | null>;
     markResetTokenUsed(id: string): Promise<void>;
+    // Email verification
+    setVerificationToken(accountId: string, token: string): Promise<void>;
+    findAccountByVerificationToken(token: string): Promise<PortalAccountRecord | null>;
+    markEmailVerified(accountId: string): Promise<void>;
 };
 
 export type RegisterPortalAuthRoutesOptions = {
@@ -132,6 +156,23 @@ const getPrismaRepo = async (): Promise<PortalAuthRepo> => {
             await (prisma as unknown as Record<string, { update: (a: unknown) => Promise<unknown> }>)['tenantPasswordResetToken']!.update({
                 where: { id },
                 data: { usedAt: new Date() },
+            });
+        },
+        async setVerificationToken(accountId, token) {
+            await prisma.tenantPortalAccount.update({
+                where: { id: accountId },
+                data: { emailVerificationToken: token },
+            });
+        },
+        async findAccountByVerificationToken(token) {
+            return prisma.tenantPortalAccount.findUnique({
+                where: { emailVerificationToken: token },
+            }) as unknown as PortalAccountRecord | null;
+        },
+        async markEmailVerified(accountId) {
+            await prisma.tenantPortalAccount.update({
+                where: { id: accountId },
+                data: { isEmailVerified: true, emailVerifiedAt: new Date(), emailVerificationToken: null },
             });
         },
     };
@@ -239,11 +280,25 @@ export const registerPortalAuthRoutes = async (
             displayName: displayName ?? null,
         });
 
+        // Issue a verification token and send email — fire-and-forget
+        const verificationToken = randomUUID();
+        void repo.setVerificationToken(account.id, verificationToken).then(async () => {
+            const appBaseUrl = process.env['PORTAL_APP_BASE_URL'] ?? 'http://localhost:3001';
+            const verifyUrl = `${appBaseUrl}/portal/verify-email?token=${encodeURIComponent(verificationToken)}`;
+            void sendVerificationEmail({ to: normalizedEmail, tenantId, verifyUrl }).catch(() => {/* best-effort */});
+        }).catch(() => {/* best-effort */});
+
+        const extra = process.env['NODE_ENV'] !== 'production' ? {
+            verifyUrl: `${process.env['PORTAL_APP_BASE_URL'] ?? 'http://localhost:3001'}/portal/verify-email?token=${encodeURIComponent(verificationToken)}`,
+        } : {};
+
         return reply.code(201).send({
             accountId: account.id,
             tenantId: account.tenantId,
             email: account.email,
             role: account.role,
+            emailVerified: false,
+            ...extra,
         });
     });
 
@@ -295,6 +350,13 @@ export const registerPortalAuthRoutes = async (
             return reply.code(403).send({
                 error: 'account_inactive',
                 message: 'This account has been deactivated.',
+            });
+        }
+
+        if (!account.isEmailVerified) {
+            return reply.code(403).send({
+                error: 'email_not_verified',
+                message: 'Please verify your email address before signing in. Check your inbox for the verification link.',
             });
         }
 
@@ -432,6 +494,18 @@ export const registerPortalAuthRoutes = async (
         }
 
         const normalizedEmail = email.trim().toLowerCase();
+
+        // Rate-limit: max 3 reset requests per email per hour
+        const rlKey = `${tenantId}:${normalizedEmail}`;
+        const rl = checkForgotPasswordRate(rlKey);
+        if (!rl.allowed) {
+            return reply.code(429).send({
+                error: 'too_many_requests',
+                message: 'Too many password reset requests. Please wait before trying again.',
+                retryAfterSeconds: rl.retryAfterSeconds,
+            });
+        }
+
         const account = await repo.findAccountByEmail(tenantId, normalizedEmail);
 
         // Silently succeed — don't reveal whether the account exists
@@ -518,5 +592,63 @@ export const registerPortalAuthRoutes = async (
         await repo.updateSessionLastSeen(session.id);
 
         return reply.send({ ok: true, displayName: displayName?.trim() || null });
+    });
+
+    // ── GET /portal/auth/verify-email?token= ─────────────────────────────────
+    app.get<{ Querystring: { token?: string } }>('/portal/auth/verify-email', async (request, reply) => {
+        const { token } = request.query;
+        if (!token || typeof token !== 'string') {
+            return reply.code(400).send({ error: 'token_required', message: 'Verification token is required.' });
+        }
+
+        const account = await repo.findAccountByVerificationToken(token);
+        if (!account) {
+            return reply.code(400).send({ error: 'invalid_token', message: 'Verification link is invalid or has already been used.' });
+        }
+
+        if (account.isEmailVerified) {
+            return reply.send({ ok: true, alreadyVerified: true });
+        }
+
+        await repo.markEmailVerified(account.id);
+        return reply.send({ ok: true, alreadyVerified: false });
+    });
+
+    // ── POST /portal/auth/resend-verification ────────────────────────────────
+    app.post<{
+        Body: { tenantId?: string; email?: string };
+    }>('/portal/auth/resend-verification', async (request, reply) => {
+        const body = request.body ?? {};
+        const { tenantId, email } = body;
+
+        if (!tenantId || typeof tenantId !== 'string') {
+            return reply.code(400).send({ error: 'validation_failed', field: 'tenantId', message: 'tenantId is required.' });
+        }
+        if (!email || typeof email !== 'string' || !EMAIL_REGEX.test(email.trim())) {
+            return reply.code(400).send({ error: 'validation_failed', field: 'email', message: 'Valid email address is required.' });
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+
+        // Rate-limit same as forgot-password
+        const rl = checkForgotPasswordRate(`verify:${tenantId}:${normalizedEmail}`);
+        if (!rl.allowed) {
+            return reply.code(429).send({ error: 'too_many_requests', message: 'Too many requests. Please wait before trying again.' });
+        }
+
+        const account = await repo.findAccountByEmail(tenantId, normalizedEmail);
+
+        // Anti-enumeration: always return ok
+        if (account && account.isActive && !account.isEmailVerified) {
+            const newToken = randomUUID();
+            await repo.setVerificationToken(account.id, newToken);
+            const appBaseUrl = process.env['PORTAL_APP_BASE_URL'] ?? 'http://localhost:3001';
+            const verifyUrl = `${appBaseUrl}/portal/verify-email?token=${encodeURIComponent(newToken)}`;
+            void sendVerificationEmail({ to: normalizedEmail, tenantId, verifyUrl }).catch(() => {/* best-effort */});
+            const extra = process.env['NODE_ENV'] !== 'production' ? { verifyUrl } : {};
+            return reply.send({ ok: true, ...extra });
+        }
+
+        return reply.send({ ok: true });
     });
 };

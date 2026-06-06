@@ -72,7 +72,7 @@ function AgentListItem({ agent, selected, onClick }: { agent: Agent; selected: b
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
             }}>{icon}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: selected ? '#0066cc' : '#1d1d1f',
+                <div style={{ fontSize: 13, fontWeight: 600, color: selected ? 'var(--accent)' : 'var(--ink)',
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {roleLabel}
                 </div>
@@ -185,7 +185,7 @@ function CreateAgentModal({
                         <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
                             Cancel
                         </button>
-                        <button type="submit" disabled={creating} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: 'none', background: creating ? '#aeaeb2' : '#0066cc', color: '#ffffff', fontSize: 14, fontWeight: 500, cursor: creating ? 'not-allowed' : 'pointer', transition: 'background 0.15s' }}>
+                        <button type="submit" disabled={creating} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: 'none', background: creating ? 'var(--ink-muted)' : 'var(--accent)', color: 'var(--card)', fontSize: 14, fontWeight: 500, cursor: creating ? 'not-allowed' : 'pointer', transition: 'background 0.15s' }}>
                             {creating ? 'Creating…' : 'Create Agent'}
                         </button>
                     </div>
@@ -201,13 +201,13 @@ function EmptyState({ onNew }: { onNew: () => void }) {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 40, textAlign: 'center' }}>
             <div style={{ width: 64, height: 64, borderRadius: 18, background: 'color-mix(in srgb, var(--accent) 8%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-                <Bot size={28} color="#0066cc" />
+                <Bot size={28} color="var(--accent)" />
             </div>
             <h3 style={{ margin: '0 0 6px', fontSize: 17, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>No agents yet</h3>
             <p style={{ margin: '0 0 20px', fontSize: 14, color: 'var(--ink-muted)', maxWidth: 280, lineHeight: 1.5 }}>
                 Create your first AI agent. Each agent has a dedicated role, memory, and action capabilities.
             </p>
-            <button onClick={onNew} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 9999, border: 'none', background: '#0066cc', color: '#fff', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
+            <button onClick={onNew} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 9999, border: 'none', background: 'var(--accent)', color: 'var(--card)', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
                 <Plus size={14} /> New Agent
             </button>
         </div>
@@ -276,10 +276,10 @@ export default function AgentsPage() {
                 <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--ink-muted)', fontSize: 13, textDecoration: 'none', fontWeight: 500 }}>
                     ← Dashboard
                 </Link>
-                <span style={{ color: '#d2d2d7' }}>|</span>
+                <span style={{ color: 'var(--line)' }}>|</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(0,102,204,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Bot size={14} color="#0066cc" />
+                        <Bot size={14} color="var(--accent)" />
                     </div>
                     <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>Agent Management</span>
                 </div>
@@ -304,7 +304,7 @@ export default function AgentsPage() {
                     <button onClick={loadAgents} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
                         <RefreshCw size={12} />
                     </button>
-                    <button onClick={() => setShowCreate(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 16px', borderRadius: 9999, border: 'none', background: '#0066cc', color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                    <button onClick={() => setShowCreate(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 16px', borderRadius: 9999, border: 'none', background: 'var(--accent)', color: 'var(--card)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
                         <Plus size={13} /> New Agent
                     </button>
                 </div>

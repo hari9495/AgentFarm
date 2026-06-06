@@ -180,12 +180,12 @@ function RegisterForm({
             <div style={{ display: 'flex', padding: '12px 20px', borderBottom: '1px solid #f0f0f2', gap: 0 }}>
                 {STEPS.map(({ n, label: lbl, done }, i) => (
                     <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {i > 0 && <div style={{ width: 32, height: 1, background: '#d2d2d7', margin: '0 6px' }} />}
+                        {i > 0 && <div style={{ width: 32, height: 1, background: 'var(--line)', margin: '0 6px' }} />}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: done ? 'pointer' : 'default' }} onClick={() => done && setStep(n)}>
-                            <div style={{ width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, background: step === n ? '#0066cc' : done ? 'rgba(26,122,74,0.1)' : '#f5f5f7', color: step === n ? '#fff' : done ? '#1a7a4a' : '#aeaeb2', border: `1px solid ${step === n ? '#0066cc' : done ? 'rgba(26,122,74,0.3)' : '#d2d2d7'}` }}>
+                            <div style={{ width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, background: step === n ? 'var(--accent)' : done ? 'var(--ok-bg)' : 'var(--bg)', color: step === n ? 'var(--card)' : done ? 'var(--ok)' : 'var(--ink-muted)', border: `1px solid ${step === n ? 'var(--accent)' : done ? 'var(--ok-border)' : 'var(--line)'}` }}>
                                 {done ? '✓' : n}
                             </div>
-                            <span style={{ fontSize: 12, fontWeight: step === n ? 700 : 500, color: step === n ? '#0066cc' : done ? '#1a7a4a' : '#aeaeb2' }}>{lbl}</span>
+                            <span style={{ fontSize: 12, fontWeight: step === n ? 700 : 500, color: step === n ? 'var(--accent)' : done ? 'var(--ok)' : 'var(--ink-muted)' }}>{lbl}</span>
                         </div>
                     </div>
                 ))}
@@ -223,7 +223,7 @@ function RegisterForm({
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                             <button onClick={() => { if (!adapterId.trim() || !name.trim()) { setError('Adapter ID and Name are required.'); return; } setError(null); setStep(2); }}
-                                style={{ padding: '8px 24px', borderRadius: 9999, border: 'none', background: '#0066cc', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                                style={{ padding: '8px 24px', borderRadius: 9999, border: 'none', background: 'var(--accent)', color: 'var(--card)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                                 Next: Connection →
                             </button>
                         </div>
@@ -243,7 +243,7 @@ function RegisterForm({
                             <label style={label}>Authentication</label>
                             <div style={{ display: 'flex', gap: 6 }}>
                                 {(['none','api_key','bearer_token','basic_auth'] as AuthType[]).map(a => (
-                                    <button key={a} type="button" onClick={() => setAuthType(a)} style={{ padding: '6px 12px', borderRadius: 9999, border: `1px solid ${authType === a ? '#0066cc' : '#d2d2d7'}`, background: authType === a ? 'rgba(0,102,204,0.07)' : '#fff', color: authType === a ? '#0066cc' : '#424245', fontSize: 12, fontWeight: authType === a ? 700 : 500, cursor: 'pointer' }}>
+                                    <button key={a} type="button" onClick={() => setAuthType(a)} style={{ padding: '6px 12px', borderRadius: 9999, border: `1px solid ${authType === a ? 'var(--accent)' : 'var(--line)'}`, background: authType === a ? 'rgba(0,102,204,0.07)' : 'var(--card)', color: authType === a ? 'var(--accent)' : '#424245', fontSize: 12, fontWeight: authType === a ? 700 : 500, cursor: 'pointer' }}>
                                         {a === 'none' ? 'None' : a === 'api_key' ? 'API Key' : a === 'bearer_token' ? 'Bearer Token' : 'Basic Auth'}
                                     </button>
                                 ))}
@@ -292,7 +292,7 @@ function RegisterForm({
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                             <button onClick={() => setStep(1)} style={{ padding: '8px 18px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>← Back</button>
                             <button onClick={() => { if (!endpointUrl.trim()) { setError('API Base URL is required.'); return; } setError(null); setStep(3); }}
-                                style={{ padding: '8px 24px', borderRadius: 9999, border: 'none', background: '#0066cc', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                                style={{ padding: '8px 24px', borderRadius: 9999, border: 'none', background: 'var(--accent)', color: 'var(--card)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                                 Next: Actions →
                             </button>
                         </div>
@@ -370,7 +370,7 @@ function RegisterForm({
 
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                             <button onClick={() => setStep(2)} style={{ padding: '8px 18px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>← Back</button>
-                            <button onClick={submit} disabled={saving || success} style={{ padding: '8px 28px', borderRadius: 9999, border: 'none', background: saving || success ? '#aeaeb2' : '#0066cc', color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
+                            <button onClick={submit} disabled={saving || success} style={{ padding: '8px 28px', borderRadius: 9999, border: 'none', background: saving || success ? 'var(--ink-muted)' : 'var(--accent)', color: 'var(--card)', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
                                 {saving ? 'Registering…' : success ? '✓ Registered' : 'Register Adapter'}
                             </button>
                         </div>
@@ -452,7 +452,7 @@ export function AdapterDiscoveryPanel({ workspaceId }: Props) {
                     <button onClick={() => void load()} disabled={loading} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
                         <RefreshCw size={11} className={loading ? 'animate-spin' : ''} /> Refresh
                     </button>
-                    <button onClick={() => setShowForm(v => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 9999, border: 'none', background: showForm ? '#aeaeb2' : '#0066cc', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                    <button onClick={() => setShowForm(v => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 9999, border: 'none', background: showForm ? 'var(--ink-muted)' : 'var(--accent)', color: 'var(--card)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                         {showForm ? '✕ Cancel' : <><Plus size={12} /> Register Adapter</>}
                     </button>
                 </div>
@@ -476,7 +476,7 @@ export function AdapterDiscoveryPanel({ workspaceId }: Props) {
                     <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--ink-muted)', maxWidth: 320, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.5 }}>
                         Register your custom internal APIs so agents can call them as typed actions — just like GitHub or Jira.
                     </p>
-                    <button onClick={() => setShowForm(true)} style={{ padding: '8px 20px', borderRadius: 9999, border: 'none', background: '#0066cc', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                    <button onClick={() => setShowForm(true)} style={{ padding: '8px 20px', borderRadius: 9999, border: 'none', background: 'var(--accent)', color: 'var(--card)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                         Register your first adapter
                     </button>
                 </div>
@@ -507,7 +507,7 @@ export function AdapterDiscoveryPanel({ workspaceId }: Props) {
                                     <div style={{ fontSize: 12, color: 'var(--ink-muted)', fontFamily: 'ui-monospace, monospace' }}>{adapter.adapter_id}</div>
                                     {adapter.endpoint_url && <div style={{ fontSize: 12, color: 'var(--accent)', marginTop: 3 }}>{adapter.endpoint_url}</div>}
                                     {health && (
-                                        <div style={{ marginTop: 4, fontSize: 12, color: health.healthy ? '#1a7a4a' : '#c4161c', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                        <div style={{ marginTop: 4, fontSize: 12, color: health.healthy ? 'var(--ok)' : 'var(--danger)', display: 'flex', alignItems: 'center', gap: 4 }}>
                                             {health.healthy ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
                                             {health.healthy ? `Healthy · ${health.latency_ms}ms` : `Unhealthy${health.message ? ` · ${health.message}` : ''}`}
                                         </div>

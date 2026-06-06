@@ -30,7 +30,7 @@ function SectionHeader({ title }: { title: string }) {
             style={{
                 fontSize: '11px',
                 fontWeight: 700,
-                color: '#475569',
+                color: 'var(--ink-muted)',
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em',
                 marginBottom: '10px',
@@ -55,10 +55,10 @@ function InfoRow({ label, value }: { label: string; value: string }) {
                 marginBottom: '8px',
             }}
         >
-            <span style={{ color: '#64748b' }}>{label}</span>
+            <span style={{ color: 'var(--ink-muted)' }}>{label}</span>
             <span
                 style={{
-                    color: '#e2e8f0',
+                    color: 'var(--ink)',
                     fontFamily: 'monospace',
                     fontSize: '12px',
                     maxWidth: '55%',
@@ -90,9 +90,9 @@ function ActionButton({
     loading?: boolean;
 }) {
     const colors = {
-        default: { bg: '#1e293b', border: '#334155', text: '#94a3b8', hover: '#263244' },
-        danger: { bg: '#3b0d0d', border: '#7f1d1d', text: '#fca5a5', hover: '#4c1313' },
-        success: { bg: '#0d2b1f', border: '#166534', text: '#86efac', hover: '#113526' },
+        default: { bg: 'var(--bg-deep)', border: 'var(--bg-deep)', text: 'var(--ink-muted)', hover: '#263244' },
+        danger: { bg: '#3b0d0d', border: 'var(--danger)', text: 'var(--danger)', hover: '#4c1313' },
+        success: { bg: '#0d2b1f', border: 'var(--ok)', text: 'var(--ok)', hover: '#113526' },
     }[variant];
 
     return (
@@ -252,13 +252,13 @@ export default function AgentDetailPanel({ agent, onStatusChange }: AgentDetailP
                     style={{
                         fontSize: '18px',
                         fontWeight: 700,
-                        color: '#f1f5f9',
+                        color: 'var(--ink)',
                         marginBottom: '4px',
                     }}
                 >
                     {agent.role}
                 </div>
-                <div style={{ fontSize: '12px', color: '#475569', fontFamily: 'monospace' }}>
+                <div style={{ fontSize: '12px', color: 'var(--ink-muted)', fontFamily: 'monospace' }}>
                     {agent.id}
                 </div>
             </div>
@@ -269,7 +269,7 @@ export default function AgentDetailPanel({ agent, onStatusChange }: AgentDetailP
                     display: 'flex',
                     gap: '4px',
                     marginBottom: '20px',
-                    borderBottom: '1px solid #1e293b',
+                    borderBottom: '1px solid var(--line)',
                     paddingBottom: '0',
                 }}
             >
@@ -282,7 +282,7 @@ export default function AgentDetailPanel({ agent, onStatusChange }: AgentDetailP
                             background: 'transparent',
                             border: 'none',
                             borderBottom: activeTab === tab.key ? '2px solid #3b82f6' : '2px solid transparent',
-                            color: activeTab === tab.key ? '#3b82f6' : '#64748b',
+                            color: activeTab === tab.key ? 'var(--info)' : '#64748b',
                             fontSize: '13px',
                             fontWeight: activeTab === tab.key ? 600 : 400,
                             cursor: 'pointer',
@@ -299,10 +299,10 @@ export default function AgentDetailPanel({ agent, onStatusChange }: AgentDetailP
                 <div
                     style={{
                         padding: '10px 14px',
-                        background: '#3b0d0d',
-                        border: '1px solid #7f1d1d',
+                        background: 'var(--danger-bg)',
+                        border: '1px solid var(--danger-border)',
                         borderRadius: '6px',
-                        color: '#fca5a5',
+                        color: 'var(--danger)',
                         fontSize: '12px',
                         marginBottom: '16px',
                     }}
@@ -347,7 +347,7 @@ export default function AgentDetailPanel({ agent, onStatusChange }: AgentDetailP
                             />
                         )}
                         {!isActive && !isPaused && (
-                            <span style={{ fontSize: '12px', color: '#475569' }}>
+                            <span style={{ fontSize: '12px', color: 'var(--ink-muted)' }}>
                                 Pause / resume available when agent is active or paused.
                             </span>
                         )}
@@ -360,11 +360,11 @@ export default function AgentDetailPanel({ agent, onStatusChange }: AgentDetailP
                 <div>
                     <SectionHeader title="Rate Limit Config" />
                     {rateLimitLoading ? (
-                        <p style={{ color: '#475569', fontSize: '13px' }}>Loading…</p>
+                        <p style={{ color: 'var(--ink-muted)', fontSize: '13px' }}>Loading…</p>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             <div>
-                                <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
+                                <label style={{ fontSize: '12px', color: 'var(--ink-muted)', display: 'block', marginBottom: '4px' }}>
                                     Requests per minute
                                 </label>
                                 <input
@@ -373,17 +373,17 @@ export default function AgentDetailPanel({ agent, onStatusChange }: AgentDetailP
                                     onChange={(e) => setRateLimitDraft((d) => ({ ...d, rpm: e.target.value }))}
                                     style={{
                                         padding: '7px 10px',
-                                        background: '#0f172a',
-                                        border: '1px solid #334155',
+                                        background: 'var(--bg)',
+                                        border: '1px solid var(--line)',
                                         borderRadius: '6px',
-                                        color: '#e2e8f0',
+                                        color: 'var(--ink)',
                                         fontSize: '13px',
                                         width: '120px',
                                     }}
                                 />
                             </div>
                             <div>
-                                <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
+                                <label style={{ fontSize: '12px', color: 'var(--ink-muted)', display: 'block', marginBottom: '4px' }}>
                                     Burst limit
                                 </label>
                                 <input
@@ -392,10 +392,10 @@ export default function AgentDetailPanel({ agent, onStatusChange }: AgentDetailP
                                     onChange={(e) => setRateLimitDraft((d) => ({ ...d, burst: e.target.value }))}
                                     style={{
                                         padding: '7px 10px',
-                                        background: '#0f172a',
-                                        border: '1px solid #334155',
+                                        background: 'var(--bg)',
+                                        border: '1px solid var(--line)',
                                         borderRadius: '6px',
-                                        color: '#e2e8f0',
+                                        color: 'var(--ink)',
                                         fontSize: '13px',
                                         width: '120px',
                                     }}

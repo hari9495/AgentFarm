@@ -31,9 +31,9 @@ type Metrics = {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const RISK_CONFIG: Record<RiskLevel, { label: string; bg: string; color: string; border: string }> = {
-    high:   { label: 'HIGH',   bg: '#fef2f2', color: 'var(--danger)', border: '#fecaca' },
-    medium: { label: 'MEDIUM', bg: '#fffbeb', color: 'var(--warn)', border: '#fde68a' },
-    low:    { label: 'LOW',    bg: '#f0fdf4', color: 'var(--ok)', border: '#bbf7d0' },
+    high:   { label: 'HIGH',   bg: 'var(--danger-bg)', color: 'var(--danger)', border: '#fecaca' },
+    medium: { label: 'MEDIUM', bg: 'var(--warn-bg)', color: 'var(--warn)', border: 'var(--warn)' },
+    low:    { label: 'LOW',    bg: 'var(--ok-bg)', color: 'var(--ok)', border: '#bbf7d0' },
 };
 
 function timeAgo(iso: string): string {
@@ -93,7 +93,7 @@ function ApprovalCard({
                 {flash === 'approved'
                     ? <CheckCircle size={28} color="#166534" />
                     : <XCircle size={28} color="#991b1b" />}
-                <span style={{ fontSize: 13, fontWeight: 600, color: flash === 'approved' ? '#166534' : '#991b1b' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: flash === 'approved' ? 'var(--ok)' : 'var(--danger)' }}>
                     {flash === 'approved' ? 'Approved' : 'Rejected'}
                 </span>
             </div>
@@ -127,14 +127,14 @@ function ApprovalCard({
                 </div>
 
                 {/* Agent + task */}
-                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6, fontFamily: 'monospace' }}>
+                <div style={{ fontSize: 11, color: 'var(--ink-muted)', marginBottom: 6, fontFamily: 'monospace' }}>
                     {approval.bot_id.slice(-10)}
                     {approval.task_id ? ` · task ${approval.task_id.slice(-6)}` : ''}
                 </div>
 
                 {/* Action summary */}
                 <p style={{
-                    fontSize: 14, fontWeight: 500, color: '#0f172a',
+                    fontSize: 14, fontWeight: 500, color: 'var(--ink)',
                     lineHeight: 1.55, margin: 0,
                     display: '-webkit-box', WebkitLineClamp: expanded ? 'unset' : 3,
                     WebkitBoxOrient: 'vertical', overflow: expanded ? 'visible' : 'hidden',
@@ -169,7 +169,7 @@ function ApprovalCard({
                             borderRadius: 10, border: '1px solid var(--line)',
                             fontSize: 13, fontFamily: 'inherit', resize: 'none',
                             background: 'var(--bg)', boxSizing: 'border-box',
-                            color: '#0f172a',
+                            color: 'var(--ink)',
                         }}
                     />
                 </div>
@@ -183,8 +183,8 @@ function ApprovalCard({
                     style={{
                         flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
                         minHeight: 52, borderRadius: 12,
-                        background: busy ? '#e2e8f0' : '#16a34a',
-                        color: busy ? '#94a3b8' : '#fff',
+                        background: busy ? 'var(--bg)' : 'var(--ok)',
+                        color: busy ? 'var(--ink-muted)' : 'var(--card)',
                         border: 'none', fontSize: 15, fontWeight: 700,
                         cursor: busy ? 'not-allowed' : 'pointer',
                         transition: 'background 0.15s',
@@ -202,8 +202,8 @@ function ApprovalCard({
                         style={{
                             flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
                             minHeight: 52, borderRadius: 12,
-                            background: busy ? '#e2e8f0' : '#dc2626',
-                            color: busy ? '#94a3b8' : '#fff',
+                            background: busy ? 'var(--bg)' : 'var(--danger)',
+                            color: busy ? 'var(--ink-muted)' : 'var(--card)',
                             border: 'none', fontSize: 15, fontWeight: 700,
                             cursor: busy ? 'not-allowed' : 'pointer',
                             WebkitTapHighlightColor: 'transparent',
@@ -321,22 +321,22 @@ export default function MobileApprovalsClient({ workspaceIds }: { workspaceIds: 
             {/* ── Sticky header ── */}
             <div style={{
                 position: 'sticky', top: 0, zIndex: 50,
-                background: '#0f172a',
+                background: 'var(--bg)',
                 paddingTop: 'env(safe-area-inset-top, 0px)',
                 boxShadow: '0 1px 8px rgba(0,0,0,0.25)',
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 18px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 32, height: 32, borderRadius: 8, background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Zap size={16} color="#fff" />
+                        <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--info)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Zap size={16} color="var(--card)" />
                         </div>
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span style={{ fontSize: 17, fontWeight: 800, color: '#f8fafc' }}>Approvals</span>
+                                <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--bg)' }}>Approvals</span>
                                 {metrics.pending_count > 0 && (
                                     <span style={{
                                         fontSize: 11, fontWeight: 700,
-                                        background: '#ef4444', color: '#fff',
+                                        background: 'var(--danger)', color: 'var(--card)',
                                         borderRadius: 9999, padding: '1px 7px',
                                     }}>
                                         {metrics.pending_count}
@@ -344,7 +344,7 @@ export default function MobileApprovalsClient({ workspaceIds }: { workspaceIds: 
                                 )}
                             </div>
                             {lastRefreshed && (
-                                <div style={{ fontSize: 10, color: '#64748b', marginTop: 1 }}>
+                                <div style={{ fontSize: 10, color: 'var(--ink-muted)', marginTop: 1 }}>
                                     Updated {timeAgo(lastRefreshed.toISOString())}
                                 </div>
                             )}
@@ -370,17 +370,17 @@ export default function MobileApprovalsClient({ workspaceIds }: { workspaceIds: 
                 {pending.length > 0 && (
                     <div style={{ display: 'flex', gap: 6, padding: '0 18px 14px' }}>
                         {highCount > 0 && (
-                            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 9999, background: '#7f1d1d', color: '#fca5a5' }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 9999, background: 'var(--danger)', color: 'var(--danger)' }}>
                                 {highCount} high
                             </span>
                         )}
                         {medCount > 0 && (
-                            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 9999, background: '#78350f', color: '#fcd34d' }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 9999, background: '#78350f', color: 'var(--warn)' }}>
                                 {medCount} medium
                             </span>
                         )}
                         {lowCount > 0 && (
-                            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 9999, background: '#14532d', color: '#86efac' }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 9999, background: 'var(--ok-bg)', color: 'var(--ok)' }}>
                                 {lowCount} low
                             </span>
                         )}
@@ -432,8 +432,8 @@ export default function MobileApprovalsClient({ workspaceIds }: { workspaceIds: 
                             <CheckCircle size={32} color="#16a34a" />
                         </div>
                         <div>
-                            <div style={{ fontSize: 17, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>All caught up!</div>
-                            <div style={{ fontSize: 13, color: '#64748b' }}>No pending approvals right now.</div>
+                            <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>All caught up!</div>
+                            <div style={{ fontSize: 13, color: 'var(--ink-muted)' }}>No pending approvals right now.</div>
                         </div>
                         {metrics.decision_count > 0 && (
                             <div style={{ fontSize: 12, color: 'var(--ink-muted)' }}>
@@ -458,7 +458,7 @@ export default function MobileApprovalsClient({ workspaceIds }: { workspaceIds: 
                 {/* Footer with full dashboard link */}
                 {!loading && (
                     <div style={{ textAlign: 'center', padding: '8px 0 4px' }}>
-                        <a href="/?tab=approvals" style={{ fontSize: 12, color: '#64748b', textDecoration: 'none' }}>
+                        <a href="/?tab=approvals" style={{ fontSize: 12, color: 'var(--ink-muted)', textDecoration: 'none' }}>
                             Open full dashboard →
                         </a>
                     </div>

@@ -68,7 +68,7 @@ export default function PortalSignupPage() {
     };
 
     const highlight = (field: string) => fieldError === field
-        ? { ...inputStyle, borderColor: '#dc2626', boxShadow: '0 0 0 2px rgba(220,38,38,0.15)' }
+        ? { ...inputStyle, borderColor: 'var(--danger)', boxShadow: '0 0 0 2px rgba(220,38,38,0.15)' }
         : inputStyle;
 
     return (
@@ -146,7 +146,7 @@ export default function PortalSignupPage() {
                         disabled={loading || !form.tenantId.trim() || !form.email.trim() || form.password.length < 8}
                         style={{
                             marginTop: '0.25rem', padding: '0.6rem 1rem', fontSize: '0.9rem', fontWeight: 600,
-                            background: loading ? '#93c5fd' : '#2563eb', color: '#fff',
+                            background: loading ? 'var(--info)' : 'var(--info)', color: 'var(--card)',
                             border: 'none', borderRadius: 6,
                             cursor: (loading || !form.tenantId.trim() || !form.email.trim() || form.password.length < 8) ? 'not-allowed' : 'pointer',
                         }}

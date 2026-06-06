@@ -16,11 +16,11 @@ export type SubscriptionStatusCardProps = {
 // ── Badge ─────────────────────────────────────────────────────────────────────
 
 const STATUS_COLOR: Record<string, { bg: string; text: string; border: string; label: string }> = {
-    active: { bg: '#ecfdf5', text: '#065f46', border: '#a7f3d0', label: 'Active' },
-    expired: { bg: '#fef2f2', text: '#991b1b', border: '#fca5a5', label: 'Expired' },
-    suspended: { bg: '#fffbeb', text: '#92400e', border: '#fcd34d', label: 'Suspended' },
-    cancelled: { bg: '#f1f5f9', text: '#475569', border: '#cbd5e1', label: 'Cancelled' },
-    none: { bg: '#f1f5f9', text: '#475569', border: '#cbd5e1', label: 'No Plan' },
+    active: { bg: 'var(--ok-bg)', text: 'var(--ok)', border: '#a7f3d0', label: 'Active' },
+    expired: { bg: 'var(--danger-bg)', text: 'var(--danger)', border: 'var(--danger)', label: 'Expired' },
+    suspended: { bg: 'var(--warn-bg)', text: 'var(--warn)', border: 'var(--warn)', label: 'Suspended' },
+    cancelled: { bg: 'var(--bg)', text: 'var(--ink-muted)', border: '#cbd5e1', label: 'Cancelled' },
+    none: { bg: 'var(--bg)', text: 'var(--ink-muted)', border: '#cbd5e1', label: 'No Plan' },
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -50,9 +50,9 @@ function StatusBadge({ status }: { status: string }) {
 function UsageBar({ used, limit }: { used: number; limit: number }) {
     const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
     const color =
-        pct > 90 ? '#dc2626' :
-            pct > 70 ? '#d97706' :
-                '#059669';
+        pct > 90 ? 'var(--danger)' :
+            pct > 70 ? 'var(--warn)' :
+                'var(--ok)';
 
     return (
         <div style={{ marginTop: '1rem' }}>

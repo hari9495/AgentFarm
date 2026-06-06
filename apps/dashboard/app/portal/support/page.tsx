@@ -108,7 +108,7 @@ function PortalChatPanel() {
 
             <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span style={{ flex: 1, fontWeight: 600, fontSize: '0.95rem' }}>Chat Support</span>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: connected ? '#16a34a' : '#dc2626', flexShrink: 0 }} title={connected ? 'Connected' : 'Disconnected'} />
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: connected ? 'var(--ok)' : 'var(--danger)', flexShrink: 0 }} title={connected ? 'Connected' : 'Disconnected'} />
             </div>
 
             {reconnecting && !connected && (
@@ -132,7 +132,7 @@ function PortalChatPanel() {
                 {messages.map((m) => {
                     if (m.kind === 'user') return (
                         <div key={m.id} style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                            <div style={{ maxWidth: '78%', padding: '0.4rem 0.65rem', borderRadius: '10px 10px 2px 10px', background: '#334155', color: '#f8fafc', fontSize: '0.84rem', lineHeight: 1.5 }}>{m.text}</div>
+                            <div style={{ maxWidth: '78%', padding: '0.4rem 0.65rem', borderRadius: '10px 10px 2px 10px', background: 'var(--bg-deep)', color: 'var(--bg)', fontSize: '0.84rem', lineHeight: 1.5 }}>{m.text}</div>
                         </div>
                     );
                     if (m.kind === 'agent') return (
@@ -141,7 +141,7 @@ function PortalChatPanel() {
                         </div>
                     );
                     if (m.kind === 'step') return (
-                        <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.28rem 0.55rem', borderRadius: 5, background: 'var(--bg)', border: '1px solid var(--line)', fontSize: '0.75rem', color: '#475569' }}>
+                        <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.28rem 0.55rem', borderRadius: 5, background: 'var(--bg)', border: '1px solid var(--line)', fontSize: '0.75rem', color: 'var(--ink-muted)' }}>
                             {m.status === 'running'
                                 ? <span style={{ width: 7, height: 7, border: '1.5px solid #2563eb', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block', flexShrink: 0 }} />
                                 : <span style={{ color: 'var(--ok)', flexShrink: 0 }}>✓</span>}
@@ -337,7 +337,7 @@ function PortalVoicePanel() {
             <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span style={{ fontSize: '1rem' }}>🎙</span>
                 <span style={{ flex: 1, fontWeight: 600, fontSize: '0.95rem' }}>Voice / Call Support</span>
-                {callActive && <span style={{ width: 8, height: 8, borderRadius: '50%', background: connected ? '#16a34a' : '#f59e0b', flexShrink: 0, animation: connected ? 'pulse-g 2s ease infinite' : undefined }} />}
+                {callActive && <span style={{ width: 8, height: 8, borderRadius: '50%', background: connected ? 'var(--ok)' : 'var(--warn)', flexShrink: 0, animation: connected ? 'pulse-g 2s ease infinite' : undefined }} />}
                 {langLabel && <span style={{ padding: '0.1rem 0.35rem', fontSize: '0.65rem', fontWeight: 700, background: 'var(--info-bg)', color: 'var(--info)', borderRadius: 4 }}>{langLabel}</span>}
             </div>
 
@@ -365,8 +365,8 @@ function PortalVoicePanel() {
                             <div style={{
                                 maxWidth: '80%', padding: '0.35rem 0.6rem', lineHeight: 1.45, fontSize: '0.83rem',
                                 borderRadius: isUser ? '10px 10px 2px 10px' : '10px 10px 10px 2px',
-                                background: isUser ? (t.kind === 'partial' ? '#e2e8f0' : '#334155') : '#f0fdf4',
-                                color: isUser ? (t.kind === 'partial' ? '#64748b' : '#f8fafc') : '#15803d',
+                                background: isUser ? (t.kind === 'partial' ? 'var(--bg)' : 'var(--bg-deep)') : '#f0fdf4',
+                                color: isUser ? (t.kind === 'partial' ? '#64748b' : 'var(--bg)') : 'var(--ok)',
                                 fontStyle: t.kind === 'partial' ? 'italic' : undefined,
                                 opacity: t.kind === 'partial' ? 0.75 : 1,
                             }}>
@@ -401,7 +401,7 @@ function PortalVoicePanel() {
                 {!callActive
                     ? <button type="button" className="primary-action" onClick={() => void beginCall()} style={{ flex: 1 }}>📞 Begin Call</button>
                     : <>
-                        <button type="button" onClick={() => setMuted((m) => !m)} style={{ flex: 1, padding: '0.35rem', fontSize: '0.82rem', border: '1px solid var(--line)', borderRadius: 4, background: muted ? '#fef2f2' : 'var(--bg)', color: muted ? '#dc2626' : 'var(--ink)', cursor: 'pointer' }}>
+                        <button type="button" onClick={() => setMuted((m) => !m)} style={{ flex: 1, padding: '0.35rem', fontSize: '0.82rem', border: '1px solid var(--line)', borderRadius: 4, background: muted ? '#fef2f2' : 'var(--bg)', color: muted ? 'var(--danger)' : 'var(--ink)', cursor: 'pointer' }}>
                             {muted ? '🔇 Unmute' : '🎤 Mute'}
                         </button>
                         <button type="button" onClick={endCall} style={{ flex: 1, padding: '0.35rem', fontSize: '0.82rem', border: '1px solid var(--danger-border)', borderRadius: 4, background: 'var(--danger-bg)', color: 'var(--danger)', cursor: 'pointer', fontWeight: 600 }}>
@@ -487,8 +487,8 @@ export default function PortalSupportPage() {
                         style={{
                             padding: '0.4rem 1.1rem', fontSize: '0.85rem', fontWeight: 600,
                             border: '1px solid var(--line)', borderRadius: 6,
-                            background: tab === t ? '#2563eb' : 'var(--bg)',
-                            color: tab === t ? '#fff' : 'var(--ink-soft)',
+                            background: tab === t ? 'var(--info)' : 'var(--bg)',
+                            color: tab === t ? 'var(--card)' : 'var(--ink-soft)',
                             cursor: 'pointer',
                         }}
                     >

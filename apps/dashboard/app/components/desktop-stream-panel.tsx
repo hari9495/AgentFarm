@@ -57,9 +57,9 @@ async function apiFetch(path: string, init?: RequestInit): Promise<{ ok: boolean
 const STATUS_BADGE: Record<string, string> = {
     idle: 'var(--ink-muted)',
     busy: 'var(--brand)',
-    completed: '#166534',
+    completed: 'var(--ok)',
     timeout: '#854d0e',
-    failed: '#991b1b',
+    failed: 'var(--danger)',
     queued: 'var(--ink-soft)',
     running: 'var(--brand)',
     terminated: 'var(--ink-muted)',

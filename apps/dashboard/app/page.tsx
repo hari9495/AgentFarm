@@ -1330,9 +1330,9 @@ export default async function HomePage({
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                                     {[
-                                        { label: 'Workspaces', value: systemHealthPct, color: systemHealthPct >= 80 ? '#1a7a4a' : systemHealthPct >= 50 ? '#b45309' : '#c4161c' },
-                                        { label: 'Approvals', value: approvalHealthPct, color: approvalHealthPct >= 80 ? '#1a7a4a' : approvalHealthPct >= 50 ? '#b45309' : '#c4161c' },
-                                        { label: 'Connectors', value: connectorHealthPct, color: connectorHealthPct >= 80 ? '#1a7a4a' : connectorHealthPct >= 50 ? '#b45309' : '#c4161c' },
+                                        { label: 'Workspaces', value: systemHealthPct, color: systemHealthPct >= 80 ? '#1a7a4a' : systemHealthPct >= 50 ? 'var(--warn)' : 'var(--danger)' },
+                                        { label: 'Approvals', value: approvalHealthPct, color: approvalHealthPct >= 80 ? '#1a7a4a' : approvalHealthPct >= 50 ? 'var(--warn)' : 'var(--danger)' },
+                                        { label: 'Connectors', value: connectorHealthPct, color: connectorHealthPct >= 80 ? '#1a7a4a' : connectorHealthPct >= 50 ? 'var(--warn)' : 'var(--danger)' },
                                     ].map(({ label, value, color }) => (
                                         <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1497,18 +1497,18 @@ export default async function HomePage({
 
                                 {['failed', 'cleanup_pending', 'cleaned_up'].includes(dashboardSlice.provisioning.job_status) && (
                                     <div className={`status-panel ${dashboardSlice.provisioning.job_status === 'cleaned_up' ? 'warning' : 'error'}`}>
-                                        <p style={{ margin: '0 0 0.25rem', fontWeight: 700, color: dashboardSlice.provisioning.job_status === 'cleaned_up' ? '#92400e' : '#991b1b', fontSize: '0.88rem' }}>
+                                        <p style={{ margin: '0 0 0.25rem', fontWeight: 700, color: dashboardSlice.provisioning.job_status === 'cleaned_up' ? 'var(--warn)' : 'var(--danger)', fontSize: '0.88rem' }}>
                                             {dashboardSlice.provisioning.job_status === 'failed' && 'Provisioning failed'}
                                             {dashboardSlice.provisioning.job_status === 'cleanup_pending' && 'Provisioning failed — cleanup in progress'}
                                             {dashboardSlice.provisioning.job_status === 'cleaned_up' && 'Provisioning failed — resources cleaned up'}
                                         </p>
                                         {dashboardSlice.provisioning.error_code && (
-                                            <p style={{ margin: '0 0 0.2rem', fontSize: '0.82rem', color: dashboardSlice.provisioning.job_status === 'cleaned_up' ? '#78350f' : '#7f1d1d' }}>
+                                            <p style={{ margin: '0 0 0.2rem', fontSize: '0.82rem', color: dashboardSlice.provisioning.job_status === 'cleaned_up' ? '#78350f' : 'var(--danger)' }}>
                                                 Error: <code>{dashboardSlice.provisioning.error_code}</code>
                                             </p>
                                         )}
                                         {dashboardSlice.provisioning.error_message && (
-                                            <p style={{ margin: 0, fontSize: '0.82rem', color: dashboardSlice.provisioning.job_status === 'cleaned_up' ? '#78350f' : '#7f1d1d' }}>
+                                            <p style={{ margin: 0, fontSize: '0.82rem', color: dashboardSlice.provisioning.job_status === 'cleaned_up' ? '#78350f' : 'var(--danger)' }}>
                                                 Hint: {dashboardSlice.provisioning.error_message}
                                             </p>
                                         )}

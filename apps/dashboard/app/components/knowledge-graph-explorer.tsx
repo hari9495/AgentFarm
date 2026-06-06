@@ -25,20 +25,20 @@ type Suggestion = { skill_id: string; confidence: number; rationale: string };
 const KIND_BADGE: Record<GraphSymbol['kind'], { bg: string; color: string; border: string }> = {
     function:  { bg: 'rgba(0,102,204,0.08)',   color: 'var(--accent)', border: 'rgba(0,102,204,0.2)'   },
     class:     { bg: 'rgba(124,45,146,0.08)',  color: '#7c2d92', border: 'rgba(124,45,146,0.2)'  },
-    interface: { bg: 'rgba(0,155,199,0.08)',   color: '#007ba7', border: 'rgba(0,155,199,0.2)'   },
+    interface: { bg: 'rgba(0,155,199,0.08)',   color: 'var(--info)', border: 'rgba(0,155,199,0.2)'   },
     type:      { bg: 'rgba(26,122,74,0.08)',   color: 'var(--ok)', border: 'rgba(26,122,74,0.2)'   },
     variable:  { bg: 'rgba(110,110,115,0.08)', color: 'var(--ink-muted)', border: 'rgba(110,110,115,0.2)' },
     unknown:   { bg: 'rgba(110,110,115,0.06)', color: 'var(--ink-muted)', border: 'rgba(110,110,115,0.15)'},
 };
 
 const KIND_TEXT: Record<GraphSymbol['kind'], string> = {
-    function: '#0066cc', class: '#7c2d92', interface: '#007ba7',
-    type: '#1a7a4a', variable: '#6e6e73', unknown: '#aeaeb2',
+    function: 'var(--accent)', class: '#7c2d92', interface: 'var(--info)',
+    type: 'var(--ok)', variable: 'var(--ink-muted)', unknown: 'var(--ink-muted)',
 };
 
 const KIND_DOT: Record<GraphSymbol['kind'], string> = {
-    function: '#2563eb', class: '#7c3aed', interface: '#0891b2',
-    type: '#059669', variable: '#6b7280', unknown: '#9ca3af',
+    function: 'var(--info)', class: 'var(--accent)', interface: 'var(--info)',
+    type: 'var(--ok)', variable: 'var(--ink-muted)', unknown: 'var(--ink-muted)',
 };
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
@@ -134,7 +134,7 @@ export function KnowledgeGraphExplorer() {
                         {loading ? 'Loading…' : 'Load Snapshot'}
                     </button>
                     <button onClick={triggerIndex} disabled={indexing}
-                        style={{ padding: '6px 16px', borderRadius: 9999, border: 'none', background: indexing ? '#aeaeb2' : '#0066cc', color: '#fff', fontSize: 12, fontWeight: 700, cursor: indexing ? 'not-allowed' : 'pointer' }}>
+                        style={{ padding: '6px 16px', borderRadius: 9999, border: 'none', background: indexing ? 'var(--ink-muted)' : 'var(--accent)', color: 'var(--card)', fontSize: 12, fontWeight: 700, cursor: indexing ? 'not-allowed' : 'pointer' }}>
                         {indexing ? 'Indexing…' : '⟳ Index Workspace'}
                     </button>
                 </div>
@@ -172,7 +172,7 @@ export function KnowledgeGraphExplorer() {
                     style={{ flex: 1, padding: '8px 12px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: 13, fontFamily: 'ui-monospace, monospace', outline: 'none' }}
                 />
                 <button onClick={() => void search()} disabled={searchLoading || !searchQuery.trim()}
-                    style={{ padding: '8px 18px', borderRadius: 9999, border: 'none', background: '#0066cc', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: searchLoading || !searchQuery.trim() ? 0.5 : 1 }}>
+                    style={{ padding: '8px 18px', borderRadius: 9999, border: 'none', background: 'var(--accent)', color: 'var(--card)', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: searchLoading || !searchQuery.trim() ? 0.5 : 1 }}>
                     {searchLoading ? '…' : 'Search'}
                 </button>
                 {searchResults.length > 0 && (
@@ -188,7 +188,7 @@ export function KnowledgeGraphExplorer() {
                 <div style={{ display: 'flex', gap: 2, padding: '3px', borderRadius: 9999, background: 'var(--bg)', width: 'fit-content', border: '1px solid var(--line)' }}>
                     {(['symbols', 'graph', 'suggestions'] as const).map(tab => (
                         <button key={tab} onClick={() => { setActiveTab(tab); if (tab !== 'graph') setSelectedNode(null); if (tab === 'suggestions') void loadSuggestions(); }}
-                            style={{ padding: '5px 14px', borderRadius: 9999, fontSize: 12, fontWeight: activeTab === tab ? 700 : 500, cursor: 'pointer', border: 'none', background: activeTab === tab ? '#fff' : 'transparent', color: activeTab === tab ? '#1d1d1f' : '#6e6e73', boxShadow: activeTab === tab ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', textTransform: 'capitalize' }}>
+                            style={{ padding: '5px 14px', borderRadius: 9999, fontSize: 12, fontWeight: activeTab === tab ? 700 : 500, cursor: 'pointer', border: 'none', background: activeTab === tab ? 'var(--card)' : 'transparent', color: activeTab === tab ? 'var(--ink)' : 'var(--ink-muted)', boxShadow: activeTab === tab ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', textTransform: 'capitalize' }}>
                             {tab}
                         </button>
                     ))}
@@ -260,7 +260,7 @@ export function KnowledgeGraphExplorer() {
 
             {/* ── Graph tab ──────────────────────────────────────────────── */}
             {activeTab === 'graph' && snapshot && (() => {
-                const kindFill = (k: string): string => ({ function: '#2563eb', class: '#7c3aed', interface: '#0891b2', variable: '#6b7280' }[k] ?? '#6b7280');
+                const kindFill = (k: string): string => ({ function: 'var(--info)', class: 'var(--accent)', interface: 'var(--info)', variable: 'var(--ink-muted)' }[k] ?? 'var(--ink-muted)');
                 const topSymbols = [...snapshot.symbols].sort((a, b) => (b.callers.length + b.callees.length) - (a.callers.length + a.callees.length)).slice(0, 40);
                 const count = topSymbols.length;
                 const cols = Math.max(1, Math.ceil(Math.sqrt(count)));
@@ -289,7 +289,7 @@ export function KnowledgeGraphExplorer() {
                                     const label = s.name.length > 12 ? s.name.slice(0, 11) + '…' : s.name;
                                     return (
                                         <g key={s.name} onClick={() => setSelectedNode(selectedNode === s.name ? null : s.name)} style={{ cursor: 'pointer' }}>
-                                            <circle cx={pos.x} cy={pos.y} r={16} fill={kindFill(s.kind)} stroke={isSelected ? '#1d1d1f' : 'rgba(255,255,255,0.4)'} strokeWidth={isSelected ? 2.5 : 1} />
+                                            <circle cx={pos.x} cy={pos.y} r={16} fill={kindFill(s.kind)} stroke={isSelected ? 'var(--ink)' : 'rgba(255,255,255,0.4)'} strokeWidth={isSelected ? 2.5 : 1} />
                                             <text x={pos.x} y={pos.y + 26} fontSize={8} fill="#6e6e73" textAnchor="middle">{label}</text>
                                         </g>
                                     );
@@ -314,7 +314,7 @@ export function KnowledgeGraphExplorer() {
                             <div style={{ ...card, padding: 14, marginTop: 4 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                                     <span style={{ fontSize: 13, fontFamily: 'ui-monospace, monospace', fontWeight: 700, color: 'var(--ink)' }}>{selSym.name}</span>
-                                    <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: kindFill(selSym.kind), color: '#fff' }}>{selSym.kind}</span>
+                                    <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: kindFill(selSym.kind), color: 'var(--card)' }}>{selSym.kind}</span>
                                 </div>
                                 <div style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--ink-muted)', marginBottom: 10 }}>{selSym.file_path}:{selSym.line}</div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -353,7 +353,7 @@ export function KnowledgeGraphExplorer() {
                                 <p style={{ flex: 1, fontSize: 12, color: 'var(--ink-muted)', margin: 0, lineHeight: 1.5 }}>{s.rationale}</p>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                                     <div style={{ width: 60, height: 4, borderRadius: 9999, background: 'var(--bg)', overflow: 'hidden' }}>
-                                        <div style={{ height: '100%', borderRadius: 9999, background: '#0066cc', width: `${s.confidence * 100}%` }} />
+                                        <div style={{ height: '100%', borderRadius: 9999, background: 'var(--accent)', width: `${s.confidence * 100}%` }} />
                                     </div>
                                     <span style={{ fontSize: 11, color: 'var(--ink-muted)', fontWeight: 600 }}>{(s.confidence * 100).toFixed(0)}%</span>
                                 </div>

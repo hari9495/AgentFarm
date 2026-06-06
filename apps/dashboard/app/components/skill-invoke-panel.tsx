@@ -104,9 +104,9 @@ export function SkillInvokePanel({ workspaceId, botId }: SkillInvokePanelProps) 
     };
 
     const riskColor: Record<string, string> = {
-        LOW: '#22c55e',
-        MEDIUM: '#f59e0b',
-        HIGH: '#ef4444',
+        LOW: 'var(--ok)',
+        MEDIUM: 'var(--warn)',
+        HIGH: 'var(--danger)',
     };
 
     return (
@@ -135,7 +135,7 @@ export function SkillInvokePanel({ workspaceId, botId }: SkillInvokePanelProps) 
                         rows={5}
                         value={rawInputs}
                         onChange={(e) => handleInputChange(e.target.value)}
-                        style={{ padding: '0.45rem 0.6rem', borderRadius: 6, border: `1px solid ${inputError ? '#ef4444' : 'var(--border-color, #444)'}`, background: 'var(--input-bg, #0f0f1a)', color: 'inherit', fontSize: '0.8rem', fontFamily: 'monospace', resize: 'vertical' }}
+                        style={{ padding: '0.45rem 0.6rem', borderRadius: 6, border: `1px solid ${inputError ? 'var(--danger)' : 'var(--border-color, #444)'}`, background: 'var(--input-bg, #0f0f1a)', color: 'inherit', fontSize: '0.8rem', fontFamily: 'monospace', resize: 'vertical' }}
                         placeholder='{"repo": "org/repo", "pr_number": 42}'
                     />
                     {inputError && <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>{inputError}</span>}
@@ -145,7 +145,7 @@ export function SkillInvokePanel({ workspaceId, botId }: SkillInvokePanelProps) 
                 <button
                     onClick={() => { void handleSubmit(); }}
                     disabled={isRunning || inputError !== null}
-                    style={{ padding: '0.55rem 1.2rem', borderRadius: 6, background: isRunning ? '#555' : '#4f46e5', color: '#fff', border: 'none', cursor: isRunning ? 'not-allowed' : 'pointer', fontWeight: 600, alignSelf: 'flex-start' }}
+                    style={{ padding: '0.55rem 1.2rem', borderRadius: 6, background: isRunning ? 'var(--ink-soft)' : 'var(--accent)', color: 'var(--card)', border: 'none', cursor: isRunning ? 'not-allowed' : 'pointer', fontWeight: 600, alignSelf: 'flex-start' }}
                 >
                     {isRunning ? 'Running…' : 'Run Skill'}
                 </button>
@@ -153,7 +153,7 @@ export function SkillInvokePanel({ workspaceId, botId }: SkillInvokePanelProps) 
 
             {/* Error state */}
             {fetchError && (
-                <div style={{ marginTop: '0.75rem', padding: '0.6rem', background: '#2a0a0a', borderRadius: 6, color: '#f87171', fontSize: '0.85rem' }}>
+                <div style={{ marginTop: '0.75rem', padding: '0.6rem', background: '#2a0a0a', borderRadius: 6, color: 'var(--danger)', fontSize: '0.85rem' }}>
                     {fetchError}
                 </div>
             )}
@@ -162,7 +162,7 @@ export function SkillInvokePanel({ workspaceId, botId }: SkillInvokePanelProps) 
             {lastResult && (
                 <div style={{ marginTop: '1rem', padding: '0.9rem', background: 'var(--result-bg, #12121f)', borderRadius: 8, border: '1px solid var(--border-color, #333)' }}>
                     <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', marginBottom: '0.6rem', flexWrap: 'wrap' }}>
-                        <span style={{ padding: '0.2rem 0.55rem', borderRadius: 4, background: lastResult.ok ? '#14532d' : '#450a0a', color: lastResult.ok ? '#86efac' : '#f87171', fontWeight: 700, fontSize: '0.78rem' }}>
+                        <span style={{ padding: '0.2rem 0.55rem', borderRadius: 4, background: lastResult.ok ? 'var(--ok)' : 'var(--danger)', color: lastResult.ok ? 'var(--ok)' : 'var(--danger)', fontWeight: 700, fontSize: '0.78rem' }}>
                             {lastResult.ok ? '✓ OK' : '✗ FAILED'}
                         </span>
                         {lastResult.risk_level && (
@@ -172,8 +172,8 @@ export function SkillInvokePanel({ workspaceId, botId }: SkillInvokePanelProps) 
                         )}
                         <span style={{ fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{lastResult.duration_ms}ms</span>
                     </div>
-                    <p style={{ fontSize: '0.85rem', marginBottom: '0.5rem', color: '#ccc' }}>{lastResult.summary}</p>
-                    {lastResult.error && <p style={{ fontSize: '0.82rem', color: '#f87171' }}>{lastResult.error}</p>}
+                    <p style={{ fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--line-strong)' }}>{lastResult.summary}</p>
+                    {lastResult.error && <p style={{ fontSize: '0.82rem', color: 'var(--danger)' }}>{lastResult.error}</p>}
                     {lastResult.result && Object.keys(lastResult.result).length > 0 && (
                         <pre style={{ fontSize: '0.75rem', overflowX: 'auto', background: '#0a0a14', padding: '0.6rem', borderRadius: 6, color: '#a5f3fc', maxHeight: 300 }}>
                             {JSON.stringify(lastResult.result, null, 2)}

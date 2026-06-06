@@ -19,7 +19,7 @@ const POLL_MS = 60_000;
 const SEV_COLORS: Record<string, { bg: string; dot: string }> = {
     high:  { bg: 'rgba(196,22,28,0.07)',   dot: '#c4161c' },
     warn:  { bg: 'rgba(180,83,9,0.07)',    dot: '#b45309' },
-    info:  { bg: 'rgba(0,82,204,0.06)',    dot: '#0052cc' },
+    info:  { bg: 'rgba(0,82,204,0.06)',    dot: 'var(--accent)' },
 };
 
 function loadReadIds(): Set<string> {
@@ -107,7 +107,7 @@ export function NotificationBell({ workspaceId }: { workspaceId?: string }) {
                 className="inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-slate-100"
                 style={{ position: 'relative', flexShrink: 0 }}
             >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: unreadCount > 0 ? '#0052cc' : '#64748b' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: unreadCount > 0 ? 'var(--accent)' : '#64748b' }}>
                     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                     <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                 </svg>
@@ -117,7 +117,7 @@ export function NotificationBell({ workspaceId }: { workspaceId?: string }) {
                         width: 16, height: 16,
                         background: '#c4161c', borderRadius: '50%',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 9, fontWeight: 800, color: '#fff',
+                        fontSize: 9, fontWeight: 800, color: 'var(--card)',
                         border: '1.5px solid #fff',
                     }}>
                         {unreadCount > 9 ? '9+' : unreadCount}
@@ -172,13 +172,13 @@ export function NotificationBell({ workspaceId }: { workspaceId?: string }) {
                                         display: 'block',
                                         padding: '0.7rem 0.9rem',
                                         borderBottom: '1px solid #f8fafc',
-                                        background: isUnread ? colors.bg : '#fff',
+                                        background: isUnread ? colors.bg : 'var(--card)',
                                         textDecoration: 'none',
                                         transition: 'background 0.1s',
                                     }}
                                 >
                                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-                                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: isUnread ? colors.dot : 'transparent', border: `1.5px solid ${isUnread ? colors.dot : '#e2e8f0'}`, flexShrink: 0, marginTop: 4 }} />
+                                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: isUnread ? colors.dot : 'transparent', border: `1.5px solid ${isUnread ? colors.dot : 'var(--bg)'}`, flexShrink: 0, marginTop: 4 }} />
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ fontSize: '0.8rem', fontWeight: isUnread ? 700 : 500, color: 'var(--ink)', marginBottom: '0.15rem' }}>
                                                 {item.title}

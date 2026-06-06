@@ -44,17 +44,17 @@ const SOURCE_LABEL: Record<WakeSource, string> = {
 };
 
 const STATUS_STYLE: Record<WakeRun['status'], { bg: string; color: string; icon: React.ElementType }> = {
-    scheduled: { bg: '#eff6ff', color: '#1e40af', icon: Clock },
-    running: { bg: '#fef9c3', color: 'var(--warn)', icon: Loader2 },
-    completed: { bg: '#dcfce7', color: 'var(--ok)', icon: CheckCircle2 },
-    failed: { bg: '#fee2e2', color: 'var(--danger)', icon: XCircle },
-    skipped: { bg: '#f1f5f9', color: '#475569', icon: RefreshCw },
+    scheduled: { bg: 'var(--info-bg)', color: 'var(--info)', icon: Clock },
+    running: { bg: 'var(--warn-bg)', color: 'var(--warn)', icon: Loader2 },
+    completed: { bg: 'var(--ok-bg)', color: 'var(--ok)', icon: CheckCircle2 },
+    failed: { bg: 'var(--danger-bg)', color: 'var(--danger)', icon: XCircle },
+    skipped: { bg: 'var(--bg)', color: 'var(--ink-muted)', icon: RefreshCw },
 };
 
 const SOURCE_BADGE: Record<WakeSource, { bg: string; color: string }> = {
-    timer: { bg: '#eff6ff', color: '#1e40af' },
-    assignment: { bg: '#f0fdf4', color: 'var(--ok)' },
-    on_demand: { bg: '#fdf4ff', color: '#7c3aed' },
+    timer: { bg: 'var(--info-bg)', color: 'var(--info)' },
+    assignment: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    on_demand: { bg: '#fdf4ff', color: 'var(--accent)' },
     automation: { bg: '#fff7ed', color: '#c2410c' },
     proactive_signal: { bg: '#fefce8', color: 'var(--warn)' },
     agent_handoff: { bg: '#f0f9ff', color: 'var(--info)' },
@@ -174,12 +174,12 @@ export default function WakeRunsPanel({ workspaceId }: { workspaceId: string }) 
             {/* Toolbar */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <button type="button" onClick={load} title="Refresh" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', cursor: 'pointer', fontSize: 13, color: '#64748b' }}>
+                    <button type="button" onClick={load} title="Refresh" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', cursor: 'pointer', fontSize: 13, color: 'var(--ink-muted)' }}>
                         <RefreshCw size={13} />Refresh
                     </button>
                     <span style={{ fontSize: 12, color: 'var(--ink-muted)' }}>{runs.length} run{runs.length !== 1 ? 's' : ''}</span>
                 </div>
-                <button type="button" onClick={() => { setShowForm(f => !f); setSubmitError(null); setSubmitOk(false); }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', border: 'none', borderRadius: 8, background: '#0066cc', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                <button type="button" onClick={() => { setShowForm(f => !f); setSubmitError(null); setSubmitOk(false); }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', border: 'none', borderRadius: 8, background: 'var(--accent)', color: 'var(--card)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
                     <Play size={12} />Schedule Wake Run
                 </button>
             </div>
@@ -190,33 +190,33 @@ export default function WakeRunsPanel({ workspaceId }: { workspaceId: string }) 
                     <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--ink-soft)' }}>New Wake Run</p>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                         <div>
-                            <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>Bot ID *</label>
+                            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-muted)', display: 'block', marginBottom: 4 }}>Bot ID *</label>
                             <input style={inp} required placeholder="bot_xyz" value={form.botId} onChange={e => setForm(f => ({ ...f, botId: e.target.value }))} />
                         </div>
                         <div>
-                            <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>Wake Source *</label>
+                            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-muted)', display: 'block', marginBottom: 4 }}>Wake Source *</label>
                             <select style={{ ...inp }} required value={form.wakeSource} onChange={e => setForm(f => ({ ...f, wakeSource: e.target.value as WakeSource }))}>
                                 {WAKE_SOURCES.map(s => <option key={s} value={s}>{SOURCE_LABEL[s]}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>Dedupe Key</label>
+                            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-muted)', display: 'block', marginBottom: 4 }}>Dedupe Key</label>
                             <input style={inp} placeholder="optional" value={form.dedupeKey} onChange={e => setForm(f => ({ ...f, dedupeKey: e.target.value }))} />
                         </div>
                         <div>
-                            <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>Scheduled At (ISO)</label>
+                            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-muted)', display: 'block', marginBottom: 4 }}>Scheduled At (ISO)</label>
                             <input style={inp} type="datetime-local" value={form.timestamp} onChange={e => setForm(f => ({ ...f, timestamp: e.target.value ? new Date(e.target.value).toISOString() : '' }))} />
                         </div>
                         <div style={{ gridColumn: '1 / -1' }}>
-                            <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>Correlation ID</label>
+                            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-muted)', display: 'block', marginBottom: 4 }}>Correlation ID</label>
                             <input style={inp} placeholder="optional trace ID" value={form.correlationId} onChange={e => setForm(f => ({ ...f, correlationId: e.target.value }))} />
                         </div>
                     </div>
                     {submitError && <p style={{ margin: 0, fontSize: 12, color: 'var(--danger)' }}>{submitError}</p>}
                     {submitOk && <p style={{ margin: 0, fontSize: 12, color: 'var(--ok)' }}>Wake run scheduled successfully.</p>}
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <button type="button" onClick={() => setShowForm(false)} style={{ padding: '6px 14px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', cursor: 'pointer', fontSize: 13, color: '#64748b' }}>Cancel</button>
-                        <button type="submit" disabled={submitting} style={{ padding: '6px 14px', border: 'none', borderRadius: 8, background: '#0066cc', color: '#fff', cursor: submitting ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600, opacity: submitting ? 0.7 : 1 }}>
+                        <button type="button" onClick={() => setShowForm(false)} style={{ padding: '6px 14px', border: '1px solid var(--line)', borderRadius: 8, background: 'var(--card)', cursor: 'pointer', fontSize: 13, color: 'var(--ink-muted)' }}>Cancel</button>
+                        <button type="submit" disabled={submitting} style={{ padding: '6px 14px', border: 'none', borderRadius: 8, background: 'var(--accent)', color: 'var(--card)', cursor: submitting ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600, opacity: submitting ? 0.7 : 1 }}>
                             {submitting ? 'Scheduling…' : 'Schedule'}
                         </button>
                     </div>
@@ -242,13 +242,13 @@ export default function WakeRunsPanel({ workspaceId }: { workspaceId: string }) 
                         </thead>
                         <tbody>
                             {runs.map((run, i) => (
-                                <tr key={run.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : '#fff' }}>
+                                <tr key={run.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : 'var(--card)' }}>
                                     <td style={cell}><code style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 6px', borderRadius: 4 }}>{run.botId}</code></td>
                                     <td style={cell}><SourceBadge source={run.wakeSource} /></td>
                                     <td style={cell}><StatusBadge status={run.status} /></td>
-                                    <td style={{ ...cell, color: '#64748b' }}>{run.scheduledAt ? new Date(run.scheduledAt).toLocaleString() : run.createdAt ? new Date(run.createdAt).toLocaleString() : '—'}</td>
-                                    <td style={{ ...cell, color: '#64748b' }}>{run.completedAt ? new Date(run.completedAt).toLocaleString() : '—'}</td>
-                                    <td style={{ ...cell, color: '#64748b', fontFamily: 'monospace', fontSize: 11 }}>{run.correlationId ?? '—'}</td>
+                                    <td style={{ ...cell, color: 'var(--ink-muted)' }}>{run.scheduledAt ? new Date(run.scheduledAt).toLocaleString() : run.createdAt ? new Date(run.createdAt).toLocaleString() : '—'}</td>
+                                    <td style={{ ...cell, color: 'var(--ink-muted)' }}>{run.completedAt ? new Date(run.completedAt).toLocaleString() : '—'}</td>
+                                    <td style={{ ...cell, color: 'var(--ink-muted)', fontFamily: 'monospace', fontSize: 11 }}>{run.correlationId ?? '—'}</td>
                                 </tr>
                             ))}
                         </tbody>

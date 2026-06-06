@@ -116,13 +116,13 @@ type WeeklyQualityRoiResponse = {
 };
 
 const STATE_COLORS: Record<string, string> = {
-    created: '#6366f1',
-    starting: '#f59e0b',
-    ready: '#3b82f6',
-    active: '#22c55e',
-    stopping: '#f97316',
-    stopped: '#6b7280',
-    degraded: '#ef4444',
+    created: 'var(--accent)',
+    starting: 'var(--warn)',
+    ready: 'var(--info)',
+    active: 'var(--ok)',
+    stopping: 'var(--warn)',
+    stopped: 'var(--ink-muted)',
+    degraded: 'var(--danger)',
 };
 
 const EVENT_TYPE_BADGE: Record<string, string> = {
@@ -154,9 +154,9 @@ const statePillStyle = (state: string, isCurrent: boolean) => ({
     borderRadius: 999,
     fontSize: '0.75rem',
     fontWeight: isCurrent ? 700 : 400,
-    background: isCurrent ? (STATE_COLORS[state] ?? '#6b7280') : '#e5e7eb',
-    color: isCurrent ? '#fff' : '#374151',
-    border: isCurrent ? `2px solid ${STATE_COLORS[state] ?? '#6b7280'}` : '2px solid transparent',
+    background: isCurrent ? (STATE_COLORS[state] ?? 'var(--ink-muted)') : 'var(--line)',
+    color: isCurrent ? 'var(--card)' : 'var(--ink-soft)',
+    border: isCurrent ? `2px solid ${STATE_COLORS[state] ?? 'var(--ink-muted)'}` : '2px solid transparent',
     opacity: isCurrent ? 1 : 0.6,
 });
 
@@ -434,7 +434,7 @@ export function RuntimeObservabilityPanel({
                         </button>
                     )}
                     {killMessage && (
-                        <p className="obs-kill-message" style={{ color: killEngaged ? '#166534' : '#dc2626' }}>
+                        <p className="obs-kill-message" style={{ color: killEngaged ? 'var(--ok)' : 'var(--danger)' }}>
                             {killMessage}
                         </p>
                     )}
@@ -491,7 +491,7 @@ export function RuntimeObservabilityPanel({
                 <div className="obs-metrics-grid">
                     <div>
                         <p className="obs-metric-label">Heartbeat loop</p>
-                        <p className="obs-metric-value" style={{ color: health.heartbeat_loop_running ? '#16a34a' : '#dc2626' }}>
+                        <p className="obs-metric-value" style={{ color: health.heartbeat_loop_running ? 'var(--ok)' : 'var(--danger)' }}>
                             {health.heartbeat_loop_running ? 'running' : 'stopped'}
                         </p>
                     </div>
@@ -500,7 +500,7 @@ export function RuntimeObservabilityPanel({
                         <p className="obs-metric-value">
                             <span style={{ color: 'var(--ok)' }}>{health.heartbeat_sent ?? 0}</span>
                             {' / '}
-                            <span style={{ color: (health.heartbeat_failed ?? 0) > 0 ? '#dc2626' : '#374151' }}>
+                            <span style={{ color: (health.heartbeat_failed ?? 0) > 0 ? 'var(--danger)' : 'var(--ink-soft)' }}>
                                 {health.heartbeat_failed ?? 0}
                             </span>
                             {heartbeatSuccessRate !== null && (
@@ -521,7 +521,7 @@ export function RuntimeObservabilityPanel({
                         <p className="obs-metric-value">
                             <span style={{ color: 'var(--ok)' }}>{health.succeeded_tasks ?? 0}</span>
                             {' ok / '}
-                            <span style={{ color: (health.failed_tasks ?? 0) > 0 ? '#dc2626' : '#374151' }}>
+                            <span style={{ color: (health.failed_tasks ?? 0) > 0 ? 'var(--danger)' : 'var(--ink-soft)' }}>
                                 {health.failed_tasks ?? 0}
                             </span>
                             {' fail'}
@@ -529,7 +529,7 @@ export function RuntimeObservabilityPanel({
                     </div>
                     <div>
                         <p className="obs-metric-label">Queue depth</p>
-                        <p className="obs-metric-value" style={{ color: (health.task_queue_depth ?? 0) > 0 ? '#f59e0b' : '#374151' }}>
+                        <p className="obs-metric-value" style={{ color: (health.task_queue_depth ?? 0) > 0 ? 'var(--warn)' : 'var(--ink-soft)' }}>
                             {health.task_queue_depth ?? 0}
                         </p>
                     </div>
@@ -549,7 +549,7 @@ export function RuntimeObservabilityPanel({
                                     <span className="obs-transition-time">{formatTs(t.at)}</span>
                                     <span className="obs-transition-from">{t.from}</span>
                                     <span className="obs-state-arrow">→</span>
-                                    <span className="obs-transition-to" style={{ color: STATE_COLORS[t.to] ?? '#374151' }}>{t.to}</span>
+                                    <span className="obs-transition-to" style={{ color: STATE_COLORS[t.to] ?? 'var(--ink-soft)' }}>{t.to}</span>
                                     {t.reason && (
                                         <span className="obs-transition-reason">
                                             — {t.reason}
@@ -685,7 +685,7 @@ export function RuntimeObservabilityPanel({
                                 <div key={`${event.taskId}:${event.sequence}:${event.recordedAt}`} className="obs-transition-item" style={{ alignItems: 'flex-start', flexDirection: 'column' }}>
                                     <div>
                                         <span className="obs-transition-time">{formatTs(event.recordedAt)}</span>
-                                        <span className="obs-transition-to" style={{ color: '#0f766e', marginLeft: '0.4rem' }}>{event.event}</span>
+                                        <span className="obs-transition-to" style={{ color: 'var(--ok)', marginLeft: '0.4rem' }}>{event.event}</span>
                                         <span className="badge neutral" style={{ marginLeft: '0.5rem' }}>{event.source}</span>
                                         {event.finalRecommendation && (
                                             <span className="badge warn" style={{ marginLeft: '0.5rem' }}>final {event.finalRecommendation}</span>
@@ -695,7 +695,7 @@ export function RuntimeObservabilityPanel({
                                         session {event.sessionId ?? 'n/a'} · role {event.roleTrack ?? 'n/a'} · turn {event.turnIndex ?? 'n/a'}
                                         {event.interruptedSpeaking ? ' · speaker interrupted' : ''}
                                     </div>
-                                    <div style={{ marginTop: '0.25rem', color: '#1f2937', fontSize: '0.82rem' }}>
+                                    <div style={{ marginTop: '0.25rem', color: 'var(--ink-soft)', fontSize: '0.82rem' }}>
                                         {event.text}
                                     </div>
                                     {event.followUpQuestion && (
@@ -740,15 +740,15 @@ export function RuntimeObservabilityPanel({
                                         <span
                                             className="obs-log-event"
                                             style={{
-                                                color: EVENT_TYPE_BADGE[log.eventType] === 'high' ? '#f87171'
-                                                    : EVENT_TYPE_BADGE[log.eventType] === 'low' ? '#86efac'
-                                                        : EVENT_TYPE_BADGE[log.eventType] === 'medium' ? '#fcd34d'
-                                                            : '#94a3b8',
+                                                color: EVENT_TYPE_BADGE[log.eventType] === 'high' ? 'var(--danger)'
+                                                    : EVENT_TYPE_BADGE[log.eventType] === 'low' ? 'var(--ok)'
+                                                        : EVENT_TYPE_BADGE[log.eventType] === 'medium' ? 'var(--warn)'
+                                                            : 'var(--ink-muted)',
                                             }}
                                         >
                                             {log.eventType}
                                         </span>
-                                        <span className="obs-log-state" style={{ color: STATE_COLORS[log.runtimeState] ?? '#94a3b8' }}>
+                                        <span className="obs-log-state" style={{ color: STATE_COLORS[log.runtimeState] ?? 'var(--ink-muted)' }}>
                                             [{log.runtimeState}]
                                         </span>
                                         {log.correlationId && (
@@ -796,7 +796,7 @@ export function RuntimeObservabilityPanel({
                                 return (
                                     <div key={sessionKey} style={{ marginBottom: '1rem', borderLeft: '3px solid #0f766e', paddingLeft: '0.75rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                                            <span className="obs-transition-time" style={{ fontWeight: 600, color: '#0f766e' }}>{sessionKey}</span>
+                                            <span className="obs-transition-time" style={{ fontWeight: 600, color: 'var(--ok)' }}>{sessionKey}</span>
                                             {roleTrack && <span className="badge neutral">{roleTrack}</span>}
                                             {lastFinal?.finalRecommendation && (
                                                 <span className="badge warn">rec: {lastFinal.finalRecommendation}</span>
@@ -811,7 +811,7 @@ export function RuntimeObservabilityPanel({
                                                     {ev.interruptedSpeaking && <span className="badge high" style={{ marginLeft: '0.4rem' }}>interrupted</span>}
                                                     {ev.turnIndex !== null && <span className="obs-muted-empty" style={{ marginLeft: '0.5rem' }}>turn {ev.turnIndex}</span>}
                                                 </div>
-                                                <div style={{ marginTop: '0.2rem', color: '#1f2937', fontSize: '0.82rem' }}>{ev.text}</div>
+                                                <div style={{ marginTop: '0.2rem', color: 'var(--ink-soft)', fontSize: '0.82rem' }}>{ev.text}</div>
                                                 {ev.followUpQuestion && (
                                                     <div className="obs-muted-empty" style={{ marginTop: '0.15rem' }}>follow-up: {ev.followUpQuestion}</div>
                                                 )}

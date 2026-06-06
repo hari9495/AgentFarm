@@ -169,11 +169,11 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
     }
 
     if (loading) {
-        return <p style={{ color: '#475569', fontSize: '13px' }}>Loading versions…</p>;
+        return <p style={{ color: 'var(--ink-muted)', fontSize: '13px' }}>Loading versions…</p>;
     }
     if (error) {
         return (
-            <p style={{ color: '#fca5a5', fontSize: '13px' }}>{error}</p>
+            <p style={{ color: 'var(--danger)', fontSize: '13px' }}>{error}</p>
         );
     }
 
@@ -182,8 +182,8 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
             {/* Take snapshot */}
             <div
                 style={{
-                    background: '#0f172a',
-                    border: '1px solid #1e293b',
+                    background: 'var(--bg)',
+                    border: '1px solid var(--line)',
                     borderRadius: '8px',
                     padding: '14px',
                     marginBottom: '20px',
@@ -193,7 +193,7 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                     style={{
                         fontSize: '12px',
                         fontWeight: 700,
-                        color: '#475569',
+                        color: 'var(--ink-muted)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.06em',
                         marginBottom: '10px',
@@ -209,10 +209,10 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                     style={{
                         width: '100%',
                         padding: '7px 10px',
-                        background: '#1e293b',
-                        border: '1px solid #334155',
+                        background: 'var(--bg-deep)',
+                        border: '1px solid var(--line)',
                         borderRadius: '6px',
-                        color: '#e2e8f0',
+                        color: 'var(--ink)',
                         fontSize: '12px',
                         marginBottom: '8px',
                         boxSizing: 'border-box',
@@ -223,8 +223,8 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                     disabled={snapshotLoading}
                     style={{
                         padding: '6px 14px',
-                        background: '#1e293b',
-                        border: '1px solid #334155',
+                        background: 'var(--bg-deep)',
+                        border: '1px solid var(--line)',
                         borderRadius: '6px',
                         color: 'var(--ink-muted)',
                         fontSize: '12px',
@@ -238,7 +238,7 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
 
             {/* Version list */}
             {versions.length === 0 ? (
-                <p style={{ color: '#475569', fontSize: '13px' }}>No versions yet.</p>
+                <p style={{ color: 'var(--ink-muted)', fontSize: '13px' }}>No versions yet.</p>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {versions.map((v) => (
@@ -246,8 +246,8 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                             key={v.id}
                             style={{
                                 padding: '12px 14px',
-                                background: '#0f172a',
-                                border: '1px solid #1e293b',
+                                background: 'var(--bg)',
+                                border: '1px solid var(--line)',
                                 borderRadius: '8px',
                                 display: 'flex',
                                 alignItems: 'flex-start',
@@ -261,7 +261,7 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                                         style={{
                                             fontSize: '13px',
                                             fontWeight: 700,
-                                            color: '#e2e8f0',
+                                            color: 'var(--ink)',
                                         }}
                                     >
                                         v{v.versionNumber}
@@ -269,7 +269,7 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                                     <span
                                         style={{
                                             fontSize: '11px',
-                                            color: '#475569',
+                                            color: 'var(--ink-muted)',
                                             fontFamily: 'monospace',
                                         }}
                                     >
@@ -307,10 +307,10 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                                     }}
                                     style={{
                                         padding: '5px 10px',
-                                        background: diffBase === v.id ? '#1e3a5f' : '#1e293b',
+                                        background: diffBase === v.id ? '#1e3a5f' : 'var(--bg-deep)',
                                         border: diffBase === v.id ? '1px solid #3b82f6' : '1px solid #334155',
                                         borderRadius: '5px',
-                                        color: diffBase === v.id ? '#93c5fd' : '#94a3b8',
+                                        color: diffBase === v.id ? 'var(--info)' : 'var(--ink-muted)',
                                         fontSize: '11px',
                                         fontWeight: 600,
                                         cursor: 'pointer',
@@ -328,10 +328,10 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                                         disabled={diffLoading}
                                         style={{
                                             padding: '5px 10px',
-                                            background: diffTarget === v.id ? '#1e3a5f' : '#1e293b',
+                                            background: diffTarget === v.id ? '#1e3a5f' : 'var(--bg-deep)',
                                             border: diffTarget === v.id ? '1px solid #3b82f6' : '1px solid #334155',
                                             borderRadius: '5px',
-                                            color: diffTarget === v.id ? '#93c5fd' : '#94a3b8',
+                                            color: diffTarget === v.id ? 'var(--info)' : 'var(--ink-muted)',
                                             fontSize: '11px',
                                             fontWeight: 600,
                                             cursor: diffLoading ? 'not-allowed' : 'pointer',
@@ -346,8 +346,8 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                                     disabled={restoring === v.id}
                                     style={{
                                         padding: '5px 10px',
-                                        background: '#1e293b',
-                                        border: '1px solid #334155',
+                                        background: 'var(--bg-deep)',
+                                        border: '1px solid var(--line)',
                                         borderRadius: '5px',
                                         color: 'var(--ink-muted)',
                                         fontSize: '11px',
@@ -367,11 +367,11 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
             {/* Diff hint */}
             {versions.length > 1 && !diffBase && (
                 <p style={{ fontSize: '11px', color: 'var(--ink-soft)', marginTop: '12px' }}>
-                    Tip: click <strong style={{ color: '#475569' }}>Set Base</strong> on one version, then <strong style={{ color: '#475569' }}>Compare →</strong> on another to diff their brainConfig.
+                    Tip: click <strong style={{ color: 'var(--ink-muted)' }}>Set Base</strong> on one version, then <strong style={{ color: 'var(--ink-muted)' }}>Compare →</strong> on another to diff their brainConfig.
                 </p>
             )}
             {diffBase && !showDiff && (
-                <p style={{ fontSize: '11px', color: '#475569', marginTop: '12px' }}>
+                <p style={{ fontSize: '11px', color: 'var(--ink-muted)', marginTop: '12px' }}>
                     Base set. Click <strong>Compare →</strong> on another version to see the diff.
                 </p>
             )}
@@ -381,8 +381,8 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                 <div
                     style={{
                         marginTop: '20px',
-                        background: '#0f172a',
-                        border: '1px solid #1e293b',
+                        background: 'var(--bg)',
+                        border: '1px solid var(--line)',
                         borderRadius: '8px',
                         padding: '14px',
                     }}
@@ -392,7 +392,7 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                             style={{
                                 fontSize: '12px',
                                 fontWeight: 700,
-                                color: '#475569',
+                                color: 'var(--ink-muted)',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.06em',
                             }}
@@ -404,7 +404,7 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                             style={{
                                 background: 'transparent',
                                 border: 'none',
-                                color: '#475569',
+                                color: 'var(--ink-muted)',
                                 fontSize: '12px',
                                 cursor: 'pointer',
                             }}
@@ -414,20 +414,20 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                     </div>
 
                     {diffLoading && (
-                        <p style={{ color: '#475569', fontSize: '12px' }}>Computing diff…</p>
+                        <p style={{ color: 'var(--ink-muted)', fontSize: '12px' }}>Computing diff…</p>
                     )}
                     {diffError && (
-                        <p style={{ color: '#fca5a5', fontSize: '12px' }}>{diffError}</p>
+                        <p style={{ color: 'var(--danger)', fontSize: '12px' }}>{diffError}</p>
                     )}
                     {!diffLoading && !diffError && diffLines.length === 0 && (
-                        <p style={{ color: '#475569', fontSize: '12px' }}>No differences found in brainConfig.</p>
+                        <p style={{ color: 'var(--ink-muted)', fontSize: '12px' }}>No differences found in brainConfig.</p>
                     )}
                     {!diffLoading && !diffError && diffLines.length > 0 && (
                         <>
                             <div
                                 style={{
                                     fontSize: '11px',
-                                    color: '#475569',
+                                    color: 'var(--ink-muted)',
                                     marginBottom: '8px',
                                 }}
                             >
@@ -448,9 +448,9 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                                         .filter((l) => l.type !== 'unchanged')
                                         .map((line, idx) => {
                                             const isAdd = line.type === 'added';
-                                            const bg = isAdd ? '#052e16' : '#450a0a';
+                                            const bg = isAdd ? '#052e16' : 'var(--danger)';
                                             const prefix = isAdd ? '+' : '−';
-                                            const prefixColor = isAdd ? '#4ade80' : '#f87171';
+                                            const prefixColor = isAdd ? '#4ade80' : 'var(--danger)';
                                             const truncate = (v: unknown): string => {
                                                 const s = JSON.stringify(v);
                                                 return s.length > 120 ? s.slice(0, 120) + '…' : s;

@@ -148,7 +148,7 @@ function PrimaryButton({
                 fontWeight: 700,
                 fontFamily: 'inherit',
                 background: isDisabled ? 'var(--brand-dark)' : 'var(--brand)',
-                color: '#fff',
+                color: 'var(--card)',
                 border: 'none',
                 borderRadius: 8,
                 cursor: isDisabled ? 'not-allowed' : 'pointer',
@@ -222,8 +222,8 @@ function ProgressIndicator({ step }: { step: number }) {
                                     fontSize: '0.75rem',
                                     fontWeight: 700,
                                     flexShrink: 0,
-                                    background: done ? '#059669' : active ? 'var(--brand)' : 'var(--line)',
-                                    color: done || active ? '#fff' : 'var(--ink-muted)',
+                                    background: done ? 'var(--ok)' : active ? 'var(--brand)' : 'var(--line)',
+                                    color: done || active ? 'var(--card)' : 'var(--ink-muted)',
                                     transition: 'background 0.2s ease, color 0.2s ease',
                                 }}
                             >
@@ -234,7 +234,7 @@ function ProgressIndicator({ step }: { step: number }) {
                                     fontSize: '0.65rem',
                                     fontWeight: 500,
                                     whiteSpace: 'nowrap',
-                                    color: done ? '#059669' : active ? 'var(--brand)' : 'var(--ink-muted)',
+                                    color: done ? 'var(--ok)' : active ? 'var(--brand)' : 'var(--ink-muted)',
                                     transition: 'color 0.2s ease',
                                 }}
                             >
@@ -247,7 +247,7 @@ function ProgressIndicator({ step }: { step: number }) {
                                     flex: 1,
                                     height: 1,
                                     marginTop: 15, // align with centre of 32px circle
-                                    background: num < step ? '#059669' : 'var(--line)',
+                                    background: num < step ? 'var(--ok)' : 'var(--line)',
                                     transition: 'background 0.2s ease',
                                 }}
                             />
@@ -535,7 +535,7 @@ function StepAgent({
                                 padding: '0.85rem 1rem',
                                 border: `2px solid ${selected ? 'var(--brand)' : 'var(--line)'}`,
                                 borderRadius: 10,
-                                background: selected ? 'var(--brand-light)' : '#fff',
+                                background: selected ? 'var(--brand-light)' : 'var(--card)',
                                 cursor: 'pointer',
                                 transition: 'border-color 0.15s ease, background 0.15s ease',
                                 fontFamily: 'inherit',
@@ -617,7 +617,7 @@ function StepPlan({
                                 padding: '0.85rem 1rem',
                                 border: `2px solid ${selected ? 'var(--brand)' : 'var(--line)'}`,
                                 borderRadius: 10,
-                                background: selected ? 'var(--brand-light)' : '#fff',
+                                background: selected ? 'var(--brand-light)' : 'var(--card)',
                                 cursor: 'pointer',
                                 transition: 'border-color 0.15s ease, background 0.15s ease',
                                 fontFamily: 'inherit',
@@ -635,7 +635,7 @@ function StepPlan({
                                         textTransform: 'uppercase',
                                         letterSpacing: '0.08em',
                                         background: 'var(--brand)',
-                                        color: '#fff',
+                                        color: 'var(--card)',
                                         padding: '2px 7px',
                                         borderRadius: 4,
                                     }}
@@ -757,7 +757,7 @@ function StepDone({ state, agentRoles, plans }: { state: WizardState; agentRoles
                         fontSize: '0.9rem',
                         fontWeight: 700,
                         background: 'var(--brand)',
-                        color: '#fff',
+                        color: 'var(--card)',
                         borderRadius: 8,
                         textDecoration: 'none',
                         textAlign: 'center',

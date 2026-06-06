@@ -46,13 +46,13 @@ type PluginHistoryRecord = {
 };
 
 const LOAD_STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    loaded: { bg: '#dcfce7', color: 'var(--ok)' },
-    rejected: { bg: '#fee2e2', color: 'var(--danger)' },
-    disabled: { bg: '#fef9c3', color: 'var(--warn)' },
+    loaded: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    rejected: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    disabled: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
 };
 
 function loadStatusBadge(status: string) {
-    const style = LOAD_STATUS_BADGE[status] ?? { bg: '#f1f5f9', color: '#475569' };
+    const style = LOAD_STATUS_BADGE[status] ?? { bg: 'var(--bg)', color: 'var(--ink-muted)' };
     return (
         <span style={{ padding: '1px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: 700, background: style.bg, color: style.color }}>
             {status}
@@ -327,7 +327,7 @@ export function PluginLoadingPanel({ workspaceId }: { workspaceId: string }) {
                         {allowlistSaving ? 'Saving…' : 'Update Allowlist'}
                     </button>
                     {allowlistMsg && (
-                        <p style={{ fontSize: '0.82rem', color: allowlistMsg === 'Allowlist updated.' ? '#166534' : '#991b1b', margin: 0 }}>
+                        <p style={{ fontSize: '0.82rem', color: allowlistMsg === 'Allowlist updated.' ? 'var(--ok)' : 'var(--danger)', margin: 0 }}>
                             {allowlistMsg}
                         </p>
                     )}

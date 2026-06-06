@@ -321,25 +321,25 @@ function InstallModal({ connector, onClose, onInstalled }: {
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
             onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-            <div style={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 16, width: '100%', maxWidth: 480, overflow: 'hidden' }}>
+            <div style={{ background: 'var(--bg-deep)', border: '1px solid #3f3f46', borderRadius: 16, width: '100%', maxWidth: 480, overflow: 'hidden' }}>
                 {/* Header */}
                 <div style={{ padding: '18px 20px', borderBottom: '1px solid #3f3f46', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
                         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--info)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>Install Connector</div>
                         <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#f4f4f5' }}>{connector.name}</h2>
-                        <p style={{ margin: 0, fontSize: 12, color: '#71717a', marginTop: 2 }}>{CATEGORY_LABELS[connector.category]}</p>
+                        <p style={{ margin: 0, fontSize: 12, color: 'var(--ink-muted)', marginTop: 2 }}>{CATEGORY_LABELS[connector.category]}</p>
                     </div>
-                    <button onClick={onClose} style={{ background: '#27272a', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', color: '#71717a', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                    <button onClick={onClose} style={{ background: 'var(--bg-deep)', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-muted)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
                 </div>
 
                 {/* What agents can do */}
-                <div style={{ padding: '12px 20px', background: '#09090b', borderBottom: '1px solid #27272a' }}>
-                    <p style={{ fontSize: 10, fontWeight: 700, color: '#52525b', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Your agents will be able to</p>
+                <div style={{ padding: '12px 20px', background: 'var(--bg-deep)', borderBottom: '1px solid #27272a' }}>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Your agents will be able to</p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                         {(connector as ConnectorEntry & { supportedActions?: string[] }).supportedActions?.slice(0, 6).map((a: string) => (
-                            <span key={a} style={{ padding: '2px 8px', borderRadius: 6, background: '#18181b', border: '1px solid #3f3f46', fontSize: 10, fontFamily: 'monospace', color: '#a1a1aa' }}>{a}</span>
+                            <span key={a} style={{ padding: '2px 8px', borderRadius: 6, background: 'var(--bg-deep)', border: '1px solid #3f3f46', fontSize: 10, fontFamily: 'monospace', color: 'var(--ink-muted)' }}>{a}</span>
                         )) ?? connector.requiredEnvVars.slice(0, 4).map(e => (
-                            <span key={e} style={{ padding: '2px 8px', borderRadius: 6, background: '#18181b', border: '1px solid #3f3f46', fontSize: 10, fontFamily: 'monospace', color: '#a1a1aa' }}>{e}</span>
+                            <span key={e} style={{ padding: '2px 8px', borderRadius: 6, background: 'var(--bg-deep)', border: '1px solid #3f3f46', fontSize: 10, fontFamily: 'monospace', color: 'var(--ink-muted)' }}>{e}</span>
                         ))}
                     </div>
                 </div>
@@ -348,8 +348,8 @@ function InstallModal({ connector, onClose, onInstalled }: {
                 <form onSubmit={submit} style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {fields.map(field => (
                         <div key={field.key}>
-                            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#a1a1aa', marginBottom: 5 }}>
-                                {field.label} {field.required && <span style={{ color: '#f43f5e' }}>*</span>}
+                            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--ink-muted)', marginBottom: 5 }}>
+                                {field.label} {field.required && <span style={{ color: 'var(--danger)' }}>*</span>}
                             </label>
                             <input
                                 type={field.type === 'password' ? 'password' : field.type === 'url' ? 'url' : 'text'}
@@ -359,16 +359,16 @@ function InstallModal({ connector, onClose, onInstalled }: {
                                 placeholder={field.placeholder}
                                 required={field.required}
                             />
-                            {field.hint && <p style={{ margin: '3px 0 0', fontSize: 11, color: '#52525b' }}>{field.hint}</p>}
+                            {field.hint && <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--ink-muted)' }}>{field.hint}</p>}
                         </div>
                     ))}
 
-                    {error && <div style={{ padding: '8px 12px', borderRadius: 9, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5', fontSize: 12 }}>⚠ {error}</div>}
-                    {success && <div style={{ padding: '8px 12px', borderRadius: 9, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#86efac', fontSize: 12 }}>✓ {connector.name} installed successfully!</div>}
+                    {error && <div style={{ padding: '8px 12px', borderRadius: 9, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: 'var(--danger)', fontSize: 12 }}>⚠ {error}</div>}
+                    {success && <div style={{ padding: '8px 12px', borderRadius: 9, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: 'var(--ok)', fontSize: 12 }}>✓ {connector.name} installed successfully!</div>}
 
                     <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                        <button type="button" onClick={onClose} style={{ flex: 1, padding: '8px', borderRadius: 9, border: '1px solid #3f3f46', background: 'transparent', color: '#a1a1aa', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-                        <button type="submit" disabled={saving || success} style={{ flex: 1, padding: '8px', borderRadius: 9, border: 'none', background: saving || success ? '#1d4ed8' : '#2563eb', color: '#fff', fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+                        <button type="button" onClick={onClose} style={{ flex: 1, padding: '8px', borderRadius: 9, border: '1px solid #3f3f46', background: 'transparent', color: 'var(--ink-muted)', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                        <button type="submit" disabled={saving || success} style={{ flex: 1, padding: '8px', borderRadius: 9, border: 'none', background: saving || success ? 'var(--info)' : 'var(--info)', color: 'var(--card)', fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
                             {saving ? 'Installing…' : success ? '✓ Done' : `Install ${connector.name}`}
                         </button>
                     </div>

@@ -1327,7 +1327,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                         </div>
 
                         {delegateResult && (
-                            <div style={{ padding: '0.5rem 0.75rem', borderRadius: '0.4rem', background: delegateResult.ok ? 'rgba(26,122,74,0.07)' : 'rgba(196,22,28,0.07)', border: `1px solid ${delegateResult.ok ? 'rgba(26,122,74,0.2)' : 'rgba(196,22,28,0.2)'}`, fontSize: '0.82rem', color: delegateResult.ok ? '#1a7a4a' : '#c4161c' }}>
+                            <div style={{ padding: '0.5rem 0.75rem', borderRadius: '0.4rem', background: delegateResult.ok ? 'rgba(26,122,74,0.07)' : 'rgba(196,22,28,0.07)', border: `1px solid ${delegateResult.ok ? 'rgba(26,122,74,0.2)' : 'rgba(196,22,28,0.2)'}`, fontSize: '0.82rem', color: delegateResult.ok ? 'var(--ok)' : 'var(--danger)' }}>
                                 {delegateResult.ok ? '✓ ' : '⚠ '}{delegateResult.msg}
                             </div>
                         )}
@@ -1340,7 +1340,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                 type="button"
                                 onClick={() => void submitDelegation()}
                                 disabled={delegateBusy || !delegateTargetUserId}
-                                style={{ padding: '0.45rem 1rem', borderRadius: 9999, border: '1px solid rgba(3,105,161,0.35)', background: delegateBusy || !delegateTargetUserId ? '#f5f5f7' : 'rgba(3,105,161,0.08)', color: delegateBusy || !delegateTargetUserId ? '#aeaeb2' : '#0369a1', fontSize: '0.82rem', fontWeight: 700, cursor: delegateBusy || !delegateTargetUserId ? 'not-allowed' : 'pointer' }}
+                                style={{ padding: '0.45rem 1rem', borderRadius: 9999, border: '1px solid rgba(3,105,161,0.35)', background: delegateBusy || !delegateTargetUserId ? 'var(--bg-deep)' : 'var(--info-bg)', color: delegateBusy || !delegateTargetUserId ? 'var(--ink-muted)' : 'var(--info)', fontSize: '0.82rem', fontWeight: 700, cursor: delegateBusy || !delegateTargetUserId ? 'not-allowed' : 'pointer' }}
                             >
                                 {delegateBusy ? 'Delegating…' : '→ Delegate'}
                             </button>
@@ -1393,7 +1393,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                 onClick={() => setDrawerTab('summary')}
                                 style={{
                                     padding: '0.5rem 0.75rem',
-                                    background: drawerTab === 'summary' ? '#fef3c7' : 'transparent',
+                                    background: drawerTab === 'summary' ? 'var(--warn-bg)' : 'transparent',
                                     border: 'none',
                                     borderBottom: drawerTab === 'summary' ? '2px solid #b45309' : 'none',
                                     cursor: 'pointer',
@@ -1414,7 +1414,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                 }}
                                 style={{
                                     padding: '0.5rem 0.75rem',
-                                    background: drawerTab === 'evidence' ? '#fef3c7' : 'transparent',
+                                    background: drawerTab === 'evidence' ? 'var(--warn-bg)' : 'transparent',
                                     border: 'none',
                                     borderBottom: drawerTab === 'evidence' ? '2px solid #b45309' : 'none',
                                     cursor: 'pointer',
@@ -1430,7 +1430,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                     onClick={() => setDrawerTab('negotiate')}
                                     style={{
                                         padding: '0.5rem 0.75rem',
-                                        background: drawerTab === 'negotiate' ? '#f0f9ff' : 'transparent',
+                                        background: drawerTab === 'negotiate' ? 'var(--info-bg)' : 'transparent',
                                         border: 'none',
                                         borderBottom: drawerTab === 'negotiate' ? '2px solid #0284c7' : 'none',
                                         cursor: 'pointer',
@@ -1455,9 +1455,9 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
 
                                     {selectedApproval.gate_type && (
                                         <div style={{
-                                            background: selectedApproval.gate_category === 'compliance' ? '#fef2f2' : selectedApproval.gate_category === 'strategy' ? '#f0f9ff' : '#f9fafb',
+                                            background: selectedApproval.gate_category === 'compliance' ? 'var(--danger-bg)' : selectedApproval.gate_category === 'strategy' ? 'var(--info-bg)' : 'var(--bg)',
                                             border: '1px solid',
-                                            borderColor: selectedApproval.gate_category === 'compliance' ? '#fca5a5' : selectedApproval.gate_category === 'strategy' ? '#bae6fd' : '#e5e7eb',
+                                            borderColor: selectedApproval.gate_category === 'compliance' ? 'var(--danger-border)' : selectedApproval.gate_category === 'strategy' ? 'var(--info-border)' : 'var(--line)',
                                             borderRadius: '0.35rem',
                                             padding: '0.65rem',
                                             display: 'grid',
@@ -1531,7 +1531,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                     {selectedApproval.delegated_to_user_id && (
                                         <div style={{ padding: '0.65rem 0.75rem', borderRadius: '0.4rem', background: 'rgba(3,105,161,0.05)', border: '1px solid rgba(3,105,161,0.18)', display: 'grid', gap: '0.3rem' }}>
                                             <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--info)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Delegated</div>
-                                            <div style={{ fontSize: '0.85rem', color: '#0c4a6e' }}>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--info)' }}>
                                                 → <strong>{selectedApproval.delegated_to_user_name ?? selectedApproval.delegated_to_user_id}</strong>
                                             </div>
                                             {selectedApproval.delegated_at && (
@@ -1581,7 +1581,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                     style={{ width: '100%', padding: '7px 10px', borderRadius: 9, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: 12, resize: 'vertical', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
                                                 />
                                                 {result && (
-                                                    <div style={{ marginTop: 6, padding: '6px 10px', borderRadius: 8, background: result.ok ? 'rgba(26,122,74,0.07)' : 'rgba(196,22,28,0.07)', border: `1px solid ${result.ok ? 'rgba(26,122,74,0.2)' : 'rgba(196,22,28,0.2)'}`, fontSize: 12, color: result.ok ? '#1a7a4a' : '#c4161c' }}>
+                                                    <div style={{ marginTop: 6, padding: '6px 10px', borderRadius: 8, background: result.ok ? 'rgba(26,122,74,0.07)' : 'rgba(196,22,28,0.07)', border: `1px solid ${result.ok ? 'rgba(26,122,74,0.2)' : 'rgba(196,22,28,0.2)'}`, fontSize: 12, color: result.ok ? 'var(--ok)' : 'var(--danger)' }}>
                                                         {result.ok ? '✓ ' : '⚠ '}{result.msg}
                                                     </div>
                                                 )}
@@ -1589,7 +1589,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                     type="button"
                                                     onClick={() => void escalateApproval(id)}
                                                     disabled={busy || !reason.trim()}
-                                                    style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 9999, border: '1px solid rgba(180,83,9,0.35)', background: busy || !reason.trim() ? '#f5f5f7' : 'rgba(180,83,9,0.08)', color: busy || !reason.trim() ? '#aeaeb2' : '#b45309', fontSize: 12, fontWeight: 700, cursor: busy || !reason.trim() ? 'not-allowed' : 'pointer', transition: 'all 0.15s' }}
+                                                    style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 9999, border: '1px solid rgba(180,83,9,0.35)', background: busy || !reason.trim() ? 'var(--bg-deep)' : 'color-mix(in srgb, var(--warn) 8%, transparent)', color: busy || !reason.trim() ? 'var(--ink-muted)' : 'var(--warn)', fontSize: 12, fontWeight: 700, cursor: busy || !reason.trim() ? 'not-allowed' : 'pointer', transition: 'all 0.15s' }}
                                                 >
                                                     ↑ {busy ? 'Escalating…' : 'Escalate'}
                                                 </button>
@@ -1616,8 +1616,8 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                     <div style={{ display: 'grid', gap: '0.75rem' }}>
                                         {/* Context block */}
                                         <div style={{
-                                            background: '#f0f9ff',
-                                            border: '1px solid #bae6fd',
+                                            background: 'var(--info-bg)',
+                                            border: '1px solid var(--info-border)',
                                             borderRadius: '0.35rem',
                                             padding: '0.75rem',
                                             display: 'grid',
@@ -1627,7 +1627,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                             <pre style={{
                                                 margin: 0,
                                                 fontSize: '0.78rem',
-                                                color: '#1e3a5f',
+                                                color: 'var(--info)',
                                                 whiteSpace: 'pre-wrap',
                                                 wordBreak: 'break-word',
                                                 fontFamily: 'inherit',
@@ -1652,8 +1652,8 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                                 gap: '0.5rem',
                                                                 padding: '0.55rem 0.7rem',
                                                                 borderRadius: '0.3rem',
-                                                                border: `1px solid ${isSelected ? '#0284c7' : '#e2e8f0'}`,
-                                                                background: isSelected ? '#e0f2fe' : '#f8fafc',
+                                                                border: `1px solid ${isSelected ? 'var(--info)' : 'var(--line)'}`,
+                                                                background: isSelected ? 'var(--info-bg)' : 'var(--bg)',
                                                                 cursor: selectedApproval.decision_status !== 'pending' ? 'default' : 'pointer',
                                                             }}
                                                         >
@@ -1672,7 +1672,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                                 style={{ marginTop: '0.15rem', flexShrink: 0 }}
                                                             />
                                                             <div style={{ display: 'grid', gap: '0.15rem' }}>
-                                                                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#0c4a6e' }}>
+                                                                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--info)' }}>
                                                                     {option.optionId}
                                                                 </span>
                                                                 <span style={{ fontSize: '0.78rem', color: 'var(--ink-soft)' }}>{option.summary}</span>
@@ -1736,10 +1736,10 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                             <div style={{
                                                 padding: '0.55rem 0.7rem',
                                                 borderRadius: '0.3rem',
-                                                background: selectedApproval.decision_status === 'approved' ? '#f0fdf4' : '#fef2f2',
-                                                border: `1px solid ${selectedApproval.decision_status === 'approved' ? '#86efac' : '#fca5a5'}`,
+                                                background: selectedApproval.decision_status === 'approved' ? 'var(--ok-bg)' : 'var(--danger-bg)',
+                                                border: `1px solid ${selectedApproval.decision_status === 'approved' ? 'var(--ok)' : 'var(--danger)'}`,
                                                 fontSize: '0.82rem',
-                                                color: selectedApproval.decision_status === 'approved' ? '#166534' : '#991b1b',
+                                                color: selectedApproval.decision_status === 'approved' ? 'var(--ok)' : 'var(--danger)',
                                             }}>
                                                 Decision: <strong>{selectedApproval.decision_status}</strong>
                                                 {selectedApproval.selected_option_id && (
@@ -1834,8 +1834,8 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
 
                                                     {rec.action_outcome && (
                                                         <div style={{ ...fieldStyle, borderColor: rec.action_outcome.error_reason ? 'rgba(196,22,28,0.3)' : 'rgba(26,122,74,0.3)', background: rec.action_outcome.error_reason ? 'rgba(196,22,28,0.04)' : 'rgba(26,122,74,0.04)' }}>
-                                                            <div style={{ ...labelStyle, color: rec.action_outcome.error_reason ? '#c4161c' : '#1a7a4a' }}>Action Outcome</div>
-                                                            <div style={{ ...valueStyle, fontFamily: undefined, color: rec.action_outcome.error_reason ? '#c4161c' : '#1a7a4a', fontWeight: 600 }}>
+                                                            <div style={{ ...labelStyle, color: rec.action_outcome.error_reason ? 'var(--danger)' : 'var(--ok)' }}>Action Outcome</div>
+                                                            <div style={{ ...valueStyle, fontFamily: undefined, color: rec.action_outcome.error_reason ? 'var(--danger)' : 'var(--ok)', fontWeight: 600 }}>
                                                                 {rec.action_outcome.result_summary ?? 'Pending'}
                                                             </div>
                                                             {rec.action_outcome.error_reason && (
@@ -1866,14 +1866,14 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                                     }}>
                                                                         <span style={{ fontSize: 13, flexShrink: 0, marginTop: 1 }}>{passed ? '✅' : failed ? '❌' : '⚠️'}</span>
                                                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                                                            <div style={{ fontSize: 12, fontWeight: 700, color: passed ? '#1a7a4a' : failed ? '#c4161c' : '#b45309' }}>
+                                                                            <div style={{ fontSize: 12, fontWeight: 700, color: passed ? 'var(--ok)' : failed ? 'var(--danger)' : 'var(--warn)' }}>
                                                                                 {check.checkType}
                                                                             </div>
                                                                             {check.details && (
                                                                                 <div style={{ fontSize: 11, color: 'var(--ink-muted)', marginTop: 2 }}>{check.details}</div>
                                                                             )}
                                                                         </div>
-                                                                        <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: passed ? '#1a7a4a' : failed ? '#c4161c' : '#b45309', flexShrink: 0 }}>
+                                                                        <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: passed ? 'var(--ok)' : failed ? 'var(--danger)' : 'var(--warn)', flexShrink: 0 }}>
                                                                             {check.status}
                                                                         </span>
                                                                     </div>
@@ -1889,9 +1889,9 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
                                                             Execution Logs
                                                         </div>
-                                                        <div style={{ background: '#1d1d1f', borderRadius: 10, padding: '10px 12px', maxHeight: '180px', overflowY: 'auto' }}>
+                                                        <div style={{ background: 'var(--bg-deep)', borderRadius: 10, padding: '10px 12px', maxHeight: '180px', overflowY: 'auto' }}>
                                                             {rec.execution_logs.slice(-10).map((log, idx) => {
-                                                                const color = log.level === 'error' ? '#ff6b6b' : log.level === 'warn' ? '#ffd93d' : '#a8e6cf';
+                                                                const color = log.level === 'error' ? 'var(--danger)' : log.level === 'warn' ? 'var(--warn)' : 'var(--ok)';
                                                                 return (
                                                                     <div key={idx} style={{ fontSize: 11, fontFamily: 'ui-monospace, monospace', lineHeight: 1.6, display: 'flex', gap: 8 }}>
                                                                         <span style={{ color: 'var(--ink-muted)', flexShrink: 0 }}>
@@ -1900,7 +1900,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                                         <span style={{ color, flexShrink: 0, fontWeight: 700 }}>
                                                                             {log.level.toUpperCase()}
                                                                         </span>
-                                                                        <span style={{ color: '#e5e5e7' }}>{log.message}</span>
+                                                                        <span style={{ color: 'var(--ink)' }}>{log.message}</span>
                                                                     </div>
                                                                 );
                                                             })}

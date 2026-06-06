@@ -28,22 +28,22 @@ type NavColor =
     | 'violet' | 'gold' | 'emerald' | 'slate';
 
 const COLOR_MAP: Record<NavColor, { bg: string; text: string }> = {
-    blue:    { bg: 'rgba(0,102,204,0.1)',    text: '#0066cc' },
-    purple:  { bg: 'rgba(124,58,237,0.1)',   text: '#7c3aed' },
-    green:   { bg: 'rgba(5,150,105,0.1)',    text: '#059669' },
-    amber:   { bg: 'rgba(217,119,6,0.1)',    text: '#d97706' },
-    red:     { bg: 'rgba(220,38,38,0.1)',    text: '#dc2626' },
-    rose:    { bg: 'rgba(225,29,72,0.1)',    text: '#e11d48' },
+    blue:    { bg: 'rgba(0,102,204,0.1)',    text: 'var(--accent)' },
+    purple:  { bg: 'rgba(124,58,237,0.1)',   text: 'var(--accent)' },
+    green:   { bg: 'rgba(5,150,105,0.1)',    text: 'var(--ok)' },
+    amber:   { bg: 'rgba(217,119,6,0.1)',    text: 'var(--warn)' },
+    red:     { bg: 'rgba(220,38,38,0.1)',    text: 'var(--danger)' },
+    rose:    { bg: 'rgba(225,29,72,0.1)',    text: 'var(--danger)' },
     pink:    { bg: 'rgba(219,39,119,0.1)',   text: '#db2777' },
-    orange:  { bg: 'rgba(234,88,12,0.1)',    text: '#ea580c' },
-    teal:    { bg: 'rgba(13,148,136,0.1)',   text: '#0d9488' },
-    cyan:    { bg: 'rgba(8,145,178,0.1)',    text: '#0891b2' },
-    indigo:  { bg: 'rgba(79,70,229,0.1)',    text: '#4f46e5' },
-    sky:     { bg: 'rgba(2,132,199,0.1)',    text: '#0284c7' },
-    violet:  { bg: 'rgba(109,40,217,0.1)',   text: '#7c3aed' },
-    gold:    { bg: 'rgba(202,138,4,0.1)',    text: '#ca8a04' },
-    emerald: { bg: 'rgba(16,185,129,0.1)',   text: '#059669' },
-    slate:   { bg: 'rgba(71,85,105,0.1)',    text: '#475569' },
+    orange:  { bg: 'rgba(234,88,12,0.1)',    text: 'var(--warn)' },
+    teal:    { bg: 'rgba(13,148,136,0.1)',   text: 'var(--info)' },
+    cyan:    { bg: 'rgba(8,145,178,0.1)',    text: 'var(--info)' },
+    indigo:  { bg: 'rgba(79,70,229,0.1)',    text: 'var(--accent)' },
+    sky:     { bg: 'rgba(2,132,199,0.1)',    text: 'var(--info)' },
+    violet:  { bg: 'rgba(109,40,217,0.1)',   text: 'var(--accent)' },
+    gold:    { bg: 'rgba(202,138,4,0.1)',    text: 'var(--warn)' },
+    emerald: { bg: 'rgba(16,185,129,0.1)',   text: 'var(--ok)' },
+    slate:   { bg: 'rgba(71,85,105,0.1)',    text: 'var(--ink-muted)' },
 };
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -115,7 +115,7 @@ function NavItem({
             >
                 <Icon
                     className="w-3.5 h-3.5"
-                    style={{ color: active ? '#0066cc' : c.text }}
+                    style={{ color: active ? 'var(--accent)' : c.text }}
                     aria-hidden="true"
                 />
             </span>
@@ -217,7 +217,7 @@ export function InternalSidebar({
         <div className="flex flex-col h-screen sticky top-0 bg-white border-r border-slate-200 overflow-hidden">
             {/* Logo */}
             <div className="flex items-center gap-2.5 px-4 h-14 border-b border-slate-200 shrink-0">
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg shadow-sm shrink-0" style={{ background: '#0066cc' }}>
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg shadow-sm shrink-0" style={{ background: 'var(--accent)' }}>
                     <Cpu className="w-3.5 h-3.5 text-white" aria-hidden="true" />
                 </span>
                 <span className="text-sm font-bold tracking-tight text-slate-900 flex-1">AgentFarms Ops</span>

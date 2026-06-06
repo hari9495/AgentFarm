@@ -31,7 +31,7 @@ function StatRow({ label, value, highlight }: { label: string; value: string; hi
             <span style={{
                 fontSize: '13px',
                 fontWeight: highlight ? 700 : 500,
-                color: highlight ? '#38bdf8' : '#e2e8f0',
+                color: highlight ? '#38bdf8' : 'var(--bg)',
                 fontVariantNumeric: 'tabular-nums',
             }}>
                 {value}
@@ -76,7 +76,7 @@ export default function AgentBillingCard({ botId }: Props) {
 
     return (
         <div>
-            <p style={{ margin: '0 0 12px', fontSize: '11px', color: '#475569' }}>{periodLabel}</p>
+            <p style={{ margin: '0 0 12px', fontSize: '11px', color: 'var(--ink-muted)' }}>{periodLabel}</p>
             <StatRow label="Total tasks" value={data.taskCount.toLocaleString()} />
             <StatRow label="Billable tasks" value={data.billableTaskCount.toLocaleString()} />
             <StatRow label="Platform fee" value={`$${data.platformFeeUsd.toFixed(2)}`} />

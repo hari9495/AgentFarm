@@ -41,16 +41,16 @@ const TYPE_ICON: Record<CommsType, string> = {
 };
 
 const STATUS_STYLE: Record<CommsStatus, { bg: string; color: string; icon: React.ElementType }> = {
-    draft:          { bg: '#f1f5f9', color: '#475569', icon: Clock },
-    pending_review: { bg: '#fef9c3', color: 'var(--warn)', icon: Clock },
-    approved:       { bg: '#dcfce7', color: 'var(--ok)', icon: CheckCircle2 },
-    sent:           { bg: '#eff6ff', color: '#1e40af', icon: Send },
-    rejected:       { bg: '#fee2e2', color: 'var(--danger)', icon: XCircle },
+    draft:          { bg: 'var(--bg)', color: 'var(--ink-muted)', icon: Clock },
+    pending_review: { bg: 'var(--warn-bg)', color: 'var(--warn)', icon: Clock },
+    approved:       { bg: 'var(--ok-bg)', color: 'var(--ok)', icon: CheckCircle2 },
+    sent:           { bg: 'var(--info-bg)', color: 'var(--info)', icon: Send },
+    rejected:       { bg: 'var(--danger-bg)', color: 'var(--danger)', icon: XCircle },
 };
 
 const PRIORITY_STYLE: Record<string, { color: string }> = {
     low:    { color: 'var(--ink-muted)' },
-    normal: { color: '#475569' },
+    normal: { color: 'var(--ink-muted)' },
     high:   { color: 'var(--warn)' },
     urgent: { color: 'var(--danger)' },
 };
@@ -120,7 +120,7 @@ export default function CommsDraftsPanel({ workspaceId }: { workspaceId: string 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                     {filters.map(({ key, label }) => (
-                        <button key={key} type="button" onClick={() => setFilter(key)} style={{ padding: '5px 12px', border: `1px solid ${filter === key ? '#0066cc' : '#e2e8f0'}`, borderRadius: 20, background: filter === key ? 'rgba(0,102,204,0.07)' : '#fff', color: filter === key ? '#0066cc' : '#64748b', fontSize: 12, fontWeight: filter === key ? 600 : 400, cursor: 'pointer' }}>
+                        <button key={key} type="button" onClick={() => setFilter(key)} style={{ padding: '5px 12px', border: `1px solid ${filter === key ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: filter === key ? 'rgba(0,102,204,0.07)' : 'var(--card)', color: filter === key ? 'var(--accent)' : '#64748b', fontSize: 12, fontWeight: filter === key ? 600 : 400, cursor: 'pointer' }}>
                             {label}
                         </button>
                     ))}
@@ -152,7 +152,7 @@ export default function CommsDraftsPanel({ workspaceId }: { workspaceId: string 
                                 const StIcon = st.icon;
                                 const pr = PRIORITY_STYLE[d.priority] ?? PRIORITY_STYLE.normal;
                                 return (
-                                    <tr key={d.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : '#fff' }}>
+                                    <tr key={d.id} style={{ borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', background: i % 2 === 1 ? '#fafafa' : 'var(--card)' }}>
                                         <td style={td}><span style={{ fontWeight: 500 }}>{d.subject}</span></td>
                                         <td style={td}><span style={{ fontSize: 12 }}>{TYPE_ICON[d.commsType]} {TYPE_LABEL[d.commsType]}</span></td>
                                         <td style={{ ...td, color: '#64748b' }}>{d.recipientCount}</td>

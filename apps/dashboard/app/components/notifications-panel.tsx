@@ -25,21 +25,21 @@ type SummaryEntry = {
 
 const CHANNEL_COLORS: Record<string, { bg: string; color: string }> = {
     slack: { bg: '#4a154b', color: '#e8d5ff' },
-    email: { bg: '#1e3a5f', color: '#bfdbfe' },
+    email: { bg: '#1e3a5f', color: 'var(--info-bg)' },
     teams: { bg: '#1a3a6b', color: '#a5c8ff' },
     discord: { bg: '#1e1b4b', color: '#c7d2fe' },
     sms: { bg: '#1c2d1e', color: '#bbf7d0' },
 };
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    sent: { bg: '#dcfce7', color: 'var(--ok)' },
-    failed: { bg: '#fee2e2', color: 'var(--danger)' },
-    retrying: { bg: '#fef9c3', color: 'var(--warn)' },
-    suppressed: { bg: '#f1f5f9', color: '#475569' },
+    sent: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    failed: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    retrying: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
+    suppressed: { bg: 'var(--bg)', color: 'var(--ink-muted)' },
 };
 
 function channelStyle(channel: string): { bg: string; color: string } {
-    return CHANNEL_COLORS[channel.toLowerCase()] ?? { bg: '#27272a', color: '#a1a1aa' };
+    return CHANNEL_COLORS[channel.toLowerCase()] ?? { bg: '#27272a', color: 'var(--ink-muted)' };
 }
 
 function statusBadge(status: string) {
@@ -146,10 +146,10 @@ export default function NotificationsPanel() {
                 <p
                     style={{
                         padding: '0.6rem 0.8rem',
-                        background: '#450a0a',
+                        background: 'var(--danger-bg)',
                         border: '1px solid #991b1b',
                         borderRadius: '6px',
-                        color: '#fca5a5',
+                        color: 'var(--danger)',
                         fontSize: '0.84rem',
                         marginBottom: '0.75rem',
                     }}

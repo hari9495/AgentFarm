@@ -30,12 +30,12 @@ export type LiveTaskFeedProps = {
 // ── Badge helpers ─────────────────────────────────────────────────────────────
 
 const STATUS_COLORS: Record<SseEventType, string> = {
-    task_started:    '#2563eb', // blue
-    task_queued:     '#d97706', // yellow/amber
-    task_completed:  '#16a34a', // green
-    task_failed:     '#dc2626', // red
-    task_cancelled:  '#6b7280', // grey
-    heartbeat:       '#6b7280', // grey
+    task_started:    'var(--info)', // blue
+    task_queued:     'var(--warn)', // yellow/amber
+    task_completed:  'var(--ok)', // green
+    task_failed:     'var(--danger)', // red
+    task_cancelled:  'var(--ink-muted)', // grey
+    heartbeat:       'var(--ink-muted)', // grey
 };
 
 const STATUS_LABELS: Record<SseEventType, string> = {
@@ -48,7 +48,7 @@ const STATUS_LABELS: Record<SseEventType, string> = {
 };
 
 function StatusBadge({ type }: { type: SseEventType }) {
-    const color = STATUS_COLORS[type] ?? '#6b7280';
+    const color = STATUS_COLORS[type] ?? 'var(--ink-muted)';
     const label = STATUS_LABELS[type] ?? type;
     return (
         <span style={{
@@ -57,7 +57,7 @@ function StatusBadge({ type }: { type: SseEventType }) {
             borderRadius: 4,
             fontSize: 11,
             fontWeight: 600,
-            color: '#fff',
+            color: 'var(--card)',
             background: color,
             letterSpacing: '0.02em',
             textTransform: 'uppercase',
@@ -147,11 +147,11 @@ export function LiveTaskFeed({ workspaceId, maxEvents = 50 }: LiveTaskFeedProps)
                     width: 10,
                     height: 10,
                     borderRadius: '50%',
-                    background: connected ? '#16a34a' : '#dc2626',
+                    background: connected ? 'var(--ok)' : 'var(--danger)',
                     display: 'inline-block',
                     flexShrink: 0,
                 }} />
-                <span style={{ fontWeight: 600, color: connected ? '#16a34a' : '#dc2626' }}>
+                <span style={{ fontWeight: 600, color: connected ? 'var(--ok)' : 'var(--danger)' }}>
                     {connected ? 'Live' : 'Reconnecting...'}
                 </span>
                 {events.length > 0 && (
@@ -189,7 +189,7 @@ export function LiveTaskFeed({ workspaceId, maxEvents = 50 }: LiveTaskFeedProps)
                             }}
                         >
                             <StatusBadge type={evt.type} />
-                            <span style={{ fontFamily: 'monospace', color: '#e2e8f0', minWidth: 96 }}>
+                            <span style={{ fontFamily: 'monospace', color: 'var(--ink)', minWidth: 96 }}>
                                 {(evt.taskId ?? '—').slice(0, 12)}
                             </span>
                             <span style={{ color: 'var(--ink-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

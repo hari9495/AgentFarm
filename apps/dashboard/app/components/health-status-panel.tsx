@@ -81,30 +81,30 @@ function formatUptime(seconds: number): string {
 // ─── Badge colour maps ────────────────────────────────────────────────────────
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    ok: { bg: '#dcfce7', color: 'var(--ok)' },
-    degraded: { bg: '#fee2e2', color: 'var(--danger)' },
-    connected: { bg: '#dcfce7', color: 'var(--ok)' },
-    unreachable: { bg: '#fee2e2', color: 'var(--danger)' },
+    ok: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    degraded: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    connected: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    unreachable: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
 };
 
 const CIRCUIT_BADGE: Record<string, { bg: string; color: string }> = {
-    closed: { bg: '#dcfce7', color: 'var(--ok)' },
-    open: { bg: '#fee2e2', color: 'var(--danger)' },
-    'half-open': { bg: '#fef9c3', color: 'var(--warn)' },
+    closed: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    open: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    'half-open': { bg: 'var(--warn-bg)', color: 'var(--warn)' },
 };
 
 const CONNECTOR_BADGE: Record<string, { bg: string; color: string }> = {
-    healthy: { bg: '#dcfce7', color: 'var(--ok)' },
-    unhealthy: { bg: '#fee2e2', color: 'var(--danger)' },
-    error: { bg: '#fee2e2', color: 'var(--danger)' },
-    unknown: { bg: '#f1f5f9', color: '#475569' },
+    healthy: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    unhealthy: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    error: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    unknown: { bg: 'var(--bg)', color: 'var(--ink-muted)' },
 };
 
 function resolveBadge(
     map: Record<string, { bg: string; color: string }>,
     key: string,
 ): { bg: string; color: string } {
-    return map[key] ?? { bg: '#fef9c3', color: 'var(--warn)' };
+    return map[key] ?? { bg: 'var(--warn-bg)', color: 'var(--warn)' };
 }
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
@@ -520,20 +520,20 @@ export default function HealthStatusPanel() {
                                         {
                                             label: 'High',
                                             priority: 'high',
-                                            bg: '#fee2e2',
+                                            bg: 'var(--danger-bg)',
                                             color: 'var(--danger)',
                                         },
                                         {
                                             label: 'Normal',
                                             priority: 'normal',
-                                            bg: '#dbeafe',
-                                            color: '#1e40af',
+                                            bg: 'var(--info-bg)',
+                                            color: 'var(--info)',
                                         },
                                         {
                                             label: 'Low',
                                             priority: 'low',
-                                            bg: '#f1f5f9',
-                                            color: '#475569',
+                                            bg: 'var(--bg)',
+                                            color: 'var(--ink-muted)',
                                         },
                                     ] as const
                                 ).map(({ label, priority, bg, color }) => (
@@ -678,9 +678,9 @@ export default function HealthStatusPanel() {
                     ) : (
                         <>
                             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.6rem' }}>
-                                <InlineBadge badgeStyle={agentRuntime.ok ? { bg: '#dcfce7', color: 'var(--ok)' } : { bg: '#fee2e2', color: 'var(--danger)' }} label={agentRuntime.state ?? 'unknown'} />
-                                {agentRuntime.worker_loop_running && <InlineBadge badgeStyle={{ bg: '#dbeafe', color: '#1e40af' }} label="worker ✓" />}
-                                {agentRuntime.heartbeat_loop_running && <InlineBadge badgeStyle={{ bg: '#dbeafe', color: '#1e40af' }} label="heartbeat ✓" />}
+                                <InlineBadge badgeStyle={agentRuntime.ok ? { bg: 'var(--ok-bg)', color: 'var(--ok)' } : { bg: 'var(--danger-bg)', color: 'var(--danger)' }} label={agentRuntime.state ?? 'unknown'} />
+                                {agentRuntime.worker_loop_running && <InlineBadge badgeStyle={{ bg: 'var(--info-bg)', color: 'var(--info)' }} label="worker ✓" />}
+                                {agentRuntime.heartbeat_loop_running && <InlineBadge badgeStyle={{ bg: 'var(--info-bg)', color: 'var(--info)' }} label="heartbeat ✓" />}
                             </div>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                                 <tbody>
@@ -724,7 +724,7 @@ export default function HealthStatusPanel() {
                     ) : (
                         <>
                             <div style={{ marginBottom: '0.6rem' }}>
-                                <InlineBadge badgeStyle={triggerSvc.status === 'ok' ? { bg: '#dcfce7', color: 'var(--ok)' } : { bg: '#fef9c3', color: 'var(--warn)' }} label={triggerSvc.status ?? 'unknown'} />
+                                <InlineBadge badgeStyle={triggerSvc.status === 'ok' ? { bg: 'var(--ok-bg)', color: 'var(--ok)' } : { bg: 'var(--warn-bg)', color: 'var(--warn)' }} label={triggerSvc.status ?? 'unknown'} />
                             </div>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                                 <tbody>
@@ -765,7 +765,7 @@ export default function HealthStatusPanel() {
                     ) : (
                         <>
                             <div style={{ marginBottom: '0.6rem' }}>
-                                <InlineBadge badgeStyle={orchestrator.status === 'ok' ? { bg: '#dcfce7', color: 'var(--ok)' } : { bg: '#fef9c3', color: 'var(--warn)' }} label={orchestrator.status ?? 'unknown'} />
+                                <InlineBadge badgeStyle={orchestrator.status === 'ok' ? { bg: 'var(--ok-bg)', color: 'var(--ok)' } : { bg: 'var(--warn-bg)', color: 'var(--warn)' }} label={orchestrator.status ?? 'unknown'} />
                             </div>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                                 <tbody>

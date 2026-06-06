@@ -19,11 +19,11 @@ interface Deal {
 }
 
 const STAGES: { key: DealStage; label: string; accentColor: string }[] = [
-    { key: 'discovery', label: 'Discovery', accentColor: '#94a3b8' },
-    { key: 'proposal', label: 'Proposal', accentColor: '#0284c7' },
-    { key: 'negotiation', label: 'Negotiation', accentColor: '#d97706' },
-    { key: 'closed_won', label: 'Won', accentColor: '#059669' },
-    { key: 'closed_lost', label: 'Lost', accentColor: '#dc2626' },
+    { key: 'discovery', label: 'Discovery', accentColor: 'var(--ink-muted)' },
+    { key: 'proposal', label: 'Proposal', accentColor: 'var(--info)' },
+    { key: 'negotiation', label: 'Negotiation', accentColor: 'var(--warn)' },
+    { key: 'closed_won', label: 'Won', accentColor: 'var(--ok)' },
+    { key: 'closed_lost', label: 'Lost', accentColor: 'var(--danger)' },
 ];
 
 const VALID_NEXT: Partial<Record<DealStage, DealStage>> = {
@@ -290,7 +290,7 @@ export default function PipelinePage() {
                                     borderRadius: 8,
                                     border: 'none',
                                     background: 'var(--danger)',
-                                    color: '#fff',
+                                    color: 'var(--card)',
                                     cursor: submitting ? 'not-allowed' : 'pointer',
                                     fontSize: '0.875rem',
                                     opacity: submitting ? 0.6 : 1,

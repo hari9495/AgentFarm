@@ -224,7 +224,7 @@ function AddCustomMcpModal({ onClose, onSaved }: { onClose: () => void; onSaved:
 
                     <div style={{ display: 'flex', gap: 8, paddingTop: 4 }}>
                         <button type="button" onClick={onClose} style={{ flex: 1, padding: '10px 0', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
-                        <button type="submit" disabled={saving || saved} style={{ flex: 1, padding: '10px 0', borderRadius: 9999, border: 'none', background: saving || saved ? 'var(--ink-muted)' : 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
+                        <button type="submit" disabled={saving || saved} style={{ flex: 1, padding: '10px 0', borderRadius: 9999, border: 'none', background: saving || saved ? 'var(--ink-muted)' : 'var(--accent)', color: 'var(--card)', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
                             {saving ? 'Adding…' : saved ? '✓ Added' : 'Add MCP Server'}
                         </button>
                     </div>
@@ -326,7 +326,7 @@ function ConfigureModal({
 
                     <div style={{ display: 'flex', gap: 8 }}>
                         <button type="button" onClick={onClose} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
-                        <button type="submit" disabled={saving || saved} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: 'none', background: saving || saved ? 'var(--ink-muted)' : 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
+                        <button type="submit" disabled={saving || saved} style={{ flex: 1, padding: '9px 0', borderRadius: 9999, border: 'none', background: saving || saved ? 'var(--ink-muted)' : 'var(--accent)', color: 'var(--card)', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
                             {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save URL'}
                         </button>
                     </div>
@@ -411,7 +411,7 @@ export default function PlatformMcpPage() {
                         <RefreshCw size={11} /> Refresh
                     </button>
                     <CopyBtn text={envTemplate} />
-                    <button onClick={() => setShowAddCustom(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 16px', borderRadius: 9999, border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                    <button onClick={() => setShowAddCustom(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 16px', borderRadius: 9999, border: 'none', background: 'var(--accent)', color: 'var(--card)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                         <Plus size={12} /> Add Custom MCP
                     </button>
                 </div>
@@ -423,7 +423,7 @@ export default function PlatformMcpPage() {
                 <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 18, padding: '20px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
                         <div style={{ width: 40, height: 40, borderRadius: 12, background: 'color-mix(in srgb, var(--accent) 8%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <Cpu size={18} color="#0066cc" />
+                            <Cpu size={18} color="var(--accent)" />
                         </div>
                         <div style={{ flex: 1 }}>
                             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>Platform-wide MCP Servers</div>

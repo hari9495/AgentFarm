@@ -45,22 +45,22 @@ type RotateResult = {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const RESULT_BADGE: Record<string, { bg: string; color: string }> = {
-    success: { bg: '#dcfce7', color: 'var(--ok)' },
-    failed: { bg: '#fee2e2', color: 'var(--danger)' },
-    retrying: { bg: '#fef9c3', color: 'var(--warn)' },
-    approval_pending: { bg: '#dbeafe', color: 'var(--info)' },
-    blocked: { bg: '#f1f5f9', color: '#475569' },
+    success: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    failed: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    retrying: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
+    approval_pending: { bg: 'var(--info-bg)', color: 'var(--info)' },
+    blocked: { bg: 'var(--bg)', color: 'var(--ink-muted)' },
 };
 
 const RISK_BADGE: Record<string, { bg: string; color: string }> = {
-    low: { bg: '#dcfce7', color: 'var(--ok)' },
-    medium: { bg: '#fef9c3', color: 'var(--warn)' },
-    high: { bg: '#fee2e2', color: 'var(--danger)' },
+    low: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    medium: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
+    high: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
 };
 
 const SOURCE_BADGE: Record<string, { bg: string; color: string }> = {
-    persisted: { bg: '#dcfce7', color: 'var(--ok)' },
-    default: { bg: '#f1f5f9', color: '#475569' },
+    persisted: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    default: { bg: 'var(--bg)', color: 'var(--ink-muted)' },
 };
 
 function inlineBadge(label: string, map: Record<string, { bg: string; color: string }>) {

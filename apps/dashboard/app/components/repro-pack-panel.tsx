@@ -62,7 +62,7 @@ function PackRow({ pack }: { pack: ReproPack }) {
                 style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}
             >
                 <div style={{ width: 34, height: 34, borderRadius: 9, background: 'color-mix(in srgb, var(--accent) 8%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Package size={15} color="#0066cc" />
+                    <Package size={15} color="var(--accent)" />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', fontFamily: 'monospace' }}>
@@ -93,7 +93,7 @@ function PackRow({ pack }: { pack: ReproPack }) {
                         )}
                     </div>
                     {pack.payload !== undefined && (
-                        <pre style={{ margin: 0, padding: '10px 12px', borderRadius: 10, background: '#1d1d1f', color: '#f5f5f7', fontSize: 11, overflow: 'auto', maxHeight: 220, lineHeight: 1.5, fontFamily: 'ui-monospace, SFMono-Regular, monospace' }}>
+                        <pre style={{ margin: 0, padding: '10px 12px', borderRadius: 10, background: 'var(--bg-deep)', color: '#f5f5f7', fontSize: 11, overflow: 'auto', maxHeight: 220, lineHeight: 1.5, fontFamily: 'ui-monospace, SFMono-Regular, monospace' }}>
                             {JSON.stringify(pack.payload, null, 2)}
                         </pre>
                     )}
@@ -199,7 +199,7 @@ export default function ReproPackPanel({ botId }: Props) {
             <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 18, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                     <div style={{ width: 32, height: 32, borderRadius: 9, background: 'color-mix(in srgb, var(--accent) 8%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Package size={15} color="#0066cc" />
+                        <Package size={15} color="var(--accent)" />
                     </div>
                     <div>
                         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em' }}>Create Repro Pack</div>
@@ -234,7 +234,7 @@ export default function ReproPackPanel({ botId }: Props) {
                     )}
 
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <button type="submit" disabled={creating} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 18px', borderRadius: 9999, border: 'none', background: creating ? '#aeaeb2' : '#0066cc', color: '#fff', fontSize: 13, fontWeight: 500, cursor: creating ? 'not-allowed' : 'pointer' }}>
+                        <button type="submit" disabled={creating} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 18px', borderRadius: 9999, border: 'none', background: creating ? 'var(--ink-muted)' : 'var(--accent)', color: 'var(--card)', fontSize: 13, fontWeight: 500, cursor: creating ? 'not-allowed' : 'pointer' }}>
                             <Plus size={13} /> {creating ? 'Creating…' : 'Create Pack'}
                         </button>
                         <button type="button" onClick={loadPacks} disabled={loading} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 13, fontWeight: 500, cursor: loading ? 'not-allowed' : 'pointer' }}>

@@ -142,7 +142,7 @@ export default function BrowserTasksPage() {
                     onClick={() => setShowModal(true)}
                     style={{
                         background: 'var(--brand)',
-                        color: '#fff',
+                        color: 'var(--card)',
                         border: 'none',
                         borderRadius: 8,
                         padding: '0.5rem 1.25rem',
@@ -424,7 +424,7 @@ export default function BrowserTasksPage() {
                                         border: 'none',
                                         borderRadius: 8,
                                         background: submitting ? 'var(--ink-muted)' : 'var(--brand)',
-                                        color: '#fff',
+                                        color: 'var(--card)',
                                         cursor: submitting ? 'not-allowed' : 'pointer',
                                         fontSize: '0.875rem',
                                         fontWeight: 600,

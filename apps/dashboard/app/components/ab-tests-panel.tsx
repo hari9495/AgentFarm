@@ -37,9 +37,9 @@ type AbTestResults = {
 };
 
 const STATUS_BADGE: Record<string, { bg: string; color: string }> = {
-    active: { bg: '#dcfce7', color: 'var(--ok)' },
-    paused: { bg: '#fef9c3', color: 'var(--warn)' },
-    concluded: { bg: '#f1f5f9', color: '#475569' },
+    active: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    paused: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
+    concluded: { bg: 'var(--bg)', color: 'var(--ink-muted)' },
 };
 
 export default function AbTestsPanel({ tenantId: _tenantId }: AbTestsPanelProps) {

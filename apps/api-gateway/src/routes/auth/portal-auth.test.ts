@@ -16,6 +16,8 @@ type PortalAccountRecord = {
     displayName: string | null;
     role: string;
     isActive: boolean;
+    isEmailVerified: boolean;
+    emailVerificationToken: string | null;
 };
 
 type PortalSessionRecord = {
@@ -55,6 +57,8 @@ const createMockRepo = () => {
                 displayName: displayName ?? null,
                 role: 'VIEWER',
                 isActive: true,
+                isEmailVerified: true, // tests default to verified; signup-specific tests override
+                emailVerificationToken: null,
             };
             accounts.set(`${tenantId}:${email}`, account);
             return account;
@@ -91,6 +95,17 @@ const createMockRepo = () => {
         async createResetToken() { /* no-op in tests */ },
         async findResetToken() { return null; },
         async markResetTokenUsed() { /* no-op in tests */ },
+        async setVerificationToken(accountId, token) {
+            const entry = [...accounts.entries()].find(([, a]) => a.id === accountId);
+            if (entry) accounts.set(entry[0], { ...entry[1], emailVerificationToken: token });
+        },
+        async findAccountByVerificationToken(token) {
+            return [...accounts.values()].find((a) => a.emailVerificationToken === token) ?? null;
+        },
+        async markEmailVerified(accountId) {
+            const entry = [...accounts.entries()].find(([, a]) => a.id === accountId);
+            if (entry) accounts.set(entry[0], { ...entry[1], isEmailVerified: true, emailVerificationToken: null });
+        },
         async updateAccountPassword(accountId, passwordHash) {
             const entry = [...accounts.entries()].find(([, a]) => a.id === accountId);
             if (entry) {
@@ -361,6 +376,8 @@ test('POST /portal/auth/logout — clears session and cookie → 200', async () 
         displayName: null,
         role: 'VIEWER',
         isActive: true,
+        isEmailVerified: true,
+        emailVerificationToken: null,
     };
     accounts.set('t-1:out@corp.io', account);
     sessions.set('logout-token', {
@@ -416,6 +433,8 @@ test('GET /portal/auth/me — valid session → 200 with account info', async ()
         displayName: 'Portal User',
         role: 'ADMIN',
         isActive: true,
+        isEmailVerified: true,
+        emailVerificationToken: null,
     };
     accounts.set('t-1:me@corp.io', account);
     sessions.set('valid-me-token', {
@@ -453,6 +472,8 @@ test('GET /portal/auth/me — expired session → 401', async () => {
         displayName: null,
         role: 'VIEWER',
         isActive: true,
+        isEmailVerified: true,
+        emailVerificationToken: null,
     };
     accounts.set('t-1:me@corp.io', account);
     sessions.set('expired-me-token', {
@@ -502,6 +523,8 @@ test('POST /portal/auth/change-password — correct current password → 200', a
         displayName: null,
         role: 'VIEWER',
         isActive: true,
+        isEmailVerified: true,
+        emailVerificationToken: null,
     };
     accounts.set('t-1:pw@corp.io', account);
     sessions.set('cp-token', {
@@ -541,6 +564,8 @@ test('POST /portal/auth/change-password — wrong current password → 401', asy
         displayName: null,
         role: 'VIEWER',
         isActive: true,
+        isEmailVerified: true,
+        emailVerificationToken: null,
     };
     accounts.set('t-1:pw@corp.io', account);
     sessions.set('cp-token2', {
@@ -640,6 +665,8 @@ test('POST /portal/auth/change-password — new password too short → 400', asy
         displayName: null,
         role: 'VIEWER',
         isActive: true,
+        isEmailVerified: true,
+        emailVerificationToken: null,
     };
     accounts.set('t-1:short@corp.io', account);
     sessions.set('short-token', { id: 'sess-s', accountId: 'acc-short', tenantId: 't-1', token: 'short-token', expiresAt: new Date(Date.now() + 3_600_000), account });
@@ -667,6 +694,8 @@ test('POST /portal/auth/change-password — expired session → 401', async () =
         displayName: null,
         role: 'VIEWER',
         isActive: true,
+        isEmailVerified: true,
+        emailVerificationToken: null,
     };
     accounts.set('t-1:exp@corp.io', account);
     sessions.set('exp-cp-token', { id: 'sess-exp', accountId: 'acc-exp', tenantId: 't-1', token: 'exp-cp-token', expiresAt: new Date(Date.now() - 1_000), account });
@@ -693,6 +722,8 @@ test('GET /portal/auth/me — lastSeenAt is updated on valid session', async () 
         displayName: null,
         role: 'VIEWER',
         isActive: true,
+        isEmailVerified: true,
+        emailVerificationToken: null,
     };
     accounts.set('t-1:seen@corp.io', account);
     sessions.set('seen-token', { id: 'sess-seen', accountId: 'acc-seen', tenantId: 't-1', token: 'seen-token', expiresAt: new Date(Date.now() + 3_600_000), account });

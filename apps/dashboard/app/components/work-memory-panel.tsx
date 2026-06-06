@@ -32,9 +32,9 @@ type DailyPlan = {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const PRIORITY_BADGE: Record<string, { bg: string; color: string }> = {
-    high: { bg: '#fee2e2', color: 'var(--danger)' },
-    medium: { bg: '#fef9c3', color: 'var(--warn)' },
-    low: { bg: '#dcfce7', color: 'var(--ok)' },
+    high: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    medium: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
+    low: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
 };
 
 function inlineBadge(label: string, map: Record<string, { bg: string; color: string }>) {
@@ -384,7 +384,7 @@ export default function WorkMemoryPanel({ tenantId, workspaceId }: WorkMemoryPan
                                         <td style={{ padding: '0.5rem 0.6rem', color: 'var(--ink)' }}>
                                             {(item.confidence * 100).toFixed(0)}%
                                         </td>
-                                        <td style={{ padding: '0.5rem 0.6rem', color: item.requiresApproval ? '#991b1b' : 'var(--ink-soft)' }}>
+                                        <td style={{ padding: '0.5rem 0.6rem', color: item.requiresApproval ? 'var(--danger)' : 'var(--ink-soft)' }}>
                                             {item.requiresApproval ? '✓ Required' : '—'}
                                         </td>
                                         <td style={{ padding: '0.5rem 0.6rem', color: 'var(--ink-muted)', fontSize: '0.8rem' }}>

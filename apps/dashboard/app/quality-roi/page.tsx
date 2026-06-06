@@ -41,10 +41,10 @@ type RoiRow = {
 };
 
 function roiColor(score: number | null): string {
-    if (score === null) return '#9ca3af';
-    if (score >= 10) return '#16a34a';
-    if (score >= 3) return '#d97706';
-    return '#dc2626';
+    if (score === null) return 'var(--ink-muted)';
+    if (score >= 10) return 'var(--ok)';
+    if (score >= 3) return 'var(--warn)';
+    return 'var(--danger)';
 }
 
 function roiLabel(score: number | null): string {
@@ -173,7 +173,7 @@ export default function QualityRoiPage() {
                         ].map(({ label, value, sub, highlight }) => (
                             <div key={label} style={{
                                 flex: '1 1 0', minWidth: 140, padding: '0.9rem 1rem',
-                                border: `1px solid ${highlight ?? '#e5e7eb'}`,
+                                border: `1px solid ${highlight ?? 'var(--line)'}`,
                                 borderRadius: 8, background: 'var(--card)',
                             }}>
                                 <p style={{ margin: '0 0 0.2rem', fontSize: '0.72rem', color: 'var(--ink-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
@@ -185,7 +185,7 @@ export default function QualityRoiPage() {
                 )}
 
                 {/* ROI explanation */}
-                <div style={{ padding: '0.75rem 1rem', background: 'var(--info-bg)', border: '1px solid var(--info-border)', borderRadius: 8, fontSize: '0.82rem', color: '#1e40af' }}>
+                <div style={{ padding: '0.75rem 1rem', background: 'var(--info-bg)', border: '1px solid var(--info-border)', borderRadius: 8, fontSize: '0.82rem', color: 'var(--info)' }}>
                     <strong>ROI Score</strong> = successful tasks ÷ total cost (USD). Higher is better.
                     A score ≥ 10 is <strong>Excellent</strong>, 3–10 is <strong>Good</strong>, below 3 needs attention.
                     <strong> Cost per success</strong> shows the inverse — dollars spent per delivered outcome.
@@ -224,7 +224,7 @@ export default function QualityRoiPage() {
                                         <td style={{ padding: '0.5rem 0.6rem', color: 'var(--ink)', fontFamily: 'monospace' }}>{r.week}</td>
                                         <td style={{ padding: '0.5rem 0.6rem', textAlign: 'right' }}>{r.tasks.toLocaleString()}</td>
                                         <td style={{ padding: '0.5rem 0.6rem', textAlign: 'right', color: 'var(--ok)' }}>{r.successes.toLocaleString()}</td>
-                                        <td style={{ padding: '0.5rem 0.6rem', textAlign: 'right', color: r.successRate >= 80 ? '#16a34a' : r.successRate >= 50 ? '#d97706' : '#dc2626', fontWeight: 600 }}>
+                                        <td style={{ padding: '0.5rem 0.6rem', textAlign: 'right', color: r.successRate >= 80 ? 'var(--ok)' : r.successRate >= 50 ? 'var(--warn)' : 'var(--danger)', fontWeight: 600 }}>
                                             {r.successRate.toFixed(1)}%
                                         </td>
                                         <td style={{ padding: '0.5rem 0.6rem', textAlign: 'right', color: 'var(--ink-muted)' }}>${r.cost.toFixed(3)}</td>

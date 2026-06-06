@@ -299,7 +299,7 @@ export default function AgentPersonaPanel({ botId }: AgentPersonaPanelProps) {
                         padding: '0.55rem 1.25rem',
                         borderRadius: '0.375rem',
                         background: 'var(--accent, #2563eb)',
-                        color: '#fff',
+                        color: 'var(--card)',
                         fontWeight: 600,
                         fontSize: '0.9rem',
                         border: 'none',

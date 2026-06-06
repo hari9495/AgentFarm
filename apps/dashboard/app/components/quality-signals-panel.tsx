@@ -48,8 +48,8 @@ const thStyle: React.CSSProperties = {
 
 function scorePill(score: number | undefined): React.ReactNode {
     if (score === undefined) return <span style={{ color: 'var(--ink-muted)' }}>—</span>;
-    const bg = score >= 0.8 ? '#14532d' : score >= 0.5 ? '#78350f' : '#450a0a';
-    const color = score >= 0.8 ? '#86efac' : score >= 0.5 ? '#fde68a' : '#fca5a5';
+    const bg = score >= 0.8 ? 'var(--ok)' : score >= 0.5 ? '#78350f' : 'var(--danger)';
+    const color = score >= 0.8 ? 'var(--ok)' : score >= 0.5 ? 'var(--warn)' : 'var(--danger)';
     return (
         <span style={{ background: bg, color, padding: '0.1rem 0.45rem', borderRadius: '4px', fontSize: '0.78rem', fontWeight: 600 }}>
             {score.toFixed(2)}
@@ -60,7 +60,7 @@ function scorePill(score: number | undefined): React.ReactNode {
 function ratingPill(rating: number | undefined): React.ReactNode {
     if (rating === undefined) return <span style={{ color: 'var(--ink-muted)' }}>—</span>;
     const stars = '★'.repeat(Math.max(0, Math.min(5, rating))) + '☆'.repeat(Math.max(0, 5 - Math.min(5, rating)));
-    const color = rating >= 4 ? '#86efac' : rating >= 3 ? '#fde68a' : '#fca5a5';
+    const color = rating >= 4 ? 'var(--ok)' : rating >= 3 ? 'var(--warn)' : 'var(--danger)';
     return <span style={{ color, fontSize: '0.82rem' }}>{stars}</span>;
 }
 
@@ -137,7 +137,7 @@ export default function QualitySignalsPanel() {
         fontSize: '0.85rem',
         fontWeight: activeTab === t ? 600 : 400,
         background: activeTab === t ? 'var(--accent, #2563eb)' : 'transparent',
-        color: activeTab === t ? '#fff' : 'var(--ink-muted)',
+        color: activeTab === t ? 'var(--card)' : 'var(--ink-muted)',
         border: 'none',
     });
 
@@ -168,7 +168,7 @@ export default function QualitySignalsPanel() {
                     </div>
 
                     {sigError && (
-                        <p style={{ padding: '0.6rem 0.8rem', background: '#450a0a', border: '1px solid #991b1b', borderRadius: '6px', color: '#fca5a5', fontSize: '0.84rem', marginBottom: '0.75rem' }}>
+                        <p style={{ padding: '0.6rem 0.8rem', background: 'var(--danger-bg)', border: '1px solid #991b1b', borderRadius: '6px', color: 'var(--danger)', fontSize: '0.84rem', marginBottom: '0.75rem' }}>
                             {sigError}
                         </p>
                     )}
@@ -231,7 +231,7 @@ export default function QualitySignalsPanel() {
                     </div>
 
                     {fbError && (
-                        <p style={{ padding: '0.6rem 0.8rem', background: '#450a0a', border: '1px solid #991b1b', borderRadius: '6px', color: '#fca5a5', fontSize: '0.84rem', marginBottom: '0.75rem' }}>
+                        <p style={{ padding: '0.6rem 0.8rem', background: 'var(--danger-bg)', border: '1px solid #991b1b', borderRadius: '6px', color: 'var(--danger)', fontSize: '0.84rem', marginBottom: '0.75rem' }}>
                             {fbError}
                         </p>
                     )}

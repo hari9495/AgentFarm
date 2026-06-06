@@ -217,7 +217,7 @@ function LoginForm() {
                         padding: '0.45rem 0', border: 'none', borderRadius: '9px', cursor: 'pointer',
                         fontSize: '0.77rem', fontWeight: mode === id ? 600 : 400,
                         background: mode === id ? '#ffffff' : 'transparent',
-                        color: mode === id ? '#1d1d1f' : '#8e8e93',
+                        color: mode === id ? 'var(--ink)' : 'var(--ink-muted)',
                         boxShadow: mode === id ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
                         transition: 'all 150ms ease',
                     }}
@@ -451,7 +451,7 @@ const brandBadge = (
         fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.03em',
         color: 'var(--accent)', textTransform: 'uppercase',
     }}>
-        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#0066cc', display: 'inline-block' }} aria-hidden />
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', display: 'inline-block' }} aria-hidden />
         AgentFarms Internal
     </span>
 );
@@ -496,8 +496,8 @@ function submitBtnStyle(disabled: boolean): React.CSSProperties {
     return {
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
         width: '100%', padding: '0.7rem 1.5rem',
-        background: disabled ? '#5599d8' : '#0066cc',
-        color: '#ffffff', border: 'none', borderRadius: '9999px',
+        background: disabled ? '#5599d8' : 'var(--accent)',
+        color: 'var(--card)', border: 'none', borderRadius: '9999px',
         fontSize: '1rem', fontWeight: 500, letterSpacing: '-0.01em',
         cursor: disabled ? 'not-allowed' : 'pointer',
         transition: 'background-color 180ms ease',
@@ -519,12 +519,12 @@ const footerTextStyle: React.CSSProperties = {
 const linkStyle: React.CSSProperties = { color: 'var(--accent)', textDecoration: 'none' };
 
 function onFocus(e: React.FocusEvent<HTMLInputElement>) {
-    e.currentTarget.style.borderColor = '#0066cc';
+    e.currentTarget.style.borderColor = 'var(--accent)';
     e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,102,204,0.12)';
 }
 
 function onBlur(e: React.FocusEvent<HTMLInputElement>) {
-    e.currentTarget.style.borderColor = '#d2d2d7';
+    e.currentTarget.style.borderColor = 'var(--line)';
     e.currentTarget.style.boxShadow = 'none';
 }
 

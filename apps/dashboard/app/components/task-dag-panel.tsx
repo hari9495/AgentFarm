@@ -34,14 +34,14 @@ const PADDING = 32;
 
 const STATUS_FILL: Record<TaskDepStatus, string> = {
     pending: 'var(--color-background-secondary, #f1f5f9)',
-    running: '#3b82f6',
-    done: '#22c55e',
-    failed: '#ef4444',
-    blocked: '#f59e0b',
+    running: 'var(--info)',
+    done: 'var(--ok)',
+    failed: 'var(--danger)',
+    blocked: 'var(--warn)',
 };
 
 const STATUS_TEXT: Record<TaskDepStatus, string> = {
-    pending: '#475569',
+    pending: 'var(--ink-muted)',
     running: '#ffffff',
     done: '#ffffff',
     failed: '#ffffff',
@@ -50,10 +50,10 @@ const STATUS_TEXT: Record<TaskDepStatus, string> = {
 
 const STATUS_STROKE: Record<TaskDepStatus, string> = {
     pending: '#cbd5e1',
-    running: '#2563eb',
-    done: '#16a34a',
-    failed: '#dc2626',
-    blocked: '#d97706',
+    running: 'var(--info)',
+    done: 'var(--ok)',
+    failed: 'var(--danger)',
+    blocked: 'var(--warn)',
 };
 
 // ─── Layout helper ────────────────────────────────────────────────────────────
@@ -154,7 +154,7 @@ export default function TaskDagPanel({ taskIds }: TaskDagPanelProps) {
                                 fontSize: '0.75rem',
                                 fontWeight: 400,
                                 background: 'var(--line)',
-                                color: '#475569',
+                                color: 'var(--ink-muted)',
                                 borderRadius: 9999,
                                 padding: '1px 8px',
                             }}
@@ -171,9 +171,9 @@ export default function TaskDagPanel({ taskIds }: TaskDagPanelProps) {
                         padding: '4px 10px',
                         borderRadius: 6,
                         border: '1px solid #cbd5e1',
-                        background: loading ? '#f1f5f9' : '#fff',
+                        background: loading ? '#f1f5f9' : 'var(--card)',
                         cursor: loading ? 'default' : 'pointer',
-                        color: '#475569',
+                        color: 'var(--ink-muted)',
                     }}
                 >
                     {loading ? 'Loading…' : 'Refresh'}
@@ -310,7 +310,7 @@ export default function TaskDagPanel({ taskIds }: TaskDagPanelProps) {
                         flexWrap: 'wrap',
                         marginTop: '0.75rem',
                         fontSize: '0.75rem',
-                        color: '#64748b',
+                        color: 'var(--ink-muted)',
                     }}
                 >
                     {(Object.keys(STATUS_FILL) as TaskDepStatus[]).map((s) => (

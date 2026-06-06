@@ -12,12 +12,12 @@ type Branding = {
 };
 
 const PRESET_COLORS = [
-    { label: 'Sky blue',    hex: '#0052cc' },
-    { label: 'Indigo',      hex: '#4f46e5' },
-    { label: 'Emerald',     hex: '#059669' },
+    { label: 'Sky blue',    hex: 'var(--accent)' },
+    { label: 'Indigo',      hex: 'var(--accent)' },
+    { label: 'Emerald',     hex: 'var(--ok)' },
     { label: 'Rose',        hex: '#e11d48' },
-    { label: 'Amber',       hex: '#d97706' },
-    { label: 'Slate',       hex: '#475569' },
+    { label: 'Amber',       hex: 'var(--warn)' },
+    { label: 'Slate',       hex: 'var(--ink-muted)' },
 ];
 
 export function BrandingSettingsCard() {
@@ -29,7 +29,7 @@ export function BrandingSettingsCard() {
 
     const [companyName, setCompanyName] = useState('');
     const [logoUrl, setLogoUrl] = useState('');
-    const [primaryColor, setPrimaryColor] = useState('#0052cc');
+    const [primaryColor, setPrimaryColor] = useState('var(--accent)');
     const [portalTitle, setPortalTitle] = useState('');
     const [faviconUrl, setFaviconUrl] = useState('');
 
@@ -43,7 +43,7 @@ export function BrandingSettingsCard() {
             if (b) {
                 setCompanyName(b.company_name ?? '');
                 setLogoUrl(b.logo_url ?? '');
-                setPrimaryColor(b.primary_color ?? '#0052cc');
+                setPrimaryColor(b.primary_color ?? 'var(--accent)');
                 setPortalTitle(b.portal_title ?? '');
                 setFaviconUrl(b.favicon_url ?? '');
             }
@@ -87,7 +87,7 @@ export function BrandingSettingsCard() {
         try {
             await fetch('/api/tenant/branding', { method: 'DELETE' });
             setBranding(null);
-            setCompanyName(''); setLogoUrl(''); setPrimaryColor('#0052cc');
+            setCompanyName(''); setLogoUrl(''); setPrimaryColor('var(--accent)');
             setPortalTitle(''); setFaviconUrl('');
             setMessage({ text: 'Branding reset to defaults.', ok: true });
         } finally {
@@ -121,7 +121,7 @@ export function BrandingSettingsCard() {
             </div>
 
             {message && (
-                <p style={{ margin: '0 0 0.65rem', fontSize: '0.82rem', color: message.ok ? '#1a7a4a' : '#c4161c' }}>
+                <p style={{ margin: '0 0 0.65rem', fontSize: '0.82rem', color: message.ok ? 'var(--ok)' : 'var(--danger)' }}>
                     {message.ok ? '✓ ' : '⚠ '}{message.text}
                 </p>
             )}
@@ -191,7 +191,7 @@ export function BrandingSettingsCard() {
                 {/* Preview strip */}
                 <div style={{ padding: '0.65rem 0.85rem', background: primaryColor, borderRadius: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     {logoUrl && <img src={logoUrl} alt="logo preview" style={{ height: 24, objectFit: 'contain', borderRadius: 4 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
-                    <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600 }}>
+                    <span style={{ color: 'var(--card)', fontSize: '0.85rem', fontWeight: 600 }}>
                         {portalTitle || companyName || 'Your Portal'}
                     </span>
                 </div>

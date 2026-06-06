@@ -17,9 +17,9 @@ type ApiKeyRecord = {
 };
 
 const ROLE_BADGE: Record<string, { bg: string; color: string }> = {
-    viewer:   { bg: '#f1f5f9', color: '#475569' },
-    operator: { bg: '#dbeafe', color: 'var(--info)' },
-    admin:    { bg: '#fef3c7', color: 'var(--warn)' },
+    viewer:   { bg: 'var(--bg)', color: 'var(--ink-muted)' },
+    operator: { bg: 'var(--info-bg)', color: 'var(--info)' },
+    admin:    { bg: 'var(--warn-bg)', color: 'var(--warn)' },
 };
 
 function timeAgo(iso: string): string {
@@ -193,7 +193,7 @@ export default function ApiKeysPanel({ tenantId: _tenantId }: { tenantId: string
                     </select>
                 </div>
                 <button type="submit" disabled={creating}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.46rem 1rem', background: 'var(--brand, #0066cc)', color: '#fff', border: 'none', borderRadius: 6, fontSize: '0.875rem', fontWeight: 600, cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? 0.7 : 1 }}>
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.46rem 1rem', background: 'var(--brand, #0066cc)', color: 'var(--card)', border: 'none', borderRadius: 6, fontSize: '0.875rem', fontWeight: 600, cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? 0.7 : 1 }}>
                     <Plus size={14} /> {creating ? 'Creating…' : 'Create'}
                 </button>
             </form>
@@ -207,7 +207,7 @@ export default function ApiKeysPanel({ tenantId: _tenantId }: { tenantId: string
                         <span style={{ fontWeight: 700, fontSize: '0.83rem', color: '#78350f' }}>Copy now — this key will not be shown again.</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--card)', border: '1px solid #fde047', borderRadius: 6, padding: '0.4rem 0.7rem', marginBottom: '0.5rem' }}>
-                        <code style={{ flex: 1, wordBreak: 'break-all', fontSize: '0.8rem', color: '#1c1917', fontFamily: 'monospace' }}>{newRawKey}</code>
+                        <code style={{ flex: 1, wordBreak: 'break-all', fontSize: '0.8rem', color: 'var(--ink-muted)', fontFamily: 'monospace' }}>{newRawKey}</code>
                         <CopyButton text={newRawKey} />
                     </div>
                     <button onClick={() => setNewRawKey(null)}
@@ -287,7 +287,7 @@ export default function ApiKeysPanel({ tenantId: _tenantId }: { tenantId: string
 
                                     {/* Status */}
                                     <td style={TD}>
-                                        <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: '0.72rem', fontWeight: 700, background: k.enabled ? '#dcfce7' : '#fee2e2', color: k.enabled ? '#166534' : '#991b1b' }}>
+                                        <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: '0.72rem', fontWeight: 700, background: k.enabled ? '#dcfce7' : '#fee2e2', color: k.enabled ? 'var(--ok)' : 'var(--danger)' }}>
                                             {k.enabled ? 'Active' : 'Disabled'}
                                         </span>
                                     </td>
@@ -317,7 +317,7 @@ export default function ApiKeysPanel({ tenantId: _tenantId }: { tenantId: string
                                             {/* Toggle enable/disable */}
                                             <button onClick={() => void handleToggle(k)} disabled={!!row}
                                                 title={k.enabled ? 'Disable' : 'Enable'}
-                                                style={{ padding: '3px 8px', fontSize: '0.72rem', fontWeight: 600, borderRadius: 4, cursor: row ? 'not-allowed' : 'pointer', border: `1px solid ${k.enabled ? '#fecaca' : '#bbf7d0'}`, background: 'var(--card)', color: k.enabled ? '#dc2626' : '#166534' }}>
+                                                style={{ padding: '3px 8px', fontSize: '0.72rem', fontWeight: 600, borderRadius: 4, cursor: row ? 'not-allowed' : 'pointer', border: `1px solid ${k.enabled ? '#fecaca' : '#bbf7d0'}`, background: 'var(--card)', color: k.enabled ? 'var(--danger)' : 'var(--ok)' }}>
                                                 {row === 'toggle' ? '…' : k.enabled ? 'Disable' : 'Enable'}
                                             </button>
 

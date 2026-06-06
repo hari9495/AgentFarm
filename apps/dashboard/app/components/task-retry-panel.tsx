@@ -29,12 +29,12 @@ type ReproPackResult = {
 };
 
 const OUTCOME_STYLES: Record<string, { bg: string; color: string }> = {
-    success: { bg: '#dcfce7', color: 'var(--ok)' },
-    failed: { bg: '#fee2e2', color: 'var(--danger)' },
-    approval_queued: { bg: '#fef3c7', color: 'var(--warn)' },
+    success: { bg: 'var(--ok-bg)', color: 'var(--ok)' },
+    failed: { bg: 'var(--danger-bg)', color: 'var(--danger)' },
+    approval_queued: { bg: 'var(--warn-bg)', color: 'var(--warn)' },
 };
 
-const DEFAULT_OUTCOME_STYLE = { bg: '#f3f4f6', color: 'var(--ink)' };
+const DEFAULT_OUTCOME_STYLE = { bg: 'var(--bg)', color: 'var(--ink)' };
 
 function OutcomeBadge({ outcome }: { outcome: string }) {
     const s = OUTCOME_STYLES[outcome] ?? DEFAULT_OUTCOME_STYLE;
@@ -177,7 +177,7 @@ export default function TaskRetryPanel({ botId, workspaceId }: Props) {
                     padding: '3px 10px',
                     borderRadius: 6,
                     border: '1px solid var(--danger-border)',
-                    background: '#fff1f2',
+                    background: 'var(--danger-bg)',
                     color: '#be123c',
                     fontSize: '0.78rem',
                     fontWeight: 600,
@@ -222,8 +222,8 @@ export default function TaskRetryPanel({ botId, workspaceId }: Props) {
                             padding: '4px 12px',
                             borderRadius: 6,
                             border: '1px solid #c7d2fe',
-                            background: reproPackLoading ? '#f3f4f6' : '#eef2ff',
-                            color: reproPackLoading ? '#9ca3af' : '#4338ca',
+                            background: reproPackLoading ? 'var(--bg)' : '#eef2ff',
+                            color: reproPackLoading ? 'var(--ink-muted)' : '#4338ca',
                             fontSize: '0.78rem',
                             fontWeight: 600,
                             cursor: reproPackLoading ? 'not-allowed' : 'pointer',

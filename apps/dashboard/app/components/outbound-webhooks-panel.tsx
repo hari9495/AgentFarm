@@ -341,7 +341,7 @@ export default function OutboundWebhooksPanel({ tenantId: _tenantId }: OutboundW
                                                 <span style={{
                                                     padding: '2px 8px', borderRadius: 9999, fontSize: '0.72rem', fontWeight: 700,
                                                     background: wh.enabled ? '#dcfce7' : '#f1f5f9',
-                                                    color: wh.enabled ? '#166534' : '#475569',
+                                                    color: wh.enabled ? 'var(--ok)' : 'var(--ink-muted)',
                                                 }}>
                                                     {wh.enabled ? 'Active' : 'Disabled'}
                                                 </span>
@@ -356,14 +356,14 @@ export default function OutboundWebhooksPanel({ tenantId: _tenantId }: OutboundW
                                                             padding: '0.3rem 0.8rem', borderRadius: '0.4rem',
                                                             border: '1px solid var(--accent, #0066cc)',
                                                             background: testing === wh.id ? 'var(--line)' : 'var(--accent, #0066cc)',
-                                                            color: testing === wh.id ? 'var(--ink-muted)' : '#fff',
+                                                            color: testing === wh.id ? 'var(--ink-muted)' : 'var(--card)',
                                                             cursor: testing === wh.id ? 'not-allowed' : 'pointer',
                                                         }}
                                                     >
                                                         {testing === wh.id ? 'Sending…' : '▶ Test'}
                                                     </button>
                                                     {result && (
-                                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: result.ok ? '#166534' : '#dc2626' }}>
+                                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: result.ok ? 'var(--ok)' : 'var(--danger)' }}>
                                                             {result.msg}
                                                         </span>
                                                     )}
@@ -574,7 +574,7 @@ export default function OutboundWebhooksPanel({ tenantId: _tenantId }: OutboundW
                                                         style={{
                                                             fontWeight: 600,
                                                             fontSize: '0.85rem',
-                                                            color: d.success ? '#166534' : '#991b1b',
+                                                            color: d.success ? 'var(--ok)' : 'var(--danger)',
                                                         }}
                                                     >
                                                         {d.success ? '✓' : '✗'}
@@ -587,7 +587,7 @@ export default function OutboundWebhooksPanel({ tenantId: _tenantId }: OutboundW
                                                             style={{
                                                                 fontSize: '0.75rem',
                                                                 fontWeight: 600,
-                                                                color: replayResult.success ? '#166534' : '#991b1b',
+                                                                color: replayResult.success ? 'var(--ok)' : 'var(--danger)',
                                                             }}
                                                         >
                                                             {replayResult.success

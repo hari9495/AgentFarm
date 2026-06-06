@@ -44,7 +44,7 @@ export default function AgentDecommissionButton({ botId }: Props) {
                     background: 'transparent',
                     border: '1px solid #7f1d1d',
                     borderRadius: '8px',
-                    color: '#fca5a5',
+                    color: 'var(--danger)',
                     fontSize: '12px',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -68,11 +68,11 @@ export default function AgentDecommissionButton({ botId }: Props) {
             border: '1px solid #7f1d1d',
             borderRadius: '8px',
         }}>
-            <p style={{ margin: 0, fontSize: '12px', color: '#fca5a5', fontWeight: 600 }}>
+            <p style={{ margin: 0, fontSize: '12px', color: 'var(--danger)', fontWeight: 600 }}>
                 This will stop and permanently remove this agent. Are you sure?
             </p>
             {error && (
-                <p style={{ margin: 0, fontSize: '11px', color: '#f87171' }}>{error}</p>
+                <p style={{ margin: 0, fontSize: '11px', color: 'var(--danger)' }}>{error}</p>
             )}
             <div style={{ display: 'flex', gap: '8px' }}>
                 <button
@@ -80,7 +80,7 @@ export default function AgentDecommissionButton({ botId }: Props) {
                     disabled={loading}
                     style={{
                         padding: '6px 14px',
-                        background: '#7f1d1d',
+                        background: 'var(--danger)',
                         border: '1px solid #991b1b',
                         borderRadius: '6px',
                         color: '#fef2f2',

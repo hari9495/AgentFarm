@@ -299,8 +299,8 @@ export default function TenantSettingsPanel() {
                                     fontWeight: 600,
                                     border: 'none',
                                     borderRadius: '6px',
-                                    background: '#1d4ed8',
-                                    color: '#fff',
+                                    background: 'var(--info)',
+                                    color: 'var(--card)',
                                     cursor: langSaving ? 'not-allowed' : 'pointer',
                                     opacity: langSaving ? 0.7 : 1,
                                 }}
@@ -532,8 +532,8 @@ export default function TenantSettingsPanel() {
                                 fontWeight: 600,
                                 border: 'none',
                                 borderRadius: '6px',
-                                background: '#1d4ed8',
-                                color: '#fff',
+                                background: 'var(--info)',
+                                color: 'var(--card)',
                                 cursor: adding ? 'not-allowed' : 'pointer',
                                 opacity: adding ? 0.7 : 1,
                             }}
