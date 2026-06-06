@@ -18,6 +18,26 @@ import { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 
 // ---------------------------------------------------------------------------
+// CSAT model helper — dynamic accessor so it degrades gracefully before migration
+// ---------------------------------------------------------------------------
+
+type CsatRow = {
+    id: string; issueId: string; token: string;
+    rating: number | null; comment: string | null; respondedAt: Date | null;
+    issue?: { title: string };
+};
+type CsatModel = {
+    create: (a: { data: unknown }) => Promise<unknown>;
+    findUnique: (a: { where: Record<string, unknown>; include?: Record<string, unknown> }) => Promise<CsatRow | null>;
+    update: (a: { where: Record<string, unknown>; data: unknown }) => Promise<unknown>;
+    findMany: (a: { where: Record<string, unknown> }) => Promise<Array<{ issueId: string; token: string; rating: number | null }>>;
+};
+
+function getCsatModel(prisma: PrismaClient): CsatModel | null {
+    return ((prisma as unknown as Record<string, unknown>)['supportCsatResponse'] as CsatModel | undefined) ?? null;
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -396,6 +416,15 @@ export async function registerSupportIssueRoutes(
             issueStore.set(resolved.id, resolved);
             pushIssueUpdate(resolved);
 
+            // Generate CSAT token so the portal history page can show "Rate Support"
+            if (opts.prisma) {
+                const csatModel = getCsatModel(opts.prisma);
+                if (csatModel) {
+                    void csatModel.create({ data: { id: randomUUID(), issueId: resolved.id, token: randomUUID() } })
+                        .catch(() => {/* best-effort — table may not exist yet */});
+                }
+            }
+
             // Fire-and-forget lesson ingestion — dispatch to agent-runtime so the
             // support agent learns from every manually resolved issue.
             if (notes && notes.length > 20) {
@@ -504,8 +533,80 @@ export async function registerSupportIssueRoutes(
         if (status) issues = issues.filter((i) => i.status === status);
         issues.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-        return reply.send({ issues });
+        // Attach CSAT state per issue (token for linking, rated flag for UI)
+        const csatModel = getCsatModel(opts.prisma);
+        const csatMap = new Map<string, { token: string; rating: number | null }>();
+        if (csatModel && issues.length > 0) {
+            try {
+                const rows = await csatModel.findMany({ where: { issueId: { in: issues.map((i) => i.id) } } });
+                for (const row of rows) csatMap.set(row.issueId, { token: row.token, rating: row.rating });
+            } catch { /* graceful — table may not exist yet */ }
+        }
+
+        return reply.send({
+            issues: issues.map((i) => ({
+                ...i,
+                csatToken: csatMap.get(i.id)?.token ?? null,
+                csatRated: (csatMap.get(i.id)?.rating ?? null) !== null,
+            })),
+        });
     });
+
+    // ── GET /v1/portal/csat/:token — get CSAT request info (public) ──────────
+    app.get<{ Params: { token: string } }>('/v1/portal/csat/:token', async (req, reply) => {
+        if (!opts.prisma) return reply.code(503).send({ error: 'not_configured' });
+        const csatModel = getCsatModel(opts.prisma);
+        if (!csatModel) return reply.code(503).send({ error: 'not_configured' });
+
+        try {
+            const csat = await csatModel.findUnique({
+                where: { token: req.params.token },
+                include: { issue: true },
+            });
+            if (!csat) return reply.code(404).send({ error: 'not_found' });
+
+            return reply.send({
+                issueId: csat.issueId,
+                issueTitle: csat.issue?.title ?? 'Support ticket',
+                responded: csat.respondedAt != null,
+                rating: csat.rating,
+            });
+        } catch { return reply.code(503).send({ error: 'not_configured' }); }
+    });
+
+    // ── POST /v1/portal/csat/respond — submit CSAT rating (public) ───────────
+    app.post<{ Body: { token?: unknown; rating?: unknown; comment?: unknown } }>(
+        '/v1/portal/csat/respond',
+        async (req, reply) => {
+            if (!opts.prisma) return reply.code(503).send({ error: 'not_configured' });
+            const csatModel = getCsatModel(opts.prisma);
+            if (!csatModel) return reply.code(503).send({ error: 'not_configured' });
+
+            const { token, rating, comment } = req.body ?? {};
+            if (!token || typeof token !== 'string') {
+                return reply.code(400).send({ error: 'token_required' });
+            }
+            if (typeof rating !== 'number' || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+                return reply.code(400).send({ error: 'invalid_rating', message: 'rating must be an integer 1–5' });
+            }
+
+            try {
+                const csat = await csatModel.findUnique({ where: { token } });
+                if (!csat) return reply.code(404).send({ error: 'not_found' });
+                if (csat.respondedAt) return reply.code(409).send({ error: 'already_responded' });
+
+                await csatModel.update({
+                    where: { token },
+                    data: {
+                        rating,
+                        comment: typeof comment === 'string' && comment.trim() ? comment.trim() : null,
+                        respondedAt: new Date(),
+                    },
+                });
+                return reply.send({ ok: true });
+            } catch { return reply.code(503).send({ error: 'not_configured' }); }
+        },
+    );
 }
 
 // ---------------------------------------------------------------------------

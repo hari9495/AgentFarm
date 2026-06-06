@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -19,6 +19,8 @@ type Issue = {
     fixApplied: boolean;
     escalatedTo: string | null;
     prUrl: string | null;
+    csatToken: string | null;
+    csatRated: boolean;
     createdAt: string;
     resolvedAt: string | null;
     messages?: ChatMessage[];
@@ -57,7 +59,9 @@ export default function IssueHistoryPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [filter, setFilter] = useState<IssueStatus | 'all'>('all');
+    const [search, setSearch] = useState('');
     const [expanded, setExpanded] = useState<string | null>(null);
+    const refreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     useEffect(() => {
         fetch('/api/portal/auth/me', { credentials: 'same-origin' })
@@ -65,21 +69,40 @@ export default function IssueHistoryPage() {
             .catch(() => router.replace('/portal/login'));
     }, [router]);
 
-    useEffect(() => {
-        setLoading(true);
+    const fetchIssues = useCallback(async (silent = false) => {
+        if (!silent) setLoading(true);
         const qs = filter !== 'all' ? `?status=${filter}` : '';
-        fetch(`/api/portal/support/issues${qs}`, { credentials: 'same-origin' })
-            .then(async (r) => {
-                if (r.status === 503) { setError('Issue history requires database connection.'); return; }
-                if (!r.ok) { setError('Failed to load issues.'); return; }
-                const data = await r.json() as { issues: Issue[] };
-                setIssues(data.issues);
-            })
-            .catch(() => setError('Failed to load issues.'))
-            .finally(() => setLoading(false));
+        try {
+            const r = await fetch(`/api/portal/support/issues${qs}`, { credentials: 'same-origin' });
+            if (r.status === 503) { setError('Issue history requires database connection.'); return; }
+            if (!r.ok) { setError('Failed to load issues.'); return; }
+            const data = await r.json() as { issues: Issue[] };
+            setIssues(data.issues);
+            setError(null);
+        } catch { setError('Failed to load issues.'); }
+        finally { if (!silent) setLoading(false); }
     }, [filter]);
 
-    const filtered = filter === 'all' ? issues : issues.filter((i) => i.status === filter);
+    useEffect(() => {
+        void fetchIssues();
+    }, [fetchIssues]);
+
+    // Auto-refresh every 20 s while any issue is not yet resolved
+    useEffect(() => {
+        if (refreshRef.current) clearInterval(refreshRef.current);
+        const hasActive = issues.some((i) => i.status !== 'resolved');
+        if (hasActive) {
+            refreshRef.current = setInterval(() => { void fetchIssues(true); }, 20_000);
+        }
+        return () => { if (refreshRef.current) clearInterval(refreshRef.current); };
+    }, [issues, fetchIssues]);
+
+    const q = search.trim().toLowerCase();
+    const filtered = issues.filter((i) => {
+        if (filter !== 'all' && i.status !== filter) return false;
+        if (q) return i.title.toLowerCase().includes(q) || i.description.toLowerCase().includes(q);
+        return true;
+    });
 
     return (
         <main style={{ minHeight: 'calc(100vh - 52px)', background: 'var(--bg)', padding: '2rem 1.5rem', fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -93,6 +116,17 @@ export default function IssueHistoryPage() {
                     <Link href="/portal/support" style={{ padding: '0.4rem 0.9rem', background: 'var(--info)', color: 'var(--card)', borderRadius: 6, fontSize: '0.83rem', fontWeight: 600, textDecoration: 'none' }}>
                         + New Ticket
                     </Link>
+                </div>
+
+                {/* Search */}
+                <div style={{ marginBottom: '0.75rem' }}>
+                    <input
+                        type="search"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search tickets by title or description…"
+                        style={{ width: '100%', padding: '0.45rem 0.8rem', fontSize: '0.85rem', border: '1px solid #e2e8f0', borderRadius: 8, outline: 'none', fontFamily: 'inherit', background: '#fff', color: '#0f172a' }}
+                    />
                 </div>
 
                 {/* Filter tabs */}
@@ -161,6 +195,16 @@ export default function IssueHistoryPage() {
                                                 <a href={issue.prUrl} target="_blank" rel="noopener noreferrer" style={{ padding: '0.1rem 0.45rem', borderRadius: 12, fontSize: '0.72rem', fontWeight: 600, background: 'var(--ok-bg)', color: 'var(--ok)', textDecoration: 'none', flexShrink: 0 }}>
                                                     🔀 PR raised
                                                 </a>
+                                            )}
+                                            {issue.csatToken && issue.csatRated && (
+                                                <span style={{ padding: '0.1rem 0.45rem', borderRadius: 12, fontSize: '0.72rem', fontWeight: 600, background: '#fffbeb', color: '#92400e', flexShrink: 0 }}>
+                                                    ⭐ Rated
+                                                </span>
+                                            )}
+                                            {issue.csatToken && !issue.csatRated && issue.status === 'resolved' && (
+                                                <Link href={`/portal/support/csat?token=${encodeURIComponent(issue.csatToken)}`} style={{ padding: '0.1rem 0.45rem', borderRadius: 12, fontSize: '0.72rem', fontWeight: 600, background: '#eff6ff', color: '#2563eb', textDecoration: 'none', flexShrink: 0 }}>
+                                                    ★ Rate support
+                                                </Link>
                                             )}
                                         </div>
                                         <p style={{ fontSize: '0.8rem', color: 'var(--ink-muted)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

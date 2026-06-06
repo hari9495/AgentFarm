@@ -8,15 +8,19 @@ function PortalLoginForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const justRegistered = searchParams.get('registered') === '1';
+    const justVerified = searchParams.get('verified') === '1';
     const [tenantId, setTenantId] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [errorKind, setErrorKind] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [resending, setResending] = useState(false);
+    const [resentOk, setResentOk] = useState(false);
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-        setError(null);
+        setError(null); setErrorKind(null);
         setLoading(true);
 
         try {
@@ -26,26 +30,39 @@ function PortalLoginForm() {
                 body: JSON.stringify({ tenantId: tenantId.trim(), email: email.trim().toLowerCase(), password }),
             });
 
-            if (res.ok) {
-                router.push('/portal/support');
-                return;
-            }
+            if (res.ok) { router.push('/portal/support'); return; }
 
             let msg = 'Login failed. Please try again.';
+            let kind = '';
             try {
                 const body = await res.json() as { message?: string; error?: string };
+                kind = body.error ?? '';
                 if (body.message) msg = body.message;
-                else if (body.error === 'invalid_credentials') msg = 'Email or password is incorrect.';
-                else if (body.error === 'account_inactive') msg = 'This account has been deactivated.';
-                else if (body.error === 'tenant_not_found') msg = 'Tenant not found.';
+                else if (kind === 'invalid_credentials') msg = 'Email or password is incorrect.';
+                else if (kind === 'account_inactive') msg = 'This account has been deactivated.';
+                else if (kind === 'email_not_verified') msg = 'Please verify your email before signing in.';
+                else if (kind === 'tenant_not_found') msg = 'Tenant not found.';
             } catch { /* keep default */ }
 
-            setError(msg);
+            setError(msg); setErrorKind(kind);
         } catch {
             setError('Unable to connect. Please try again.');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleResend = async () => {
+        setResending(true); setResentOk(false);
+        try {
+            await fetch('/api/portal/auth/resend-verification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tenantId: tenantId.trim(), email: email.trim().toLowerCase() }),
+            });
+            setResentOk(true);
+        } catch { /* silent */ }
+        finally { setResending(false); }
     };
 
     return (
@@ -78,16 +95,28 @@ function PortalLoginForm() {
                 </div>
 
                 {justRegistered && (
+                    <div style={{ padding: '0.6rem 0.8rem', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 6, marginBottom: '1rem', fontSize: '0.83rem', color: '#1d4ed8' }}>
+                        ✉️ Account created! Check your email to verify, then sign in.
+                    </div>
+                )}
+                {justVerified && (
                     <div style={{ padding: '0.6rem 0.8rem', background: 'var(--ok-bg)', border: '1px solid var(--ok-border)', borderRadius: 6, marginBottom: '1rem', fontSize: '0.83rem', color: 'var(--ok)' }}>
-                        ✓ Account created! Sign in below.
+                        ✓ Email verified! You can now sign in.
                     </div>
                 )}
                 {error && (
-                    <div style={{
-                        padding: '0.6rem 0.8rem', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)',
-                        borderRadius: 6, marginBottom: '1rem', fontSize: '0.83rem', color: 'var(--danger)',
-                    }}>
+                    <div style={{ padding: '0.6rem 0.8rem', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: 6, marginBottom: '1rem', fontSize: '0.83rem', color: 'var(--danger)' }}>
                         {error}
+                        {errorKind === 'email_not_verified' && (
+                            <div style={{ marginTop: '0.4rem' }}>
+                                {resentOk
+                                    ? <span style={{ color: 'var(--ok)' }}>✓ Verification email resent. Check your inbox.</span>
+                                    : <button type="button" onClick={() => void handleResend()} disabled={resending} style={{ background: 'none', border: 'none', color: 'var(--danger)', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.83rem', padding: 0 }}>
+                                        {resending ? 'Resending…' : 'Resend verification email'}
+                                    </button>
+                                }
+                            </div>
+                        )}
                     </div>
                 )}
 

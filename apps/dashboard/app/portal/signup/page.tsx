@@ -43,7 +43,7 @@ export default function PortalSignupPage() {
             });
 
             if (res.ok) {
-                router.push('/portal/login?registered=1');
+                router.push('/portal/login?registered=1'); // login page shows "check your email" banner
                 return;
             }
 

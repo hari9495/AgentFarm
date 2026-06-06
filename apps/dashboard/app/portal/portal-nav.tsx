@@ -29,8 +29,9 @@ export function PortalNav() {
         { href: '/portal/account', label: 'Account' },
     ];
 
-    // Don't render nav on the login page
-    if (pathname === '/portal/login') return null;
+    // Don't render nav on unauthenticated pages
+    const AUTH_PAGES = ['/portal/login', '/portal/signup', '/portal/forgot-password', '/portal/reset-password', '/portal/verify-email'];
+    if (AUTH_PAGES.some((p) => pathname === p || pathname.startsWith(p + '/'))) return null;
 
     return (
         <nav style={{
