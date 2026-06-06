@@ -253,8 +253,8 @@ function DispatchModal({
                 {result ? (
                     // Success state
                     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center' }}>
-                        <div style={{ width: 48, height: 48, borderRadius: 9999, background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <CheckCircle size={24} color="#166534" />
+                        <div style={{ width: 48, height: 48, borderRadius: 9999, background: 'var(--ok-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <CheckCircle size={24} color="var(--ok)" />
                         </div>
                         <div>
                             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>Task Dispatched</div>
@@ -278,7 +278,7 @@ function DispatchModal({
                     // Inputs form
                     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 18 }}>
                         {error && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 10, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 12 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', borderRadius: 10, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 12 }}>
                                 <AlertCircle size={13} /> {error}
                             </div>
                         )}
@@ -286,7 +286,7 @@ function DispatchModal({
                         {/* Agent selector */}
                         <div>
                             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ink)', marginBottom: 6 }}>
-                                Dispatch to Agent <span style={{ color: '#c4161c' }}>*</span>
+                                Dispatch to Agent <span style={{ color: 'var(--danger)' }}>*</span>
                             </label>
                             {compatibleBots.length === 0 ? (
                                 <div style={{ fontSize: 12, color: 'var(--ink-muted)', padding: '8px 12px', borderRadius: 8, background: 'var(--bg-deep)' }}>
@@ -466,8 +466,12 @@ export default function PlaybooksClient({
             {/* Content */}
             <div style={{ padding: '0 32px 40px', maxWidth: 1200, margin: '0 auto' }}>
                 {error && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'rgba(196,22,28,0.07)', border: '1px solid rgba(196,22,28,0.2)', color: '#c4161c', fontSize: 13, marginBottom: 20 }}>
-                        <AlertCircle size={14} /> {error}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 13, marginBottom: 20 }}>
+                        <AlertCircle size={14} />
+                        <span style={{ flex: 1 }}>{error}</span>
+                        <button type="button" onClick={() => void load()} style={{ fontSize: 12, fontWeight: 600, color: 'var(--danger)', background: 'transparent', border: '1px solid var(--danger-border)', borderRadius: 6, padding: '2px 10px', cursor: 'pointer' }}>
+                            Retry
+                        </button>
                     </div>
                 )}
 
