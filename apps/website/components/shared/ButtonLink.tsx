@@ -17,7 +17,7 @@ export default function ButtonLink({
     return (
         <Link
             className={cn(
-                "inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)]/50 focus-visible:ring-offset-2",
+                "inline-flex items-center justify-center whitespace-nowrap shrink-0 font-semibold rounded-xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-blue)]/50 focus-visible:ring-offset-2",
                 variant === "primary" && "bg-[var(--accent-blue)] text-[#07080a] hover:bg-[#8dd7ff] active:scale-[0.98] shadow-sm",
                 variant === "outline" && "border border-[var(--hairline)] text-[var(--ink)] bg-[var(--surface-card)] hover:bg-[var(--surface-el)] hover:-translate-y-0.5 hover:shadow-sm",
                 variant === "ghost" && "text-[var(--mute)] hover:text-[var(--ink)] hover:bg-[var(--surface-el)]",

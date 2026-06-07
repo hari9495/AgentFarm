@@ -43,8 +43,14 @@ const nextConfig: NextConfig = {
     },
     webpack: (config, { dev }) => {
         if (dev) {
-            // Avoid intermittent filesystem cache corruption on Windows during hot reload.
-            config.cache = false;
+            // Use webpack's in-memory cache instead of the filesystem cache: the filesystem
+            // cache is what corrupts intermittently on Windows during hot reload, but fully
+            // disabling caching forces a from-scratch rebuild of shared chunks (e.g.
+            // app/layout.js) on every route compile, which churns their content hashes mid-session
+            // and causes the browser to fetch a stale chunk URL -> "ChunkLoadError: Loading
+            // chunk app/layout failed (timeout)". In-memory caching keeps shared chunk hashes
+            // stable across navigations within a dev server run while avoiding the filesystem cache.
+            config.cache = { type: 'memory' };
         }
 
         // node:* built-ins (e.g. node:sqlite, node:fs) are used in instrumentation.ts

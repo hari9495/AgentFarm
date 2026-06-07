@@ -1,23 +1,55 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import DeploymentHistoryTable from "@/components/dashboard/DeploymentHistoryTable";
 import ProvisioningOpsPanel from "@/components/dashboard/ProvisioningOpsPanel";
 import PremiumIcon from "@/components/shared/PremiumIcon";
 import ButtonLink from "@/components/shared/ButtonLink";
 import { Activity, AlertTriangle, CheckCircle2, ChevronRight, Layers, Rocket } from "lucide-react";
+import { getSessionUser, listDeploymentsForUser } from "@/lib/auth-store";
 
 export const metadata: Metadata = {
     title: "Deployments · AgentFarms Dashboard",
     description: "Track deployment history and status transitions for marketplace-launched agents.",
 };
 
-const deploymentStats = [
-    { label: "Total Deployments", value: "148", icon: Layers,        tone: "sky"     as const },
-    { label: "In Progress",        value: "3",   icon: Activity,      tone: "amber"   as const },
-    { label: "Succeeded (30d)",    value: "141", icon: CheckCircle2,  tone: "emerald" as const },
-    { label: "Failed (30d)",       value: "4",   icon: AlertTriangle, tone: "rose"    as const },
-];
+const COOKIE_NAME = "agentfarm_session";
 
-export default function DeploymentsPage() {
+const getCookieValue = (cookieHeader: string | null, name: string): string | null => {
+    if (!cookieHeader) return null;
+    const cookie = cookieHeader
+        .split(";")
+        .map((c) => c.trim())
+        .find((c) => c.startsWith(`${name}=`));
+    if (!cookie) return null;
+    return decodeURIComponent(cookie.slice(name.length + 1));
+};
+
+const THIRTY_DAYS_MS = 30 * 86_400_000;
+
+export default async function DeploymentsPage() {
+    const requestHeaders = await headers();
+    const token = getCookieValue(requestHeaders.get("cookie"), COOKIE_NAME);
+    if (!token) redirect("/login");
+
+    const user = await getSessionUser(token!);
+    if (!user) redirect("/login");
+
+    const deployments = await listDeploymentsForUser(user.id, 100);
+    const now = Date.now();
+    const within30d = (ts: number) => now - ts <= THIRTY_DAYS_MS;
+
+    const inProgress = deployments.filter((d) => d.status === "queued" || d.status === "running").length;
+    const succeeded30d = deployments.filter((d) => d.status === "succeeded" && within30d(d.updatedAt)).length;
+    const failed30d = deployments.filter((d) => d.status === "failed" && within30d(d.updatedAt)).length;
+
+    const deploymentStats = [
+        { label: "Total Deployments", value: String(deployments.length), icon: Layers, tone: "sky" as const },
+        { label: "In Progress", value: String(inProgress), icon: Activity, tone: "amber" as const },
+        { label: "Succeeded (30d)", value: String(succeeded30d), icon: CheckCircle2, tone: "emerald" as const },
+        { label: "Failed (30d)", value: String(failed30d), icon: AlertTriangle, tone: "rose" as const },
+    ];
+
     return (
         <div className="min-h-screen bg-slate-50">
 
@@ -77,13 +109,13 @@ export default function DeploymentsPage() {
                 </section>
 
                 {/* ── Stat cards ──────────────────────────────────────── */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {deploymentStats.map(({ label, value, icon, tone }) => (
                         <div key={label} className="rounded-2xl border border-slate-200 bg-white p-5 flex items-center gap-3 shadow-sm">
                             <PremiumIcon icon={icon} tone={tone} containerClassName="w-10 h-10 rounded-xl shrink-0" iconClassName="w-5 h-5" />
-                            <div>
+                            <div className="min-w-0">
                                 <p className="text-2xl font-extrabold text-slate-900 leading-none">{value}</p>
-                                <p className="text-xs text-slate-500 mt-0.5">{label}</p>
+                                <p className="text-xs text-slate-500 mt-0.5 truncate">{label}</p>
                             </div>
                         </div>
                     ))}

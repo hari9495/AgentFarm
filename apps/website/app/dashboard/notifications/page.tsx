@@ -1,92 +1,35 @@
 import type { Metadata } from "next";
-import { Bell, CheckCircle2, ChevronRight, CreditCard, Info, ShieldAlert, Zap } from "lucide-react";
-import PremiumIcon from "@/components/shared/PremiumIcon";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { Bell, CheckCircle2, ChevronRight, Cpu, Info, Rocket, ShieldAlert } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import PremiumIcon from "@/components/shared/PremiumIcon";
+import MarkAllReadButton from "@/components/dashboard/MarkAllReadButton";
+import {
+    getSessionUser,
+    listDerivedNotifications,
+    type DerivedNotification,
+    type NotificationLevel,
+} from "@/lib/auth-store";
 
 export const metadata: Metadata = {
     title: "Notifications - AgentFarms Dashboard",
     description: "System alerts, approval outcomes, and deployment events.",
 };
 
-type NotifLevel = "info" | "success" | "warning" | "critical";
+const COOKIE_NAME = "agentfarm_session";
 
-type Notification = {
-    id: string;
-    title: string;
-    body: string;
-    level: NotifLevel;
-    time: string;
-    read: boolean;
-    icon: LucideIcon;
+const getCookieValue = (cookieHeader: string | null, name: string): string | null => {
+    if (!cookieHeader) return null;
+    const cookie = cookieHeader
+        .split(";")
+        .map((c) => c.trim())
+        .find((c) => c.startsWith(`${name}=`));
+    if (!cookie) return null;
+    return decodeURIComponent(cookie.slice(name.length + 1));
 };
 
-const notifications: Notification[] = [
-    {
-        id: "n1",
-        title: "Approval granted — deploy production hotfix",
-        body: "AI Backend Developer's PR #482 was approved by Alex Rivera and is queued for merge.",
-        level: "success",
-        time: "2m ago",
-        read: false,
-        icon: CheckCircle2,
-    },
-    {
-        id: "n2",
-        title: "High-risk action pending review",
-        body: "AI DevOps Engineer has requested approval to rotate cloud tokens in production.",
-        level: "critical",
-        time: "14m ago",
-        read: false,
-        icon: ShieldAlert,
-    },
-    {
-        id: "n3",
-        title: "Deployment to staging succeeded",
-        body: "Canary release of auth service v2.3.1 completed with 0 failures across 3 instances.",
-        level: "success",
-        time: "1h ago",
-        read: false,
-        icon: Zap,
-    },
-    {
-        id: "n4",
-        title: "Seat limit approaching",
-        body: "You are using 46 of 50 seats on the Pro+ plan. Consider upgrading before onboarding new workers.",
-        level: "warning",
-        time: "3h ago",
-        read: true,
-        icon: CreditCard,
-    },
-    {
-        id: "n5",
-        title: "New skill available: workspace_semantic_search",
-        body: "A new code intelligence skill is available for assignment to your AI Backend Developer.",
-        level: "info",
-        time: "5h ago",
-        read: true,
-        icon: Info,
-    },
-    {
-        id: "n6",
-        title: "MFA reminder",
-        body: "2 invited members have not enabled MFA. Remind them from the Security panel.",
-        level: "warning",
-        time: "1d ago",
-        read: true,
-        icon: ShieldAlert,
-    },
-    {
-        id: "n7",
-        title: "Monthly spend report ready",
-        body: "Your April 2026 spend report is available for download in Admin › Billing.",
-        level: "info",
-        time: "2d ago",
-        read: true,
-        icon: CreditCard,
-    },
-];
-
-const levelStyle: Record<NotifLevel, { container: string; dot: string }> = {
+const levelStyle: Record<NotificationLevel, { container: string; dot: string }> = {
     critical: {
         container: "border-l-4 border-l-rose-500 bg-rose-50 dark:bg-rose-950/20",
         dot: "bg-rose-500",
@@ -105,16 +48,57 @@ const levelStyle: Record<NotifLevel, { container: string; dot: string }> = {
     },
 };
 
-const levelIconTone: Record<NotifLevel, "rose" | "amber" | "emerald" | "sky"> = {
+const levelIconTone: Record<NotificationLevel, "rose" | "amber" | "emerald" | "sky"> = {
     critical: "rose",
     warning: "amber",
     success: "emerald",
     info: "sky",
 };
 
-const unread = notifications.filter((n) => !n.read).length;
+const categoryIcon: Record<DerivedNotification["category"], LucideIcon> = {
+    approval: ShieldAlert,
+    agent: Cpu,
+    deployment: Rocket,
+};
 
-export default function DashboardNotificationsPage() {
+const levelFallbackIcon: Record<NotificationLevel, LucideIcon> = {
+    critical: ShieldAlert,
+    warning: Info,
+    success: CheckCircle2,
+    info: Info,
+};
+
+function iconForNotification(notif: DerivedNotification): LucideIcon {
+    if (notif.category === "approval" && notif.level === "success") return CheckCircle2;
+    return categoryIcon[notif.category] ?? levelFallbackIcon[notif.level];
+}
+
+function formatRelativeTime(ts: number): string {
+    if (!ts) return "Just now";
+    const diff = Date.now() - ts;
+    if (diff < 60_000) return "Just now";
+    if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+    if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
+    if (diff < 86_400_000 * 7) return `${Math.floor(diff / 86_400_000)}d ago`;
+    return new Date(ts).toLocaleDateString();
+}
+
+export default async function DashboardNotificationsPage() {
+    const requestHeaders = await headers();
+    const token = getCookieValue(requestHeaders.get("cookie"), COOKIE_NAME);
+    if (!token) redirect("/login");
+
+    const user = await getSessionUser(token!);
+    if (!user) redirect("/login");
+
+    const notifications = await listDerivedNotifications({
+        userId: user.id,
+        tenantId: user.tenantId ?? undefined,
+        limit: 30,
+    });
+
+    const unread = notifications.filter((n) => !n.read).length;
+
     return (
         <div className="min-h-screen bg-slate-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
@@ -140,39 +124,50 @@ export default function DashboardNotificationsPage() {
                                 <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">Notifications</h1>
                                 <p className="mt-2 text-slate-400 text-base max-w-lg">System alerts, approval outcomes, and deployment events.</p>
                             </div>
-                            <button className="text-xs font-semibold text-sky-400 border border-sky-500/30 hover:border-sky-400/60 bg-sky-500/10 hover:bg-sky-500/20 rounded-lg px-4 py-2 transition-colors shrink-0">
-                                Mark all read
-                            </button>
+                            <MarkAllReadButton disabled={unread === 0} />
                         </div>
                     </div>
                 </section>
 
-                <div className="space-y-3">
-                    {notifications.map((notif) => {
-                        const style = levelStyle[notif.level];
-                        const tone = levelIconTone[notif.level];
-                        return (
-                            <div
-                                key={notif.id}
-                                className={`rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden ${style.container} transition-opacity ${notif.read ? "opacity-70" : ""}`}
-                            >
-                                <div className="flex items-start gap-3 px-5 py-4">
-                                    <PremiumIcon icon={notif.icon} tone={tone} containerClassName="w-8 h-8 rounded-xl shrink-0 mt-0.5" iconClassName="w-4 h-4" />
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{notif.title}</p>
-                                            {!notif.read && (
-                                                <span className={`w-2 h-2 rounded-full shrink-0 ${style.dot}`} />
-                                            )}
+                {notifications.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-6 py-14 text-center">
+                        <div className="mx-auto w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                            <Bell className="w-5 h-5 text-slate-400" />
+                        </div>
+                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">You&apos;re all caught up</p>
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                            New approval requests, agent status changes, and deployment events will show up here as they happen.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {notifications.map((notif) => {
+                            const style = levelStyle[notif.level];
+                            const tone = levelIconTone[notif.level];
+                            const Icon = iconForNotification(notif);
+                            return (
+                                <div
+                                    key={notif.id}
+                                    className={`rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden ${style.container} transition-opacity ${notif.read ? "opacity-70" : ""}`}
+                                >
+                                    <div className="flex items-start gap-3 px-5 py-4">
+                                        <PremiumIcon icon={Icon} tone={tone} containerClassName="w-8 h-8 rounded-xl shrink-0 mt-0.5" iconClassName="w-4 h-4" />
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{notif.title}</p>
+                                                {!notif.read && (
+                                                    <span className={`w-2 h-2 rounded-full shrink-0 ${style.dot}`} />
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">{notif.body}</p>
+                                            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 font-mono">{formatRelativeTime(notif.createdAt)}</p>
                                         </div>
-                                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">{notif.body}</p>
-                                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 font-mono">{notif.time}</p>
                                     </div>
                                 </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                            );
+                        })}
+                    </div>
+                )}
 
             </div>
         </div>

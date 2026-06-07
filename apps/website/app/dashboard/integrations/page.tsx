@@ -549,7 +549,7 @@ function AvailableCard({
             <div className="flex-1 min-w-0">
                 <p className="font-medium text-slate-900 dark:text-slate-100 text-sm truncate">{connector.displayName}</p>
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                    {connector.supportedActions.length} actions · {connector.authMethod.replace(/_/g, " ")}
+                    {connector.supportedActions.length} {connector.supportedActions.length === 1 ? "action" : "actions"} · {connector.authMethod.replace(/_/g, " ")}
                 </p>
             </div>
             {connector.connected ? (

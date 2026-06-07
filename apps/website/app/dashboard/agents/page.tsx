@@ -2,18 +2,36 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, ChevronLeft, ChevronRight, ClipboardCheck, Shield, Timer, Cpu, RotateCcw } from "lucide-react";
 import HeatmapDatePicker from "@/components/dashboard/HeatmapDatePicker";
+import { listBots, type BotRecord, type BotStatus } from "@/lib/auth-store";
 
 export const metadata: Metadata = {
     title: "Agents - AgentFarms Dashboard",
     description: "Browse and manage deployed AI workers.",
 };
 
-const agents = [
-    { slug: "ai-backend-developer", name: "AI Backend Developer", role: "Backend Engineering", status: "Active", tasks: 34, reliability: 99.2, tone: "sky", heatSeed: 7 },
-    { slug: "ai-qa-engineer", name: "AI QA Engineer", role: "Quality Assurance", status: "Active", tasks: 52, reliability: 99.6, tone: "violet", heatSeed: 13 },
-    { slug: "ai-devops-engineer", name: "AI DevOps Engineer", role: "DevOps & Infrastructure", status: "Active", tasks: 18, reliability: 98.9, tone: "amber", heatSeed: 5 },
-    { slug: "ai-security-engineer", name: "AI Security Engineer", role: "Security & Compliance", status: "Needs review", tasks: 7, reliability: 99.7, tone: "rose", heatSeed: 3 },
-];
+// Display label for each real bot status — distinct from the raw BotStatus union
+// stored in the database (active/paused/error/maintenance).
+const statusLabel: Record<BotStatus, string> = {
+    active: "Active",
+    paused: "Paused",
+    error: "Needs review",
+    maintenance: "Maintenance",
+};
+
+const tones = ["sky", "violet", "amber", "rose"] as const;
+
+/** Deterministic, stable per-agent heatmap seed derived from its slug (no randomness). */
+function seedFromSlug(slug: string): number {
+    let hash = 0;
+    for (let i = 0; i < slug.length; i++) {
+        hash = (hash * 31 + slug.charCodeAt(i)) >>> 0;
+    }
+    return (hash % 16) + 1;
+}
+
+function toneFromBot(bot: BotRecord, index: number): string {
+    return tones.includes(bot.tone as (typeof tones)[number]) ? bot.tone : tones[index % tones.length]!;
+}
 
 // ── Date utilities ─────────────────────────────────────────────────────────────
 
@@ -151,7 +169,9 @@ const toneDot: Record<string, string> = {
 
 const statusConfig: Record<string, { dot: string; text: string; pulse: boolean }> = {
     "Active":       { dot: "bg-emerald-400", text: "text-emerald-600 dark:text-emerald-400", pulse: true  },
-    "Needs review": { dot: "bg-amber-400",   text: "text-amber-600 dark:text-amber-400",     pulse: false },
+    "Needs review": { dot: "bg-rose-400",    text: "text-rose-600 dark:text-rose-400",       pulse: false },
+    "Paused":       { dot: "bg-amber-400",   text: "text-amber-600 dark:text-amber-400",     pulse: false },
+    "Maintenance":  { dot: "bg-slate-400",   text: "text-slate-500 dark:text-slate-400",     pulse: false },
 };
 
 // ── Page ───────────────────────────────────────────────────────────────────────
@@ -162,6 +182,18 @@ export default async function AgentsIndexPage({
     searchParams: Promise<{ from?: string; to?: string; offset?: string }>;
 }) {
     const params = await searchParams;
+
+    const bots = await listBots();
+    const agents = bots.map((bot, index) => ({
+        slug: bot.slug,
+        name: bot.name,
+        role: bot.role,
+        status: statusLabel[bot.status] ?? "Active",
+        tasks: bot.tasksCompleted,
+        reliability: bot.reliabilityPct,
+        tone: toneFromBot(bot, index),
+        heatSeed: seedFromSlug(bot.slug),
+    }));
 
     const today    = new Date(); today.setHours(0, 0, 0, 0);
     const minStart = addDays(today, -MAX_LOOKBACK_DAYS);
@@ -182,7 +214,9 @@ export default async function AgentsIndexPage({
     // Summary stats
     const activeCount    = agents.filter((a) => a.status === "Active").length;
     const totalTasks     = agents.reduce((sum, a) => sum + a.tasks, 0);
-    const avgReliability = (agents.reduce((sum, a) => sum + a.reliability, 0) / agents.length).toFixed(1);
+    const avgReliability = agents.length > 0
+        ? (agents.reduce((sum, a) => sum + a.reliability, 0) / agents.length).toFixed(1)
+        : "—";
 
     // Range label
     const rangeLabel =
@@ -296,6 +330,22 @@ export default async function AgentsIndexPage({
                 </div>
 
                 {/* Agent cards grid */}
+                {agents.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-16 text-center">
+                        <Cpu className="mx-auto h-8 w-8 text-slate-300 dark:text-slate-700" />
+                        <h2 className="mt-3 text-sm font-bold text-slate-900 dark:text-slate-100">No agents deployed yet</h2>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                            Deploy an AI worker from the marketplace to see its task history, quality metrics, and approvals here.
+                        </p>
+                        <Link
+                            href="/dashboard/deployments"
+                            className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-white/90 transition-colors"
+                        >
+                            Go to Deployments
+                            <ArrowRight className="h-3.5 w-3.5" />
+                        </Link>
+                    </div>
+                ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {agents.map((agent) => {
                         const sc = statusConfig[agent.status] ?? { dot: "bg-slate-400", text: "text-slate-500", pulse: false };
@@ -424,6 +474,7 @@ export default async function AgentsIndexPage({
                         );
                     })}
                 </div>
+                )}
 
             </div>
         </div>

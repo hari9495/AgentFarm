@@ -1639,6 +1639,189 @@ export const updateBotConfig = async (
     return { ok: Number(result.meta.changes) > 0 };
 };
 
+// ── Notifications (derived live feed + persisted preferences) ────────────────
+//
+// Rather than standing up a duplicate notification-delivery pipeline, the
+// in-app feed is *derived* on read from the same domain events the rest of the
+// dashboard already shows (approvals, bot health, deployments). "Read" state is
+// a single per-user `notifications_viewed_at` watermark — anything newer than
+// that timestamp counts as unread for the sidebar badge. Preferences (which
+// notification types a user wants) are stored as a small JSON blob.
+
+export type NotificationLevel = "info" | "success" | "warning" | "critical";
+
+export type DerivedNotification = {
+    id: string;
+    title: string;
+    body: string;
+    level: NotificationLevel;
+    createdAt: number;
+    read: boolean;
+    category: "approval" | "agent" | "deployment";
+};
+
+export type NotificationPrefKey =
+    | "agent_pause"
+    | "high_risk"
+    | "daily_summary"
+    | "weekly_report"
+    | "agent_error"
+    | "new_task";
+
+export const notificationPrefDefaults: Record<NotificationPrefKey, boolean> = {
+    agent_pause: true,
+    high_risk: true,
+    daily_summary: true,
+    weekly_report: true,
+    agent_error: false,
+    new_task: false,
+};
+
+export const getNotificationPrefs = async (userId: string): Promise<Record<NotificationPrefKey, boolean>> => {
+    const row = await getDb().prepare(`SELECT notification_prefs FROM users WHERE id = ?`).bind(userId).first<{ notification_prefs?: string }>();
+    let stored: Partial<Record<NotificationPrefKey, boolean>> = {};
+    try {
+        if (row?.notification_prefs) stored = JSON.parse(String(row.notification_prefs));
+    } catch {
+        stored = {};
+    }
+    return { ...notificationPrefDefaults, ...stored };
+};
+
+export const updateNotificationPrefs = async (
+    userId: string,
+    prefs: Partial<Record<NotificationPrefKey, boolean>>,
+): Promise<{ ok: boolean; prefs: Record<NotificationPrefKey, boolean> }> => {
+    const current = await getNotificationPrefs(userId);
+    const merged = { ...current, ...prefs };
+    await getDb().prepare(`UPDATE users SET notification_prefs = ? WHERE id = ?`).bind(JSON.stringify(merged), userId).run();
+    return { ok: true, prefs: merged };
+};
+
+export const getNotificationsViewedAt = async (userId: string): Promise<number> => {
+    const row = await getDb().prepare(`SELECT notifications_viewed_at FROM users WHERE id = ?`).bind(userId).first<{ notifications_viewed_at?: number }>();
+    return Number(row?.notifications_viewed_at ?? 0);
+};
+
+export const markNotificationsViewed = async (userId: string): Promise<{ ok: boolean; viewedAt: number }> => {
+    const viewedAt = now();
+    await getDb().prepare(`UPDATE users SET notifications_viewed_at = ? WHERE id = ?`).bind(viewedAt, userId).run();
+    return { ok: true, viewedAt };
+};
+
+const riskToLevel: Record<ApprovalRisk, NotificationLevel> = {
+    low: "info",
+    medium: "warning",
+    high: "critical",
+};
+
+const botStatusNotification: Partial<Record<BotStatus, { level: NotificationLevel; verb: string }>> = {
+    error: { level: "critical", verb: "needs attention" },
+    paused: { level: "warning", verb: "is paused" },
+    maintenance: { level: "info", verb: "is in maintenance" },
+};
+
+/**
+ * Build a live notification feed for a user by combining their pending/recent
+ * approvals, the health of their deployed agents, and recent deployment jobs —
+ * the same underlying records already shown elsewhere in the dashboard. This
+ * keeps the feed truthful (no synthetic data) without a separate ingestion path.
+ */
+export const listDerivedNotifications = async (input: {
+    userId: string;
+    tenantId?: string | null;
+    limit?: number;
+}): Promise<DerivedNotification[]> => {
+    const limit = Math.max(1, Math.min(100, Math.floor(input.limit ?? 30)));
+    const tenantId = input.tenantId ?? undefined;
+
+    const [viewedAt, pending, approved, rejected, bots, deployments] = await Promise.all([
+        getNotificationsViewedAt(input.userId),
+        listApprovals({ status: "pending", tenantId, limit: 25 }),
+        listApprovals({ status: "approved", tenantId, limit: 15 }),
+        listApprovals({ status: "rejected", tenantId, limit: 15 }),
+        listBots(),
+        listDeploymentsForUser(input.userId, 15),
+    ]);
+
+    const items: DerivedNotification[] = [];
+
+    for (const approval of pending) {
+        items.push({
+            id: `notif-apr-req-${approval.id}`,
+            title: approval.risk === "high"
+                ? `High-risk action pending review`
+                : `Approval requested — ${approval.title}`,
+            body: `${approval.agent} requested approval for "${approval.title}" (${approval.risk} risk).`,
+            level: riskToLevel[approval.risk],
+            createdAt: approval.createdAt,
+            read: approval.createdAt <= viewedAt,
+            category: "approval",
+        });
+    }
+    for (const approval of [...approved, ...rejected]) {
+        if (!approval.decidedAt) continue;
+        items.push({
+            id: `notif-apr-dec-${approval.id}`,
+            title: approval.status === "approved"
+                ? `Approval granted — ${approval.title}`
+                : `Approval rejected — ${approval.title}`,
+            body: approval.status === "approved"
+                ? `${approval.decidedBy ?? "An operator"} approved ${approval.agent}'s request "${approval.title}".`
+                : `${approval.decidedBy ?? "An operator"} rejected ${approval.agent}'s request "${approval.title}"${approval.reason ? `: ${approval.reason}` : "."}`,
+            level: approval.status === "approved" ? "success" : "warning",
+            createdAt: approval.decidedAt,
+            read: approval.decidedAt <= viewedAt,
+            category: "approval",
+        });
+    }
+
+    for (const bot of bots) {
+        const meta = botStatusNotification[bot.status];
+        if (!meta) continue;
+        items.push({
+            id: `notif-bot-${bot.slug}-${bot.status}`,
+            title: `${bot.name} ${meta.verb}`,
+            body: bot.status === "error"
+                ? `${bot.name} reported an error and may be unable to complete tasks. Review its status on the Bots page.`
+                : bot.status === "paused"
+                    ? `${bot.name} is currently paused and won't pick up new work until resumed.`
+                    : `${bot.name} is in maintenance mode.`,
+            level: meta.level,
+            createdAt: bot.lastActivityAt || bot.createdAt,
+            read: (bot.lastActivityAt || bot.createdAt) <= viewedAt,
+            category: "agent",
+        });
+    }
+
+    for (const job of deployments) {
+        if (job.status !== "succeeded" && job.status !== "failed") continue;
+        items.push({
+            id: `notif-deploy-${job.id}`,
+            title: job.status === "succeeded"
+                ? `Deployment succeeded — ${job.botName}`
+                : `Deployment failed — ${job.botName}`,
+            body: job.statusMessage || (job.status === "succeeded"
+                ? `${job.botName} was deployed successfully.`
+                : `${job.botName}'s deployment failed and may need a retry.`),
+            level: job.status === "succeeded" ? "success" : "critical",
+            createdAt: job.updatedAt,
+            read: job.updatedAt <= viewedAt,
+            category: "deployment",
+        });
+    }
+
+    return items
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, limit);
+};
+
+/** Fast unread count for the sidebar badge — avoids building full notification bodies. */
+export const countUnreadNotifications = async (input: { userId: string; tenantId?: string | null }): Promise<number> => {
+    const items = await listDerivedNotifications({ userId: input.userId, tenantId: input.tenantId, limit: 100 });
+    return items.filter((n) => !n.read).length;
+};
+
 // ── Company control plane ─────────────────────────────────────────────────────
 
 export type TenantStatus = "healthy" | "degraded" | "incident";

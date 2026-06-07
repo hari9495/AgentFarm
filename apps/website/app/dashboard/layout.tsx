@@ -1,7 +1,7 @@
 ﻿import AppSidebar from "@/components/layout/AppSidebar";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getSessionUser, isCompanyOperatorEmail, listApprovals } from "@/lib/auth-store";
+import { getSessionUser, isCompanyOperatorEmail, listApprovals, countUnreadNotifications } from "@/lib/auth-store";
 
 const COOKIE_NAME = "agentfarm_session";
 
@@ -30,14 +30,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
     const showCompanyPortal = isCompanyOperatorEmail(user.email);
 
     // Live badge counts — fetched server-side so they're accurate on every navigation
-    const pendingApprovals = await listApprovals({
-        status: "pending",
-        tenantId: user.tenantId ?? undefined,
-        limit: 100,
-    });
+    const [pendingApprovals, unreadNotifications] = await Promise.all([
+        listApprovals({
+            status: "pending",
+            tenantId: user.tenantId ?? undefined,
+            limit: 100,
+        }),
+        countUnreadNotifications({ userId: user.id, tenantId: user.tenantId }),
+    ]);
     const badges = {
         approvals: pendingApprovals.length,
-        notifications: 0, // placeholder until notification service is wired
+        notifications: unreadNotifications,
     };
 
     return (

@@ -811,9 +811,9 @@ export default function GovernancePageClient() {
     return (
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {/* Tab bar */}
-            <div className="flex gap-1 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/60 mb-8 w-fit">
+            <div className="flex gap-1 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/60 mb-8 max-w-full overflow-x-auto">
                 {TABS.map(({ id, label, icon: Icon }) => (
-                    <button key={id} onClick={() => setActiveTab(id)} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeTab === id ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"}`}>
+                    <button key={id} onClick={() => setActiveTab(id)} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap shrink-0 transition-all ${activeTab === id ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"}`}>
                         <Icon className="w-4 h-4" />
                         {label}
                     </button>

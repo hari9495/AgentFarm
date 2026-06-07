@@ -1,23 +1,12 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { getSessionUser } from "@/lib/auth-store";
+import { getSessionUser, getBotBySlug } from "@/lib/auth-store";
 import ApprovalsQueue from "@/components/dashboard/ApprovalsQueue";
 
 export const metadata: Metadata = {
     title: "Agent Approvals - AgentFarms Dashboard",
 };
-
-const agents: Record<string, { name: string }> = {
-    "ai-backend-developer": { name: "AI Backend Developer" },
-    "ai-qa-engineer": { name: "AI QA Engineer" },
-    "ai-devops-engineer": { name: "AI DevOps Engineer" },
-    "ai-security-engineer": { name: "AI Security Engineer" },
-};
-
-export function generateStaticParams() {
-    return Object.keys(agents).map((slug) => ({ slug }));
-}
 
 const COOKIE_NAME = "agentfarm_session";
 
@@ -30,7 +19,7 @@ const getCookieValue = (cookieHeader: string | null, name: string): string | nul
 
 export default async function AgentApprovalsPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
-    const agent = agents[slug];
+    const agent = await getBotBySlug(slug);
     if (!agent) notFound();
 
     const requestHeaders = await headers();

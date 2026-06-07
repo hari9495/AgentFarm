@@ -269,7 +269,7 @@ export default function CustomerAdaptersPage() {
                             <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
                             <span className="text-xs text-slate-500">Adapters</span>
                         </div>
-                        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
+                        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
                             <div>
                                 <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">Custom API Adapters</h1>
                                 <p className="mt-2 text-slate-400 text-base max-w-lg">Register your internal APIs so agents can call them as typed actions.</p>
