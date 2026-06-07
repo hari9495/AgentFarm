@@ -280,11 +280,11 @@ export default function AdminPage() {
                             <PremiumIcon icon={Download} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="w-3.5 h-3.5" />
                             Data Exports
                         </h2>
-                        <span className="text-[10px] text-slate-400">Admin only — downloads are audit-logged</span>
+                        <span className="text-[10px] text-slate-400">Scoped to your workspace — downloads are audit-logged</span>
                     </div>
                     <div className="p-5 flex flex-wrap gap-3">
                         <a href="/api/admin/export/sql" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 transition-colors">
-                            <Download className="w-4 h-4" /> Full SQL Backup
+                            <Download className="w-4 h-4" /> Workspace Backup (JSON)
                         </a>
                         <a href="/api/admin/export/csv?table=users" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 transition-colors">
                             <Download className="w-4 h-4" /> Users CSV
@@ -292,12 +292,14 @@ export default function AdminPage() {
                         <a href="/api/admin/export/csv?table=approvals" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 transition-colors">
                             <Download className="w-4 h-4" /> Approvals CSV
                         </a>
-                        <a href="/api/admin/export/csv?table=company_audit_events" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 transition-colors">
-                            <Download className="w-4 h-4" /> Audit Log CSV
-                        </a>
-                        <a href="/api/admin/export/csv?table=bots" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 transition-colors">
+                        <a href="/api/admin/export/csv?table=tenant_bots" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700 transition-colors">
                             <Download className="w-4 h-4" /> Bots CSV
                         </a>
+                    </div>
+                    <div className="px-5 pb-5 -mt-1">
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                            Exports include only your organization's records — never other tenants' data or credentials (passwords, tokens are always excluded).
+                        </p>
                     </div>
                 </div>
 

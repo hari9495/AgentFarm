@@ -15,8 +15,15 @@ export async function GET() {
     if (user.role !== "admin" && user.role !== "superadmin") {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+    // Org-admin backups are scoped to the caller's own tenant — never accept
+    // a tenant id from the request, and untenanted callers get an empty
+    // snapshot rather than an unscoped/global dump (see exportDatabaseSnapshot
+    // in lib/auth-store.ts for the full security rationale).
+    if (!user.tenantId) {
+        return NextResponse.json({ error: "No workspace to export" }, { status: 400 });
+    }
 
-    const snapshot = await exportDatabaseSnapshot();
+    const snapshot = await exportDatabaseSnapshot(user.tenantId);
     const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
     const filename = `agentfarm-backup-${ts}.json`;
 

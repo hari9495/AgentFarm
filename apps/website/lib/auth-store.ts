@@ -1453,6 +1453,26 @@ export const listUsers = async (): Promise<UserPublic[]> => {
     }));
 };
 
+export const listTeamMembers = async (tenantId: string): Promise<UserPublic[]> => {
+    const result = await getDb()
+        .prepare(`SELECT id, email, name, company, role, created_at FROM users WHERE tenant_id = ? ORDER BY created_at ASC`)
+        .bind(tenantId)
+        .all<Record<string, unknown>>();
+    return result.results.map((row) => ({
+        id: String(row.id),
+        email: String(row.email),
+        name: String(row.name),
+        company: String(row.company),
+        role:
+            String(row.role) === "superadmin"
+                ? "superadmin"
+                : String(row.role) === "admin"
+                    ? "admin"
+                    : ("member" as UserRole),
+        createdAt: Number(row.created_at),
+    }));
+};
+
 export const getUserById = async (id: string): Promise<UserPublic | null> => {
     const row = await getDb()
         .prepare(`SELECT id, email, name, company, role, created_at FROM users WHERE id = ?`)
@@ -1552,6 +1572,51 @@ export const listActiveOperatorSessions = async (): Promise<OperatorSessionRecor
 export const revokeSessionById = async (sessionId: string): Promise<{ ok: boolean }> => {
     const result = await getDb().prepare(`DELETE FROM sessions WHERE id = ?`).bind(sessionId).run();
     return { ok: Number(result.meta.changes) > 0 };
+};
+
+export type OwnSessionRecord = {
+    sessionId: string;
+    createdAt: number;
+    expiresAt: number;
+    lastSeenAt: number;
+    isCurrent: boolean;
+};
+
+export const getCurrentSessionId = async (sessionToken: string): Promise<string | null> => {
+    const tokenHash = await hashSessionToken(sessionToken);
+    const row = await getDb()
+        .prepare(`SELECT id FROM sessions WHERE token_hash = ?`)
+        .bind(tokenHash).first<{ id: string }>();
+    return row ? String(row.id) : null;
+};
+
+export const listSessionsForUser = async (userId: string, currentSessionId: string | null): Promise<OwnSessionRecord[]> => {
+    const result = await getDb()
+        .prepare(
+            `SELECT id, created_at, expires_at, last_seen_at FROM sessions
+             WHERE user_id = ? AND expires_at > ?
+             ORDER BY last_seen_at DESC`,
+        )
+        .bind(userId, now()).all<Record<string, unknown>>();
+    return result.results.map((row) => ({
+        sessionId: String(row.id),
+        createdAt: Number(row.created_at),
+        expiresAt: Number(row.expires_at),
+        lastSeenAt: Number(row.last_seen_at),
+        isCurrent: String(row.id) === currentSessionId,
+    }));
+};
+
+export const revokeOwnSession = async (userId: string, sessionId: string, currentSessionId: string | null): Promise<{ ok: boolean; error?: string }> => {
+    if (sessionId === currentSessionId) {
+        return { ok: false, error: "You can't revoke your current session. Sign out instead." };
+    }
+    const row = await getDb().prepare(`SELECT user_id FROM sessions WHERE id = ?`).bind(sessionId).first<{ user_id: string }>();
+    if (!row || String(row.user_id) !== userId) {
+        return { ok: false, error: "Session not found." };
+    }
+    await getDb().prepare(`DELETE FROM sessions WHERE id = ?`).bind(sessionId).run();
+    return { ok: true };
 };
 
 // ── Bot / Agent management ────────────────────────────────────────────────────
@@ -2751,41 +2816,92 @@ export const listWorkspaceBotsForUser = async (userId: string): Promise<Workspac
 };
 
 // ── Admin export ──────────────────────────────────────────────────────────────
+//
+// SECURITY: these exports are reachable from the per-tenant Admin Console
+// (gated to `role IN (admin, superadmin)` — i.e. an ordinary customer's own
+// org admin, NOT AgentFarm staff). They must NEVER return rows belonging to
+// other tenants, and must NEVER include credential-bearing columns
+// (password_hash, gateway_token, session token_hash, etc).
+//
+// Only tables that carry a direct, non-empty `tenant_id` column are eligible
+// — each such table is filtered with `WHERE tenant_id = ?`. Tables with no
+// tenant_id (sessions, tenants, customer_tenants, bots, company_audit_events,
+// deployment_jobs, marketplace_selections, customer_bots, …) are global /
+// staff-only / cross-tenant and are intentionally excluded here. AgentFarm
+// staff already have a separate, properly-scoped path for cross-tenant data
+// via the Company Portal.
 
-const TABLE_NAMES = [
+const TENANT_SCOPED_EXPORT_TABLES = [
     "users",
-    "sessions",
     "approvals",
-    "company_audit_events",
-    "deployment_jobs",
-    "marketplace_selections",
-    "customer_tenants",
     "customer_workspaces",
-    "customer_bots",
     "provisioning_queue",
-    "bots",
-    "tenants",
     "tenant_bots",
     "tenant_integrations",
     "tenant_incidents",
     "tenant_logs",
 ] as const;
 
-export const exportDatabaseSnapshot = async (): Promise<Record<string, Record<string, unknown>[]>> => {
+type TenantScopedExportTable = (typeof TENANT_SCOPED_EXPORT_TABLES)[number];
+
+export const isTenantScopedExportTable = (value: unknown): value is TenantScopedExportTable =>
+    TENANT_SCOPED_EXPORT_TABLES.includes(value as TenantScopedExportTable);
+
+// Columns that must never leave the server in an org-admin export, keyed by table.
+const REDACTED_EXPORT_COLUMNS: Partial<Record<TenantScopedExportTable, string[]>> = {
+    users: ["password_hash", "gateway_token", "gateway_workspace_id", "gateway_bot_id", "github_org"],
+};
+
+const redactRow = (table: TenantScopedExportTable, row: Record<string, unknown>): Record<string, unknown> => {
+    const redacted = REDACTED_EXPORT_COLUMNS[table];
+    if (!redacted || redacted.length === 0) return row;
+    const copy: Record<string, unknown> = { ...row };
+    for (const col of redacted) delete copy[col];
+    return copy;
+};
+
+const fetchTenantScopedRows = async (
+    table: TenantScopedExportTable,
+    tenantId: string,
+): Promise<Record<string, unknown>[]> => {
+    if (!tenantId) return [];
+    const result = await getDb()
+        .prepare(`SELECT * FROM "${table}" WHERE tenant_id = ?`)
+        .bind(tenantId)
+        .all<Record<string, unknown>>();
+    return result.results.map((row) => redactRow(table, row));
+};
+
+/**
+ * Exports a JSON snapshot of the CALLING ADMIN'S OWN TENANT data only.
+ * `tenantId` must be the session user's tenant_id — never accept this from
+ * the request. Users without a tenant get an empty snapshot (nothing to
+ * scope to, never fall back to an unscoped/global dump).
+ */
+export const exportDatabaseSnapshot = async (
+    tenantId: string | null | undefined,
+): Promise<Record<string, Record<string, unknown>[]>> => {
     const snapshot: Record<string, Record<string, unknown>[]> = {};
-    for (const table of TABLE_NAMES) {
-        const result = await getDb().prepare(`SELECT * FROM "${table}"`).all<Record<string, unknown>>();
-        snapshot[table] = result.results;
+    if (!tenantId) return snapshot;
+    for (const table of TENANT_SCOPED_EXPORT_TABLES) {
+        snapshot[table] = await fetchTenantScopedRows(table, tenantId);
     }
     return snapshot;
 };
 
-export const exportDatabaseAsCsv = async (tableName: string): Promise<string> => {
-    if (!TABLE_NAMES.includes(tableName as typeof TABLE_NAMES[number])) {
-        throw new Error(`Unknown table: ${tableName}`);
+/**
+ * Exports a single table as CSV, scoped to the calling admin's own tenant.
+ * `tableName` must be one of TENANT_SCOPED_EXPORT_TABLES (validated by the
+ * route via `isTenantScopedExportTable`); `tenantId` must be the session
+ * user's tenant_id — never accept this from the request.
+ */
+export const exportDatabaseAsCsv = async (tableName: string, tenantId: string | null | undefined): Promise<string> => {
+    if (!isTenantScopedExportTable(tableName)) {
+        throw new Error(`Unknown or unsupported export table: ${tableName}`);
     }
-    const result = await getDb().prepare(`SELECT * FROM "${tableName}"`).all<Record<string, unknown>>();
-    const rows = result.results;
+    if (!tenantId) return "";
+
+    const rows = await fetchTenantScopedRows(tableName, tenantId);
     if (rows.length === 0) return "";
 
     const cols = Object.keys(rows[0]!);
