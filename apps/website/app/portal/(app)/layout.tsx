@@ -9,6 +9,8 @@ import {
     LayoutDashboard,
     LogOut,
     Plug,
+    LifeBuoy,
+    Settings,
 } from "lucide-react";
 
 const GATEWAY_URL =
@@ -65,7 +67,9 @@ const navItems = [
     { href: "/portal/connectors", label: "Integrations", icon: Plug },
     { href: "/portal/usage",      label: "Usage",        icon: BarChart3 },
     { href: "/portal/billing",    label: "Billing",      icon: CreditCard },
+    { href: "/portal/support",    label: "Support",      icon: LifeBuoy },
     { href: "/portal/profile",    label: "Profile",      icon: User },
+    { href: "/portal/account",    label: "Account",      icon: Settings },
 ];
 
 export default async function PortalAppLayout({

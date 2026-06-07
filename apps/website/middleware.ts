@@ -40,17 +40,31 @@ const PROTECTED_PREFIXES = [
 const PUBLIC_PREFIXES = ["/api/auth"];
 
 /**
- * Portal paths that are always public (no portal_session required).
+ * Portal paths that are always public (no portal_session required) — exact matches.
  */
 const PORTAL_PUBLIC_PATHS = new Set(["/portal/login"]);
 
 /**
- * Portal session: pages under /portal/* (except /portal/login and /api/portal/auth/*)
- * require a portal_session cookie.  Full validation is done server-side; middleware
- * does a fast presence-only check at the edge.
+ * Portal path prefixes that are always public (no portal_session required) —
+ * covers unauthenticated flows like signup, password recovery, email verification,
+ * and the token-authenticated CSAT survey.
+ */
+const PORTAL_PUBLIC_PREFIXES = [
+    "/portal/signup",
+    "/portal/forgot-password",
+    "/portal/reset-password",
+    "/portal/verify-email",
+    "/portal/support/csat",
+];
+
+/**
+ * Portal session: pages under /portal/* (except the public paths/prefixes above and
+ * /api/portal/*) require a portal_session cookie.  Full validation is done server-side;
+ * middleware does a fast presence-only check at the edge.
  */
 function isPortalProtected(pathname: string): boolean {
     if (PORTAL_PUBLIC_PATHS.has(pathname)) return false;
+    if (PORTAL_PUBLIC_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) return false;
     if (pathname.startsWith("/api/portal/")) return false;
     return pathname === "/portal" || pathname.startsWith("/portal/");
 }

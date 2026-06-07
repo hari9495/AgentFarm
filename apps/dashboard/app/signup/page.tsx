@@ -222,7 +222,7 @@ export default function SignupPage() {
                         Create your <span style={{ color: 'var(--accent)' }}>account</span>
                     </h1>
                     <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: 'var(--ink-muted)' }}>
-                        Internal dashboard access for approved team members.
+                        Set up your workspace and start operating your AI agent fleet.
                     </p>
                 </div>
 

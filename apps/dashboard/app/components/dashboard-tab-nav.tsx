@@ -163,7 +163,7 @@ export function DashboardTabNav({
 
     if (variant === 'sidebar') {
         return (
-            <nav className="sidebar-nav" aria-label="Internal dashboard navigation">
+            <nav className="sidebar-nav" aria-label="Dashboard navigation">
                 {tabs.map((tab) => (
                     <button
                         key={tab.key}

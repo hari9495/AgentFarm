@@ -14,11 +14,30 @@ export default function PortalLoginPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [inactive, setInactive] = useState(false);
+    const [needsVerification, setNeedsVerification] = useState(false);
+    const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+
+    async function handleResendVerification() {
+        if (!email.trim()) { setResendStatus("error"); return; }
+        setResendStatus("sending");
+        try {
+            const res = await fetch("/api/portal/auth/resend-verification", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ tenantId: tenantId.trim(), email: email.trim() }),
+            });
+            setResendStatus(res.ok ? "sent" : "error");
+        } catch {
+            setResendStatus("error");
+        }
+    }
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setError(null);
         setInactive(false);
+        setNeedsVerification(false);
+        setResendStatus("idle");
 
         if (!tenantId.trim()) {
             setError("Tenant ID is required.");
@@ -46,7 +65,12 @@ export default function PortalLoginPage() {
                 return;
             }
             if (!res.ok) {
-                const data = (await res.json().catch(() => ({}))) as { message?: string };
+                const data = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
+                if (data.error === "email_not_verified") {
+                    setNeedsVerification(true);
+                    setError(data.message ?? "Please verify your email address before signing in.");
+                    return;
+                }
                 setError(data.message ?? "Email or password is incorrect.");
                 return;
             }
@@ -86,8 +110,21 @@ export default function PortalLoginPage() {
                     )}
 
                     {error && !inactive && (
-                        <div className="mb-5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 px-4 py-3 text-sm text-rose-700 dark:text-rose-400">
-                            {error}
+                        <div className="mb-5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 px-4 py-3 text-sm text-rose-700 dark:text-rose-400 space-y-2">
+                            <p>{error}</p>
+                            {needsVerification && (
+                                <button
+                                    type="button"
+                                    onClick={() => void handleResendVerification()}
+                                    disabled={resendStatus === "sending" || resendStatus === "sent"}
+                                    className="text-xs font-semibold text-rose-700 dark:text-rose-300 underline disabled:no-underline disabled:opacity-60"
+                                >
+                                    {resendStatus === "sending" && "Sending verification email…"}
+                                    {resendStatus === "sent" && "Verification email sent — check your inbox."}
+                                    {resendStatus === "error" && "Couldn't resend — try again"}
+                                    {resendStatus === "idle" && "Resend verification email"}
+                                </button>
+                            )}
                         </div>
                     )}
 
@@ -176,6 +213,15 @@ export default function PortalLoginPage() {
                             )}
                         </button>
                     </form>
+
+                    <div className="mt-4 flex items-center justify-between text-xs">
+                        <Link href="/portal/forgot-password" className="text-sky-600 hover:underline">
+                            Forgot password?
+                        </Link>
+                        <Link href="/portal/signup" className="text-sky-600 hover:underline">
+                            Create an account →
+                        </Link>
+                    </div>
                 </div>
 
                 <p className="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">

@@ -19,9 +19,18 @@ const plexMono = IBM_Plex_Mono({
     variable: '--font-plex-mono',
 });
 
+// NOTE: despite the legacy "internal" naming on the session cookie/helpers in
+// ./lib/internal-session.ts (a holdover from when this app was staff-only),
+// this is the primary CUSTOMER/operator product dashboard — tenant admins and
+// their teams log in here to run their AI agent fleet (agents, connectors,
+// billing, governance, support, etc). AgentFarm staff also use it (with
+// `scope: "internal"` sessions) for cross-tenant operations, but ordinary
+// paying customers are the primary audience. The title/description below
+// reflect that — do not revert to "Internal Dashboard" branding, which
+// confused customers into thinking this was a staff-only console.
 export const metadata: Metadata = {
-    title: 'AgentFarms Internal Dashboard',
-    description: 'Internal operations dashboard for runtime, approvals, and evidence monitoring.',
+    title: 'AgentFarms Dashboard',
+    description: 'Manage your AI agent workspace — agents, connectors, billing, governance, and support.',
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
