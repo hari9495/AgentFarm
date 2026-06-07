@@ -1493,12 +1493,33 @@ export const updateUserRole = async (
     newRole: UserRole,
     actingUserId: string,
     actingUserRole: UserRole,
+    actingUserEmail: string,
+    /**
+     * Tenant isolation guard. Pass the ACTING user's tenant_id to restrict
+     * this call to users within that same tenant — required for ordinary
+     * org admins/superadmins (they must never be able to view or mutate
+     * another customer's roster). Pass `undefined` ONLY for AgentFarm staff
+     * (isCompanyOperatorEmail) acting from the Company Portal, which has its
+     * own audited cross-tenant path by design.
+     *
+     * When scoping is active and the target user belongs to a different
+     * tenant (or the acting admin has no tenant), this returns "User not
+     * found" rather than "Forbidden" so the existence of users in other
+     * tenants is never disclosed.
+     */
+    scopeToTenantId?: string | null,
 ): Promise<{ ok: boolean; error?: string }> => {
     const targetRow = await getDb()
-        .prepare(`SELECT role FROM users WHERE id = ?`)
-        .bind(targetUserId).first<{ role: string }>();
+        .prepare(`SELECT role, tenant_id FROM users WHERE id = ?`)
+        .bind(targetUserId).first<{ role: string; tenant_id: string | null }>();
     if (!targetRow) {
         return { ok: false, error: "User not found." };
+    }
+
+    if (scopeToTenantId !== undefined) {
+        if (!scopeToTenantId || targetRow.tenant_id !== scopeToTenantId) {
+            return { ok: false, error: "User not found." };
+        }
     }
 
     const targetRole: UserRole =
@@ -1531,6 +1552,18 @@ export const updateUserRole = async (
     }
 
     await getDb().prepare(`UPDATE users SET role = ? WHERE id = ?`).bind(newRole, targetUserId).run();
+
+    await writeAuditEvent({
+        actorId: actingUserId,
+        actorEmail: actingUserEmail,
+        action: "user.role.updated",
+        targetType: "user",
+        targetId: targetUserId,
+        tenantId: targetRow.tenant_id ?? "",
+        beforeState: { role: targetRole },
+        afterState: { role: newRole },
+    });
+
     return { ok: true };
 };
 
