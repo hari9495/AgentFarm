@@ -49,6 +49,7 @@ type SessionContext = {
 };
 
 export type SupportIssueSeverity = 'critical' | 'high' | 'medium' | 'low';
+export type SupportIssueSource = 'portal' | 'operator';
 export type SupportIssueStatus = 'open' | 'diagnosing' | 'fixing' | 'escalated' | 'resolved';
 
 export interface SupportIssueRecord {
@@ -59,6 +60,7 @@ export interface SupportIssueRecord {
     description: string;
     status: SupportIssueStatus;
     severity: SupportIssueSeverity;
+    source: SupportIssueSource;
     tierReached: number | null;
     fixApplied: boolean;
     diagnosisReport: Record<string, unknown> | null;
@@ -90,7 +92,7 @@ let _prisma: PrismaClient | null = null;
 
 function prismaIssueToRecord(raw: {
     id: string; tenantId: string; workspaceId: string | null; title: string; description: string;
-    status: string; severity: string; tierReached: number | null; fixApplied: boolean;
+    status: string; severity: string; source?: string; tierReached: number | null; fixApplied: boolean;
     diagnosisReport: unknown; resolutionNotes: string | null; escalatedTo: string | null;
     createdAt: Date; resolvedAt: Date | null;
 }): SupportIssueRecord {
@@ -98,6 +100,7 @@ function prismaIssueToRecord(raw: {
         id: raw.id, tenantId: raw.tenantId, workspaceId: raw.workspaceId,
         title: raw.title, description: raw.description,
         status: raw.status as SupportIssueStatus, severity: raw.severity as SupportIssueSeverity,
+        source: (raw.source as SupportIssueSource | undefined) ?? 'operator',
         tierReached: raw.tierReached, fixApplied: raw.fixApplied,
         diagnosisReport: raw.diagnosisReport as Record<string, unknown> | null,
         resolutionNotes: raw.resolutionNotes, escalatedTo: raw.escalatedTo,
@@ -139,6 +142,7 @@ class WriteThroughIssueStore {
             description: issue.description,
             status: issue.status as never,
             severity: issue.severity as never,
+            source: issue.source as never,
             tierReached: issue.tierReached ?? undefined,
             fixApplied: issue.fixApplied,
             diagnosisReport,
@@ -311,6 +315,7 @@ export async function registerSupportIssueRoutes(
                 status: 'open',
                 severity: (['critical', 'high', 'medium', 'low'].includes(String(severity))
                     ? String(severity) : 'medium') as SupportIssueSeverity,
+                source: 'operator',
                 tierReached: null,
                 fixApplied: false,
                 diagnosisReport: null,

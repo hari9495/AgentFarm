@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 
 export type SupportIssueStatus = 'open' | 'diagnosing' | 'fixing' | 'escalated' | 'resolved';
 export type SupportIssueSeverity = 'critical' | 'high' | 'medium' | 'low';
+export type SupportIssueSource = 'portal' | 'operator';
 
 export type SupportIssue = {
     id: string;
@@ -17,6 +18,7 @@ export type SupportIssue = {
     description: string;
     status: SupportIssueStatus;
     severity: SupportIssueSeverity;
+    source: SupportIssueSource;
     tierReached: number | null;
     fixApplied: boolean;
     diagnosisReport: Record<string, unknown> | null;
@@ -95,6 +97,19 @@ function StatusPill({ status }: { status: SupportIssueStatus }) {
                 }} />
             )}
             {c.label}
+        </span>
+    );
+}
+
+function PortalSourceBadge({ source }: { source: SupportIssueSource }) {
+    if (source !== 'portal') return null;
+    return (
+        <span style={{
+            display: 'inline-flex', alignItems: 'center',
+            padding: '1px 7px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+            background: 'var(--info-bg)', color: 'var(--info)',
+        }} title="This ticket was raised by the customer via the support portal">
+            Customer escalated
         </span>
     );
 }
@@ -213,6 +228,7 @@ export function SupportIssueFeed() {
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.35rem' }}>
                                 <SeverityBadge severity={issue.severity} />
                                 <StatusPill status={issue.status} />
+                                <PortalSourceBadge source={issue.source} />
                                 {issue.fixApplied && (
                                     <span style={{ fontSize: 11, color: 'var(--ok)', marginLeft: 'auto', flexShrink: 0 }}>
                                         ✓ Fixed

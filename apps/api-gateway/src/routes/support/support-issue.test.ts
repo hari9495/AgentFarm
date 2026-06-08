@@ -103,6 +103,7 @@ describe('SupportIssue — POST /v1/support/issues', () => {
         assert.equal(body.severity, 'medium');
         assert.equal(body.fixApplied, false);
         assert.equal(body.tierReached, null);
+        assert.equal(body.source, 'operator', 'REST-created issues are always operator-originated');
     });
 
     it('accepts optional title and severity', async () => {
@@ -163,13 +164,13 @@ describe('SupportIssue — GET /v1/support/issues (list)', () => {
         // Seed one issue for this tenant, one for another
         issueStore.set('id1', {
             id: 'id1', tenantId: SESSION.tenantId, workspaceId: null, title: 'mine',
-            description: 'a', status: 'open', severity: 'low', tierReached: null,
+            description: 'a', status: 'open', severity: 'low', source: 'operator', tierReached: null,
             fixApplied: false, diagnosisReport: null, resolutionNotes: null,
             escalatedTo: null, createdAt: new Date().toISOString(), prUrl: null, resolvedAt: null,
         });
         issueStore.set('id2', {
             id: 'id2', tenantId: 'other_tenant', workspaceId: null, title: 'theirs',
-            description: 'b', status: 'open', severity: 'low', tierReached: null,
+            description: 'b', status: 'open', severity: 'low', source: 'operator', tierReached: null,
             fixApplied: false, diagnosisReport: null, resolutionNotes: null,
             escalatedTo: null, createdAt: new Date().toISOString(), prUrl: null, resolvedAt: null,
         });
@@ -195,7 +196,7 @@ describe('SupportIssue — GET /v1/support/issues/:id', () => {
     it('returns 403 for another tenant\'s issue', async () => {
         issueStore.set('foreign', {
             id: 'foreign', tenantId: 'other_tenant', workspaceId: null, title: 't',
-            description: 'd', status: 'open', severity: 'low', tierReached: null,
+            description: 'd', status: 'open', severity: 'low', source: 'operator', tierReached: null,
             fixApplied: false, diagnosisReport: null, resolutionNotes: null,
             escalatedTo: null, createdAt: new Date().toISOString(), prUrl: null, resolvedAt: null,
         });
@@ -206,7 +207,7 @@ describe('SupportIssue — GET /v1/support/issues/:id', () => {
     it('returns issue with steps array', async () => {
         issueStore.set('my1', {
             id: 'my1', tenantId: SESSION.tenantId, workspaceId: null, title: 'ok',
-            description: 'desc', status: 'diagnosing', severity: 'medium', tierReached: null,
+            description: 'desc', status: 'diagnosing', severity: 'medium', source: 'operator', tierReached: null,
             fixApplied: false, diagnosisReport: null, resolutionNotes: null,
             escalatedTo: null, createdAt: new Date().toISOString(), prUrl: null, resolvedAt: null,
         });
@@ -226,7 +227,7 @@ describe('SupportIssue — POST /v1/support/issues/:id/resolve', () => {
     it('marks issue resolved', async () => {
         issueStore.set('r1', {
             id: 'r1', tenantId: SESSION.tenantId, workspaceId: null, title: 't',
-            description: 'd', status: 'open', severity: 'medium', tierReached: 1,
+            description: 'd', status: 'open', severity: 'medium', source: 'operator', tierReached: 1,
             fixApplied: true, diagnosisReport: null, resolutionNotes: null,
             escalatedTo: null, createdAt: new Date().toISOString(), prUrl: null, resolvedAt: null,
         });
@@ -246,7 +247,7 @@ describe('SupportIssue — POST /v1/support/issues/:id/resolve', () => {
     it('returns 409 if already resolved', async () => {
         issueStore.set('r2', {
             id: 'r2', tenantId: SESSION.tenantId, workspaceId: null, title: 't',
-            description: 'd', status: 'resolved', severity: 'low', tierReached: 1,
+            description: 'd', status: 'resolved', severity: 'low', source: 'operator', tierReached: 1,
             fixApplied: true, diagnosisReport: null, resolutionNotes: 'done',
             escalatedTo: null, createdAt: new Date().toISOString(), resolvedAt: new Date().toISOString(),
         });
@@ -269,7 +270,7 @@ describe('SupportIssue — POST /v1/support/issues/:id/resolve', () => {
     it('returns 403 for another tenant\'s issue', async () => {
         issueStore.set('r3', {
             id: 'r3', tenantId: 'other', workspaceId: null, title: 't',
-            description: 'd', status: 'open', severity: 'low', tierReached: null,
+            description: 'd', status: 'open', severity: 'low', source: 'operator', tierReached: null,
             fixApplied: false, diagnosisReport: null, resolutionNotes: null,
             escalatedTo: null, createdAt: new Date().toISOString(), prUrl: null, resolvedAt: null,
         });
@@ -296,6 +297,7 @@ describe('SupportIssue — GET /v1/support/stats', () => {
     it('counts resolved issues and computes tier breakdown', async () => {
         const base = {
             workspaceId: null, description: 'd', status: 'resolved' as const, severity: 'medium' as const,
+            source: 'operator' as const,
             fixApplied: true, diagnosisReport: null, resolutionNotes: null,
             escalatedTo: null, createdAt: new Date().toISOString(), resolvedAt: new Date().toISOString(),
         };

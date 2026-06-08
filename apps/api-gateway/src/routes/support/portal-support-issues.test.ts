@@ -65,7 +65,7 @@ function seedIssue(id: string, tenantId = TENANT_ID) {
     issueStore.set(id, {
         id, tenantId, workspaceId: null,
         title: `Issue ${id}`, description: 'test',
-        status: 'open', severity: 'medium',
+        status: 'open', severity: 'medium', source: 'operator',
         tierReached: null, fixApplied: false, diagnosisReport: null,
         resolutionNotes: null, escalatedTo: null,
         createdAt: new Date().toISOString(), prUrl: null, resolvedAt: null,
@@ -138,7 +138,7 @@ describe('GET /v1/portal/support/issues', () => {
         issueStore.set('ps-resolved', {
             id: 'ps-resolved', tenantId: TENANT_ID, workspaceId: null,
             title: 'resolved issue', description: 'r', status: 'resolved',
-            severity: 'low', tierReached: 1, fixApplied: true, diagnosisReport: null,
+            severity: 'low', source: 'operator', tierReached: 1, fixApplied: true, diagnosisReport: null,
             resolutionNotes: 'done', escalatedTo: null, prUrl: null,
             createdAt: new Date().toISOString(), resolvedAt: new Date().toISOString(),
         });
@@ -189,14 +189,14 @@ describe('GET /v1/portal/support/issues', () => {
     it('issues are sorted newest-first', async () => {
         issueStore.set('old-issue', {
             id: 'old-issue', tenantId: TENANT_ID, workspaceId: null,
-            title: 'old', description: 'o', status: 'open', severity: 'low',
+            title: 'old', description: 'o', status: 'open', severity: 'low', source: 'operator',
             tierReached: null, fixApplied: false, diagnosisReport: null,
             resolutionNotes: null, escalatedTo: null,
             createdAt: new Date(Date.now() - 10_000).toISOString(), prUrl: null, resolvedAt: null,
         });
         issueStore.set('new-issue', {
             id: 'new-issue', tenantId: TENANT_ID, workspaceId: null,
-            title: 'new', description: 'n', status: 'open', severity: 'low',
+            title: 'new', description: 'n', status: 'open', severity: 'low', source: 'operator',
             tierReached: null, fixApplied: false, diagnosisReport: null,
             resolutionNotes: null, escalatedTo: null,
             createdAt: new Date().toISOString(), prUrl: null, resolvedAt: null,

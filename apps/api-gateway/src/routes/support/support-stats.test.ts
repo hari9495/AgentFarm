@@ -41,6 +41,7 @@ function makeIssue(overrides: Partial<SupportIssueRecord> = {}): SupportIssueRec
         title: 'Test issue',
         description: 'Something broken',
         severity: 'medium',
+        source: 'operator',
         status: 'resolved',
         tierReached: 1,
         fixApplied: true,

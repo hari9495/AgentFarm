@@ -2431,6 +2431,7 @@ model SupportIssue {
   description      String
   status           SupportIssueStatus      @default(open)
   severity         SupportIssueSeverity    @default(medium)
+  source           SupportIssueSource      @default(operator)
   tierReached      Int?
   fixApplied       Boolean                 @default(false)
   diagnosisReport  Json?
@@ -2500,6 +2501,11 @@ enum SupportIssueSeverity {
   high
   medium
   low
+}
+
+enum SupportIssueSource {
+  portal
+  operator
 }
 
 enum DiagnosisStepStatus {

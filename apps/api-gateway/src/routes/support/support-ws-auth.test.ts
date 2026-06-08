@@ -115,6 +115,7 @@ describe('support chat-session — portal_session auth', () => {
             description: 'test',
             status: 'open',
             severity: 'medium',
+            source: 'operator',
             tierReached: null,
             fixApplied: false,
             diagnosisReport: null,
@@ -154,6 +155,7 @@ describe('support chat-session — portal_session auth', () => {
             description: 'd',
             status: 'open',
             severity: 'low',
+            source: 'operator',
             tierReached: null,
             fixApplied: false,
             diagnosisReport: null,
@@ -241,6 +243,7 @@ describe('support voice-session — portal_session auth', () => {
             description: 'test',
             status: 'open',
             severity: 'medium',
+            source: 'operator',
             tierReached: null,
             fixApplied: false,
             diagnosisReport: null,
@@ -292,6 +295,140 @@ describe('support voice-session — portal_session auth', () => {
         assert.equal(connected.type, 'connected');
         assert.ok(connected.issueId, 'should have created a new issue');
         assert.equal(issueStore.size, initialSize + 1, 'new issue should be in the store');
+
+        const created = issueStore.get(connected.issueId!);
+        assert.equal(created?.source, 'portal', 'issue created via portal_session should be source=portal');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// `source` discriminator — issues created via agentfarm_session (operator)
+// vs. portal_session (customer) must be tagged accordingly.
+// ---------------------------------------------------------------------------
+
+describe('support sessions — source discriminator', () => {
+    let chatApp: FastifyInstance;
+    let chatPort: number;
+    let voiceApp: FastifyInstance;
+    let voicePort: number;
+
+    const OPERATOR_SESSION = {
+        userId: 'operator-u1',
+        tenantId: 'source-discriminator-tenant',
+        workspaceIds: ['ws1'],
+        expiresAt: Date.now() + 3_600_000,
+    };
+
+    before(async () => {
+        chatApp = Fastify({ logger: false });
+        await registerSupportChatSessionRoutes(chatApp, {
+            getSession: () => OPERATOR_SESSION,
+            getPortalSession: makeGetPortalSession(OPERATOR_SESSION.tenantId),
+            gatewayBaseUrl: 'http://127.0.0.1:1',
+            serviceToken: 'test',
+        });
+        await chatApp.listen({ port: 0, host: '127.0.0.1' });
+        chatPort = (chatApp.server.address() as { port: number }).port;
+
+        voiceApp = Fastify({ logger: false });
+        await registerSupportVoiceSessionRoutes(voiceApp, {
+            getSession: () => OPERATOR_SESSION,
+            getPortalSession: makeGetPortalSession(OPERATOR_SESSION.tenantId),
+            sarvamApiKey: '',
+            gatewayBaseUrl: 'http://127.0.0.1:1',
+            serviceToken: 'test',
+        });
+        await voiceApp.listen({ port: 0, host: '127.0.0.1' });
+        voicePort = (voiceApp.server.address() as { port: number }).port;
+
+        issueStore.clear();
+    });
+
+    after(async () => {
+        await chatApp.close();
+        await voiceApp.close();
+        issueStore.clear();
+    });
+
+    it('tags chat issues created via agentfarm_session as source=operator', async () => {
+        const frames: string[] = [];
+        const ws = new WebSocket(`ws://127.0.0.1:${chatPort}/v1/support/chat-session`);
+        await new Promise<void>((resolve, reject) => {
+            ws.on('message', (d) => frames.push(d.toString()));
+            ws.on('open', () => resolve());
+            ws.on('error', reject);
+            setTimeout(() => reject(new Error('timeout')), 3_000);
+        });
+        await waitForFrame(frames, 1);
+
+        ws.send(JSON.stringify({ type: 'message', text: 'Operator-initiated ticket' }));
+        await waitForFrame(frames, 2, 5_000);
+
+        const parsed = frames.map((f) => JSON.parse(f) as { type: string; issueId?: string });
+        const created = parsed.find((f) => f.type === 'connected' && f.issueId);
+        assert.ok(created?.issueId, 'expected a connected frame with issueId');
+        const issue = issueStore.get(created!.issueId!);
+        assert.equal(issue?.source, 'operator', 'issue created via agentfarm_session should be source=operator');
+
+        await new Promise<void>((resolve) => { ws.on('close', () => resolve()); ws.close(); });
+    });
+
+    it('tags chat issues created via portal_session as source=portal', async () => {
+        const frames: string[] = [];
+        // Force the portal_session fallback path by pretending agentfarm_session is absent —
+        // re-register a server with getSession returning null, but reuse the same tenant.
+        const portalOnlyApp = Fastify({ logger: false });
+        await registerSupportChatSessionRoutes(portalOnlyApp, {
+            getSession: () => null,
+            getPortalSession: makeGetPortalSession(OPERATOR_SESSION.tenantId),
+            gatewayBaseUrl: 'http://127.0.0.1:1',
+            serviceToken: 'test',
+        });
+        await portalOnlyApp.listen({ port: 0, host: '127.0.0.1' });
+        const portalPort = (portalOnlyApp.server.address() as { port: number }).port;
+
+        const ws = new WebSocket(`ws://127.0.0.1:${portalPort}/v1/support/chat-session`, {
+            headers: { cookie: `portal_session=${PORTAL_TOKEN}` },
+        });
+        await new Promise<void>((resolve, reject) => {
+            ws.on('message', (d) => frames.push(d.toString()));
+            ws.on('open', () => resolve());
+            ws.on('error', reject);
+            setTimeout(() => reject(new Error('timeout')), 3_000);
+        });
+        await waitForFrame(frames, 1);
+
+        ws.send(JSON.stringify({ type: 'message', text: 'Customer-initiated ticket' }));
+        await waitForFrame(frames, 2, 5_000);
+
+        const parsed = frames.map((f) => JSON.parse(f) as { type: string; issueId?: string });
+        const created = parsed.find((f) => f.type === 'connected' && f.issueId);
+        assert.ok(created?.issueId, 'expected a connected frame with issueId');
+        const issue = issueStore.get(created!.issueId!);
+        assert.equal(issue?.source, 'portal', 'issue created via portal_session should be source=portal');
+
+        await new Promise<void>((resolve) => { ws.on('close', () => resolve()); ws.close(); });
+        await portalOnlyApp.close();
+    });
+
+    it('tags voice issues created via agentfarm_session as source=operator', async () => {
+        const frames: string[] = [];
+        const ws = new WebSocket(`ws://127.0.0.1:${voicePort}/v1/support/voice-session`);
+        await new Promise<void>((resolve, reject) => {
+            ws.on('message', (d) => frames.push(d.toString()));
+            ws.on('open', async () => {
+                await waitForFrame(frames, 1).catch(reject);
+                ws.close();
+                resolve();
+            });
+            ws.on('error', reject);
+            setTimeout(() => reject(new Error('timeout')), 3_000);
+        });
+
+        const connected = JSON.parse(frames[0]!) as { type: string; issueId?: string };
+        assert.ok(connected?.issueId, 'should have created a new issue');
+        const issue = issueStore.get(connected!.issueId!);
+        assert.equal(issue?.source, 'operator', 'issue created via agentfarm_session should be source=operator');
     });
 });
 

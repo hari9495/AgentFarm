@@ -21,7 +21,7 @@ import type { IncomingMessage } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { SarvamRealtimeSttClient, SarvamRealtimeTtsClient } from '@agentfarm/meeting-agent';
-import { issueStore, pushIssueUpdate, type SupportIssueRecord } from './support-issue.js';
+import { issueStore, pushIssueUpdate, type SupportIssueRecord, type SupportIssueSource } from './support-issue.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -161,10 +161,12 @@ export async function registerSupportVoiceSessionRoutes(
             const rawCookie = req.headers['cookie'] ?? '';
             const mockReq = { headers: { cookie: rawCookie } } as unknown as FastifyRequest;
             let session: SessionContext | null = getSession(mockReq);
+            let sessionSource: SupportIssueSource = 'operator';
 
             // Fall back to portal_session if no agentfarm_session present
             if ((!session || session.expiresAt < Date.now()) && getPortalSession) {
                 session = await getPortalSession(rawCookie);
+                sessionSource = 'portal';
             }
 
             if (!session || session.expiresAt < Date.now()) {
@@ -174,12 +176,12 @@ export async function registerSupportVoiceSessionRoutes(
             }
 
             wss.handleUpgrade(req, socket, head, (ws) => {
-                wss.emit('connection', ws, req, session!);
+                wss.emit('connection', ws, req, session!, sessionSource);
             });
         })();
     });
 
-    wss.on('connection', (ws: WebSocket, req: unknown, session: SessionContext) => {
+    wss.on('connection', (ws: WebSocket, req: unknown, session: SessionContext, sessionSource: SupportIssueSource) => {
         // Read optional ?issueId= from the upgrade request URL for session resume
         const httpReq = req as IncomingMessage;
         const upgradeUrl = new URL(httpReq.url ?? '/', 'http://localhost');
@@ -226,6 +228,7 @@ export async function registerSupportVoiceSessionRoutes(
                 description: 'Voice support session initiated',
                 status: 'open',
                 severity: 'medium',
+                source: sessionSource,
                 tierReached: null,
                 fixApplied: false,
                 diagnosisReport: null,
