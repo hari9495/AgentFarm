@@ -277,9 +277,12 @@ export async function registerSupportChatSessionRoutes(
         void (async () => {
             const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
             if (url.pathname !== '/v1/support/chat-session') {
-                // Don't destroy the socket — other `upgrade` listeners (e.g. the
-                // voice-session route) share this same HTTP server and need a
-                // chance to handle paths that aren't ours.
+                // Only destroy sockets for paths that no support WS route owns —
+                // the voice-session route shares this HTTP server's `upgrade` event
+                // and needs an unmolested socket to complete its own handshake.
+                if (url.pathname !== '/v1/support/voice-session') {
+                    socket.destroy();
+                }
                 return;
             }
 
