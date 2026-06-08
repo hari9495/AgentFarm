@@ -22,7 +22,7 @@
     },
     "devDependencies": {
         "@types/nodemailer": "^6.4.17",
-        "@types/node": "^22.0.0",
+        "@types/node": "^20.19.42",
         "typescript": "^5.7.2",
         "vite": "^6.0.0",
         "vitest": "^4.1.8"
