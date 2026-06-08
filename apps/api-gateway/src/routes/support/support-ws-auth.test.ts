@@ -294,3 +294,87 @@ describe('support voice-session — portal_session auth', () => {
         assert.equal(issueStore.size, initialSize + 1, 'new issue should be in the store');
     });
 });
+
+// ---------------------------------------------------------------------------
+// Duplicate registration guard — one client connection must not fan out into
+// N stacked WebSocket wrappers (see CHAT_SESSION_WS_REGISTERED /
+// VOICE_SESSION_WS_REGISTERED). Regression for: a single chat message
+// producing dozens of `connected` frames with distinct issueIds and creating
+// duplicate SupportIssue rows.
+// ---------------------------------------------------------------------------
+
+describe('support chat-session — duplicate registration guard', () => {
+    let app: FastifyInstance;
+    let port: number;
+
+    before(async () => {
+        app = Fastify({ logger: false });
+        const registerOpts = {
+            getSession: () => null,
+            getPortalSession: makeGetPortalSession('dup-guard-tenant'),
+            gatewayBaseUrl: 'http://127.0.0.1:1',
+            serviceToken: 'test',
+        };
+        // Simulate the route module being registered more than once against the
+        // same underlying HTTP server (e.g. duplicate plugin load / reload).
+        await registerSupportChatSessionRoutes(app, registerOpts);
+        await registerSupportChatSessionRoutes(app, registerOpts);
+        await registerSupportChatSessionRoutes(app, registerOpts);
+        await app.listen({ port: 0, host: '127.0.0.1' });
+        port = (app.server.address() as { port: number }).port;
+        issueStore.clear();
+    });
+
+    after(async () => { await app.close(); issueStore.clear(); });
+
+    it('sends exactly one `connected` frame per physical connection', async () => {
+        const frames: { type: string; issueId?: string }[] = [];
+        const ws = new WebSocket(`ws://127.0.0.1:${port}/v1/support/chat-session`, {
+            headers: { cookie: `portal_session=${PORTAL_TOKEN}` },
+        });
+        await new Promise<void>((resolve, reject) => {
+            ws.on('message', (d) => frames.push(JSON.parse(d.toString())));
+            ws.on('open', () => resolve());
+            ws.on('error', reject);
+            setTimeout(() => reject(new Error('timeout')), 3_000);
+        });
+
+        // Give any stacked listeners a chance to fire their own `connected` frames.
+        await new Promise((r) => setTimeout(r, 300));
+        assert.equal(
+            frames.filter((f) => f.type === 'connected').length,
+            1,
+            'expected exactly one `connected` frame on connect — got duplicates from stacked listeners',
+        );
+
+        await new Promise<void>((resolve) => { ws.on('close', () => resolve()); ws.close(); });
+    });
+
+    it('creates exactly one SupportIssue for a single chat message', async () => {
+        const initialSize = issueStore.size;
+        const frames: { type: string; issueId?: string }[] = [];
+        const ws = new WebSocket(`ws://127.0.0.1:${port}/v1/support/chat-session`, {
+            headers: { cookie: `portal_session=${PORTAL_TOKEN}` },
+        });
+        await new Promise<void>((resolve, reject) => {
+            ws.on('message', (d) => frames.push(JSON.parse(d.toString())));
+            ws.on('open', () => resolve());
+            ws.on('error', reject);
+            setTimeout(() => reject(new Error('timeout')), 3_000);
+        });
+        // Wait for the initial `connected` frame before sending a message.
+        await new Promise((r) => setTimeout(r, 200));
+
+        ws.send(JSON.stringify({ type: 'message', text: 'My dashboard will not load' }));
+
+        // Wait for the new-issue `connected` frame plus the agent reply.
+        await new Promise((r) => setTimeout(r, 800));
+
+        const connectedFrames = frames.filter((f) => f.type === 'connected' && f.issueId);
+        const distinctIssueIds = new Set(connectedFrames.map((f) => f.issueId));
+        assert.equal(distinctIssueIds.size, 1, `expected one distinct issueId, got: ${[...distinctIssueIds].join(', ')}`);
+        assert.equal(issueStore.size, initialSize + 1, 'expected exactly one new SupportIssue to be created');
+
+        await new Promise<void>((resolve) => { ws.on('close', () => resolve()); ws.close(); });
+    });
+});

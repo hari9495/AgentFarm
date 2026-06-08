@@ -242,10 +242,26 @@ export interface RegisterSupportChatSessionRoutesOptions {
 // Route registration
 // ---------------------------------------------------------------------------
 
+/**
+ * Marks `app.server` once the chat-session `upgrade`/`connection` listeners
+ * are attached. Without this guard, a second invocation against the same
+ * underlying HTTP server (e.g. duplicate plugin registration, module reload)
+ * would stack another pair of listeners — every upgrade would then fan out to
+ * N independent WebSocket wrappers around the same socket, each sending its
+ * own `connected` frame and creating its own SupportIssue for one client.
+ */
+const CHAT_SESSION_WS_REGISTERED = Symbol.for('agentfarm.support.chat-session.ws-registered');
+
 export async function registerSupportChatSessionRoutes(
     app: FastifyInstance,
     opts: RegisterSupportChatSessionRoutesOptions,
 ): Promise<void> {
+    const server = app.server as unknown as Record<symbol, boolean>;
+    if (server[CHAT_SESSION_WS_REGISTERED]) {
+        return;
+    }
+    server[CHAT_SESSION_WS_REGISTERED] = true;
+
     const { getSession, getPortalSession } = opts;
     const gatewayBaseUrl = opts.gatewayBaseUrl ?? process.env['GATEWAY_BASE_URL'] ?? 'http://localhost:3000';
     const serviceToken = opts.serviceToken ?? process.env['RUNTIME_TASK_SHARED_TOKEN'] ?? '';
@@ -261,7 +277,9 @@ export async function registerSupportChatSessionRoutes(
         void (async () => {
             const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
             if (url.pathname !== '/v1/support/chat-session') {
-                socket.destroy();
+                // Don't destroy the socket — other `upgrade` listeners (e.g. the
+                // voice-session route) share this same HTTP server and need a
+                // chance to handle paths that aren't ours.
                 return;
             }
 

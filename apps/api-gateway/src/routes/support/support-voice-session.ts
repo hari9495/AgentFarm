@@ -121,10 +121,24 @@ export interface RegisterSupportVoiceSessionRoutesOptions {
 // Route registration
 // ---------------------------------------------------------------------------
 
+/**
+ * Marks `app.server` once the voice-session `upgrade`/`connection` listeners
+ * are attached — see CHAT_SESSION_WS_REGISTERED in support-chat-session.ts for
+ * why a duplicate registration would otherwise stack listeners and cause one
+ * client connection to fan out into N independent WebSocket wrappers.
+ */
+const VOICE_SESSION_WS_REGISTERED = Symbol.for('agentfarm.support.voice-session.ws-registered');
+
 export async function registerSupportVoiceSessionRoutes(
     app: FastifyInstance,
     opts: RegisterSupportVoiceSessionRoutesOptions,
 ): Promise<void> {
+    const server = app.server as unknown as Record<symbol, boolean>;
+    if (server[VOICE_SESSION_WS_REGISTERED]) {
+        return;
+    }
+    server[VOICE_SESSION_WS_REGISTERED] = true;
+
     const { getSession, getPortalSession } = opts;
     const gatewayBaseUrl =
         opts.gatewayBaseUrl ?? process.env['GATEWAY_BASE_URL'] ?? 'http://localhost:3000';
