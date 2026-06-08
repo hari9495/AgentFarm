@@ -35,7 +35,7 @@ const log = {
 const workerManager = new WorkerManager({
     logger: log as never,
     secretStore,
-    agentRuntimeUrl: process.env['AGENT_RUNTIME_URL'] ?? 'http://localhost:3001',
+    agentRuntimeUrl: process.env['AGENT_RUNTIME_URL'] ?? 'http://localhost:4000',
 });
 
 workerManager.startAll();

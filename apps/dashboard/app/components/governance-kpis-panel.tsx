@@ -158,9 +158,9 @@ function Metric({ label, value, sub, bar, barColor, why }: {
 }) {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>{label}</span>
-                {why && <span style={{ fontSize: 10, color: 'var(--line)', flexShrink: 0 }}>{why}</span>}
+                {why && <span style={{ fontSize: 9.5, color: 'var(--ink-muted)', opacity: 0.6, fontWeight: 400, textTransform: 'none', letterSpacing: 'normal', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{why}</span>}
             </div>
             <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--ink)', lineHeight: 1 }}>{value}</div>
             {sub && <div style={{ fontSize: 12, color: 'var(--ink-muted)', lineHeight: 1.4 }}>{sub}</div>}

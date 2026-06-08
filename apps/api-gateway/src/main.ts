@@ -37,7 +37,7 @@ await registerAllRoutes(app, { secretStore });
 const workerManager = new WorkerManager({
     logger: app.log,
     secretStore,
-    agentRuntimeUrl: process.env.AGENT_RUNTIME_URL ?? 'http://localhost:3001',
+    agentRuntimeUrl: process.env.AGENT_RUNTIME_URL ?? 'http://localhost:4000',
 });
 
 // ---------------------------------------------------------------------------

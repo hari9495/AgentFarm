@@ -18,5 +18,5 @@ CREATE INDEX "TenantPasswordResetToken_token_idx" ON "TenantPasswordResetToken"(
 ALTER TABLE "TenantPasswordResetToken" ADD CONSTRAINT "TenantPasswordResetToken_accountId_fkey"
     FOREIGN KEY ("accountId") REFERENCES "TenantPortalAccount"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AlterTable: SupportIssue — add prUrl column
-ALTER TABLE "SupportIssue" ADD COLUMN "prUrl" TEXT;
+-- AlterTable: SupportIssue — add prUrl column (IF NOT EXISTS guards replay)
+ALTER TABLE "SupportIssue" ADD COLUMN IF NOT EXISTS "prUrl" TEXT;

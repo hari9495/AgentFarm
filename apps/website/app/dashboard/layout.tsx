@@ -1,7 +1,7 @@
 ﻿import AppSidebar from "@/components/layout/AppSidebar";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getSessionUser, isCompanyOperatorEmail, listApprovals, countUnreadNotifications } from "@/lib/auth-store";
+import { getSessionUser, listApprovals, countUnreadNotifications } from "@/lib/auth-store";
 
 const COOKIE_NAME = "agentfarm_session";
 
@@ -27,8 +27,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
         redirect("/login");
     }
 
-    const showCompanyPortal = isCompanyOperatorEmail(user.email);
-
     // Live badge counts — fetched server-side so they're accurate on every navigation
     const [pendingApprovals, unreadNotifications] = await Promise.all([
         listApprovals({
@@ -45,7 +43,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
     return (
         <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
-            <AppSidebar userName={user.name} userRole={user.role} showCompanyPortal={showCompanyPortal} badges={badges} />
+            <AppSidebar userName={user.name} userRole={user.role} badges={badges} />
             <div className="flex-1 min-w-0 overflow-auto">
                 {children}
             </div>

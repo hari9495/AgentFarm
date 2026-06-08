@@ -7816,7 +7816,13 @@ export async function startRuntimeServer(options: RuntimeServerOptions = {}): Pr
         app.log.info('Startup checks passed');
     };
 
-    const port = Number(env.AF_HEALTH_PORT ?? env.AGENTFARM_HEALTH_PORT ?? 8080);
+    // The single Fastify app below serves both the runtime API and the health-check
+    // endpoint, so it must bind to RUNTIME_PORT (the documented, externally-advertised
+    // runtime port — see RUNTIME_BASE_URL derivation above and CLAUDE.md). AF_HEALTH_PORT
+    // / AGENTFARM_HEALTH_PORT are kept as fallbacks for backward compatibility with
+    // deployments that only set those, but RUNTIME_PORT takes precedence so the server
+    // actually listens where every other service expects to find it (default 4000).
+    const port = Number(env.RUNTIME_PORT ?? env.AF_HEALTH_PORT ?? env.AGENTFARM_HEALTH_PORT ?? 4000);
     await startupChecks();
     await app.listen({ host: '0.0.0.0', port });
     app.log.info({ port }, 'agent-runtime listening');

@@ -25,12 +25,21 @@ const readSessionToken = (request: RequestLike): string | null => {
     const rawCookie = request.headers.cookie;
     if (typeof rawCookie !== 'string') return null;
 
-    const cookieItem = rawCookie
-        .split(';')
-        .map((v) => v.trim())
-        .find((v) => v.startsWith('agentfarm_session='));
+    const cookies = rawCookie.split(';').map((v) => v.trim());
 
-    return cookieItem ? decodeURIComponent(cookieItem.slice('agentfarm_session='.length)) : null;
+    // Primary: server-set HttpOnly session cookie.
+    // Fallbacks: the dashboard manages its own (non-HttpOnly) session cookies for
+    // browser-initiated connections that bypass the dashboard's proxy (e.g. direct
+    // WebSocket upgrades to the gateway) — these carry the same `v1.<payload>.<sig>`
+    // token format and are verified identically by verifySessionToken().
+    for (const cookieName of ['agentfarm_session=', 'agentfarm_internal_session=', 'agentfarm_gateway_session=']) {
+        const cookieItem = cookies.find((v) => v.startsWith(cookieName));
+        if (cookieItem) {
+            return decodeURIComponent(cookieItem.slice(cookieName.length));
+        }
+    }
+
+    return null;
 };
 
 /**

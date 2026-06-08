@@ -70,8 +70,21 @@ export default function SlaAlertsPanel({ workspaceIds }: Props) {
         try {
             const res = await fetch('/api/governance/kpis');
             if (res.ok) {
-                const data = (await res.json()) as { snapshot?: KpiSnapshot };
-                setKpi(data.snapshot ?? null);
+                // The gateway returns KPIs as a flat report keyed by domain
+                // (approval/execution/...) with millisecond latencies — not the
+                // `{ snapshot: {...seconds} }` shape this panel renders. Map it.
+                const data = (await res.json()) as {
+                    approval?: { p95_decision_latency_ms?: number | null };
+                    execution?: { p95_execution_time_ms?: number | null };
+                    sla_compliance_percent?: number | null;
+                };
+                const toSeconds = (ms: number | null | undefined): number | null =>
+                    typeof ms === 'number' ? Math.round((ms / 1000) * 100) / 100 : null;
+                setKpi({
+                    p95_decision_latency_seconds: toSeconds(data.approval?.p95_decision_latency_ms),
+                    p95_execution_latency_seconds: toSeconds(data.execution?.p95_execution_time_ms),
+                    sla_compliance_percent: typeof data.sla_compliance_percent === 'number' ? data.sla_compliance_percent : null,
+                });
             }
         } catch {
             // non-fatal

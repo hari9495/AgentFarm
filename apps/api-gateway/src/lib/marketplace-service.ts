@@ -5,7 +5,7 @@ import type { PrismaClient } from '@prisma/client';
 // ---------------------------------------------------------------------------
 
 function getRuntimeUrl(): string {
-    return (process.env['AGENT_RUNTIME_URL'] ?? 'http://localhost:3001').replace(/\/+$/, '');
+    return (process.env['AGENT_RUNTIME_URL'] ?? 'http://localhost:4000').replace(/\/+$/, '');
 }
 
 function syncRuntime(path: string, body: Record<string, unknown>): void {

@@ -85,7 +85,7 @@ export function clearQueue(): void {
 // ─── Drain sweep ──────────────────────────────────────────────────────────────
 
 type DrainOpts = {
-    /** Base URL of agent-runtime, e.g. http://localhost:3001 */
+    /** Base URL of agent-runtime, e.g. http://localhost:4000 */
     agentRuntimeUrl: string;
     prisma: PrismaClient;
     /** Max concurrent entries being processed at once. Default: 3 */

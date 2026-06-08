@@ -10,7 +10,7 @@ export async function runScheduleSweep(
 ): Promise<{ fired: number }> {
     let fired = 0;
 
-    const runtimeUrl = (process.env['AGENT_RUNTIME_URL'] ?? 'http://localhost:3001').replace(
+    const runtimeUrl = (process.env['AGENT_RUNTIME_URL'] ?? 'http://localhost:4000').replace(
         /\/+$/,
         '',
     );

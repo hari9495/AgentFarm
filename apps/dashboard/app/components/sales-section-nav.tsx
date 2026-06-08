@@ -10,6 +10,8 @@ const NAV_ITEMS = [
     { label: 'Leads', href: '/sales/leads' },
     { label: 'Activity', href: '/sales/activity' },
     { label: 'Browser Tasks', href: '/sales/browser-tasks' },
+    { label: 'Outreach', href: '/sales/outreach' },
+    { label: 'Agent Config', href: '/sales/config' },
 ] as const;
 
 export function SalesSectionNav() {

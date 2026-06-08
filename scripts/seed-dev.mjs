@@ -44,6 +44,23 @@ try {
     });
     console.log('✓ bot:', bot.id, bot.role, bot.status);
 
+    // ── User ───────────────────────────────────────────────────────────────
+    // Backs the synthetic `dev-user-001` session minted by /api/dev-login —
+    // without a matching TenantUser row, /v1/auth/me 404s and pages like
+    // /account bounce back to the dashboard home.
+    const user = await prisma.tenantUser.upsert({
+        where: { id: 'dev-user-001' },
+        create: {
+            id: 'dev-user-001',
+            tenantId: 'tenant_acme_001',
+            email: 'dev@acme.test',
+            name: 'Dev Admin',
+            role: 'admin',
+        },
+        update: {},
+    });
+    console.log('✓ user:', user.id, user.email, user.role);
+
     console.log('\nSeed complete.');
 } catch (err) {
     console.error('Seed failed:', err);

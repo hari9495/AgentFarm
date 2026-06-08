@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import type { TriggerServiceConfig, TenantTriggerConfig } from './types.js';
 
-const DEFAULT_AGENT_RUNTIME_URL = 'http://localhost:3001';
+const DEFAULT_AGENT_RUNTIME_URL = 'http://localhost:4000';
 const DEFAULT_ANTHROPIC_API_VERSION = '2023-06-01';
 
 /**
