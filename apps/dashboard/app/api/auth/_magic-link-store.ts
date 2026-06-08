@@ -49,6 +49,30 @@ export const generateMagicToken = async (email: string): Promise<string> => {
 
 export type MagicTokenResult = { email: string } | { error: 'not_found' | 'expired' | 'used' };
 
+/**
+ * Peek at a token without consuming it.
+ * Used by the GET handler so email security scanners don't burn the token.
+ */
+export const peekMagicToken = async (token: string): Promise<MagicTokenResult> => {
+    const redis = getRedisClient();
+
+    if (redis) {
+        const raw = await redis.get(KEY(token));
+        if (!raw) return { error: 'not_found' };
+        const entry: MagicLinkEntry = JSON.parse(raw);
+        if (entry.used) return { error: 'used' };
+        return { email: entry.email };
+    }
+
+    purgeMemStore();
+    const store = getMemStore();
+    const entry = store.get(token);
+    if (!entry) return { error: 'not_found' };
+    if (entry.used) return { error: 'used' };
+    if (entry.expiresAt < Date.now()) { store.delete(token); return { error: 'expired' }; }
+    return { email: entry.email };
+};
+
 export const consumeMagicToken = async (token: string): Promise<MagicTokenResult> => {
     const redis = getRedisClient();
 
