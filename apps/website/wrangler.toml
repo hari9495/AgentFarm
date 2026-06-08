@@ -8,8 +8,17 @@ preview_urls = false
 
 assets = { directory = ".open-next/assets", binding = "ASSETS" }
 
+# =============================================================================
+# Production — agentfarms.in
+# =============================================================================
+
 [[routes]]
 pattern = "agentfarms.in"
+zone_name = "agentfarms.in"
+custom_domain = true
+
+[[routes]]
+pattern = "www.agentfarms.in"
 zone_name = "agentfarms.in"
 custom_domain = true
 
@@ -18,3 +27,15 @@ binding = "DB"
 database_name = "agent-farm-db"
 database_id = "eaeeb99f-cd57-4a6b-bace-2f2bf82bf113"
 
+# =============================================================================
+# Staging — preview deployments
+# =============================================================================
+
+[env.staging]
+name = "agent-farm-staging"
+workers_dev = true
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "agent-farm-db-staging"
+database_id = "eaeeb99f-cd57-4a6b-bace-2f2bf82bf113"
