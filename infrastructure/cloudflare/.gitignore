@@ -1,0 +1,12 @@
+# Terraform state — never commit (contains sensitive resource IDs)
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+tfplan
+
+# Local variable overrides
+*.tfvars
+*.tfvars.json
+!terraform.tfvars.example
