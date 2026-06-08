@@ -5,8 +5,16 @@ const getApiBaseUrl = (): string => process.env['DASHBOARD_API_BASE_URL'] ?? 'ht
 const getSharedToken = (): string =>
     process.env['PASSWORDLESS_LOGIN_SHARED_TOKEN'] ?? 'dev-passwordless-token';
 
+// Use the public dashboard URL for redirects — request.url reflects the internal
+// localhost address when running behind Cloudflare Tunnel or any reverse proxy.
+const getPublicOrigin = (fallback: string): string =>
+    process.env['NEXT_PUBLIC_DASHBOARD_URL'] ??
+    process.env['NEXT_PUBLIC_SITE_URL'] ??
+    fallback;
+
 export async function GET(request: Request) {
-    const { searchParams, origin } = new URL(request.url);
+    const { searchParams, origin: internalOrigin } = new URL(request.url);
+    const origin = getPublicOrigin(internalOrigin);
     const token = searchParams.get('token');
 
     if (!token) {
