@@ -1,15 +1,5 @@
 import type { NextConfig } from "next";
 
-// @cloudflare/next-on-pages requires the dev platform to be set up
-// in development so that bindings (D1, KV, etc.) are available locally.
-// This import is a no-op in production builds.
-const { setupDevPlatform } =
-    process.env.NODE_ENV === "development"
-        ? await import("@cloudflare/next-on-pages/next-dev")
-        : { setupDevPlatform: async () => {} };
-
-await setupDevPlatform();
-
 const securityHeaders = [
     { key: 'X-DNS-Prefetch-Control', value: 'on' },
     { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
@@ -50,17 +40,28 @@ const nextConfig: NextConfig = {
             },
         ],
     },
-    webpack: (config, { dev }) => {
+
+    // Exclude packages from the server bundle that are either:
+    //   a) Only needed at build time (sharp)
+    //   b) Too heavy to inline and safely loadable as Workers modules
+    // NOTE: these still need to be available in the deployment environment.
+    // @opennextjs/cloudflare handles this via the assets layer.
+    serverExternalPackages: ['sharp'],
+
+    webpack: (config, { dev, isServer }) => {
         if (dev) {
+            // Use webpack's in-memory cache instead of the filesystem cache to
+            // avoid chunk hash churn on Windows during hot reload.
             config.cache = { type: 'memory' };
         }
 
-        // node:* built-ins are externalized so webpack doesn't try to bundle them.
-        // In production (Cloudflare Pages + nodejs_compat), these are provided
-        // by the Workers runtime — no polyfills needed.
+        // node:* built-ins (e.g. node:sqlite, node:crypto) are passed through
+        // to Node.js / the Workers nodejs_compat runtime — webpack must not try
+        // to bundle them.
         const existingExternals = Array.isArray(config.externals)
             ? config.externals
             : config.externals != null ? [config.externals] : [];
+
         config.externals = [
             ...existingExternals,
             (ctx: { request?: string }, callback: (err?: Error | null, result?: string) => void) => {
@@ -71,8 +72,18 @@ const nextConfig: NextConfig = {
             },
         ];
 
+        // Server-side production build: enable module concatenation (scope
+        // hoisting) for better tree-shaking and a smaller output bundle.
+        if (isServer && !dev) {
+            config.optimization = {
+                ...config.optimization,
+                concatenateModules: true,
+            };
+        }
+
         return config;
     },
+    // Turbopack config (used by `next dev --turbopack`).
     turbopack: {},
 };
 
