@@ -264,6 +264,9 @@ importers:
       next:
         specifier: ^15.5.19
         version: 15.5.19(@opentelemetry/api@1.9.1)(@playwright/test@1.59.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      nodemailer:
+        specifier: ^8.0.10
+        version: 8.0.10
       react:
         specifier: ^19.0.0
         version: 19.2.5
@@ -289,6 +292,9 @@ importers:
       '@types/node':
         specifier: ^22.10.2
         version: 22.19.17
+      '@types/nodemailer':
+        specifier: ^6.4.17
+        version: 6.4.23
       '@types/react':
         specifier: ^19.0.2
         version: 19.2.14

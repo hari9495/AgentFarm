@@ -1,51 +1,6 @@
 import { NextResponse } from 'next/server';
 import { generateOtp, INTERNAL_DOMAIN } from '../_otp-store';
-
-// Send OTP via Resend when RESEND_API_KEY is configured.
-// Falls back to console.info for local dev without the key set.
-async function deliverOtp(email: string, code: string): Promise<void> {
-    const apiKey = process.env.RESEND_API_KEY;
-    const fromAddress = process.env.OTP_FROM_EMAIL ?? `noreply@${INTERNAL_DOMAIN}`;
-
-    if (!apiKey) {
-        // Dev fallback — visible in server console / dev-otp-peek endpoint
-        console.info(`[OTP] ${email} → ${code}`);
-        return;
-    }
-
-    const { Resend } = await import('resend');
-    const resend = new Resend(apiKey);
-
-    const { error } = await resend.emails.send({
-        from: fromAddress,
-        to: email,
-        subject: 'Your AgentFarms login code',
-        html: `
-            <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:32px">
-              <h2 style="color:#1a1a2e;margin-bottom:8px">Your login code</h2>
-              <p style="color:#555;margin-bottom:24px">
-                Use this code to sign in to AgentFarms Dashboard.
-                It expires in 5 minutes.
-              </p>
-              <div style="background:#f4f4f8;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px">
-                <span style="font-size:36px;font-weight:700;letter-spacing:8px;color:#1a1a2e">
-                  ${code}
-                </span>
-              </div>
-              <p style="color:#888;font-size:13px">
-                If you didn't request this, you can ignore this email.
-              </p>
-            </div>
-        `,
-        text: `Your AgentFarms login code is: ${code}\n\nThis code expires in 5 minutes.`,
-    });
-
-    if (error) {
-        console.error('[OTP] Resend delivery failed:', error.message);
-        // Log to console as fallback so ops can still unblock users
-        console.info(`[OTP FALLBACK] ${email} → ${code}`);
-    }
-}
+import { sendEmail } from '../_mailer';
 
 export async function POST(request: Request) {
     let body: { email?: string };
@@ -76,7 +31,33 @@ export async function POST(request: Request) {
         );
     }
 
-    await deliverOtp(email, result.code);
+    const code = result.code;
+
+    // Always log to console so the dev-otp-peek endpoint + ops can read it
+    console.info(`[OTP] ${email} → ${code}`);
+
+    await sendEmail({
+        to: email,
+        subject: 'Your AgentFarms login code',
+        html: `
+            <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:32px">
+              <h2 style="color:#1a1a2e;margin-bottom:8px">Your login code</h2>
+              <p style="color:#555;margin-bottom:24px">
+                Use this 6-digit code to sign in to AgentFarms Dashboard.
+                It expires in <strong>5 minutes</strong>.
+              </p>
+              <div style="background:#f4f4f8;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px">
+                <span style="font-size:40px;font-weight:700;letter-spacing:10px;color:#1a1a2e;font-family:monospace">
+                  ${code}
+                </span>
+              </div>
+              <p style="color:#888;font-size:13px">
+                If you didn't request this code, you can safely ignore this email.
+              </p>
+            </div>
+        `,
+        text: `Your AgentFarms login code is: ${code}\n\nThis code expires in 5 minutes.\n\nIf you didn't request this, ignore this email.`,
+    });
 
     return NextResponse.json({ success: true });
 }
