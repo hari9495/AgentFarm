@@ -19,7 +19,18 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     }
 
-    const email = new URL(request.url).searchParams.get('email')?.toLowerCase() ?? '';
+    // ?env=1 — dump relevant env vars for debugging
+    const url = new URL(request.url);
+    if (url.searchParams.get('env') === '1') {
+        return NextResponse.json({
+            DASHBOARD_ALLOWED_DOMAINS: process.env.DASHBOARD_ALLOWED_DOMAINS ?? '(not set)',
+            DASHBOARD_PRIMARY_DOMAIN: process.env.DASHBOARD_PRIMARY_DOMAIN ?? '(not set)',
+            SMTP_HOST: process.env.SMTP_HOST ?? '(not set)',
+            SMTP_USER: process.env.SMTP_USER ?? '(not set)',
+        });
+    }
+
+    const email = url.searchParams.get('email')?.toLowerCase() ?? '';
     if (!email) return NextResponse.json({ error: 'email required' }, { status: 400 });
 
     const redis = getRedisClient();

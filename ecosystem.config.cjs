@@ -10,26 +10,25 @@
 // Daily usage:
 //   pm2 start ecosystem.config.cjs   ← start everything (incl. tunnel)
 //   pm2 list                          ← status
-//   pm2 logs [service-name]           ← logs
 //   pm2 restart api-gateway           ← restart one
 //   pm2 stop all                      ← stop everything
 //
-// Cloudflare Tunnel (cloudflared):
-//   Tunnel ID: 0afd24e9-2fdb-413e-804f-e30b793ec216
-//   Routes:  api.agentfarms.in → :3000
-//            dashboard.agentfarms.in → :3001
-//            runtime.agentfarms.in   → :4000
-//
-// IMPORTANT: cloudflared.exe path below — update if moved.
-// Current: C:\Users\HariSivaSaiKumarMada\AppData\Local\Temp\cloudflared.exe
-// To make permanent: copy to C:\Windows\System32\cloudflared.exe
+// Windows note: tsx .CMD files can't be spawned directly by PM2.
+// Instead we use node as the interpreter and pass tsx's .mjs CLI as the script.
+// The node_args --env-file flag loads .env before the TypeScript app starts.
 
-const TSX = 'node_modules/.pnpm/node_modules/.bin/tsx';
-// cloudflared.exe location — checked in order, first found wins.
-// To install system-wide: copy D:\AgentFarm\cloudflared.exe to C:\Windows\System32\
+// tsx CLI entry point (node-executable, works on all platforms)
+const TSX_CLI = 'D:/AgentFarm/node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/cli.mjs';
+// --env-file loads .env before the app — Node 20+ built-in flag
+const TSX_NODE_ARGS = '--env-file=D:/AgentFarm/.env';
+
+// next CLI for dashboard (use the pnpm hoisted symlink)
+const NEXT_CLI = 'D:/AgentFarm/node_modules/.pnpm/node_modules/next/dist/bin/next';
+
+// cloudflared.exe location
 const CF_EXE = require('fs').existsSync('C:/Windows/System32/cloudflared.exe')
   ? 'C:/Windows/System32/cloudflared.exe'
-  : 'cloudflared.exe'; // falls back to project root
+  : 'cloudflared.exe';
 const CF_CONFIG = 'C:/Users/HariSivaSaiKumarMada/.cloudflared/config.yml';
 
 module.exports = {
@@ -41,67 +40,59 @@ module.exports = {
       interpreter: 'none',
       watch: false,
       autorestart: true,
-      error_file: 'logs/cloudflared-error.log',
-      out_file: 'logs/cloudflared-out.log',
     },
     {
       name: 'api-gateway',
-      cwd: '.',
-      script: TSX,
-      args: '--env-file=.env apps/api-gateway/src/main.ts',
-      interpreter: 'none',
+      cwd: 'D:/AgentFarm',
+      script: TSX_CLI,
+      args: 'apps/api-gateway/src/main.ts',
+      interpreter: 'node',
+      node_args: TSX_NODE_ARGS,
       watch: false,
       max_memory_restart: '1G',
-      error_file: 'logs/api-gateway-error.log',
-      out_file: 'logs/api-gateway-out.log',
     },
     {
       name: 'agent-runtime',
-      cwd: '.',
-      script: TSX,
-      args: '--env-file=.env apps/agent-runtime/src/main.ts',
-      interpreter: 'none',
+      cwd: 'D:/AgentFarm',
+      script: TSX_CLI,
+      args: 'apps/agent-runtime/src/main.ts',
+      interpreter: 'node',
+      node_args: TSX_NODE_ARGS,
       watch: false,
       max_memory_restart: '1G',
-      error_file: 'logs/agent-runtime-error.log',
-      out_file: 'logs/agent-runtime-out.log',
     },
     {
       name: 'trigger-service',
-      cwd: '.',
-      script: TSX,
-      args: '--env-file=.env apps/trigger-service/src/main.ts',
-      interpreter: 'none',
+      cwd: 'D:/AgentFarm',
+      script: TSX_CLI,
+      args: 'apps/trigger-service/src/main.ts',
+      interpreter: 'node',
+      node_args: TSX_NODE_ARGS,
       watch: false,
       max_memory_restart: '512M',
-      error_file: 'logs/trigger-service-error.log',
-      out_file: 'logs/trigger-service-out.log',
     },
     {
       name: 'orchestrator',
-      cwd: '.',
-      script: TSX,
-      args: '--env-file=.env apps/orchestrator/src/main.ts',
-      interpreter: 'none',
+      cwd: 'D:/AgentFarm',
+      script: TSX_CLI,
+      args: 'apps/orchestrator/src/main.ts',
+      interpreter: 'node',
+      node_args: TSX_NODE_ARGS,
       watch: false,
       max_memory_restart: '512M',
-      error_file: 'logs/orchestrator-error.log',
-      out_file: 'logs/orchestrator-out.log',
     },
     {
       name: 'dashboard',
-      cwd: 'apps/dashboard',
-      script: '../../node_modules/.pnpm/node_modules/.bin/next',
+      cwd: 'D:/AgentFarm/apps/dashboard',
+      script: NEXT_CLI,
       args: 'start -p 3001',
-      interpreter: 'none',
+      interpreter: 'node',
       watch: false,
       max_memory_restart: '1G',
       env: {
         NODE_ENV: 'production',
         PORT: '3001',
       },
-      error_file: '../../logs/dashboard-error.log',
-      out_file: '../../logs/dashboard-out.log',
     },
   ],
 };

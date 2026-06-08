@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { INTERNAL_DOMAIN } from '../_otp-store';
+import { INTERNAL_DOMAIN, isAllowedEmail } from '../_otp-store';
 
 type SignupPayload = {
     name?: string;
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
         );
     }
 
-    if (!email.endsWith(`@${INTERNAL_DOMAIN}`)) {
+    if (!isAllowedEmail(email)) {
         return NextResponse.json(
             { error: 'not_internal', message: `Only @${INTERNAL_DOMAIN} email addresses can sign up.` },
             { status: 403 },

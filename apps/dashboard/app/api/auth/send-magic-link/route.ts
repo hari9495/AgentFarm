@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { generateMagicToken } from '../_magic-link-store';
-import { INTERNAL_DOMAIN } from '../_otp-store';
+import { INTERNAL_DOMAIN, isAllowedEmail } from '../_otp-store';
 import { sendEmail } from '../_mailer';
 
 const getDashboardBaseUrl = (): string =>
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ message: 'Email is required.' }, { status: 400 });
     }
 
-    if (!email.endsWith(`@${INTERNAL_DOMAIN}`)) {
+    if (!isAllowedEmail(email)) {
         return NextResponse.json(
             { message: `Only @${INTERNAL_DOMAIN} addresses are allowed.` },
             { status: 403 },

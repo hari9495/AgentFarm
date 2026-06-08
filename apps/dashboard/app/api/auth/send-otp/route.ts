@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { generateOtp, INTERNAL_DOMAIN } from '../_otp-store';
+import { generateOtp, INTERNAL_DOMAIN, isAllowedEmail } from '../_otp-store';
 import { sendEmail } from '../_mailer';
 
 export async function POST(request: Request) {
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'email_required', message: 'Email is required.' }, { status: 400 });
     }
 
-    if (!email.endsWith(`@${INTERNAL_DOMAIN}`)) {
+    if (!isAllowedEmail(email)) {
         return NextResponse.json(
             { error: 'not_internal', message: `Only @${INTERNAL_DOMAIN} email addresses can sign up.` },
             { status: 403 },
