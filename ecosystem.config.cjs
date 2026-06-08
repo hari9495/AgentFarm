@@ -2,17 +2,48 @@
 // Runs all AgentFarm services natively using tsx (no Docker for app layer).
 // Infra (postgres, redis, opa) must be running in Docker first.
 //
-// Start all:   pm2 start ecosystem.config.cjs
-// Status:      pm2 list
-// Logs:        pm2 logs [service-name]
-// Restart one: pm2 restart api-gateway
-// Stop all:    pm2 stop all
-// Delete all:  pm2 delete all
+// First-time setup:
+//   1. docker compose up -d postgres redis opa
+//   2. pm2 start ecosystem.config.cjs
+//   3. pm2 save   ← persist across reboots
+//
+// Daily usage:
+//   pm2 start ecosystem.config.cjs   ← start everything (incl. tunnel)
+//   pm2 list                          ← status
+//   pm2 logs [service-name]           ← logs
+//   pm2 restart api-gateway           ← restart one
+//   pm2 stop all                      ← stop everything
+//
+// Cloudflare Tunnel (cloudflared):
+//   Tunnel ID: 0afd24e9-2fdb-413e-804f-e30b793ec216
+//   Routes:  api.agentfarms.in → :3000
+//            dashboard.agentfarms.in → :3001
+//            runtime.agentfarms.in   → :4000
+//
+// IMPORTANT: cloudflared.exe path below — update if moved.
+// Current: C:\Users\HariSivaSaiKumarMada\AppData\Local\Temp\cloudflared.exe
+// To make permanent: copy to C:\Windows\System32\cloudflared.exe
 
 const TSX = 'node_modules/.pnpm/node_modules/.bin/tsx';
+// cloudflared.exe location — checked in order, first found wins.
+// To install system-wide: copy D:\AgentFarm\cloudflared.exe to C:\Windows\System32\
+const CF_EXE = require('fs').existsSync('C:/Windows/System32/cloudflared.exe')
+  ? 'C:/Windows/System32/cloudflared.exe'
+  : 'cloudflared.exe'; // falls back to project root
+const CF_CONFIG = 'C:/Users/HariSivaSaiKumarMada/.cloudflared/config.yml';
 
 module.exports = {
   apps: [
+    {
+      name: 'cloudflared',
+      script: CF_EXE,
+      args: `tunnel --config "${CF_CONFIG}" run agentfarm`,
+      interpreter: 'none',
+      watch: false,
+      autorestart: true,
+      error_file: 'logs/cloudflared-error.log',
+      out_file: 'logs/cloudflared-out.log',
+    },
     {
       name: 'api-gateway',
       cwd: '.',

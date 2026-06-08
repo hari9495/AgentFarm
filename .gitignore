@@ -36,3 +36,4 @@ scripts/rpa-screenshots/
 packages/e2e/playwright-report/
 packages/e2e/test-results/
 apps/website/.wrangler/
+cloudflared.exe
