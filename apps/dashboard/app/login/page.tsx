@@ -2,20 +2,12 @@
 
 import { Suspense, useEffect, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Key, Link2, Loader2, Lock, Mail, RotateCcw, Shield } from 'lucide-react';
+import { ArrowLeft, Key, Loader2, Lock, Mail, RotateCcw, Shield } from 'lucide-react';
 
 const INTERNAL_DOMAIN = 'agentfarms.in';
 
-type AuthMode = 'password' | 'otp' | 'magic';
-type AuthStep = 'form' | 'mfa' | 'otp-code' | 'magic-sent';
-
-const MAGIC_LINK_ERRORS: Record<string, string> = {
-    expired: 'Your magic link has expired. Request a new one.',
-    used: 'This magic link has already been used. Request a new one.',
-    not_found: 'Invalid magic link. Please request a new one.',
-    login_failed: 'Sign-in failed. Please try again.',
-    invalid_link: 'Invalid link. Please request a new one.',
-};
+type AuthMode = 'password' | 'otp';
+type AuthStep = 'form' | 'mfa' | 'otp-code';
 
 function LoginForm() {
     const router = useRouter();
@@ -38,7 +30,7 @@ function LoginForm() {
 
     useEffect(() => {
         const e = searchParams.get('error');
-        if (e) setError(MAGIC_LINK_ERRORS[e] ?? 'Something went wrong. Please try again.');
+        if (e) setError('Something went wrong. Please try again.');
     }, [searchParams]);
 
     useEffect(() => {
@@ -167,34 +159,11 @@ function LoginForm() {
         }
     };
 
-    // ── Magic link mode ───────────────────────────────────────────────────────
-
-    const handleMagicEmailSubmit = async (e: FormEvent) => {
-        e.preventDefault();
-        setError(null);
-        setLoading(true);
-        try {
-            const res = await fetch('/api/auth/send-magic-link', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: email.trim() }),
-            });
-            const data = (await res.json()) as { message?: string };
-            if (!res.ok) { setError(data.message ?? 'Failed to send magic link.'); return; }
-            setStep('magic-sent');
-        } catch {
-            setError('Cannot connect to the server.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const handleResend = async () => {
         if (resendCooldown > 0 || loading) return;
         const ok = await sendOtp(email.trim());
         if (ok) { setOtp(''); setResendCooldown(60); }
     };
-
 
     // ── Shared UI blocks ──────────────────────────────────────────────────────
 
@@ -204,7 +173,6 @@ function LoginForm() {
                 [
                     { id: 'password', Icon: Lock, label: 'Password' },
                     { id: 'otp', Icon: Shield, label: 'Email OTP' },
-                    { id: 'magic', Icon: Link2, label: 'Magic Link' },
                 ] as const
             ).map(({ id, Icon, label }) => (
                 <button
@@ -261,7 +229,7 @@ function LoginForm() {
                 onFocus={onFocus} onBlur={onBlur}
             />
             <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', margin: 0, textAlign: 'center' }}>
-                In development, find your code in the server console logs.
+                Check your email for the 6-digit code.
             </p>
         </div>
     );
@@ -371,45 +339,6 @@ function LoginForm() {
                             </button>
                             {backAndResend}
                         </form>
-                    )}
-
-                    {/* Magic link mode — email step */}
-                    {mode === 'magic' && step === 'form' && (
-                        <form onSubmit={handleMagicEmailSubmit} style={{ display: 'grid', gap: '1rem' }}>
-                            {modeTabs}
-                            <p style={{ fontSize: '0.85rem', color: 'var(--ink-muted)', margin: 0 }}>
-                                We'll email you a secure sign-in link. Click it to access your account instantly.
-                            </p>
-                            {emailField}
-                            <button type="submit" disabled={loading} style={{ ...submitBtnStyle(loading), marginTop: '0.25rem' }}>
-                                {loading ? <><Loader2 style={spinIconStyle} /> Sending…</> : 'Send magic link →'}
-                            </button>
-                        </form>
-                    )}
-
-                    {/* Magic link mode — sent step */}
-                    {mode === 'magic' && step === 'magic-sent' && (
-                        <div style={{ display: 'grid', gap: '1.25rem', textAlign: 'center' }}>
-                            <div style={{ paddingBottom: '0.25rem' }}>
-                                <Link2 style={{ width: 28, height: 28, color: 'var(--accent)', margin: '0 auto 0.5rem', display: 'block' }} />
-                                <p style={{ fontWeight: 600, color: 'var(--ink)', margin: 0, fontSize: '1rem' }}>Check your inbox</p>
-                                <p style={{ fontSize: '0.82rem', color: 'var(--ink-muted)', margin: '0.4rem 0 0' }}>
-                                    A magic link was sent to{' '}
-                                    <strong style={{ color: 'var(--ink)' }}>{email.trim()}</strong>.
-                                    <br />Click it to sign in — valid for 15 minutes.
-                                </p>
-                            </div>
-                            <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', margin: 0 }}>
-                                In development, find your link in the server console logs.
-                            </p>
-                            <button
-                                type="button"
-                                onClick={() => { setStep('form'); setError(null); }}
-                                style={{ ...ghostBtnStyle, justifyContent: 'center' }}
-                            >
-                                <ArrowLeft style={{ width: 13, height: 13 }} /> Use a different email
-                            </button>
-                        </div>
                     )}
                 </div>
 
