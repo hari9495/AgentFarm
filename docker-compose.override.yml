@@ -1,0 +1,38 @@
+# docker-compose.override.yml
+#
+# Fixes service-to-service URLs for running app containers alongside the
+# Dockerised infra (postgres, redis, opa).  When DATABASE_URL in .env uses
+# "localhost" (correct for native/dev runs), the containers can't reach the
+# postgres container.  This override replaces DATABASE_URL with the Docker
+# network hostname for every service that needs it.
+#
+# This file is loaded automatically by `docker compose` — no flag required.
+
+services:
+  migrate:
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-agentfarm}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agentfarm}
+
+  api-gateway:
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-agentfarm}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agentfarm}
+      REDIS_URL: redis://redis:6379
+      OPA_BASE_URL: http://opa:8181
+
+  worker-runner:
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-agentfarm}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agentfarm}
+      REDIS_URL: redis://redis:6379
+      OPA_BASE_URL: http://opa:8181
+
+  agent-runtime:
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-agentfarm}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agentfarm}
+
+  trigger-service:
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-agentfarm}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agentfarm}
+
+  dashboard:
+    environment:
+      REDIS_URL: redis://redis:6379
