@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getPortalSessionFromRequest } from "@/lib/portal-api-auth";
 
+export const dynamic = 'force-dynamic';
+
+
 const GATEWAY_URL =
     process.env.API_GATEWAY_URL ||
     process.env.NEXT_PUBLIC_API_URL ||

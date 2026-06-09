@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
 import { listTeamMembers } from "@/lib/auth-store";
 
+export const dynamic = 'force-dynamic';
+
+
 
 function getCookieValue(cookieHeader: string | null, name: string): string | null {
     if (!cookieHeader) return null;

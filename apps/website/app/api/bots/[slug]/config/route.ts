@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
 import {
+
     getBotBySlug,
     updateBotConfig,
     type ApprovalPolicy,
     type AutonomyLevel,
 } from "@/lib/auth-store";
+
+export const dynamic = 'force-dynamic';
 
 const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const VALID_DAYS = new Set(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]);

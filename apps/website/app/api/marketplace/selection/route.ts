@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
 import { saveMarketplaceSelection } from "@/lib/auth-store";
 
+export const dynamic = 'force-dynamic';
+
+
 type SelectionPayload = {
     starterAgent?: string;
     config?: Record<string, unknown>;

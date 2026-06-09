@@ -2,6 +2,9 @@
 import { NextResponse } from "next/server";
 import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
 
+export const dynamic = 'force-dynamic';
+
+
 const GATEWAY_COOKIE = "agentfarm_gateway_session";
 
 const API_GATEWAY_URL =

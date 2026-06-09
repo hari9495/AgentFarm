@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getPortalSessionFromRequest } from "@/lib/portal-api-auth";
 
+export const dynamic = 'force-dynamic';
+
+
 function extractPortalToken(cookieHeader: string | null): string | null {
     if (!cookieHeader) return null;
     const part = cookieHeader

@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
 import { getLatestDeploymentForUser } from "@/lib/auth-store";
 
+export const dynamic = 'force-dynamic';
+
+
 
 
 export async function GET(request: Request) {

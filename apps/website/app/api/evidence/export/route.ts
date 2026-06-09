@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
 import { exportComplianceEvidencePack } from "@/lib/auth-store";
 
+export const dynamic = 'force-dynamic';
+
+
 
 
 const escapeCsv = (value: string): string => {

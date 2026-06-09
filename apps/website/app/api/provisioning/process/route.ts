@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
 import { getProvisioningStatusForUser, processProvisioningQueue } from "@/lib/auth-store";
 
+export const dynamic = 'force-dynamic';
+
+
 
 type ProcessPayload = {
     limit?: number;

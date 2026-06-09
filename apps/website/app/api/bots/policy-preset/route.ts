@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
 import { listBots, updateBotConfig, type ApprovalPolicy } from "@/lib/auth-store";
 
+export const dynamic = 'force-dynamic';
+
+
 // Presets translate a one-click choice into a concrete `approvalPolicy` applied
 // across every deployed agent — there is no separate "policy preset" entity to
 // persist, so the preset *is* the bulk update of the underlying real field.

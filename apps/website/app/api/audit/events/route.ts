@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
 import { listAuditEvents, writeAuditEvent } from "@/lib/auth-store";
 
+export const dynamic = 'force-dynamic';
+
+
 
 
 type CreateAuditPayload = {

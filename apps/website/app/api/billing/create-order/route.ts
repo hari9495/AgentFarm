@@ -2,6 +2,9 @@
 import { NextResponse } from "next/server";
 import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
 
+export const dynamic = 'force-dynamic';
+
+
 
 const API_GATEWAY_URL =
     process.env.API_GATEWAY_URL ||

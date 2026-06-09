@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getPortalSessionFromRequest } from "@/lib/portal-api-auth";
 
+export const dynamic = 'force-dynamic';
+
+
 // Default preferences for a new portal user
 const DEFAULT_PREFS = {
     emailApprovals: true,

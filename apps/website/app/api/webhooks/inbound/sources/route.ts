@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
 
+export const dynamic = 'force-dynamic';
+
+
 const GATEWAY_URL = process.env.API_GATEWAY_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 // GET — list inbound webhook sources for this customer
