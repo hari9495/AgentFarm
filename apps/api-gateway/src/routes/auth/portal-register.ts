@@ -91,17 +91,22 @@ export const registerPortalRegisterRoute = async (app: FastifyInstance): Promise
             });
         }
 
-        // ── Verify the starter plan exists ────────────────────────────────────
-        const plan = await prisma.plan.findUnique({
+        // ── Ensure the starter plan exists (upsert so first signup self-heals) ──
+        const plan = await prisma.plan.upsert({
             where: { id: FREE_PLAN_ID },
+            update: {},
+            create: {
+                id: FREE_PLAN_ID,
+                name: 'Starter',
+                priceInr: 0,
+                priceUsd: 0,
+                agentSlots: 1,
+                features: 'Basic agents,Email support,1 workspace',
+                roleType: 'developer_agent',
+                isActive: true,
+            },
             select: { id: true, roleType: true },
         });
-        if (!plan) {
-            return reply.code(500).send({
-                error: 'server_error',
-                message: 'Free plan is not configured. Contact support.',
-            });
-        }
         const roleType: string = (plan as unknown as { roleType: string }).roleType ?? 'developer_agent';
 
         // ── Prepare password hash + verification token before the transaction ─
