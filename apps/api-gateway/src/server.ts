@@ -181,51 +181,52 @@ export const createServer = async (): Promise<FastifyInstance> => {
             }
         }
 
-        if (isPublicPath(request.url) || !request.url.startsWith('/v1/') || !requireAuth) {
-            return;
-        }
-
-        let session = readSession(request);
-
-        // API key fallback — Bearer af_<key> is a long-lived programmatic key
-        if (!session) {
+        // Inject a synthetic session for /v1/* routes before the requireAuth gate.
+        // Individual route handlers always check getSession() themselves — so the
+        // injection must happen even when requireAuth=false, otherwise portal users
+        // (who carry portal_session, not agentfarm_session) always get 401.
+        const isV1NonPublic = request.url.startsWith('/v1/') && !isPublicPath(request.url);
+        if (isV1NonPublic && !readSession(request)) {
+            // API key fallback — Bearer af_<key> is a long-lived programmatic key
             const apiKeySession = await resolveApiKeySession(
                 request.headers['authorization'] as string | undefined,
             );
             if (apiKeySession) {
                 (request as unknown as Record<string, unknown>)._injectedSession = apiKeySession;
-                session = apiKeySession;
             }
-        }
 
-        // Portal session fallback — customer portal forwards portal_session cookie
-        if (!session) {
-            const rawCookie = request.headers['cookie'];
-            if (typeof rawCookie === 'string') {
-                const match = rawCookie.split(';').map((v) => v.trim()).find((v) => v.startsWith('portal_session='));
-                if (match) {
-                    const token = decodeURIComponent(match.slice('portal_session='.length));
-                    const ps = await prisma.tenantPortalSession.findFirst({
-                        where: { token, expiresAt: { gt: new Date() } },
-                        select: { accountId: true, tenantId: true, account: { select: { role: true } } },
-                    });
-                    if (ps) {
-                        const portalSession: SessionPayload = {
-                            userId: ps.accountId,
-                            tenantId: ps.tenantId,
-                            workspaceIds: [],
-                            scope: 'customer',
-                            role: ps.account.role,
-                            expiresAt: Date.now() + 300_000,
-                        };
-                        (request as unknown as Record<string, unknown>)._injectedSession = portalSession;
-                        session = portalSession;
+            // Portal session fallback — customer portal forwards portal_session cookie
+            if (!readSession(request)) {
+                const rawCookie = request.headers['cookie'];
+                if (typeof rawCookie === 'string') {
+                    const match = rawCookie.split(';').map((v) => v.trim()).find((v) => v.startsWith('portal_session='));
+                    if (match) {
+                        const token = decodeURIComponent(match.slice('portal_session='.length));
+                        const ps = await prisma.tenantPortalSession.findFirst({
+                            where: { token, expiresAt: { gt: new Date() } },
+                            select: { accountId: true, tenantId: true, account: { select: { role: true } } },
+                        });
+                        if (ps) {
+                            const portalSession: SessionPayload = {
+                                userId: ps.accountId,
+                                tenantId: ps.tenantId,
+                                workspaceIds: [],
+                                scope: 'customer',
+                                role: ps.account.role,
+                                expiresAt: Date.now() + 300_000,
+                            };
+                            (request as unknown as Record<string, unknown>)._injectedSession = portalSession;
+                        }
                     }
                 }
             }
         }
 
-        if (!session) {
+        if (isPublicPath(request.url) || !request.url.startsWith('/v1/') || !requireAuth) {
+            return;
+        }
+
+        if (!readSession(request)) {
             void reply.code(401).send({
                 error: 'unauthorized',
                 message: 'Provide a valid bearer token or agentfarm_session cookie.',
