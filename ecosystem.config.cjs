@@ -94,5 +94,18 @@ module.exports = {
         PORT: '3001',
       },
     },
+    {
+      name: 'website',
+      cwd: 'D:/AgentFarm/apps/website',
+      script: NEXT_CLI,
+      args: 'start -p 3002',
+      interpreter: 'node',
+      watch: false,
+      max_memory_restart: '1G',
+      env: {
+        NODE_ENV: 'production',
+        PORT: '3002',
+      },
+    },
   ],
 };
