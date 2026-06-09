@@ -19,6 +19,15 @@ database_name = "agent-farm-db"
 database_id = "eaeeb99f-cd57-4a6b-bace-2f2bf82bf113"
 
 # =============================================================================
+# Runtime environment variables — available via process.env in API routes
+# =============================================================================
+
+[vars]
+API_GATEWAY_URL = "https://api.agentfarms.in"
+NEXT_PUBLIC_API_URL = "https://api.agentfarms.in"
+NEXT_PUBLIC_SITE_URL = "https://agentfarms.in"
+
+# =============================================================================
 # Custom domains — DNS conflict resolved; CNAME for www deleted 2026-06-09
 # =============================================================================
 
