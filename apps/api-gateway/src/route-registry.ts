@@ -22,6 +22,7 @@ import { registerAuthRoutes } from './routes/auth/auth.js';
 import { registerSsoRoutes } from './routes/auth/sso.js';
 import { registerMfaRoutes } from './routes/auth/mfa.js';
 import { registerPortalAuthRoutes } from './routes/auth/portal-auth.js';
+import { registerPortalRegisterRoute } from './routes/auth/portal-register.js';
 import { registerRoleRoutes } from './routes/auth/roles.js';
 import { registerInternalLoginPolicyRoutes } from './routes/auth/internal-login-policy.js';
 import { registerTeamRoutes } from './routes/auth/team.js';
@@ -188,6 +189,7 @@ export const registerAllRoutes = async (
         buildSessionToken: (payload) => buildSessionToken({ ...payload, scope: 'customer' }),
     });
     await registerPortalAuthRoutes(app);
+    await registerPortalRegisterRoute(app);
     await registerPortalDataRoutes(app);
     await registerRoleRoutes(app, { getSession });
     await registerInternalLoginPolicyRoutes(app, { getSession });
