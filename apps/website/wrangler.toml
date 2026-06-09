@@ -9,13 +9,6 @@ preview_urls = false
 # Static assets served from Cloudflare's CDN — no Worker size limit applies here.
 assets = { directory = ".open-next/assets", binding = "ASSETS" }
 
-# Load WASM files as WebAssembly modules instead of inlining them as binary
-# in the Worker script. This removes resvg.wasm (~1.3 MB) and yoga.wasm (~86 KB)
-# from the Worker bundle count and lets the runtime load them natively.
-[[rules]]
-globs = ["**/*.wasm"]
-type = "CompiledWasm"
-
 # =============================================================================
 # D1 database binding — website auth store
 # =============================================================================
