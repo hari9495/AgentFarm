@@ -80,8 +80,21 @@ jobs:
           NEXT_PUBLIC_MAINTENANCE_MODE: 'false'
         run: pnpm build:cf
 
-      - name: Run D1 migrations
+      - name: Check Cloudflare credentials
+        id: cf-check
         if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'production'
+        run: |
+          if [ -n "$CF_TOKEN" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::CF_API_TOKEN secret is not set — skipping D1 migrations and deploy."
+          fi
+        env:
+          CF_TOKEN: ${{ secrets.CF_API_TOKEN }}
+
+      - name: Run D1 migrations
+        if: (github.ref == 'refs/heads/main' || github.event.inputs.environment == 'production') && steps.cf-check.outputs.available == 'true'
         working-directory: apps/website
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
@@ -89,7 +102,7 @@ jobs:
         run: pnpm wrangler d1 migrations apply agent-farm-db --remote
 
       - name: Deploy to Cloudflare Workers
-        if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'production'
+        if: (github.ref == 'refs/heads/main' || github.event.inputs.environment == 'production') && steps.cf-check.outputs.available == 'true'
         working-directory: apps/website
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
