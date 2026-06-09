@@ -47,12 +47,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
     const token = cookieStore.get("portal_session")?.value;
 
     if (!token) {
-        redirect("/portal/login");
+        redirect("/login");
     }
 
     const me = await getPortalSession(token!);
     if (!me) {
-        redirect("/portal/login");
+        redirect("/login");
     }
 
     const pendingApprovals = await getPendingApprovals(token!);

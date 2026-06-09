@@ -1,36 +1,35 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { getSessionUser, getBotBySlug } from "@/lib/auth-store";
 import ApprovalsQueue from "@/components/dashboard/ApprovalsQueue";
+import { getPortalUser, portalFetch } from "@/lib/portal-server";
 
 export const metadata: Metadata = {
     title: "Agent Approvals - AgentFarms Dashboard",
 };
 
-const COOKIE_NAME = "agentfarm_session";
-
-const getCookieValue = (cookieHeader: string | null, name: string): string | null => {
-    if (!cookieHeader) return null;
-    const cookie = cookieHeader.split(";").map((c) => c.trim()).find((c) => c.startsWith(`${name}=`));
-    if (!cookie) return null;
-    return decodeURIComponent(cookie.slice(name.length + 1));
-};
+interface PortalAgent {
+    id: string;
+    role: string;
+    status: string;
+    workspace: { name: string } | null;
+}
 
 export default async function AgentApprovalsPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
-    const agent = await getBotBySlug(slug);
-    if (!agent) notFound();
 
-    const requestHeaders = await headers();
-    const token = getCookieValue(requestHeaders.get("cookie"), COOKIE_NAME);
-    const user = token ? await getSessionUser(token) : null;
+    // slug == agent id (set by the agents list page)
+    const data = await portalFetch<{ agent: PortalAgent }>(`/portal/data/agents/${encodeURIComponent(slug)}`);
+    if (!data?.agent) notFound();
+
+    const agent = data.agent;
+    const agentName = agent.workspace?.name ?? agent.role ?? slug;
+    const user = await getPortalUser();
 
     return (
         <ApprovalsQueue
             scope="agent"
             agentSlug={slug}
-            headerTitle={`${agent.name} Approvals`}
+            headerTitle={`${agentName} Approvals`}
             headerSubtitle="Pending requests that require human approval"
             backHref={`/dashboard/agents/${slug}`}
             userRole={user?.role}

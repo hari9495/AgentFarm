@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import {
     ChevronRight,
     KeyRound,
@@ -12,36 +10,29 @@ import {
 import PremiumIcon from "@/components/shared/PremiumIcon";
 import ButtonLink from "@/components/shared/ButtonLink";
 import ActiveSessionsPanel from "@/components/dashboard/ActiveSessionsPanel";
-import { getCurrentSessionId, getSessionUser, listSessionsForUser } from "@/lib/auth-store";
+import { getPortalUser } from "@/lib/portal-server";
 
 export const metadata: Metadata = {
     title: "Security - AgentFarms Dashboard",
     description: "Review your account security: sign-in method, active sessions, and MFA status.",
 };
 
-const COOKIE_NAME = "agentfarm_session";
-
-const getCookieValue = (cookieHeader: string | null, name: string): string | null => {
-    if (!cookieHeader) return null;
-    const cookie = cookieHeader
-        .split(";")
-        .map((c) => c.trim())
-        .find((c) => c.startsWith(`${name}=`));
-    if (!cookie) return null;
-    return decodeURIComponent(cookie.slice(name.length + 1));
-};
+/** Map portal role → display label */
+function roleDisplayName(role?: string): string {
+    if (role === "owner" || role === "superadmin") return "Super Admin";
+    if (role === "admin") return "Org Admin";
+    return "Member";
+}
 
 export default async function SecurityPage() {
-    const requestHeaders = await headers();
-    const token = getCookieValue(requestHeaders.get("cookie"), COOKIE_NAME);
-    if (!token) redirect("/login");
+    const user = await getPortalUser();
 
-    const user = await getSessionUser(token!);
-    if (!user) redirect("/login");
+    const canManagePolicy =
+        user?.role === "owner" || user?.role === "admin" || user?.role === "superadmin";
 
-    const currentSessionId = await getCurrentSessionId(token!);
-    const sessions = await listSessionsForUser(user.id, currentSessionId);
-    const canManagePolicy = user.role === "admin" || user.role === "superadmin";
+    // Portal sessions are managed by the gateway — we show an empty list here
+    // and let the session revocation endpoint handle removal.
+    const sessions: import("@/components/dashboard/ActiveSessionsPanel").OwnSessionView[] = [];
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -71,7 +62,7 @@ export default async function SecurityPage() {
                                     Account security
                                 </h1>
                                 <p className="mt-2 text-slate-400 text-base max-w-lg">
-                                    Review how you sign in, see where you're currently logged in, and manage your active sessions.
+                                    Review how you sign in, see where you&apos;re currently logged in, and manage your active sessions.
                                 </p>
                             </div>
                             <div className="flex flex-wrap items-center gap-3 shrink-0">
@@ -90,7 +81,7 @@ export default async function SecurityPage() {
                                 {sessions.length === 1 ? "active session" : "active sessions"}
                             </div>
                             <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
-                                <span className="text-white font-bold">{user.role === "superadmin" ? "Super Admin" : user.role === "admin" ? "Org Admin" : "Member"}</span>
+                                <span className="text-white font-bold">{roleDisplayName(user?.role)}</span>
                                 role
                             </div>
                         </div>
@@ -110,7 +101,7 @@ export default async function SecurityPage() {
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-slate-600 dark:text-slate-400">Email</span>
-                                <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{user.email}</span>
+                                <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{user?.email ?? "—"}</span>
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-slate-600 dark:text-slate-400">Password</span>
@@ -121,7 +112,7 @@ export default async function SecurityPage() {
                             </div>
                         </div>
                         <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">
-                            To change your password, use "Forgot password" from the sign-in page.
+                            To change your password, use &quot;Forgot password&quot; from the sign-in page.
                         </p>
                     </div>
 
@@ -140,7 +131,7 @@ export default async function SecurityPage() {
                             </span>
                         </div>
                         <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">
-                            Multi-factor authentication isn't enabled for your account yet. We'll let you know here as soon as it's available.
+                            Multi-factor authentication isn&apos;t enabled for your account yet. We&apos;ll let you know here as soon as it&apos;s available.
                         </p>
                     </div>
                 </div>

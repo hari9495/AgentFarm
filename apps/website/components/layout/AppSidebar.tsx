@@ -203,7 +203,7 @@ function SidebarContent({
 
     const handleLogout = async () => {
         await fetch("/api/portal/auth/logout", { method: "POST", credentials: "include" });
-        router.push("/portal/login");
+        router.push("/login");
     };
 
     const openSearch = () => {

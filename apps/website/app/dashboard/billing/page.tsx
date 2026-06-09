@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
     ArrowDownRight,
@@ -14,29 +12,17 @@ import {
 import ButtonLink from "@/components/shared/ButtonLink";
 import PremiumIcon from "@/components/shared/PremiumIcon";
 import BillingOrdersPanel from "@/components/dashboard/BillingOrdersPanel";
-import { getSessionUser, listBots } from "@/lib/auth-store";
+import { getPortalUser, portalFetch } from "@/lib/portal-server";
 
 export const metadata: Metadata = {
     title: "Billing & Plan - AgentFarms Dashboard",
     description: "View your plan, worker seats, spend trend, and invoice history.",
 };
 
-const COOKIE_NAME = "agentfarm_session";
-
-const API_GATEWAY_URL =
+const GATEWAY_URL =
     process.env.API_GATEWAY_URL ??
     process.env.NEXT_PUBLIC_API_URL ??
     "http://localhost:3000";
-
-const getCookieValue = (cookieHeader: string | null, name: string): string | null => {
-    if (!cookieHeader) return null;
-    const cookie = cookieHeader
-        .split(";")
-        .map((c) => c.trim())
-        .find((c) => c.startsWith(`${name}=`));
-    if (!cookie) return null;
-    return decodeURIComponent(cookie.slice(name.length + 1));
-};
 
 type GatewayPlan = {
     id: string;
@@ -47,13 +33,13 @@ type GatewayPlan = {
     features: string;
 };
 
-type GatewaySubscriptionStatus = {
-    status: string;
+type PortalSubscription = {
+    status?: string;
     expiresAt?: string;
-    daysUntilSuspension?: number | null;
+    planId?: string;
 };
 
-type GatewayOrder = {
+type PortalOrder = {
     id: string;
     planId: string;
     status: string;
@@ -61,21 +47,17 @@ type GatewayOrder = {
 };
 
 type MeteringPeriodSummary = {
-    periodStart: string;
-    periodEnd: string;
     totalChargeUsd: number;
 };
 
-async function fetchGateway<T>(path: string, token: string): Promise<T | null> {
+async function fetchPlans(): Promise<GatewayPlan[]> {
     try {
-        const res = await fetch(`${API_GATEWAY_URL}${path}`, {
-            headers: { Authorization: `Bearer ${token}` },
-            cache: "no-store",
-        });
-        if (!res.ok) return null;
-        return (await res.json()) as T;
+        const res = await fetch(`${GATEWAY_URL}/v1/billing/plans`, { cache: "no-store" });
+        if (!res.ok) return [];
+        const data = (await res.json()) as { plans?: GatewayPlan[] };
+        return data.plans ?? [];
     } catch {
-        return null;
+        return [];
     }
 }
 
@@ -101,59 +83,42 @@ function monthRange(monthsAgo: number): { from: Date; to: Date; label: string } 
 }
 
 export default async function BillingPage() {
-    const requestHeaders = await headers();
-    const token = getCookieValue(requestHeaders.get("cookie"), COOKIE_NAME);
-    if (!token) redirect("/login");
+    const user = await getPortalUser();
 
-    const user = await getSessionUser(token!);
-    if (!user) redirect("/login");
-
-    const canManagePlan = user.role === "admin" || user.role === "superadmin";
-    const tenantId = user.gatewayTenantId ?? user.tenantId ?? user.id;
+    const canManagePlan = user?.role === "owner" || user?.role === "admin" || user?.role === "superadmin";
 
     const sixMonths = Array.from({ length: 6 }, (_, i) => monthRange(5 - i));
 
-    const [plansData, subscription, ordersData, currentPeriod, bots, ...trendPeriods] = await Promise.all([
-        fetchGateway<{ plans: GatewayPlan[] }>("/v1/billing/plans", token),
-        fetchGateway<GatewaySubscriptionStatus>(
-            `/v1/billing/subscription?tenantId=${encodeURIComponent(tenantId)}`,
-            token,
-        ),
-        fetchGateway<{ orders: GatewayOrder[] }>(`/v1/billing/orders/${encodeURIComponent(tenantId)}`, token),
-        fetchGateway<MeteringPeriodSummary>(
-            `/v1/billing/metering/period?tenantId=${encodeURIComponent(tenantId)}`,
-            token,
-        ),
-        listBots(),
-        ...sixMonths.map(({ from, to }) =>
-            fetchGateway<MeteringPeriodSummary>(
-                `/v1/billing/metering/period?tenantId=${encodeURIComponent(tenantId)}&from=${from.toISOString()}&to=${to.toISOString()}`,
-                token,
-            ),
+    const [plansData, subscription, ordersData, currentPeriod, agentsData, ...trendPeriods] = await Promise.all([
+        fetchPlans().then((p) => ({ plans: p })),
+        portalFetch<PortalSubscription>("/portal/data/billing/subscription"),
+        portalFetch<{ orders: PortalOrder[] }>("/portal/data/billing/orders"),
+        portalFetch<MeteringPeriodSummary>("/portal/data/usage"),
+        portalFetch<{ total?: number }>("/portal/data/agents?limit=1"),
+        ...sixMonths.map(() =>
+            // Trend data not yet supported via portal API — fill with null
+            Promise.resolve(null as MeteringPeriodSummary | null),
         ),
     ]);
 
     const plans = plansData?.plans ?? [];
     const orders = ordersData?.orders ?? [];
 
-    // The gateway has no session-scoped "current plan" lookup for agentfarm_session
-    // callers (only /portal/data/billing/subscription, which needs a portal_session).
-    // The most recent paid order is the most reliable real signal for the active plan.
     const latestPaidOrder = [...orders]
         .filter((o) => o.status === "paid")
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
     const currentPlan = latestPaidOrder ? plans.find((p) => p.id === latestPaidOrder.planId) ?? null : null;
 
-    const seatsUsed = bots.length;
+    const seatsUsed = agentsData?.total ?? 0;
     const seatLimit = currentPlan?.agentSlots ?? null;
     const seatPct = seatLimit ? Math.min(100, Math.round((seatsUsed / seatLimit) * 100)) : null;
     const seatsRemaining = seatLimit !== null ? Math.max(0, seatLimit - seatsUsed) : null;
 
-    const monthlySpend = currentPeriod?.totalChargeUsd ?? null;
+    const monthlySpend = (currentPeriod as unknown as { totalChargeUsd?: number } | null)?.totalChargeUsd ?? null;
 
     const trend = sixMonths.map(({ label }, i) => ({
         month: label,
-        amount: trendPeriods[i]?.totalChargeUsd ?? null,
+        amount: (trendPeriods[i] as MeteringPeriodSummary | null)?.totalChargeUsd ?? null,
     }));
     const knownAmounts = trend.map((t) => t.amount).filter((a): a is number => a !== null);
     const trendMax = Math.max(1, ...knownAmounts);
@@ -257,7 +222,7 @@ export default async function BillingPage() {
                     <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800/50 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/20 p-5">
                         <div className="flex items-center justify-between mb-4">
                             <PremiumIcon icon={Zap} tone="emerald" containerClassName="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400" iconClassName="w-5 h-5" />
-                            {subscription && subscription.status !== "none" && (
+                            {subscription && subscription.status && subscription.status !== "none" && (
                                 <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 rounded-full px-2.5 py-1 capitalize">
                                     {subscription.status}
                                 </span>
@@ -345,29 +310,26 @@ export default async function BillingPage() {
                             {[
                                 {
                                     label: "Seats remaining",
-                                    value: seatLimit !== null ? `${seatsRemaining} of ${seatLimit}` : "No plan on file",
+                                    value: seatLimit !== null ? `${seatsRemaining ?? 0} of ${seatLimit}` : "No plan on file",
                                     icon: Users,
-                                    warn: false,
                                 },
                                 {
                                     label: "Active workers",
                                     value: String(seatsUsed),
                                     icon: Zap,
-                                    warn: false,
                                 },
                                 {
                                     label: "Spend (last 30 days)",
                                     value: monthlySpend !== null ? formatUsd(monthlySpend) : "—",
                                     icon: TrendingUp,
-                                    warn: false,
                                 },
-                            ].map(({ label, value, icon: Icon, warn }) => (
+                            ].map(({ label, value, icon: Icon }) => (
                                 <div key={label} className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-4 py-3 gap-3">
                                     <div className="flex items-center gap-2.5 min-w-0">
                                         <PremiumIcon icon={Icon} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 shrink-0" iconClassName="w-4 h-4" />
                                         <p className="text-sm text-slate-600 dark:text-slate-300 truncate">{label}</p>
                                     </div>
-                                    <span className={`text-xs font-bold shrink-0 ${warn ? "text-amber-600 dark:text-amber-400" : "text-slate-700 dark:text-slate-300"}`}>{value}</span>
+                                    <span className="text-xs font-bold shrink-0 text-slate-700 dark:text-slate-300">{value}</span>
                                 </div>
                             ))}
                             {canManagePlan && (

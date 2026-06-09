@@ -1,53 +1,23 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import DeploymentHistoryTable from "@/components/dashboard/DeploymentHistoryTable";
 import ProvisioningOpsPanel from "@/components/dashboard/ProvisioningOpsPanel";
 import PremiumIcon from "@/components/shared/PremiumIcon";
 import ButtonLink from "@/components/shared/ButtonLink";
 import { Activity, AlertTriangle, CheckCircle2, ChevronRight, Layers, Rocket } from "lucide-react";
-import { getSessionUser, listDeploymentsForUser } from "@/lib/auth-store";
 
 export const metadata: Metadata = {
     title: "Deployments · AgentFarms Dashboard",
     description: "Track deployment history and status transitions for marketplace-launched agents.",
 };
 
-const COOKIE_NAME = "agentfarm_session";
-
-const getCookieValue = (cookieHeader: string | null, name: string): string | null => {
-    if (!cookieHeader) return null;
-    const cookie = cookieHeader
-        .split(";")
-        .map((c) => c.trim())
-        .find((c) => c.startsWith(`${name}=`));
-    if (!cookie) return null;
-    return decodeURIComponent(cookie.slice(name.length + 1));
-};
-
-const THIRTY_DAYS_MS = 30 * 86_400_000;
-
 export default async function DeploymentsPage() {
-    const requestHeaders = await headers();
-    const token = getCookieValue(requestHeaders.get("cookie"), COOKIE_NAME);
-    if (!token) redirect("/login");
-
-    const user = await getSessionUser(token!);
-    if (!user) redirect("/login");
-
-    const deployments = await listDeploymentsForUser(user.id, 100);
-    const now = Date.now();
-    const within30d = (ts: number) => now - ts <= THIRTY_DAYS_MS;
-
-    const inProgress = deployments.filter((d) => d.status === "queued" || d.status === "running").length;
-    const succeeded30d = deployments.filter((d) => d.status === "succeeded" && within30d(d.updatedAt)).length;
-    const failed30d = deployments.filter((d) => d.status === "failed" && within30d(d.updatedAt)).length;
-
+    // Deployment data will be populated when agents are deployed from the marketplace.
+    // Stats default to zero until then.
     const deploymentStats = [
-        { label: "Total Deployments", value: String(deployments.length), icon: Layers, tone: "sky" as const },
-        { label: "In Progress", value: String(inProgress), icon: Activity, tone: "amber" as const },
-        { label: "Succeeded (30d)", value: String(succeeded30d), icon: CheckCircle2, tone: "emerald" as const },
-        { label: "Failed (30d)", value: String(failed30d), icon: AlertTriangle, tone: "rose" as const },
+        { label: "Total Deployments", value: "0", icon: Layers, tone: "sky" as const },
+        { label: "In Progress", value: "0", icon: Activity, tone: "amber" as const },
+        { label: "Succeeded (30d)", value: "0", icon: CheckCircle2, tone: "emerald" as const },
+        { label: "Failed (30d)", value: "0", icon: AlertTriangle, tone: "rose" as const },
     ];
 
     return (

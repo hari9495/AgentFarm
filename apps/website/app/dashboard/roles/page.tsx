@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import {
     CheckSquare,
     ChevronRight,
@@ -11,30 +9,14 @@ import {
 } from "lucide-react";
 import PremiumIcon from "@/components/shared/PremiumIcon";
 import ButtonLink from "@/components/shared/ButtonLink";
-import { getSessionUser } from "@/lib/auth-store";
+import { getPortalUser } from "@/lib/portal-server";
 
 export const metadata: Metadata = {
     title: "Roles & Permissions - AgentFarms Dashboard",
     description: "See what each role can do in your workspace — members, org admins, and super admins.",
 };
 
-const COOKIE_NAME = "agentfarm_session";
-
-const getCookieValue = (cookieHeader: string | null, name: string): string | null => {
-    if (!cookieHeader) return null;
-    const cookie = cookieHeader
-        .split(";")
-        .map((c) => c.trim())
-        .find((c) => c.startsWith(`${name}=`));
-    if (!cookie) return null;
-    return decodeURIComponent(cookie.slice(name.length + 1));
-};
-
 // ── Role + permission matrix data ────────────────────────────────────────────
-// This mirrors the website's actual authorization model in lib/auth-store.ts:
-// UserRole = "member" | "admin" | "superadmin", gated by canManagePlan /
-// canManageMembers / canManagePolicy booleans. It's informational — roles are
-// assigned from the Team page, not edited here.
 
 const modules = [
     "Billing & plan",
@@ -91,18 +73,20 @@ const classFor = (value: string) => {
     return "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300";
 };
 
+/** Map portal role → display role key */
+function toDisplayRole(portalRole?: string): "member" | "admin" | "superadmin" {
+    if (portalRole === "owner" || portalRole === "superadmin") return "superadmin";
+    if (portalRole === "admin") return "admin";
+    return "member";
+}
+
 const roleLabel = (role: "member" | "admin" | "superadmin") =>
     role === "superadmin" ? "Super Admin" : role === "admin" ? "Org Admin" : "Member";
 
 export default async function RolesPermissionsPage() {
-    const requestHeaders = await headers();
-    const token = getCookieValue(requestHeaders.get("cookie"), COOKIE_NAME);
-    if (!token) redirect("/login");
-
-    const user = await getSessionUser(token!);
-    if (!user) redirect("/login");
-
-    const canManageMembers = user.role === "admin" || user.role === "superadmin";
+    const portalUser = await getPortalUser();
+    const displayRole = toDisplayRole(portalUser?.role);
+    const canManageMembers = displayRole === "admin" || displayRole === "superadmin";
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -146,7 +130,7 @@ export default async function RolesPermissionsPage() {
 
                         <div className="mt-5 flex flex-wrap items-center gap-6 border-t border-white/10 pt-4">
                             <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
-                                <span className="text-white font-bold">{roleLabel(user.role)}</span>
+                                <span className="text-white font-bold">{roleLabel(displayRole)}</span>
                                 your current role
                             </div>
                             <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
@@ -164,7 +148,7 @@ export default async function RolesPermissionsPage() {
                 {/* ── Role cards ──────────────────────────────────────── */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {roleRows.map((role) => {
-                        const isYou = role.key === user.role;
+                        const isYou = role.key === displayRole;
                         return (
                             <div
                                 key={role.key}
@@ -231,7 +215,7 @@ export default async function RolesPermissionsPage() {
                                         <td className="px-5 py-3 font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap sticky left-0 bg-white dark:bg-slate-900 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/10 z-10 transition-colors">
                                             <span className="inline-flex items-center gap-1.5">
                                                 {role.name}
-                                                {role.key === user.role && (
+                                                {role.key === displayRole && (
                                                     <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
                                                         You
                                                     </span>

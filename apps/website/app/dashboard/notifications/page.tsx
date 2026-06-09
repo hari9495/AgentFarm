@@ -1,32 +1,24 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { Bell, CheckCircle2, ChevronRight, Cpu, Info, Rocket, ShieldAlert } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import PremiumIcon from "@/components/shared/PremiumIcon";
 import MarkAllReadButton from "@/components/dashboard/MarkAllReadButton";
-import {
-    getSessionUser,
-    listDerivedNotifications,
-    type DerivedNotification,
-    type NotificationLevel,
-} from "@/lib/auth-store";
 
 export const metadata: Metadata = {
     title: "Notifications - AgentFarms Dashboard",
     description: "System alerts, approval outcomes, and deployment events.",
 };
 
-const COOKIE_NAME = "agentfarm_session";
+type NotificationLevel = "critical" | "warning" | "success" | "info";
 
-const getCookieValue = (cookieHeader: string | null, name: string): string | null => {
-    if (!cookieHeader) return null;
-    const cookie = cookieHeader
-        .split(";")
-        .map((c) => c.trim())
-        .find((c) => c.startsWith(`${name}=`));
-    if (!cookie) return null;
-    return decodeURIComponent(cookie.slice(name.length + 1));
+type DerivedNotification = {
+    id: string;
+    title: string;
+    body: string;
+    level: NotificationLevel;
+    category: "approval" | "agent" | "deployment";
+    read: boolean;
+    createdAt: number;
 };
 
 const levelStyle: Record<NotificationLevel, { container: string; dot: string }> = {
@@ -84,20 +76,10 @@ function formatRelativeTime(ts: number): string {
 }
 
 export default async function DashboardNotificationsPage() {
-    const requestHeaders = await headers();
-    const token = getCookieValue(requestHeaders.get("cookie"), COOKIE_NAME);
-    if (!token) redirect("/login");
-
-    const user = await getSessionUser(token!);
-    if (!user) redirect("/login");
-
-    const notifications = await listDerivedNotifications({
-        userId: user.id,
-        tenantId: user.tenantId ?? undefined,
-        limit: 30,
-    });
-
-    const unread = notifications.filter((n) => !n.read).length;
+    // Notifications are populated as agents take actions.
+    // Empty until agents are deployed and running.
+    const notifications: DerivedNotification[] = [];
+    const unread = 0;
 
     return (
         <div className="min-h-screen bg-slate-50">

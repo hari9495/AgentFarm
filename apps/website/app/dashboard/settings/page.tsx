@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import {
     ChevronRight,
     Clock3,
@@ -11,29 +9,17 @@ import {
 } from "lucide-react";
 import ButtonLink from "@/components/shared/ButtonLink";
 import PremiumIcon from "@/components/shared/PremiumIcon";
-import ShiftScheduleTable, { type ShiftScheduleAgent } from "@/components/dashboard/ShiftScheduleTable";
+import ShiftScheduleTable from "@/components/dashboard/ShiftScheduleTable";
 import ApplyPolicyPresetButton from "@/components/dashboard/ApplyPolicyPresetButton";
 import NotificationPreferencesPanel from "@/components/dashboard/NotificationPreferencesPanel";
-import { getNotificationPrefs, getSessionUser, listBots, type ApprovalPolicy, type BotRecord } from "@/lib/auth-store";
+import type { NotificationPrefKey } from "@/lib/auth-store";
 
 export const metadata: Metadata = {
     title: "Worker Settings - AgentFarms Dashboard",
     description: "Configure shift hours, approval policy, and notification preferences per AI agent.",
 };
 
-const COOKIE_NAME = "agentfarm_session";
-
-const getCookieValue = (cookieHeader: string | null, name: string): string | null => {
-    if (!cookieHeader) return null;
-    const cookie = cookieHeader
-        .split(";")
-        .map((c) => c.trim())
-        .find((c) => c.startsWith(`${name}=`));
-    if (!cookie) return null;
-    return decodeURIComponent(cookie.slice(name.length + 1));
-};
-
-const tones = ["sky", "violet", "amber", "rose"];
+type ApprovalPolicy = "all" | "medium-high" | "high-only";
 
 const policyDescription: Record<ApprovalPolicy, string> = {
     all: "Every action this agent takes — regardless of risk — requires human approval before it executes.",
@@ -47,41 +33,22 @@ const policyBadge: Record<ApprovalPolicy, { label: string; className: string }> 
     "high-only": { label: "High risk only", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" },
 };
 
-function shiftAgentsFromBots(bots: BotRecord[]): ShiftScheduleAgent[] {
-    return bots.map((bot, index) => ({
-        slug: bot.slug,
-        name: bot.name,
-        tone: tones[index % tones.length] ?? "sky",
-        start: bot.shiftStart,
-        end: bot.shiftEnd,
-        days: bot.activeDays
-            .split(",")
-            .map((d) => d.trim().toLowerCase())
-            .filter(Boolean)
-            .map((d) => d.charAt(0).toUpperCase() + d.slice(1, 3)),
-    }));
-}
-
 export default async function SettingsPage() {
-    const requestHeaders = await headers();
-    const token = getCookieValue(requestHeaders.get("cookie"), COOKIE_NAME);
-    if (!token) redirect("/login");
+    // Shift agents populate when agents are deployed.
+    const shiftAgents: import("@/components/dashboard/ShiftScheduleTable").ShiftScheduleAgent[] = [];
 
-    const user = await getSessionUser(token!);
-    if (!user) redirect("/login");
+    // No agents deployed yet — all policy counts are zero.
+    const policyRows: Array<{ policy: ApprovalPolicy; count: number }> = [];
 
-    const [bots, notificationPrefs] = await Promise.all([
-        listBots(),
-        getNotificationPrefs(user.id),
-    ]);
-
-    const shiftAgents = shiftAgentsFromBots(bots);
-
-    const policyCounts: Record<ApprovalPolicy, number> = { all: 0, "medium-high": 0, "high-only": 0 };
-    bots.forEach((bot) => { policyCounts[bot.approvalPolicy] += 1; });
-    const policyRows = (["all", "medium-high", "high-only"] as ApprovalPolicy[])
-        .filter((policy) => policyCounts[policy] > 0)
-        .map((policy) => ({ policy, count: policyCounts[policy] }));
+    // Default notification preferences.
+    const defaultPrefs: Record<NotificationPrefKey, boolean> = {
+        agent_pause: true,
+        high_risk: true,
+        daily_summary: true,
+        weekly_report: true,
+        agent_error: true,
+        new_task: false,
+    };
 
     return (
         <div className="min-h-screen bg-slate-50">
@@ -223,7 +190,7 @@ export default async function SettingsPage() {
                         <PremiumIcon icon={Settings} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400" iconClassName="w-3.5 h-3.5" />
                         <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wide">Notification Preferences</h2>
                     </div>
-                    <NotificationPreferencesPanel initialPrefs={notificationPrefs} />
+                    <NotificationPreferencesPanel initialPrefs={defaultPrefs} />
                 </section>
 
             </div>

@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import {
     ChevronRight,
     ShieldCheck,
@@ -8,7 +6,7 @@ import {
 } from "lucide-react";
 import PremiumIcon from "@/components/shared/PremiumIcon";
 import ButtonLink from "@/components/shared/ButtonLink";
-import { getSessionUser, getUserById, listTeamMembers } from "@/lib/auth-store";
+import { getPortalUser } from "@/lib/portal-server";
 import TeamRosterClient from "./TeamRosterClient";
 
 export const metadata: Metadata = {
@@ -16,32 +14,40 @@ export const metadata: Metadata = {
     description: "See who's on your team, their roles, and when they joined.",
 };
 
-const COOKIE_NAME = "agentfarm_session";
-
-const getCookieValue = (cookieHeader: string | null, name: string): string | null => {
-    if (!cookieHeader) return null;
-    const cookie = cookieHeader
-        .split(";")
-        .map((c) => c.trim())
-        .find((c) => c.startsWith(`${name}=`));
-    if (!cookie) return null;
-    return decodeURIComponent(cookie.slice(name.length + 1));
+type UserPublic = {
+    id: string;
+    email: string;
+    name: string;
+    company: string;
+    role: "superadmin" | "admin" | "member";
+    createdAt: number;
 };
 
+/** Map portal role → roster role key */
+function toRosterRole(portalRole?: string): "superadmin" | "admin" | "member" {
+    if (portalRole === "owner" || portalRole === "superadmin") return "superadmin";
+    if (portalRole === "admin") return "admin";
+    return "member";
+}
+
 export default async function TeamPage() {
-    const requestHeaders = await headers();
-    const token = getCookieValue(requestHeaders.get("cookie"), COOKIE_NAME);
-    if (!token) redirect("/login");
+    const portalUser = await getPortalUser();
+    const rosterRole = toRosterRole(portalUser?.role);
+    const canManageMembers = rosterRole === "admin" || rosterRole === "superadmin";
 
-    const user = await getSessionUser(token!);
-    if (!user) redirect("/login");
-
-    // Users not yet attached to a tenant have no shared roster to scope to —
-    // show them as the sole (current) member of their own team rather than an empty state.
-    const members = user.tenantId
-        ? await listTeamMembers(user.tenantId)
-        : [await getUserById(user.id)].filter((m): m is NonNullable<typeof m> => m !== null);
-    const canManageMembers = user.role === "admin" || user.role === "superadmin";
+    // Build current-user roster entry from the portal session.
+    const members: UserPublic[] = portalUser
+        ? [
+              {
+                  id: portalUser.accountId,
+                  email: portalUser.email,
+                  name: portalUser.displayName ?? portalUser.email.split("@")[0] ?? "Account",
+                  company: portalUser.tenantId,
+                  role: rosterRole,
+                  createdAt: Date.now(),
+              },
+          ]
+        : [];
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -71,7 +77,7 @@ export default async function TeamPage() {
                                     Your team
                                 </h1>
                                 <p className="mt-2 text-slate-400 text-base max-w-lg">
-                                    See who's on your team, their roles, and when they joined.
+                                    See who&apos;s on your team, their roles, and when they joined.
                                 </p>
                             </div>
                             <div className="flex flex-wrap items-center gap-3 shrink-0">
@@ -80,12 +86,15 @@ export default async function TeamPage() {
                                 </ButtonLink>
                             </div>
                         </div>
-
                     </div>
                 </section>
 
-                {/* ── Roster (stats + table, with promote/demote for admins) ── */}
-                <TeamRosterClient initialMembers={members} currentUserId={user.id} canManage={canManageMembers} />
+                {/* ── Roster ─────────────────────────────────────────── */}
+                <TeamRosterClient
+                    initialMembers={members}
+                    currentUserId={portalUser?.accountId ?? ""}
+                    canManage={canManageMembers}
+                />
 
                 {/* ── Footnote ────────────────────────────────────────── */}
                 <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
