@@ -10,7 +10,7 @@ import MotionProvider from "@/components/shared/MotionProvider";
 import MarketingShell from "@/components/layout/MarketingShell";
 import { organizationSchema, websiteSchema, softwareApplicationSchema } from "@/lib/seo-schemas";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://agentfarms.in";
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://agentfarms.in";
 const BRAND = "AgentFarms";
 
 const inter = Inter({

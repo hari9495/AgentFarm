@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://agentfarms.in";
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://agentfarms.in";
 const NOW = new Date();
 
 // ─── Static marketing routes ──────────────────────────────────────────────────
