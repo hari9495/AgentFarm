@@ -22,7 +22,7 @@
         "@azure/storage-blob": "^12.20.0"
     },
     "devDependencies": {
-        "@types/node": "^20.0.0",
+        "@types/node": "^20.19.42",
         "typescript": "^5.3.0"
     }
 }
