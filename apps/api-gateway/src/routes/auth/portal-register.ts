@@ -8,6 +8,9 @@ import { sendVerificationEmail } from '../../lib/portal-email.js';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LEN = 8;
 
+// Free starter plan — seeded in the Plan table (priceUsd=0, agentSlots=1).
+const FREE_PLAN_ID = 'starter';
+
 /** Convert a company name to a URL-safe slug (max 30 chars). */
 function toSlug(name: string): string {
     return name
@@ -26,7 +29,9 @@ export const registerPortalRegisterRoute = async (app: FastifyInstance): Promise
      * POST /portal/auth/register
      *
      * Self-service signup: creates a new Tenant, a default Workspace, and the
-     * owner TenantPortalAccount in one transaction.
+     * owner TenantPortalAccount in one transaction. Also automatically assigns
+     * the free Starter plan subscription and queues a provisioning job for
+     * the customer's first agent — no order or payment required.
      *
      * Set PORTAL_SKIP_EMAIL_VERIFICATION=true to bypass email verification
      * (useful for local / demo environments with no SMTP).
@@ -86,6 +91,19 @@ export const registerPortalRegisterRoute = async (app: FastifyInstance): Promise
             });
         }
 
+        // ── Verify the starter plan exists ────────────────────────────────────
+        const plan = await prisma.plan.findUnique({
+            where: { id: FREE_PLAN_ID },
+            select: { id: true, roleType: true },
+        });
+        if (!plan) {
+            return reply.code(500).send({
+                error: 'server_error',
+                message: 'Free plan is not configured. Contact support.',
+            });
+        }
+        const roleType: string = (plan as unknown as { roleType: string }).roleType ?? 'developer_agent';
+
         // ── Prepare password hash + verification token before the transaction ─
         const passwordHash = await hashPassword(password);
         const verificationToken = skipVerification ? null : randomUUID();
@@ -93,26 +111,39 @@ export const registerPortalRegisterRoute = async (app: FastifyInstance): Promise
             ? `${appBaseUrl}/portal/verify-email?token=${encodeURIComponent(verificationToken)}`
             : null;
 
-        // ── Create Tenant + Workspace + PortalAccount atomically ──────────────
+        // ── IDs to be created ─────────────────────────────────────────────────
+        const now = new Date();
+        const oneYearLater = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+
+        // ── Atomic transaction: Tenant + Workspace + Subscription + Bot + Job ─
         let accountId: string;
+        let botId: string;
+        let jobId: string;
         try {
             const result = await prisma.$transaction(async (tx) => {
+                // 1. Tenant
                 await tx.tenant.create({
-                    data: {
-                        id: tenantId,
-                        name: companyName.trim(),
-                        status: 'pending',
-                    },
+                    data: { id: tenantId, name: companyName.trim(), status: 'pending' },
                 });
 
-                await tx.workspace.create({
+                // 2. Default workspace
+                const workspace = await tx.workspace.create({
+                    data: { tenantId, name: 'Default Workspace', status: 'pending' },
+                });
+
+                // 3. Free starter subscription (1 year, no payment provider)
+                await tx.tenantSubscription.create({
                     data: {
                         tenantId,
-                        name: 'Default Workspace',
-                        status: 'pending',
+                        planId: FREE_PLAN_ID,
+                        paymentProvider: 'system',
+                        startedAt: now,
+                        expiresAt: oneYearLater,
+                        status: 'active',
                     },
                 });
 
+                // 4. Portal owner account
                 const acc = await tx.tenantPortalAccount.create({
                     data: {
                         tenantId,
@@ -126,12 +157,49 @@ export const registerPortalRegisterRoute = async (app: FastifyInstance): Promise
                     },
                 });
 
-                return acc;
+                // 5. Starter bot (1 agent slot on free plan)
+                const bot = await (tx.bot as unknown as {
+                    create: (a: { data: Record<string, unknown> }) => Promise<{ id: string }>;
+                }).create({
+                    data: {
+                        workspaceId: workspace.id,
+                        role: roleType,
+                        status: 'created',
+                    },
+                });
+
+                // 6. Provisioning job (no orderId — free plan doesn't need a paid order)
+                const job = await tx.provisioningJob.create({
+                    data: {
+                        tenantId,
+                        workspaceId: workspace.id,
+                        botId: bot.id,
+                        planId: FREE_PLAN_ID,
+                        runtimeTier: 'shared_vm',
+                        roleType,
+                        correlationId: `corr_free_${Date.now().toString(36)}`,
+                        triggerSource: 'self_signup',
+                        status: 'queued',
+                        requestedBy: acc.id,
+                        requestedAt: now,
+                        triggeredBy: 'customer',
+                        metadata: JSON.stringify({
+                            planName: 'Starter',
+                            customerEmail: normalizedEmail,
+                            agentSlots: 1,
+                            roleType,
+                            autoProvisioned: true,
+                        }),
+                    },
+                });
+
+                return { acc, bot, job };
             });
 
-            accountId = result.id;
+            accountId = result.acc.id;
+            botId = result.bot.id;
+            jobId = result.job.id;
         } catch (err: unknown) {
-            // Duplicate email within this tenant (race condition)
             const msg = err instanceof Error ? err.message : String(err);
             if (msg.includes('Unique constraint')) {
                 return reply.code(409).send({
@@ -152,11 +220,12 @@ export const registerPortalRegisterRoute = async (app: FastifyInstance): Promise
         return reply.code(201).send({
             tenantId,
             accountId,
+            botId,
+            jobId,
             email: normalizedEmail,
             role: 'owner',
+            plan: FREE_PLAN_ID,
             emailVerified: skipVerification,
-            // Always include verifyUrl in response so the signup page can show it
-            // as a fallback if email delivery is unavailable.
             ...(verifyUrl ? { verifyUrl } : {}),
         });
     });
