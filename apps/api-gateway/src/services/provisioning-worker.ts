@@ -229,14 +229,28 @@ type StepHandler = (
     context: Record<string, string>,
 ) => Promise<StepResult>;
 
-const STEP_HANDLERS: Partial<Record<HappyState, StepHandler>> = {
-    validating: (job) => azureValidateTenant(job),
-    creating_resources: (job, ctx) => azureCreateResources(job, ctx),
-    bootstrapping_vm: (job, ctx) => azureBootstrapVm(job, ctx),
-    starting_container: (job, ctx) => azureStartContainer(job, ctx),
-    registering_runtime: (job, ctx) => azureRegisterRuntime(job, ctx),
-    healthchecking: (job, ctx) => azureHealthCheck(job, ctx),
-};
+// When AF_SKIP_PROVISIONING=true (local dev / no Azure), all steps are no-ops.
+// The bot is activated immediately without spinning up any Azure resources.
+const SKIP_PROVISIONING = process.env['AF_SKIP_PROVISIONING'] === 'true';
+
+const STEP_HANDLERS: Partial<Record<HappyState, StepHandler>> = SKIP_PROVISIONING
+    ? {
+        // Local bypass: skip straight to completed — bot activates immediately
+        validating: async (_job, ctx) => ({ success: true, context: ctx }),
+        creating_resources: async (_job, ctx) => ({ success: true, context: ctx }),
+        bootstrapping_vm: async (_job, ctx) => ({ success: true, context: ctx }),
+        starting_container: async (_job, ctx) => ({ success: true, context: ctx }),
+        registering_runtime: async (_job, ctx) => ({ success: true, context: ctx }),
+        healthchecking: async (_job, ctx) => ({ success: true, context: ctx }),
+    }
+    : {
+        validating: (job) => azureValidateTenant(job),
+        creating_resources: (job, ctx) => azureCreateResources(job, ctx),
+        bootstrapping_vm: (job, ctx) => azureBootstrapVm(job, ctx),
+        starting_container: (job, ctx) => azureStartContainer(job, ctx),
+        registering_runtime: (job, ctx) => azureRegisterRuntime(job, ctx),
+        healthchecking: (job, ctx) => azureHealthCheck(job, ctx),
+    };
 
 // ---------------------------------------------------------------------------
 // Failure + cleanup handlers
