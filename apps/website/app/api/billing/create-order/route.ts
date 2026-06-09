@@ -5,7 +5,7 @@ import { getSessionUser } from "@/lib/auth-store";
 const SESSION_COOKIE = "agentfarm_session";
 
 const API_GATEWAY_URL =
-    process.env.API_GATEWAY_URL ??
+    process.env.API_GATEWAY_URL ||
     process.env.NEXT_PUBLIC_API_URL ||
     "http://localhost:3000";
 

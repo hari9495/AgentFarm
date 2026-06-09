@@ -9,7 +9,7 @@ function isValidRole(value: unknown): value is UserRole {
     return typeof value === "string" && (VALID_ROLES as readonly string[]).includes(value);
 }
 const GATEWAY_URL =
-    process.env.API_GATEWAY_URL ??
+    process.env.API_GATEWAY_URL ||
     process.env.NEXT_PUBLIC_API_URL ||
     "http://localhost:3000";
 
