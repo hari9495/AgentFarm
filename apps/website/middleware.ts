@@ -19,7 +19,6 @@ const MAINTENANCE_BYPASS_PATHS = new Set(["/api/health", "/maintenance"]);
  * clearly unauthenticated requests.
  */
 const PROTECTED_PREFIXES = [
-    "/admin",
     "/onboarding",
     "/api/activity",
     "/api/approvals",
@@ -65,8 +64,9 @@ function isPortalProtected(pathname: string): boolean {
     if (PORTAL_PUBLIC_PATHS.has(pathname)) return false;
     if (PORTAL_PUBLIC_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) return false;
     if (pathname.startsWith("/api/portal/")) return false;
-    // /dashboard/* is now protected by portal_session (same auth as /portal/*)
+    // /dashboard/* and /admin/* are protected by portal_session
     if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) return true;
+    if (pathname === "/admin" || pathname.startsWith("/admin/")) return true;
     return pathname === "/portal" || pathname.startsWith("/portal/");
 }
 
