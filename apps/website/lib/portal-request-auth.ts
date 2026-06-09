@@ -26,20 +26,27 @@ export async function getPortalUserFromRequest(
     _request?: Request,
 ): Promise<PortalRequestUser | null> {
     let token: string | undefined;
+
+    // Method 1: cookies() from next/headers (works in Server Components; may return
+    // empty store in CF Worker Route Handlers without throwing)
     try {
         const cookieStore = await cookies();
         token = cookieStore.get("portal_session")?.value;
     } catch {
-        // cookies() may throw outside of a request context — fall back to header
-        if (_request) {
-            const cookieHeader = _request.headers.get("cookie") ?? "";
-            const match = cookieHeader
-                .split(";")
-                .map((p) => p.trim())
-                .find((p) => p.startsWith("portal_session="));
-            token = match ? decodeURIComponent(match.slice("portal_session=".length)) : undefined;
-        }
+        // not available in this context
     }
+
+    // Method 2: always try request Cookie header as fallback (needed when cookies()
+    // returns an empty store in CF Worker Route Handler context)
+    if (!token && _request) {
+        const cookieHeader = _request.headers.get("cookie") ?? "";
+        const match = cookieHeader
+            .split(";")
+            .map((p) => p.trim())
+            .find((p) => p.startsWith("portal_session="));
+        token = match ? decodeURIComponent(match.slice("portal_session=".length)) : undefined;
+    }
+
     if (!token) return null;
 
     try {
