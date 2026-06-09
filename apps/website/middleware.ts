@@ -20,13 +20,6 @@ const MAINTENANCE_BYPASS_PATHS = new Set(["/api/health", "/maintenance"]);
  */
 const PROTECTED_PREFIXES = [
     "/onboarding",
-    "/api/activity",
-    "/api/approvals",
-    "/api/connectors",
-    "/api/deployments",
-    "/api/marketplace",
-    "/api/onboarding",
-    "/api/provisioning",
     "/api/superadmin",
     "/api/admin",
 ];

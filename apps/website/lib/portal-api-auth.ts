@@ -19,6 +19,10 @@ export interface PortalSession {
 /**
  * Extract the portal_session token from a raw cookie header string.
  */
+export function extractPortalTokenFromRequest(request: Request): string | null {
+    return extractPortalToken(request.headers.get("cookie"));
+}
+
 function extractPortalToken(cookieHeader: string | null): string | null {
     if (!cookieHeader) return null;
     const part = cookieHeader

@@ -16,16 +16,8 @@ import {
 type StatPayload = { label: string; delta: string | null; positive: boolean; trend: number[]; sub: string };
 type StatsResponse = { source: "live"; stats: { tasksCompleted: StatPayload; prsMerged: StatPayload; medianCycleTime: StatPayload; estimatedSavings: StatPayload } };
 
-// ── Agents (in real app this would come from the API) ─────────────────────────
-
-const AGENTS = [
-    { id: "ab", ini: "AB", name: "AI Backend Developer",   aBg: "bg-sky-500"    },
-    { id: "aq", ini: "AQ", name: "AI QA Engineer",         aBg: "bg-violet-500" },
-    { id: "ad", ini: "AD", name: "AI DevOps Engineer",     aBg: "bg-amber-500"  },
-    { id: "as", ini: "AS", name: "AI Security Engineer",   aBg: "bg-rose-500"   },
-] as const;
-
-type AgentId = typeof AGENTS[number]["id"];
+type AgentOption = { id: string; ini: string; name: string; aBg: string };
+type AgentId = string;
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
@@ -113,14 +105,18 @@ export default function KpiCardsV2() {
     const [loading, setLoading]         = useState(false);
     const [error, setError]             = useState(false);
 
+    // Agents loaded from API
+    const [agents, setAgents]           = useState<AgentOption[]>([]);
+    const [agentsLoading, setAgentsLoading] = useState(true);
+
     // Filter state
-    const [activeAgent, setActiveAgent] = useState<AgentId>("ab");
+    const [activeAgent, setActiveAgent] = useState<AgentId>("");
     const [fromDate, setFromDate]       = useState(defaultFrom);
     const [toDate, setToDate]           = useState(defaultTo);
     const [appliedFrom, setAppliedFrom] = useState(defaultFrom);
     const [appliedTo, setAppliedTo]     = useState(defaultTo);
 
-    const agent = AGENTS.find(a => a.id === activeAgent) ?? AGENTS[0]!;
+    const agent = agents.find(a => a.id === activeAgent) ?? agents[0] ?? { id: "", ini: "—", name: "All Agents", aBg: "bg-slate-400" };
 
     function fetchStats(agentId: AgentId, from: string, to: string) {
         setLoading(true);
@@ -131,8 +127,22 @@ export default function KpiCardsV2() {
             .catch(() => { setError(true); setLoading(false); });
     }
 
-    // Initial load
-    useEffect(() => { fetchStats(activeAgent, appliedFrom, appliedTo); }, []); // eslint-disable-line
+    // Load agents list from API, then kick off initial stats fetch
+    useEffect(() => {
+        fetch("/api/dashboard/agents", { credentials: "include" })
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then((b: { agents: AgentOption[] }) => {
+                setAgents(b.agents);
+                const firstId = b.agents[0]?.id ?? "";
+                setActiveAgent(firstId);
+                setAgentsLoading(false);
+                fetchStats(firstId, appliedFrom, appliedTo);
+            })
+            .catch(() => {
+                setAgentsLoading(false);
+                fetchStats("", appliedFrom, appliedTo);
+            });
+    }, []); // eslint-disable-line
 
     // Switch agent — fetch immediately
     function handleAgentChange(id: AgentId) {
@@ -161,13 +171,19 @@ export default function KpiCardsV2() {
                 </div>
                 <select
                     value={activeAgent}
-                    onChange={e => handleAgentChange(e.target.value as AgentId)}
+                    onChange={e => handleAgentChange(e.target.value)}
+                    disabled={agentsLoading || agents.length === 0}
                     style={{ WebkitAppearance: "none", MozAppearance: "none", appearance: "none" }}
-                    className="pl-10 pr-8 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer transition-colors"
+                    className="pl-10 pr-8 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer transition-colors disabled:opacity-60"
                 >
-                    {AGENTS.map(a => (
-                        <option key={a.id} value={a.id}>{a.name}</option>
-                    ))}
+                    {agentsLoading
+                        ? <option value="">Loading…</option>
+                        : agents.length === 0
+                            ? <option value="">No agents yet</option>
+                            : agents.map(a => (
+                                <option key={a.id} value={a.id}>{a.name}</option>
+                              ))
+                    }
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
                     <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
