@@ -75,7 +75,10 @@ export default function PortalLoginPage() {
                 return;
             }
 
-            router.push("/portal");
+            // Redirect to intended destination or the unified dashboard
+            const params = new URLSearchParams(window.location.search);
+            const next = params.get("next");
+            router.push(next && next.startsWith("/") ? next : "/dashboard");
         } catch {
             setError("Network error. Please try again.");
         } finally {

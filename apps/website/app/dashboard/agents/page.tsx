@@ -1,36 +1,59 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { ArrowRight, ChevronLeft, ChevronRight, ClipboardCheck, Shield, Timer, Cpu, RotateCcw } from "lucide-react";
 import HeatmapDatePicker from "@/components/dashboard/HeatmapDatePicker";
-import { listBots, type BotRecord, type BotStatus } from "@/lib/auth-store";
 
 export const metadata: Metadata = {
     title: "Agents - AgentFarms Dashboard",
     description: "Browse and manage deployed AI workers.",
 };
 
-// Display label for each real bot status — distinct from the raw BotStatus union
-// stored in the database (active/paused/error/maintenance).
-const statusLabel: Record<BotStatus, string> = {
+const GATEWAY_URL =
+    process.env.API_GATEWAY_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "http://localhost:3000";
+
+// Map portal API statuses → display labels
+const statusLabel: Record<string, string> = {
     active: "Active",
     paused: "Paused",
     error: "Needs review",
+    created: "Active",       // freshly provisioned bots start as "created"
     maintenance: "Maintenance",
 };
 
 const tones = ["sky", "violet", "amber", "rose"] as const;
 
-/** Deterministic, stable per-agent heatmap seed derived from its slug (no randomness). */
-function seedFromSlug(slug: string): number {
+/** Deterministic, stable per-agent heatmap seed derived from its id. */
+function seedFromSlug(id: string): number {
     let hash = 0;
-    for (let i = 0; i < slug.length; i++) {
-        hash = (hash * 31 + slug.charCodeAt(i)) >>> 0;
+    for (let i = 0; i < id.length; i++) {
+        hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
     }
     return (hash % 16) + 1;
 }
 
-function toneFromBot(bot: BotRecord, index: number): string {
-    return tones.includes(bot.tone as (typeof tones)[number]) ? bot.tone : tones[index % tones.length]!;
+interface PortalAgent {
+    id: string;
+    role: string;
+    status: string;
+    createdAt: string;
+    workspace: { name: string } | null;
+}
+
+async function fetchAgents(token: string): Promise<PortalAgent[]> {
+    try {
+        const res = await fetch(`${GATEWAY_URL}/portal/data/agents?limit=50`, {
+            headers: { cookie: `portal_session=${token}` },
+            cache: "no-store",
+        });
+        if (!res.ok) return [];
+        const data = (await res.json()) as { agents?: PortalAgent[] };
+        return data.agents ?? [];
+    } catch {
+        return [];
+    }
 }
 
 // ── Date utilities ─────────────────────────────────────────────────────────────
@@ -183,16 +206,19 @@ export default async function AgentsIndexPage({
 }) {
     const params = await searchParams;
 
-    const bots = await listBots();
-    const agents = bots.map((bot, index) => ({
-        slug: bot.slug,
-        name: bot.name,
+    const cookieStore = await cookies();
+    const token = cookieStore.get("portal_session")?.value ?? "";
+    const portalAgents = await fetchAgents(token);
+
+    const agents = portalAgents.map((bot, index) => ({
+        slug: bot.id,
+        name: bot.role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
         role: bot.role,
         status: statusLabel[bot.status] ?? "Active",
-        tasks: bot.tasksCompleted,
-        reliability: bot.reliabilityPct,
-        tone: toneFromBot(bot, index),
-        heatSeed: seedFromSlug(bot.slug),
+        tasks: 0,          // real task counts come from usage API — shown as 0 for new tenants
+        reliability: 100,  // defaults to 100% until the agent has run tasks
+        tone: tones[index % tones.length]!,
+        heatSeed: seedFromSlug(bot.id),
     }));
 
     const today    = new Date(); today.setHours(0, 0, 0, 0);

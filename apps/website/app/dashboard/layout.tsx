@@ -1,49 +1,84 @@
-﻿import AppSidebar from "@/components/layout/AppSidebar";
-import { headers } from "next/headers";
+import AppSidebar from "@/components/layout/AppSidebar";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getSessionUser, listApprovals, countUnreadNotifications } from "@/lib/auth-store";
 
-const COOKIE_NAME = "agentfarm_session";
+const GATEWAY_URL =
+    process.env.API_GATEWAY_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "http://localhost:3000";
 
-const getCookieValue = (cookieHeader: string | null, name: string): string | null => {
-    if (!cookieHeader) return null;
-    const cookie = cookieHeader
-        .split(";")
-        .map((part) => part.trim())
-        .find((part) => part.startsWith(`${name}=`));
-    if (!cookie) return null;
-    return decodeURIComponent(cookie.slice(name.length + 1));
-};
+interface PortalMe {
+    accountId?: string;
+    tenantId?: string;
+    email?: string;
+    displayName?: string;
+    role?: string;
+}
+
+async function getPortalSession(token: string): Promise<PortalMe | null> {
+    try {
+        const res = await fetch(`${GATEWAY_URL}/portal/auth/me`, {
+            headers: { cookie: `portal_session=${token}` },
+            cache: "no-store",
+        });
+        if (!res.ok) return null;
+        return (await res.json()) as PortalMe;
+    } catch {
+        return null;
+    }
+}
+
+async function getPendingApprovals(token: string): Promise<number> {
+    try {
+        const res = await fetch(`${GATEWAY_URL}/portal/data/approvals?status=pending&limit=100`, {
+            headers: { cookie: `portal_session=${token}` },
+            cache: "no-store",
+        });
+        if (!res.ok) return 0;
+        const data = (await res.json()) as { approvals?: unknown[] };
+        return data.approvals?.length ?? 0;
+    } catch {
+        return 0;
+    }
+}
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-    const requestHeaders = await headers();
-    const token = getCookieValue(requestHeaders.get("cookie"), COOKIE_NAME);
+    const cookieStore = await cookies();
+    const token = cookieStore.get("portal_session")?.value;
+
     if (!token) {
-        redirect("/login");
+        redirect("/portal/login");
     }
 
-    const user = await getSessionUser(token!);
-    if (!user) {
-        redirect("/login");
+    const me = await getPortalSession(token!);
+    if (!me) {
+        redirect("/portal/login");
     }
 
-    // Live badge counts — fetched server-side so they're accurate on every navigation
-    const [pendingApprovals, unreadNotifications] = await Promise.all([
-        listApprovals({
-            status: "pending",
-            tenantId: user.tenantId ?? undefined,
-            limit: 100,
-        }),
-        countUnreadNotifications({ userId: user.id, tenantId: user.tenantId }),
-    ]);
+    const pendingApprovals = await getPendingApprovals(token!);
+
+    // Map portal role → sidebar role type
+    const sidebarRole =
+        me.role === "owner" || me.role === "admin" ? "admin" : "member";
+
+    const displayName =
+        me.displayName?.trim() ||
+        me.email?.split("@")[0] ||
+        "Account";
+
     const badges = {
-        approvals: pendingApprovals.length,
-        notifications: unreadNotifications,
+        approvals: pendingApprovals,
+        notifications: 0,
     };
 
     return (
         <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
-            <AppSidebar userName={user.name} userRole={user.role} badges={badges} />
+            <AppSidebar
+                userName={displayName}
+                userRole={sidebarRole}
+                tenantId={me.tenantId}
+                badges={badges}
+            />
             <div className="flex-1 min-w-0 overflow-auto">
                 {children}
             </div>

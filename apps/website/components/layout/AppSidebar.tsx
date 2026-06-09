@@ -103,7 +103,7 @@ const dashboardGroups: NavGroup[] = [
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type BadgeCounts  = { approvals: number; notifications: number };
-type SidebarUserRole = "superadmin" | "admin" | "member";
+type SidebarUserRole = "superadmin" | "admin" | "member" | "owner";
 
 // ── Single nav item ────────────────────────────────────────────────────────────
 
@@ -173,12 +173,14 @@ function NavLink({
 function SidebarContent({
     userName,
     userRole,
+    tenantId,
     showCompanyPortal,
     badges,
     onClose,
 }: {
     userName: string;
     userRole: SidebarUserRole;
+    tenantId?: string;
     showCompanyPortal?: boolean;
     badges: BadgeCounts;
     onClose?: () => void;
@@ -195,12 +197,13 @@ function SidebarContent({
 
     const roleLabel =
         userRole === "superadmin" ? "Super Admin"
-        : userRole === "admin"    ? "Org Admin"
+        : userRole === "owner"    ? "Owner"
+        : userRole === "admin"    ? "Admin"
         : "Member";
 
     const handleLogout = async () => {
-        await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-        router.push("/login");
+        await fetch("/api/portal/auth/logout", { method: "POST", credentials: "include" });
+        router.push("/portal/login");
     };
 
     const openSearch = () => {
@@ -334,7 +337,7 @@ function SidebarContent({
                             {userName}
                         </p>
                         <p className="text-[11px] text-slate-400 truncate leading-snug">
-                            {roleLabel}
+                            {tenantId ? tenantId : roleLabel}
                         </p>
                     </div>
                     {/* Theme toggle */}
@@ -370,11 +373,13 @@ function SidebarContent({
 export default function AppSidebar({
     userName,
     userRole,
+    tenantId,
     showCompanyPortal,
     badges,
 }: {
     userName: string;
     userRole: SidebarUserRole;
+    tenantId?: string;
     showCompanyPortal?: boolean;
     badges: BadgeCounts;
 }) {
@@ -408,6 +413,7 @@ export default function AppSidebar({
                 <SidebarContent
                     userName={userName}
                     userRole={userRole}
+                    tenantId={tenantId}
                     showCompanyPortal={showCompanyPortal}
                     badges={badges}
                     onClose={() => setOpen(false)}
@@ -419,6 +425,7 @@ export default function AppSidebar({
                 <SidebarContent
                     userName={userName}
                     userRole={userRole}
+                    tenantId={tenantId}
                     showCompanyPortal={showCompanyPortal}
                     badges={badges}
                 />

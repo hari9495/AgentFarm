@@ -19,7 +19,6 @@ const MAINTENANCE_BYPASS_PATHS = new Set(["/api/health", "/maintenance"]);
  * clearly unauthenticated requests.
  */
 const PROTECTED_PREFIXES = [
-    "/dashboard",
     "/admin",
     "/onboarding",
     "/api/activity",
@@ -42,7 +41,7 @@ const PUBLIC_PREFIXES = ["/api/auth"];
 /**
  * Portal paths that are always public (no portal_session required) — exact matches.
  */
-const PORTAL_PUBLIC_PATHS = new Set(["/portal/login"]);
+const PORTAL_PUBLIC_PATHS = new Set(["/portal/login", "/portal/signup"]);
 
 /**
  * Portal path prefixes that are always public (no portal_session required) —
@@ -66,6 +65,8 @@ function isPortalProtected(pathname: string): boolean {
     if (PORTAL_PUBLIC_PATHS.has(pathname)) return false;
     if (PORTAL_PUBLIC_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) return false;
     if (pathname.startsWith("/api/portal/")) return false;
+    // /dashboard/* is now protected by portal_session (same auth as /portal/*)
+    if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) return true;
     return pathname === "/portal" || pathname.startsWith("/portal/");
 }
 
@@ -115,12 +116,17 @@ export function middleware(request: NextRequest): NextResponse {
     }
 
     // Portal session protection: check before operator session check.
+    // Covers both /portal/* and /dashboard/* routes.
     if (isPortalProtected(pathname)) {
         if (hasPortalCookie(request)) {
             return NextResponse.next();
         }
         const loginUrl = request.nextUrl.clone();
         loginUrl.pathname = "/portal/login";
+        // Preserve the intended destination so we can redirect back after login
+        if (pathname !== "/portal" && pathname !== "/portal/") {
+            loginUrl.searchParams.set("next", pathname);
+        }
         return NextResponse.redirect(loginUrl);
     }
 
