@@ -1,6 +1,13 @@
 name = "agent-farm"
+main = ".open-next/worker.js"
 compatibility_date = "2026-05-13"
 compatibility_flags = ["nodejs_compat"]
+
+workers_dev = false
+preview_urls = false
+
+# Static assets served from Cloudflare's CDN — no Worker size limit applies here.
+assets = { directory = ".open-next/assets", binding = "ASSETS" }
 
 # =============================================================================
 # D1 database binding — website auth store
@@ -10,3 +17,17 @@ compatibility_flags = ["nodejs_compat"]
 binding = "DB"
 database_name = "agent-farm-db"
 database_id = "eaeeb99f-cd57-4a6b-bace-2f2bf82bf113"
+
+# =============================================================================
+# Production routes
+# =============================================================================
+
+[[routes]]
+pattern = "agentfarms.in"
+zone_name = "agentfarms.in"
+custom_domain = true
+
+[[routes]]
+pattern = "www.agentfarms.in"
+zone_name = "agentfarms.in"
+custom_domain = true
