@@ -18,16 +18,3 @@ binding = "DB"
 database_name = "agent-farm-db"
 database_id = "eaeeb99f-cd57-4a6b-bace-2f2bf82bf113"
 
-# =============================================================================
-# Production routes
-# =============================================================================
-
-[[routes]]
-pattern = "agentfarms.in"
-zone_name = "agentfarms.in"
-custom_domain = true
-
-[[routes]]
-pattern = "www.agentfarms.in"
-zone_name = "agentfarms.in"
-custom_domain = true
