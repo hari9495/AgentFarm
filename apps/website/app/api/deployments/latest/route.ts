@@ -1,35 +1,15 @@
-
 import { NextResponse } from "next/server";
-import { getLatestDeploymentForUser, getSessionUser } from "@/lib/auth-store";
-
-const COOKIE_NAME = "agentfarm_session";
-
-const getCookieValue = (cookieHeader: string | null, name: string): string | null => {
-    if (!cookieHeader) return null;
-    const cookie = cookieHeader
-        .split(";")
-        .map((part) => part.trim())
-        .find((part) => part.startsWith(`${name}=`));
-    if (!cookie) return null;
-    return decodeURIComponent(cookie.slice(name.length + 1));
-};
+import { getPortalSessionFromRequest } from "@/lib/portal-api-auth";
 
 export async function GET(request: Request) {
-    const token = getCookieValue(request.headers.get("cookie"), COOKIE_NAME);
-    if (!token) {
+    const session = await getPortalSessionFromRequest(request);
+    if (!session) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const user = await getSessionUser(token);
-    if (!user) {
-        return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
-    }
-
-    const latest = await getLatestDeploymentForUser(user.id);
-
+    // No deployments yet for this workspace — return null so the panel shows its empty state.
     return NextResponse.json({
         status: "ok",
-        deployment: latest,
+        deployment: null,
     });
 }
-

@@ -1,34 +1,21 @@
-
 import { NextResponse } from "next/server";
-import { getSessionUser, isCompanyOperatorEmail } from "@/lib/auth-store";
-
-const COOKIE_NAME = "agentfarm_session";
-
-const getCookieValue = (cookieHeader: string | null, name: string): string | null => {
-    if (!cookieHeader) return null;
-    const cookie = cookieHeader
-        .split(";")
-        .map((part) => part.trim())
-        .find((part) => part.startsWith(`${name}=`));
-    if (!cookie) return null;
-    return decodeURIComponent(cookie.slice(name.length + 1));
-};
+import { getPortalSessionFromRequest } from "@/lib/portal-api-auth";
 
 export async function GET(request: Request) {
-    const token = getCookieValue(request.headers.get("cookie"), COOKIE_NAME);
-    if (!token) {
-        return NextResponse.json({ authenticated: false }, { status: 401 });
-    }
-
-    const user = await getSessionUser(token);
-    if (!user) {
+    const session = await getPortalSessionFromRequest(request);
+    if (!session) {
         return NextResponse.json({ authenticated: false }, { status: 401 });
     }
 
     return NextResponse.json({
         authenticated: true,
-        user,
-        isCompanyOperator: isCompanyOperatorEmail(user.email),
+        user: {
+            id: session.accountId,
+            email: session.email,
+            displayName: session.displayName,
+            tenantId: session.tenantId,
+            role: session.role,
+        },
+        isCompanyOperator: false,
     });
 }
-

@@ -1,50 +1,42 @@
-
 import { NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/auth-store";
+import { getPortalSessionFromRequest } from "@/lib/portal-api-auth";
 
-const SESSION_COOKIE = "agentfarm_session";
+function extractPortalToken(cookieHeader: string | null): string | null {
+    if (!cookieHeader) return null;
+    const part = cookieHeader
+        .split(";")
+        .map((p) => p.trim())
+        .find((p) => p.startsWith("portal_session="));
+    if (!part) return null;
+    return decodeURIComponent(part.slice("portal_session=".length)) || null;
+}
 
-const API_GATEWAY_URL =
+const GATEWAY_URL =
     process.env.API_GATEWAY_URL ??
     process.env.NEXT_PUBLIC_API_URL ??
     "http://localhost:3000";
 
-function getCookieValue(cookieHeader: string | null, name: string): string | null {
-    if (!cookieHeader) return null;
-    const cookie = cookieHeader
-        .split(";")
-        .map((p) => p.trim())
-        .find((p) => p.startsWith(`${name}=`));
-    return cookie ? decodeURIComponent(cookie.slice(name.length + 1)) : null;
-}
-
 export async function GET(request: Request) {
-    const cookies = request.headers.get("cookie");
-    const token = getCookieValue(cookies, SESSION_COOKIE);
-    if (!token) {
+    const session = await getPortalSessionFromRequest(request);
+    if (!session) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const user = await getSessionUser(token);
-    if (!user) {
-        return NextResponse.json({ error: "Invalid session." }, { status: 401 });
-    }
-
-    const tenantId = user.gatewayTenantId ?? user.tenantId ?? user.id;
-
+    // Try to fetch orders from portal billing endpoint
     try {
-        const res = await fetch(
-            `${API_GATEWAY_URL}/v1/billing/orders/${encodeURIComponent(tenantId)}`,
-            {
-                // Forward session token so the gateway can validate it.
-                headers: { Authorization: `Bearer ${token}` },
-                cache: "no-store",
-            },
-        );
-        const data: unknown = await res.json();
-        return NextResponse.json(data, { status: res.status });
+        const token = extractPortalToken(request.headers.get("cookie"));
+        const res = await fetch(`${GATEWAY_URL}/portal/data/billing/orders`, {
+            headers: { cookie: `portal_session=${token ?? ""}` },
+            cache: "no-store",
+        });
+        if (res.ok) {
+            const data = (await res.json()) as unknown;
+            return NextResponse.json(data);
+        }
     } catch {
-        return NextResponse.json({ error: "Gateway unavailable." }, { status: 500 });
+        // fall through
     }
-}
 
+    // Return empty orders list for new accounts
+    return NextResponse.json({ status: "ok", orders: [] });
+}

@@ -58,8 +58,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
     const pendingApprovals = await getPendingApprovals(token!);
 
     // Map portal role → sidebar role type
-    const sidebarRole =
-        me.role === "owner" || me.role === "admin" ? "admin" : "member";
+    const sidebarRole: "superadmin" | "admin" | "member" | "owner" =
+        me.role === "superadmin" ? "superadmin"
+        : me.role === "owner"    ? "owner"
+        : me.role === "admin"    ? "admin"
+        : "member";
 
     const displayName =
         me.displayName?.trim() ||

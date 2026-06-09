@@ -5,7 +5,6 @@ import ToastProvider from "@/components/shared/ToastProvider";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
 import CookieConsent from "@/components/shared/CookieConsent";
 import ScrollToTop from "@/components/shared/ScrollToTop";
-import { Analytics } from "@vercel/analytics/react";
 import CartProvider from "@/components/shared/CartProvider";
 import MotionProvider from "@/components/shared/MotionProvider";
 import MarketingShell from "@/components/layout/MarketingShell";
@@ -181,7 +180,6 @@ export default function RootLayout({
             </CartProvider>
           </MotionProvider>
         </ThemeProvider>
-        <Analytics />
       </body>
     </html>
   );

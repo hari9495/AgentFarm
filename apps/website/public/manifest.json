@@ -1,0 +1,33 @@
+{
+  "name": "AgentFarms",
+  "short_name": "AgentFarms",
+  "description": "Deploy governed AI workers that execute real tasks inside your tools, stop at approval boundaries, and leave a full evidence trail.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a1c",
+  "theme_color": "#1a1a1c",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-IN",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "apple touch icon"
+    }
+  ]
+}
