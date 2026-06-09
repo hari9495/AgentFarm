@@ -14,7 +14,7 @@ type SignupPayload = {
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const COOKIE_NAME = "agentfarm_session";
 const GATEWAY_COOKIE_NAME = "agentfarm_gateway_session";
-const API_GATEWAY_URL = process.env.API_GATEWAY_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+const API_GATEWAY_URL = process.env.API_GATEWAY_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 const parseCsvEnv = (value: string | undefined): string[] => {
     if (!value) return [];

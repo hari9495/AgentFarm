@@ -10,7 +10,7 @@ function isValidRole(value: unknown): value is UserRole {
 }
 const GATEWAY_URL =
     process.env.API_GATEWAY_URL ??
-    process.env.NEXT_PUBLIC_API_URL ??
+    process.env.NEXT_PUBLIC_API_URL ||
     "http://localhost:3000";
 
 function getCookieValue(cookieHeader: string | null, name: string): string | null {

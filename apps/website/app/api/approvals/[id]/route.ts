@@ -3,7 +3,7 @@ import { getPortalSessionFromRequest } from "@/lib/portal-api-auth";
 
 const GATEWAY_URL =
     process.env.API_GATEWAY_URL ??
-    process.env.NEXT_PUBLIC_API_URL ??
+    process.env.NEXT_PUBLIC_API_URL ||
     "http://localhost:3000";
 
 function extractPortalToken(cookieHeader: string | null): string | null {

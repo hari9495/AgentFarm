@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 const API_GATEWAY_URL =
     process.env.API_GATEWAY_URL ??
-    process.env.NEXT_PUBLIC_API_URL ??
+    process.env.NEXT_PUBLIC_API_URL ||
     "http://localhost:3000";
 
 // â”€â”€ GET /api/connectors/oauth/callback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

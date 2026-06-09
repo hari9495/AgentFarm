@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { getSessionUser } from "@/lib/auth-store";
 
 const COOKIE_NAME = "agentfarm_session";
-const GATEWAY_URL = process.env.API_GATEWAY_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+const GATEWAY_URL = process.env.API_GATEWAY_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 const getCookieValue = (h: string | null, name: string): string | null => {
     if (!h) return null;
