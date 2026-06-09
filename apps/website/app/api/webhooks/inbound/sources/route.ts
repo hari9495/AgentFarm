@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
-import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
+import { getPortalUserFromRequest, debugPortalAuth } from "@/lib/portal-request-auth";
 
 const GATEWAY_URL = process.env.API_GATEWAY_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 // GET — list inbound webhook sources for this customer
 export async function GET(request: Request) {
     const user = await getPortalUserFromRequest(request);
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!user) {
+        const _debug = await debugPortalAuth(request);
+        return NextResponse.json({ error: "Unauthorized", _debug }, { status: 401 });
+    }
     const tenantId = user.tenantId;
     if (!tenantId) return NextResponse.json({ error: "Workspace not provisioned" }, { status: 400 });
 
