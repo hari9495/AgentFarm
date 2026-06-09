@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getPortalUserFromRequest, debugPortalAuth } from "@/lib/portal-request-auth";
+import { cookies } from "next/headers";
+import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
 
 const GATEWAY_URL = process.env.API_GATEWAY_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -7,8 +8,21 @@ const GATEWAY_URL = process.env.API_GATEWAY_URL || process.env.NEXT_PUBLIC_API_U
 export async function GET(request: Request) {
     const user = await getPortalUserFromRequest(request);
     if (!user) {
-        const _debug = await debugPortalAuth(request);
-        return NextResponse.json({ error: "Unauthorized", _debug }, { status: 401 });
+        // Inline diagnostics — no external function call
+        const rawCookieHeader = request.headers.get("cookie") ?? "";
+        const cookieNames = rawCookieHeader.split(";").map((p) => p.trim().split("=")[0] ?? "").filter(Boolean);
+        let cookiesApiToken: string | null = null;
+        try { cookiesApiToken = (await cookies()).get("portal_session")?.value ?? null; } catch { /* ignore */ }
+        return NextResponse.json({
+            error: "Unauthorized",
+            _d: {
+                cookieNames,
+                hasCookiesApiToken: !!cookiesApiToken,
+                hasHeaderToken: cookieNames.includes("portal_session"),
+                gatewayUrl: GATEWAY_URL,
+                v: 4,
+            },
+        }, { status: 401 });
     }
     const tenantId = user.tenantId;
     if (!tenantId) return NextResponse.json({ error: "Workspace not provisioned" }, { status: 400 });
