@@ -83,9 +83,8 @@ function SSOView({ onBack }: { onBack: () => void }) {
                 setSsoError("No SSO account found for this email. Please sign in with a password instead.");
                 return;
             }
-            // Redirect to the gateway SAML login for this tenant
-            const gatewayUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
-            window.location.assign(`${gatewayUrl}/v1/auth/sso/${tenantId}/login`);
+            // Redirect through our proxy route which handles errors gracefully
+            window.location.assign(`/api/auth/sso?tenantId=${encodeURIComponent(tenantId)}`);
         } catch {
             setSsoError("Unable to connect. Please check your connection and try again.");
         } finally {
@@ -172,8 +171,12 @@ function LoginForm() {
     const [rememberMe, setRememberMe] = useState(false);
     const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
     const [serverError, setServerError] = useState(
-        linkError === "expired_link" ? "Your sign-in link has expired. Please request a new one." :
-        linkError === "invalid_link" ? "This sign-in link is invalid. Please try again." : ""
+        linkError === "expired_link"        ? "Your sign-in link has expired. Please request a new one." :
+        linkError === "invalid_link"        ? "This sign-in link is invalid. Please try again." :
+        linkError === "sso_not_configured"  ? "SSO is not set up for your organization. Please sign in with your email and password." :
+        linkError === "sso_error"           ? "SSO login failed. Please try again or sign in with your email and password." :
+        linkError === "sso_no_tenant"       ? "No account found for that email. Please sign in with your email and password." :
+        ""
     );
     const [submitting, setSubmitting] = useState(false);
     const [view, setView] = useState<"main" | "sso">("main");
