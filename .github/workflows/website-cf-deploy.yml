@@ -95,6 +95,7 @@ jobs:
 
       - name: Run D1 migrations
         if: (github.ref == 'refs/heads/main' || github.event.inputs.environment == 'production') && steps.cf-check.outputs.available == 'true'
+        continue-on-error: true
         working-directory: apps/website
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
