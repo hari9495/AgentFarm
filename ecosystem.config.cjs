@@ -40,6 +40,7 @@ module.exports = {
       interpreter: 'none',
       watch: false,
       autorestart: true,
+      windowsHide: true,
       // On Windows, PM2 doesn't always kill native binaries when restarting.
       // force_exit ensures SIGKILL after kill_timeout so zombie cloudflared
       // processes don't accumulate and serve stale tunnel connections.
@@ -54,6 +55,7 @@ module.exports = {
       interpreter: 'node',
       node_args: TSX_NODE_ARGS,
       watch: false,
+      windowsHide: true,
       max_memory_restart: '1G',
     },
     {
@@ -64,6 +66,7 @@ module.exports = {
       interpreter: 'node',
       node_args: TSX_NODE_ARGS,
       watch: false,
+      windowsHide: true,
       max_memory_restart: '1G',
     },
     {
@@ -74,6 +77,7 @@ module.exports = {
       interpreter: 'node',
       node_args: TSX_NODE_ARGS,
       watch: false,
+      windowsHide: true,
       max_memory_restart: '512M',
     },
     {
@@ -84,6 +88,7 @@ module.exports = {
       interpreter: 'node',
       node_args: TSX_NODE_ARGS,
       watch: false,
+      windowsHide: true,
       max_memory_restart: '512M',
     },
     {
@@ -93,6 +98,7 @@ module.exports = {
       args: 'start -p 3001',
       interpreter: 'node',
       watch: false,
+      windowsHide: true,
       max_memory_restart: '1G',
       env: {
         NODE_ENV: 'production',
@@ -106,6 +112,7 @@ module.exports = {
       args: 'start -p 3002',
       interpreter: 'node',
       watch: false,
+      windowsHide: true,
       max_memory_restart: '1G',
       env: {
         NODE_ENV: 'production',
