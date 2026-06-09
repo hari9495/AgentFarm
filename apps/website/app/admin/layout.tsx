@@ -55,7 +55,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         redirect("/login");
     }
 
-    if (me.role !== "admin" && me.role !== "superadmin") {
+    if (me.role !== "admin" && me.role !== "superadmin" && me.role !== "owner") {
         redirect("/dashboard");
     }
 
