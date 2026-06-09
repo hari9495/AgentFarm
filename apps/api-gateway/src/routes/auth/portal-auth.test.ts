@@ -113,6 +113,16 @@ const createMockRepo = () => {
                 accounts.set(key, { ...account, passwordHash });
             }
         },
+        async findTenantsByEmail(email) {
+            const matches: Array<{ tenantId: string; tenantName: string }> = [];
+            for (const acc of accounts.values()) {
+                if (acc.email === email) {
+                    const tenant = tenants.get(acc.tenantId);
+                    if (tenant) matches.push({ tenantId: acc.tenantId, tenantName: acc.tenantId });
+                }
+            }
+            return matches;
+        },
     };
 
     return { repo, tenants, accounts, sessions, lastLogins, lastSeens };
