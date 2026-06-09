@@ -48,6 +48,7 @@ type PortalSessionRecord = {
 
 export type PortalAuthRepo = {
     findTenant(id: string): Promise<PortalTenantRecord | null>;
+    findTenantsByEmail(email: string): Promise<Array<{ tenantId: string; tenantName: string }>>;
     findAccountByEmail(tenantId: string, email: string): Promise<PortalAccountRecord | null>;
     createAccount(data: {
         tenantId: string;
@@ -92,6 +93,19 @@ const getPrismaRepo = async (): Promise<PortalAuthRepo> => {
                 where: { id },
                 select: { id: true, status: true },
             }) as Promise<PortalTenantRecord | null>;
+        },
+        async findTenantsByEmail(email) {
+            const accounts = await prisma.tenantPortalAccount.findMany({
+                where: { email, isActive: true },
+                select: { tenantId: true },
+            });
+            if (accounts.length === 0) return [];
+            const tenantIds = accounts.map((a) => a.tenantId);
+            const tenants = await prisma.tenant.findMany({
+                where: { id: { in: tenantIds } },
+                select: { id: true, name: true },
+            });
+            return tenants.map((t) => ({ tenantId: t.id, tenantName: t.name }));
         },
         async findAccountByEmail(tenantId, email) {
             return prisma.tenantPortalAccount.findUnique({
@@ -650,5 +664,18 @@ export const registerPortalAuthRoutes = async (
         }
 
         return reply.send({ ok: true });
+    });
+
+    // ── GET /portal/auth/lookup-tenant?email= ────────────────────────────────
+    // Returns the tenant(s) associated with an email — allows the login page
+    // to work with just email + password (no tenant ID field required).
+    // Anti-enumeration: always returns 200 (empty array if no match).
+    app.get<{ Querystring: { email?: string } }>('/portal/auth/lookup-tenant', async (request, reply) => {
+        const { email } = request.query;
+        if (!email || typeof email !== 'string' || !EMAIL_REGEX.test(email.trim())) {
+            return reply.send({ tenants: [] });
+        }
+        const tenants = await repo.findTenantsByEmail(email.trim().toLowerCase());
+        return reply.send({ tenants });
     });
 };

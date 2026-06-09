@@ -41,7 +41,7 @@ const PUBLIC_PREFIXES = ["/api/auth"];
 /**
  * Portal paths that are always public (no portal_session required) — exact matches.
  */
-const PORTAL_PUBLIC_PATHS = new Set(["/portal/login", "/portal/signup"]);
+const PORTAL_PUBLIC_PATHS = new Set(["/login", "/portal/login", "/portal/signup"]);
 
 /**
  * Portal path prefixes that are always public (no portal_session required) —
@@ -122,7 +122,7 @@ export function middleware(request: NextRequest): NextResponse {
             return NextResponse.next();
         }
         const loginUrl = request.nextUrl.clone();
-        loginUrl.pathname = "/portal/login";
+        loginUrl.pathname = "/login";
         // Preserve the intended destination so we can redirect back after login
         if (pathname !== "/portal" && pathname !== "/portal/") {
             loginUrl.searchParams.set("next", pathname);

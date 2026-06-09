@@ -57,11 +57,10 @@ function AgentFarmsLogo({ size = 8 }: { size?: number }) {
     );
 }
 
-// ── SSO sub-view ────────────────────────────────────────────────────────────
+// ── SSO sub-view ─────────────────────────────────────────────────────────────
 
 function SSOView({ onBack }: { onBack: () => void }) {
     const [ssoEmail, setSsoEmail] = useState("");
-
     return (
         <div
             className="flex items-center justify-center px-6"
@@ -77,7 +76,6 @@ function SSOView({ onBack }: { onBack: () => void }) {
                 >
                     ← Back to sign in
                 </button>
-
                 <div className="bg-white rounded-[20px] p-8" style={{ boxShadow: "0 2px 20px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)" }}>
                     <div className="w-10 h-10 rounded-[12px] flex items-center justify-center mb-6" style={{ background: "#0071e3" }}>
                         <Building2 className="w-5 h-5 text-white" />
@@ -123,7 +121,7 @@ function SSOView({ onBack }: { onBack: () => void }) {
     );
 }
 
-// ── Magic Link sub-view ─────────────────────────────────────────────────────
+// ── Magic Link sub-view ───────────────────────────────────────────────────────
 
 function MagicLinkView({ onBack }: { onBack: () => void }) {
     const [mlEmail, setMlEmail] = useState("");
@@ -172,10 +170,8 @@ function MagicLinkView({ onBack }: { onBack: () => void }) {
                 >
                     ← Back to sign in
                 </button>
-
                 <div className="bg-white rounded-[20px] p-8" style={{ boxShadow: "0 2px 20px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)" }}>
                     {sent ? (
-                        /* ── Sent confirmation ── */
                         <div className="text-center py-4">
                             <div
                                 className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5"
@@ -192,17 +188,12 @@ function MagicLinkView({ onBack }: { onBack: () => void }) {
                             </p>
                             <p className="text-[12px]" style={{ color: "#aeaeb2", lineHeight: 1.6 }}>
                                 Didn&apos;t receive it? Check your spam folder or{" "}
-                                <button
-                                    onClick={() => setSent(false)}
-                                    className="font-semibold cursor-pointer"
-                                    style={{ color: "#0071e3" }}
-                                >
+                                <button onClick={() => setSent(false)} className="font-semibold cursor-pointer" style={{ color: "#0071e3" }}>
                                     try again
                                 </button>.
                             </p>
                         </div>
                     ) : (
-                        /* ── Send form ── */
                         <>
                             <div className="w-10 h-10 rounded-[12px] flex items-center justify-center mb-6" style={{ background: "#f5f5f7", border: "1px solid #e8e8ed" }}>
                                 <Zap className="w-5 h-5" style={{ color: "#0071e3" }} />
@@ -217,10 +208,7 @@ function MagicLinkView({ onBack }: { onBack: () => void }) {
                                 <div>
                                     <label className="block text-[13px] font-semibold text-[#1d1d1f] mb-1.5">Work email</label>
                                     <div className="relative">
-                                        <Mail
-                                            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4"
-                                            style={{ color: "#aeaeb2" }}
-                                        />
+                                        <Mail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#aeaeb2" }} />
                                         <input
                                             type="email"
                                             placeholder="you@company.com"
@@ -263,11 +251,10 @@ function MagicLinkView({ onBack }: { onBack: () => void }) {
     );
 }
 
-// ── Main login form ─────────────────────────────────────────────────────────
+// ── Main login form ───────────────────────────────────────────────────────────
 
 function LoginForm() {
     const searchParams = useSearchParams();
-    const from = searchParams.get("from") ?? undefined;
     const linkError = searchParams.get("error");
 
     const [email, setEmail] = useState("");
@@ -286,25 +273,50 @@ function LoginForm() {
         e.preventDefault();
         const nextErrors: { email?: string; password?: string } = {};
         if (!/^\S+@\S+\.\S+$/.test(email)) nextErrors.email = "Enter a valid email address.";
-        if (password.length < 10) nextErrors.password = "Password must be at least 10 characters.";
+        if (password.length < 8) nextErrors.password = "Password must be at least 8 characters.";
         setErrors(nextErrors);
         setServerError("");
         if (Object.keys(nextErrors).length > 0) return;
 
         setSubmitting(true);
         try {
-            const res = await fetch("/api/auth/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password, from, rememberMe }),
-            });
-            const data = (await res.json()) as { error?: string; redirectTo?: string };
-            if (!res.ok) {
-                // Ambiguous — prevents username enumeration
+            // Step 1: look up which tenant this email belongs to
+            const lookupRes = await fetch(
+                `/api/portal/auth/lookup-tenant?email=${encodeURIComponent(email.trim().toLowerCase())}`,
+            );
+            const lookupData = (await lookupRes.json()) as { tenants?: Array<{ tenantId: string; tenantName: string }> };
+            const tenants = lookupData.tenants ?? [];
+
+            if (tenants.length === 0) {
                 setServerError("Invalid email or password. Please try again.");
                 return;
             }
-            window.location.assign(data.redirectTo ?? "/dashboard");
+
+            // Use the first (or only) tenant — multi-tenant picker can be added later
+            const tenantId = tenants[0]!.tenantId;
+
+            // Step 2: login with portal auth
+            const res = await fetch("/api/portal/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ tenantId, email: email.trim().toLowerCase(), password }),
+            });
+            const data = (await res.json()) as { error?: string; message?: string };
+
+            if (!res.ok) {
+                if (data.error === "email_not_verified") {
+                    setServerError("Please verify your email before signing in. Check your inbox.");
+                } else if (data.error === "account_inactive") {
+                    setServerError("This account has been deactivated. Contact support.");
+                } else {
+                    setServerError("Invalid email or password. Please try again.");
+                }
+                return;
+            }
+
+            // Success — go to dashboard (or ?next= param)
+            const next = searchParams.get("next");
+            window.location.assign(next && next.startsWith("/") ? next : "/dashboard");
         } catch {
             setServerError("Unable to sign in. Please check your connection and try again.");
         } finally {
@@ -431,7 +443,7 @@ function LoginForm() {
 
                     <Divider label="or" />
 
-                    {/* Tier 2 — Magic Link (passwordless) */}
+                    {/* Tier 2 — Magic Link */}
                     <button
                         onClick={() => setView("magic")}
                         className="w-full flex items-center justify-center gap-2.5 py-3 text-[15px] font-medium rounded-[12px] transition-all cursor-pointer"
@@ -445,7 +457,7 @@ function LoginForm() {
 
                     <Divider label="or sign in with password" />
 
-                    {/* Tier 3 — Email + Password */}
+                    {/* Tier 3 — Email + Password (portal auth) */}
                     <form onSubmit={onSubmit} noValidate className="space-y-4">
                         {/* Email */}
                         <div>
@@ -479,7 +491,7 @@ function LoginForm() {
                         <div>
                             <div className="flex items-center justify-between mb-1.5">
                                 <label className="block text-[13px] font-semibold text-[#1d1d1f]">Password</label>
-                                <Link href="/forgot-password" className="text-[13px] font-medium text-[#0071e3] hover:text-[#0077ed] transition-colors">
+                                <Link href="/portal/forgot-password" className="text-[13px] font-medium text-[#0071e3] hover:text-[#0077ed] transition-colors">
                                     Forgot password?
                                 </Link>
                             </div>
@@ -537,7 +549,7 @@ function LoginForm() {
                             </span>
                         </div>
 
-                        {/* Server / link error */}
+                        {/* Error */}
                         {serverError && (
                             <div
                                 className="rounded-[12px] px-4 py-3 flex items-start gap-2.5"
@@ -564,7 +576,7 @@ function LoginForm() {
                     {/* Sign-up link */}
                     <p className="mt-6 text-center text-[13px]" style={{ color: "#6e6e73" }}>
                         Don&rsquo;t have an account?{" "}
-                        <Link href="/get-started" className="font-semibold text-[#0071e3] hover:text-[#0077ed] transition-colors">
+                        <Link href="/signup" className="font-semibold text-[#0071e3] hover:text-[#0077ed] transition-colors">
                             Create one free
                         </Link>
                     </p>

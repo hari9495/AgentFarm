@@ -146,7 +146,7 @@ export default function SignupPage() {
                         )}
 
                         <button
-                            onClick={() => router.push("/portal/login?next=/dashboard")}
+                            onClick={() => router.push("/login")}
                             className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#0066cc] hover:bg-[#0071e3] text-white text-sm font-semibold shadow-sm transition-colors"
                         >
                             Go to login
@@ -296,7 +296,7 @@ export default function SignupPage() {
 
                 <p className="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">
                     Already have an account?{" "}
-                    <Link href="/portal/login" className="text-[#0066cc] hover:underline">
+                    <Link href="/login" className="text-[#0066cc] hover:underline">
                         Sign in
                     </Link>
                 </p>
