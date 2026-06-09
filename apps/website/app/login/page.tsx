@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import {
     ArrowRight, Eye, EyeOff, Lock, Mail, ShieldCheck,
-    Building2, CheckCircle2, AlertCircle, Fingerprint, Key, Zap,
+    Building2, CheckCircle2, AlertCircle, Fingerprint, Key,
 } from "lucide-react";
 
 const SECURITY_FEATURES = [
@@ -61,6 +61,38 @@ function AgentFarmsLogo({ size = 8 }: { size?: number }) {
 
 function SSOView({ onBack }: { onBack: () => void }) {
     const [ssoEmail, setSsoEmail] = useState("");
+    const [ssoError, setSsoError] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    async function handleSSO(e: React.FormEvent) {
+        e.preventDefault();
+        setSsoError("");
+        if (!/^\S+@\S+\.\S+$/.test(ssoEmail)) {
+            setSsoError("Enter a valid work email address.");
+            return;
+        }
+        setLoading(true);
+        try {
+            // Look up which tenant this email belongs to
+            const res = await fetch(
+                `/api/portal/auth/lookup-tenant?email=${encodeURIComponent(ssoEmail.trim().toLowerCase())}`,
+            );
+            const data = (await res.json()) as { tenants?: Array<{ tenantId: string }> };
+            const tenantId = data.tenants?.[0]?.tenantId;
+            if (!tenantId) {
+                setSsoError("No SSO account found for this email. Please sign in with a password instead.");
+                return;
+            }
+            // Redirect to the gateway SAML login for this tenant
+            const gatewayUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+            window.location.assign(`${gatewayUrl}/v1/auth/sso/${tenantId}/login`);
+        } catch {
+            setSsoError("Unable to connect. Please check your connection and try again.");
+        } finally {
+            setLoading(false);
+        }
+    }
+
     return (
         <div
             className="flex items-center justify-center px-6"
@@ -86,165 +118,42 @@ function SSOView({ onBack }: { onBack: () => void }) {
                     <p className="text-[14px] text-[#6e6e73] mb-6" style={{ lineHeight: 1.6 }}>
                         Enter your work email and we&apos;ll redirect you to your identity provider.
                     </p>
-                    <div className="space-y-4">
+                    <form onSubmit={handleSSO} noValidate className="space-y-4">
                         <div>
                             <label className="block text-[13px] font-semibold text-[#1d1d1f] mb-1.5">Work email</label>
                             <input
                                 type="email"
                                 placeholder="you@company.com"
                                 value={ssoEmail}
-                                onChange={(e) => setSsoEmail(e.target.value)}
+                                onChange={(e) => { setSsoEmail(e.target.value); setSsoError(""); }}
                                 className="w-full px-4 py-3 text-[15px] text-[#1d1d1f] placeholder:text-[#aeaeb2] outline-none transition-colors"
-                                style={INPUT_STYLE.base}
+                                style={ssoError ? INPUT_STYLE.error : INPUT_STYLE.base}
                                 onFocus={(e) => (e.currentTarget.style.borderColor = "#0071e3")}
-                                onBlur={(e) => (e.currentTarget.style.borderColor = "#d2d2d7")}
+                                onBlur={(e) => (e.currentTarget.style.borderColor = ssoError ? "#ff3b30" : "#d2d2d7")}
                                 autoComplete="email"
                                 autoCapitalize="off"
+                                autoFocus
                             />
+                            {ssoError && (
+                                <p className="mt-1.5 flex items-center gap-1 text-[12px] text-[#ff3b30]">
+                                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />{ssoError}
+                                </p>
+                            )}
                         </div>
-                        <a
-                            href={`/api/auth/sso?email=${encodeURIComponent(ssoEmail)}`}
-                            className="w-full flex items-center justify-center gap-2 py-3 text-[15px] font-medium text-white rounded-full transition-all"
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full flex items-center justify-center gap-2 py-3 text-[15px] font-medium text-white rounded-full transition-all disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                             style={{ background: "#0071e3" }}
-                            onMouseOver={(e) => (e.currentTarget.style.background = "#0077ed")}
+                            onMouseOver={(e) => !loading && (e.currentTarget.style.background = "#0077ed")}
                             onMouseOut={(e) => (e.currentTarget.style.background = "#0071e3")}
                         >
-                            Continue with SSO <ArrowRight className="w-4 h-4" />
-                        </a>
-                    </div>
+                            {loading ? <><Spinner /> Looking up…</> : <>Continue with SSO <ArrowRight className="w-4 h-4" /></>}
+                        </button>
+                    </form>
                     <p className="mt-6 text-[12px] text-center" style={{ color: "#aeaeb2", lineHeight: 1.6 }}>
                         Supports SAML 2.0 · OIDC · Okta · Azure AD · Google Workspace
                     </p>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// ── Magic Link sub-view ───────────────────────────────────────────────────────
-
-function MagicLinkView({ onBack }: { onBack: () => void }) {
-    const [mlEmail, setMlEmail] = useState("");
-    const [mlError, setMlError] = useState("");
-    const [sending, setSending] = useState(false);
-    const [sent, setSent] = useState(false);
-
-    async function onSend(e: React.FormEvent) {
-        e.preventDefault();
-        setMlError("");
-        if (!/^\S+@\S+\.\S+$/.test(mlEmail)) {
-            setMlError("Enter a valid work email address.");
-            return;
-        }
-        setSending(true);
-        try {
-            const res = await fetch("/api/auth/send-magic-link", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: mlEmail }),
-            });
-            if (res.status === 429) {
-                setMlError("Too many requests. Please wait a moment and try again.");
-                return;
-            }
-            setSent(true);
-        } catch {
-            setMlError("Unable to send. Please check your connection and try again.");
-        } finally {
-            setSending(false);
-        }
-    }
-
-    return (
-        <div
-            className="flex items-center justify-center px-6"
-            style={{ background: "#f5f5f7", fontFamily: "-apple-system, 'SF Pro Display', system-ui, sans-serif", minHeight: "100dvh" }}
-        >
-            <div className="w-full max-w-[400px]">
-                <button
-                    onClick={onBack}
-                    className="flex items-center gap-1.5 text-[13px] font-medium mb-8 cursor-pointer transition-colors"
-                    style={{ color: "#6e6e73" }}
-                    onMouseOver={(e) => (e.currentTarget.style.color = "#1d1d1f")}
-                    onMouseOut={(e) => (e.currentTarget.style.color = "#6e6e73")}
-                >
-                    ← Back to sign in
-                </button>
-                <div className="bg-white rounded-[20px] p-8" style={{ boxShadow: "0 2px 20px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)" }}>
-                    {sent ? (
-                        <div className="text-center py-4">
-                            <div
-                                className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5"
-                                style={{ background: "rgba(0,113,227,0.08)", border: "1px solid rgba(0,113,227,0.15)" }}
-                            >
-                                <Mail className="w-6 h-6" style={{ color: "#0071e3" }} />
-                            </div>
-                            <h2 className="font-semibold text-[#1d1d1f] mb-2" style={{ fontSize: "1.4rem", letterSpacing: "-0.02em" }}>
-                                Check your inbox
-                            </h2>
-                            <p className="text-[14px] text-[#6e6e73] mb-6" style={{ lineHeight: 1.6 }}>
-                                We sent a sign-in link to <span className="font-semibold text-[#1d1d1f]">{mlEmail}</span>.
-                                It expires in <span className="font-semibold text-[#1d1d1f]">15 minutes</span>.
-                            </p>
-                            <p className="text-[12px]" style={{ color: "#aeaeb2", lineHeight: 1.6 }}>
-                                Didn&apos;t receive it? Check your spam folder or{" "}
-                                <button onClick={() => setSent(false)} className="font-semibold cursor-pointer" style={{ color: "#0071e3" }}>
-                                    try again
-                                </button>.
-                            </p>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="w-10 h-10 rounded-[12px] flex items-center justify-center mb-6" style={{ background: "#f5f5f7", border: "1px solid #e8e8ed" }}>
-                                <Zap className="w-5 h-5" style={{ color: "#0071e3" }} />
-                            </div>
-                            <h2 className="font-semibold text-[#1d1d1f] mb-2" style={{ fontSize: "1.5rem", letterSpacing: "-0.02em" }}>
-                                Magic link
-                            </h2>
-                            <p className="text-[14px] text-[#6e6e73] mb-6" style={{ lineHeight: 1.6 }}>
-                                Enter your work email and we&apos;ll send a one-click sign-in link. No password needed.
-                            </p>
-                            <form onSubmit={onSend} noValidate className="space-y-4">
-                                <div>
-                                    <label className="block text-[13px] font-semibold text-[#1d1d1f] mb-1.5">Work email</label>
-                                    <div className="relative">
-                                        <Mail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#aeaeb2" }} />
-                                        <input
-                                            type="email"
-                                            placeholder="you@company.com"
-                                            value={mlEmail}
-                                            onChange={(e) => setMlEmail(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-3 text-[15px] text-[#1d1d1f] placeholder:text-[#aeaeb2] outline-none transition-colors"
-                                            style={mlError ? INPUT_STYLE.error : INPUT_STYLE.base}
-                                            onFocus={(e) => (e.currentTarget.style.borderColor = "#0071e3")}
-                                            onBlur={(e) => (e.currentTarget.style.borderColor = mlError ? "#ff3b30" : "#d2d2d7")}
-                                            autoComplete="email"
-                                            autoCapitalize="off"
-                                            autoFocus
-                                        />
-                                    </div>
-                                    {mlError && (
-                                        <p className="mt-1.5 flex items-center gap-1 text-[12px] text-[#ff3b30]">
-                                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />{mlError}
-                                        </p>
-                                    )}
-                                </div>
-                                <button
-                                    type="submit"
-                                    disabled={sending}
-                                    className="w-full flex items-center justify-center gap-2 py-3 text-[15px] font-medium text-white rounded-full transition-all disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
-                                    style={{ background: "#1d1d1f" }}
-                                    onMouseOver={(e) => !sending && (e.currentTarget.style.background = "#2d2d2f")}
-                                    onMouseOut={(e) => (e.currentTarget.style.background = "#1d1d1f")}
-                                >
-                                    {sending ? <><Spinner /> Sending…</> : <>Send magic link <ArrowRight className="w-4 h-4 shrink-0" /></>}
-                                </button>
-                            </form>
-                            <p className="mt-5 text-[12px] text-center" style={{ color: "#aeaeb2", lineHeight: 1.6 }}>
-                                Link expires in 15 minutes · Single use · No password stored
-                            </p>
-                        </>
-                    )}
                 </div>
             </div>
         </div>
@@ -267,7 +176,7 @@ function LoginForm() {
         linkError === "invalid_link" ? "This sign-in link is invalid. Please try again." : ""
     );
     const [submitting, setSubmitting] = useState(false);
-    const [view, setView] = useState<"main" | "sso" | "magic">("main");
+    const [view, setView] = useState<"main" | "sso">("main");
 
     async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -325,7 +234,6 @@ function LoginForm() {
     }
 
     if (view === "sso") return <SSOView onBack={() => setView("main")} />;
-    if (view === "magic") return <MagicLinkView onBack={() => setView("main")} />;
 
     return (
         <div
@@ -439,20 +347,6 @@ function LoginForm() {
                     >
                         <Building2 className="w-4 h-4" />
                         Continue with SSO
-                    </button>
-
-                    <Divider label="or" />
-
-                    {/* Tier 2 — Magic Link */}
-                    <button
-                        onClick={() => setView("magic")}
-                        className="w-full flex items-center justify-center gap-2.5 py-3 text-[15px] font-medium rounded-[12px] transition-all cursor-pointer"
-                        style={{ background: "#f5f5f7", color: "#1d1d1f", border: "1px solid #e8e8ed" }}
-                        onMouseOver={(e) => (e.currentTarget.style.background = "#ebebf0")}
-                        onMouseOut={(e) => (e.currentTarget.style.background = "#f5f5f7")}
-                    >
-                        <Zap className="w-4 h-4" style={{ color: "#0071e3" }} />
-                        Send me a magic link
                     </button>
 
                     <Divider label="or sign in with password" />
