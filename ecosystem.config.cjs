@@ -40,6 +40,11 @@ module.exports = {
       interpreter: 'none',
       watch: false,
       autorestart: true,
+      // On Windows, PM2 doesn't always kill native binaries when restarting.
+      // force_exit ensures SIGKILL after kill_timeout so zombie cloudflared
+      // processes don't accumulate and serve stale tunnel connections.
+      kill_timeout: 10000,
+      force_exit: true,
     },
     {
       name: 'api-gateway',
