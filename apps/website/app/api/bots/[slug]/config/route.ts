@@ -1,23 +1,11 @@
 import { NextResponse } from "next/server";
+import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
 import {
     getBotBySlug,
-    getSessionUser,
     updateBotConfig,
     type ApprovalPolicy,
     type AutonomyLevel,
 } from "@/lib/auth-store";
-
-const COOKIE_NAME = "agentfarm_session";
-
-const getCookieValue = (cookieHeader: string | null, name: string): string | null => {
-    if (!cookieHeader) return null;
-    const cookie = cookieHeader
-        .split(";")
-        .map((c) => c.trim())
-        .find((c) => c.startsWith(`${name}=`));
-    if (!cookie) return null;
-    return decodeURIComponent(cookie.slice(name.length + 1));
-};
 
 const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const VALID_DAYS = new Set(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]);
@@ -28,11 +16,8 @@ export async function PATCH(
     request: Request,
     { params }: { params: Promise<{ slug: string }> },
 ) {
-    const token = getCookieValue(request.headers.get("cookie"), COOKIE_NAME);
-    if (!token) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
-
-    const user = await getSessionUser(token);
-    if (!user) return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
+    const user = await getPortalUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { slug } = await params;
     const bot = await getBotBySlug(slug);

@@ -1,17 +1,6 @@
 import { NextResponse } from "next/server";
-import { getSessionUser, listBots, updateBotConfig, type ApprovalPolicy } from "@/lib/auth-store";
-
-const COOKIE_NAME = "agentfarm_session";
-
-const getCookieValue = (cookieHeader: string | null, name: string): string | null => {
-    if (!cookieHeader) return null;
-    const cookie = cookieHeader
-        .split(";")
-        .map((c) => c.trim())
-        .find((c) => c.startsWith(`${name}=`));
-    if (!cookie) return null;
-    return decodeURIComponent(cookie.slice(name.length + 1));
-};
+import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
+import { listBots, updateBotConfig, type ApprovalPolicy } from "@/lib/auth-store";
 
 // Presets translate a one-click choice into a concrete `approvalPolicy` applied
 // across every deployed agent — there is no separate "policy preset" entity to
@@ -22,11 +11,8 @@ const PRESETS: Record<string, ApprovalPolicy> = {
 };
 
 export async function POST(request: Request) {
-    const token = getCookieValue(request.headers.get("cookie"), COOKIE_NAME);
-    if (!token) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
-
-    const user = await getSessionUser(token);
-    if (!user) return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
+    const user = await getPortalUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     let body: { preset?: string };
     try {

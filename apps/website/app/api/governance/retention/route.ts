@@ -1,36 +1,22 @@
 import { NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/auth-store";
+import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
 
-const COOKIE_NAME = "agentfarm_session";
 const GATEWAY_URL = process.env.API_GATEWAY_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-
-const getCookieValue = (h: string | null, name: string): string | null => {
-    if (!h) return null;
-    const c = h.split(";").map(p => p.trim()).find(p => p.startsWith(`${name}=`));
-    return c ? decodeURIComponent(c.slice(name.length + 1)) : null;
-};
-
-async function getUser(request: Request) {
-    const token = getCookieValue(request.headers.get("cookie"), COOKIE_NAME);
-    if (!token) return null;
-    return getSessionUser(token);
-}
 
 // GET — list retention policies for this tenant/workspace
 export async function GET(request: Request) {
-    const user = await getUser(request);
+    const user = await getPortalUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { gatewayWorkspaceId: workspaceId, gatewayToken: authToken, tenantId } = user;
-    if (!authToken) return NextResponse.json({ error: "Workspace not provisioned" }, { status: 400 });
+    const workspaceId = user.tenantId;
 
     const params = new URLSearchParams();
-    if (tenantId) params.set("tenant_id", tenantId);
-    if (workspaceId) params.set("workspace_id", workspaceId);
+    params.set("tenant_id", workspaceId);
+    params.set("workspace_id", workspaceId);
 
     try {
         const res = await fetch(`${GATEWAY_URL}/v1/retention?${params.toString()}`,
-            { headers: { Authorization: `Bearer ${authToken}` }, cache: "no-store" }
+            { headers: { cookie: request.headers.get("cookie") ?? "" }, cache: "no-store" }
         );
         const body = await res.json().catch(() => ({ policies: [] }));
         return NextResponse.json(body, { status: res.status });
@@ -41,11 +27,10 @@ export async function GET(request: Request) {
 
 // POST — create a new retention policy
 export async function POST(request: Request) {
-    const user = await getUser(request);
+    const user = await getPortalUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { gatewayWorkspaceId: workspaceId, gatewayToken: authToken, tenantId } = user;
-    if (!authToken) return NextResponse.json({ error: "Workspace not provisioned" }, { status: 400 });
+    const workspaceId = user.tenantId;
 
     let body: unknown;
     try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
@@ -53,11 +38,11 @@ export async function POST(request: Request) {
     try {
         const res = await fetch(`${GATEWAY_URL}/v1/retention`, {
             method: "POST",
-            headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
+            headers: { cookie: request.headers.get("cookie") ?? "", "Content-Type": "application/json" },
             body: JSON.stringify({
                 ...(body as object),
-                tenant_id: tenantId,
-                workspace_id: workspaceId ?? undefined,
+                tenant_id: workspaceId,
+                workspace_id: workspaceId,
             }),
         });
         const resBody = await res.json().catch(() => ({}));
@@ -69,11 +54,8 @@ export async function POST(request: Request) {
 
 // DELETE — remove a retention policy by ID
 export async function DELETE(request: Request) {
-    const user = await getUser(request);
+    const user = await getPortalUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const { gatewayToken: authToken } = user;
-    if (!authToken) return NextResponse.json({ error: "Workspace not provisioned" }, { status: 400 });
 
     const { searchParams } = new URL(request.url);
     const policyId = searchParams.get("id");
@@ -81,7 +63,7 @@ export async function DELETE(request: Request) {
 
     try {
         const res = await fetch(`${GATEWAY_URL}/v1/retention/${encodeURIComponent(policyId)}`,
-            { method: "DELETE", headers: { Authorization: `Bearer ${authToken}` } }
+            { method: "DELETE", headers: { cookie: request.headers.get("cookie") ?? "" } }
         );
         const resBody = await res.json().catch(() => ({}));
         return NextResponse.json(resBody, { status: res.status });

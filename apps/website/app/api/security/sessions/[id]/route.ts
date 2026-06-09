@@ -1,8 +1,8 @@
 
 import { NextResponse } from "next/server";
-import { getCurrentSessionId, getSessionUser, revokeOwnSession } from "@/lib/auth-store";
+import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
+import { getCurrentSessionId, revokeOwnSession } from "@/lib/auth-store";
 
-const SESSION_COOKIE = "agentfarm_session";
 
 function getCookieValue(cookieHeader: string | null, name: string): string | null {
     if (!cookieHeader) return null;
@@ -15,18 +15,13 @@ function getCookieValue(cookieHeader: string | null, name: string): string | nul
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
     const cookies = request.headers.get("cookie");
-    const token = getCookieValue(cookies, SESSION_COOKIE);
-    if (!token) {
+    const user = await getPortalUserFromRequest(request);
+    if (!user) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
-    const user = await getSessionUser(token);
-    if (!user) {
-        return NextResponse.json({ error: "Invalid session." }, { status: 401 });
-    }
-
     const { id } = await params;
-    const currentSessionId = await getCurrentSessionId(token);
+    const currentSessionId = await getCurrentSessionId("");
     const result = await revokeOwnSession(user.id, id, currentSessionId);
     if (!result.ok) {
         return NextResponse.json({ error: result.error ?? "Unable to revoke session." }, { status: 400 });

@@ -1,34 +1,21 @@
 import { NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/auth-store";
+import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
 
-const COOKIE_NAME = "agentfarm_session";
 const GATEWAY_URL = process.env.API_GATEWAY_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-
-const getCookieValue = (h: string | null, name: string): string | null => {
-    if (!h) return null;
-    const c = h.split(";").map(p => p.trim()).find(p => p.startsWith(`${name}=`));
-    return c ? decodeURIComponent(c.slice(name.length + 1)) : null;
-};
-
-async function getUser(request: Request) {
-    const token = getCookieValue(request.headers.get("cookie"), COOKIE_NAME);
-    if (!token) return null;
-    return getSessionUser(token);
-}
 
 // GET — list inbound webhook sources for this customer
 export async function GET(request: Request) {
-    const user = await getUser(request);
+    const user = await getPortalUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const { gatewayToken: authToken, tenantId } = user;
-    if (!authToken || !tenantId) return NextResponse.json({ error: "Workspace not provisioned" }, { status: 400 });
+    const tenantId = user.tenantId;
+    if (!tenantId) return NextResponse.json({ error: "Workspace not provisioned" }, { status: 400 });
 
     const params = new URLSearchParams({ tenantId });
-    if (user.gatewayWorkspaceId) params.set("workspaceId", user.gatewayWorkspaceId);
+    if (user.tenantId) params.set("workspaceId", user.tenantId);
 
     try {
         const res = await fetch(`${GATEWAY_URL}/v1/webhooks/inbound/sources?${params.toString()}`, {
-            headers: { Authorization: `Bearer ${authToken}` }, cache: "no-store",
+            headers: { cookie: request.headers.get("cookie") ?? "" }, cache: "no-store",
         });
         const body = await res.json().catch(() => ({ sources: [] }));
         return NextResponse.json(body, { status: res.status });
@@ -39,10 +26,10 @@ export async function GET(request: Request) {
 
 // POST — create a new inbound webhook source
 export async function POST(request: Request) {
-    const user = await getUser(request);
+    const user = await getPortalUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const { gatewayToken: authToken, tenantId } = user;
-    if (!authToken || !tenantId) return NextResponse.json({ error: "Workspace not provisioned" }, { status: 400 });
+    const tenantId = user.tenantId;
+    if (!tenantId) return NextResponse.json({ error: "Workspace not provisioned" }, { status: 400 });
 
     let body: unknown;
     try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
@@ -50,8 +37,8 @@ export async function POST(request: Request) {
     try {
         const res = await fetch(`${GATEWAY_URL}/v1/webhooks/inbound/sources`, {
             method: "POST",
-            headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ ...(body as object), tenantId, workspaceId: user.gatewayWorkspaceId }),
+            headers: { cookie: request.headers.get("cookie") ?? "", "Content-Type": "application/json" },
+            body: JSON.stringify({ ...(body as object), tenantId, workspaceId: user.tenantId }),
         });
         const resBody = await res.json().catch(() => ({}));
         return NextResponse.json(resBody, { status: res.status });

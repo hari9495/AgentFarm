@@ -1,8 +1,8 @@
 
 import { NextResponse } from "next/server";
-import { getSessionUser, listTeamMembers } from "@/lib/auth-store";
+import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
+import { listTeamMembers } from "@/lib/auth-store";
 
-const SESSION_COOKIE = "agentfarm_session";
 
 function getCookieValue(cookieHeader: string | null, name: string): string | null {
     if (!cookieHeader) return null;
@@ -15,14 +15,9 @@ function getCookieValue(cookieHeader: string | null, name: string): string | nul
 
 export async function GET(request: Request) {
     const cookies = request.headers.get("cookie");
-    const token = getCookieValue(cookies, SESSION_COOKIE);
-    if (!token) {
-        return NextResponse.json({ error: "Authentication required." }, { status: 401 });
-    }
-
-    const user = await getSessionUser(token);
+    const user = await getPortalUserFromRequest(request);
     if (!user) {
-        return NextResponse.json({ error: "Invalid session." }, { status: 401 });
+        return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
     if (!user.tenantId) {
         return NextResponse.json({ members: [] });

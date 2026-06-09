@@ -1,8 +1,7 @@
 
 import { NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/auth-store";
+import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
 
-const SESSION_COOKIE = "agentfarm_session";
 const GATEWAY_COOKIE = "agentfarm_gateway_session";
 
 const API_GATEWAY_URL =
@@ -47,21 +46,18 @@ type GatewayInitiateResponse = {
 
 // â”€â”€ GET /api/connectors â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function GET(request: Request) {
+    const user = await getPortalUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+
     const cookies = request.headers.get("cookie");
-    const token = getCookieValue(cookies, SESSION_COOKIE);
-    if (!token) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
-
-    const user = await getSessionUser(token);
-    if (!user) return NextResponse.json({ error: "Invalid session." }, { status: 401 });
-
     const gatewayToken = getCookieValue(cookies, GATEWAY_COOKIE);
     if (!gatewayToken) {
         return NextResponse.json({ error: "connector_bridge_unavailable" }, { status: 503 });
     }
 
     const { searchParams } = new URL(request.url);
-    const workspaceId = searchParams.get("workspaceId") ?? user.gatewayWorkspaceId ?? "";
-    const botId = searchParams.get("botId") ?? user.gatewayBotId ?? "";
+    const workspaceId = searchParams.get("workspaceId") ?? user.tenantId ?? "";
+    const botId = searchParams.get("botId") ?? "";
 
     const qs = new URLSearchParams();
     if (workspaceId) qs.set("workspace_id", workspaceId);
@@ -86,13 +82,10 @@ export async function GET(request: Request) {
 
 // â”€â”€ POST /api/connectors â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function POST(request: Request) {
+    const user = await getPortalUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+
     const cookies = request.headers.get("cookie");
-    const token = getCookieValue(cookies, SESSION_COOKIE);
-    if (!token) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
-
-    const user = await getSessionUser(token);
-    if (!user) return NextResponse.json({ error: "Invalid session." }, { status: 401 });
-
     const gatewayToken = getCookieValue(cookies, GATEWAY_COOKIE);
     if (!gatewayToken) {
         return NextResponse.json({ error: "connector_bridge_unavailable" }, { status: 503 });
@@ -118,7 +111,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "tool is required." }, { status: 400 });
     }
 
-    const workspaceId = body.workspaceId ?? user.gatewayWorkspaceId ?? "";
+    const workspaceId = body.workspaceId ?? user.tenantId ?? "";
 
     try {
         if (body.authMethod === "oauth2") {

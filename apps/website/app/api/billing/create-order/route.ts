@@ -1,8 +1,7 @@
 
 import { NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/auth-store";
+import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
 
-const SESSION_COOKIE = "agentfarm_session";
 
 const API_GATEWAY_URL =
     process.env.API_GATEWAY_URL ||
@@ -20,14 +19,9 @@ function getCookieValue(cookieHeader: string | null, name: string): string | nul
 
 export async function POST(request: Request) {
     const cookies = request.headers.get("cookie");
-    const token = getCookieValue(cookies, SESSION_COOKIE);
-    if (!token) {
-        return NextResponse.json({ error: "Authentication required." }, { status: 401 });
-    }
-
-    const user = await getSessionUser(token);
+    const user = await getPortalUserFromRequest(request);
     if (!user) {
-        return NextResponse.json({ error: "Invalid session." }, { status: 401 });
+        return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
 
     let body: { planId?: unknown; customerEmail?: unknown; customerCountry?: unknown };
@@ -50,7 +44,7 @@ export async function POST(request: Request) {
     }
 
     // Prefer gatewayTenantId if provisioned, fall back to local tenantId, then user id.
-    const tenantId = user.gatewayTenantId ?? user.tenantId ?? user.id;
+    const tenantId = user.tenantId ?? user.id;
 
     try {
         const res = await fetch(`${API_GATEWAY_URL}/v1/billing/create-order`, {

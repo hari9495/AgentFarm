@@ -1,6 +1,7 @@
 
 import { NextResponse } from "next/server";
-import { completeOnboarding, getSessionUser } from "@/lib/auth-store";
+import { getPortalUserFromRequest } from "@/lib/portal-request-auth";
+import { completeOnboarding } from "@/lib/auth-store";
 
 type OnboardingPayload = {
     githubOrg?: string;
@@ -9,23 +10,12 @@ type OnboardingPayload = {
 };
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const COOKIE_NAME = "agentfarm_session";
 const allowedAgents = new Set([
     "ai-backend-developer",
     "ai-qa-engineer",
     "ai-devops-engineer",
     "ai-security-engineer",
 ]);
-
-const getCookieValue = (cookieHeader: string | null, name: string): string | null => {
-    if (!cookieHeader) return null;
-    const cookie = cookieHeader
-        .split(";")
-        .map((part) => part.trim())
-        .find((part) => part.startsWith(`${name}=`));
-    if (!cookie) return null;
-    return decodeURIComponent(cookie.slice(name.length + 1));
-};
 
 export async function POST(request: Request) {
     let payload: OnboardingPayload;
@@ -60,15 +50,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Invalid starter agent selection." }, { status: 400 });
     }
 
-    const sessionToken = getCookieValue(request.headers.get("cookie"), COOKIE_NAME);
-    if (!sessionToken) {
-        return NextResponse.json({ error: "Authentication required." }, { status: 401 });
-    }
-
-    const user = await getSessionUser(sessionToken);
-    if (!user) {
-        return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
-    }
+    const user = await getPortalUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     completeOnboarding({
         userId: user.id,
