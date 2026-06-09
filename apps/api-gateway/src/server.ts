@@ -13,7 +13,7 @@ import Fastify, { type FastifyInstance, type FastifyError } from 'fastify';
 import helmet from '@fastify/helmet';
 import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
-import { buildSessionToken } from './lib/session-auth.js';
+import { buildSessionToken, type SessionPayload } from './lib/session-auth.js';
 import { rateLimitAsync, rateLimitTenantAsync } from './lib/rate-limit.js';
 import { checkSubscription } from './lib/subscription-guard.js';
 import { prisma } from './lib/db.js';
@@ -195,6 +195,33 @@ export const createServer = async (): Promise<FastifyInstance> => {
             if (apiKeySession) {
                 (request as unknown as Record<string, unknown>)._injectedSession = apiKeySession;
                 session = apiKeySession;
+            }
+        }
+
+        // Portal session fallback — customer portal forwards portal_session cookie
+        if (!session) {
+            const rawCookie = request.headers['cookie'];
+            if (typeof rawCookie === 'string') {
+                const match = rawCookie.split(';').map((v) => v.trim()).find((v) => v.startsWith('portal_session='));
+                if (match) {
+                    const token = decodeURIComponent(match.slice('portal_session='.length));
+                    const ps = await prisma.tenantPortalSession.findFirst({
+                        where: { token, expiresAt: { gt: new Date() } },
+                        select: { accountId: true, tenantId: true, account: { select: { role: true } } },
+                    });
+                    if (ps) {
+                        const portalSession: SessionPayload = {
+                            userId: ps.accountId,
+                            tenantId: ps.tenantId,
+                            workspaceIds: [],
+                            scope: 'customer',
+                            role: ps.account.role,
+                            expiresAt: Date.now() + 300_000,
+                        };
+                        (request as unknown as Record<string, unknown>)._injectedSession = portalSession;
+                        session = portalSession;
+                    }
+                }
             }
         }
 

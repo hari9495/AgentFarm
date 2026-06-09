@@ -70,28 +70,6 @@ type SessionContext = {
     expiresAt: number;
 };
 
-/** Resolves tenantId from operator session OR portal_session cookie — for customer-portal-accessible routes. */
-async function resolveInboundTenantId(
-    req: FastifyRequest,
-    getSession: (r: FastifyRequest) => SessionContext | null,
-    prisma: PrismaClient,
-): Promise<string | null> {
-    const session = getSession(req);
-    if (session) return session.tenantId;
-
-    const rawCookie = req.headers['cookie'];
-    if (typeof rawCookie !== 'string') return null;
-    const match = rawCookie.split(';').map((v) => v.trim()).find((v) => v.startsWith('portal_session='));
-    if (!match) return null;
-    const token = decodeURIComponent(match.slice('portal_session='.length));
-    if (!token) return null;
-
-    const portalSession = await prisma.tenantPortalSession.findFirst({
-        where: { token, expiresAt: { gt: new Date() } },
-        select: { tenantId: true },
-    });
-    return portalSession?.tenantId ?? null;
-}
 
 type RegisterWebhookRoutesOptions = {
     getSession: (request: import('fastify').FastifyRequest) => SessionContext | null;
@@ -393,11 +371,11 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
      * Returns the list of registered inbound webhook sources for the authenticated tenant.
      */
     app.get('/v1/webhooks/inbound/sources', async (req, reply) => {
-        const tenantId = await resolveInboundTenantId(req, getSession, prisma);
-        if (!tenantId) return reply.code(401).send({ error: 'Unauthorized' });
+        const session = getSession(req);
+        if (!session) return reply.code(401).send({ error: 'Unauthorized' });
 
         const sources = await prisma.webhookSource.findMany({
-            where: { tenantId },
+            where: { tenantId: session.tenantId },
             orderBy: { createdAt: 'desc' },
         });
         return reply.send({ sources });
@@ -411,8 +389,8 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
     app.post<{ Body: { name?: unknown; description?: unknown } }>(
         '/v1/webhooks/inbound/sources',
         async (req, reply) => {
-            const tenantId = await resolveInboundTenantId(req, getSession, prisma);
-            if (!tenantId) return reply.code(401).send({ error: 'Unauthorized' });
+            const session = getSession(req);
+            if (!session) return reply.code(401).send({ error: 'Unauthorized' });
 
             const name = trimString(req.body?.name);
             if (!name) {
@@ -421,7 +399,7 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
             const description = trimString(req.body?.description) || undefined;
             const secret = randomUUID();
             const source = await prisma.webhookSource.create({
-                data: { tenantId, name, description, secret },
+                data: { tenantId: session.tenantId, name, description, secret },
             });
             const inboundUrl = `/webhooks/ingest/inbound?source=${source.id}`;
             return reply.code(201).send({ id: source.id, name: source.name, secret: source.secret, inboundUrl });
@@ -435,14 +413,14 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
     app.delete<{ Params: { sourceId: string } }>(
         '/v1/webhooks/inbound/sources/:sourceId',
         async (req, reply) => {
-            const tenantId = await resolveInboundTenantId(req, getSession, prisma);
-            if (!tenantId) return reply.code(401).send({ error: 'Unauthorized' });
+            const session = getSession(req);
+            if (!session) return reply.code(401).send({ error: 'Unauthorized' });
 
             const existing = await prisma.webhookSource.findUnique({ where: { id: req.params.sourceId } });
             if (!existing) {
                 return reply.code(404).send({ error: 'source not found' });
             }
-            if (existing.tenantId !== tenantId) {
+            if (existing.tenantId !== session.tenantId) {
                 return reply.code(403).send({ error: 'Forbidden' });
             }
             await prisma.webhookSource.delete({ where: { id: req.params.sourceId } });
@@ -458,14 +436,15 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
     app.get<{ Querystring: { source?: string; limit?: string; cursor?: string } }>(
         '/v1/webhooks/inbound/events',
         async (req, reply) => {
-            const tenantId = await resolveInboundTenantId(req, getSession, prisma);
-            if (!tenantId) return reply.code(401).send({ error: 'Unauthorized' });
+            const session = getSession(req);
+            if (!session) return reply.code(401).send({ error: 'Unauthorized' });
 
             const sourceId = req.query.source ? trimString(req.query.source) : undefined;
             const limit = Math.min(Number(req.query.limit ?? 20), 100);
             const cursor = req.query.cursor ? trimString(req.query.cursor) : undefined;
 
-            const where: Record<string, unknown> = { tenantId };
+            // Always filter by session tenant; optionally narrow by sourceId
+            const where: Record<string, unknown> = { tenantId: session.tenantId };
             if (sourceId) where['sourceId'] = sourceId;
 
             const events = await prisma.inboundWebhookEvent.findMany({
