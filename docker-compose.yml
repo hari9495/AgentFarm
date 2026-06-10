@@ -1,4 +1,4 @@
-services:
+﻿services:
   postgres:
     image: pgvector/pgvector:pg16
     container_name: agentfarm-postgres
@@ -41,8 +41,8 @@ services:
     ports:
       - '8181:8181'
     healthcheck:
-      # OPA /health returns {} (HTTP 200) when running — check for HTTP 200
-      test: [ 'CMD-SHELL', 'wget -qO /dev/null http://localhost:8181/health && exit 0 || exit 1' ]
+      # OPA /health returns {} (HTTP 200) when running â€” check for HTTP 200
+      test: [ 'CMD-SHELL', 'wget -qO /dev/null http://127.0.0.1:8181/health && exit 0 || exit 1' ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -58,7 +58,7 @@ services:
     environment:
       - PORT=17493
     healthcheck:
-      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:17493/health || exit 1' ]
+      test: [ 'CMD-SHELL', 'wget -qO- http://127.0.0.1:17493/health || exit 1' ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -97,11 +97,11 @@ services:
       API_GATEWAY_PORT: '3000'
       NODE_ENV: production
       API_SESSION_SECRET: ${API_SESSION_SECRET}
-      VOXCPM2_URL: ${VOXCPM2_URL:-http://localhost:8765}
+      VOXCPM2_URL: ${VOXCPM2_URL:-http://127.0.0.1:8765}
       VOICEBOX_URL: http://voicebox:17493
       BROWSER_AGENT_URL: ${BROWSER_AGENT_URL:-http://browser-agent:5002}
       DESKTOP_AGENT_URL: ${DESKTOP_AGENT_URL:-http://desktop-agent:5003}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3001}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://127.0.0.1:3001}
       # Workers run in the dedicated worker-runner service below.
       # Setting this flag prevents duplicate worker execution in both processes.
       AF_WORKERS_DISABLED: '1'
@@ -111,7 +111,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:3000/health || exit 1' ]
+      test: [ 'CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/health || exit 1' ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -154,7 +154,7 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       BROWSER_TIMEOUT_MS: ${BROWSER_TIMEOUT_MS:-120000}
     healthcheck:
-      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:5002/health || exit 1' ]
+      test: [ 'CMD-SHELL', 'wget -qO- http://127.0.0.1:5002/health || exit 1' ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -187,7 +187,7 @@ services:
       api-gateway:
         condition: service_healthy
     healthcheck:
-      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:4000/health || exit 1' ]
+      test: [ 'CMD-SHELL', 'wget -qO- http://127.0.0.1:4000/health || exit 1' ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -210,7 +210,7 @@ services:
       api-gateway:
         condition: service_healthy
     healthcheck:
-      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:3002/health || exit 1' ]
+      test: [ 'CMD-SHELL', 'wget -qO- http://127.0.0.1:3002/health || exit 1' ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -238,7 +238,7 @@ services:
       api-gateway:
         condition: service_healthy
     healthcheck:
-      test: [ 'CMD-SHELL', 'wget -qO /dev/null http://localhost:3001 || exit 1' ]
+      test: [ 'CMD-SHELL', 'wget -qO /dev/null http://127.0.0.1:3001 || exit 1' ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -274,9 +274,9 @@ services:
       DESKTOP_AGENT_TOKEN: ${DESKTOP_AGENT_TOKEN:-}
       # Test tool paths
       JMETER_HOME: /opt/jmeter
-      APPIUM_SERVER_URL: http://localhost:4723
+      APPIUM_SERVER_URL: http://127.0.0.1:4723
       ZAP_HOME: /opt/zaproxy
-      # Voice sidecar (pipecat_sidecar.py). On by default — set to 0 to
+      # Voice sidecar (pipecat_sidecar.py). On by default â€” set to 0 to
       # disable PulseAudio + Silero VAD + faster-whisper inside the container.
       ENABLE_VOICE_SIDECAR: ${ENABLE_VOICE_SIDECAR:-1}
       PIPECAT_PORT: '7800'
@@ -290,7 +290,7 @@ services:
       # Chromium routes its audio (what participants say) there.
       PULSE_MONITOR_SOURCE: ${PULSE_MONITOR_SOURCE:-MeetingOut.monitor}
     healthcheck:
-      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:5003/health || exit 1' ]
+      test: [ 'CMD-SHELL', 'wget -qO- http://127.0.0.1:5003/health || exit 1' ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -337,26 +337,26 @@ services:
       MEETING_BRAIN_MODEL: ${MEETING_BRAIN_MODEL:-claude-sonnet-4-6}
       MEETING_BRAIN_SYSTEM_PROMPT: ${MEETING_BRAIN_SYSTEM_PROMPT:-}
       MEETING_BRAIN_MAX_TOKENS: ${MEETING_BRAIN_MAX_TOKENS:-}
-      # ── Self-hosted voice stack (active when --profile voice is used) ──────
-      # Whisper STT — points at the whisper service (port 9090).
+      # â”€â”€ Self-hosted voice stack (active when --profile voice is used) â”€â”€â”€â”€â”€â”€
+      # Whisper STT â€” points at the whisper service (port 9090).
       # Set sttProvider=whisper_local in VoicePipelineConfig to use this.
       WHISPER_ENDPOINT: ${WHISPER_ENDPOINT:-http://whisper:8000}
-      # Kokoro TTS — OpenAI-compatible endpoint.
+      # Kokoro TTS â€” OpenAI-compatible endpoint.
       # To replace VoxCPM2 with Kokoro: set SUPERTONIC_URL=http://kokoro:8880
       KOKORO_ENDPOINT: ${KOKORO_ENDPOINT:-http://kokoro:8880}
-      # XTTS v2 — 17-language TTS. Active when --profile voice is used.
+      # XTTS v2 â€” 17-language TTS. Active when --profile voice is used.
       XTTS_ENDPOINT: ${XTTS_ENDPOINT:-http://xtts:5002}
-      # Meta MMS-TTS — 1100+ languages. Active when --profile voice is used.
+      # Meta MMS-TTS â€” 1100+ languages. Active when --profile voice is used.
       MMS_TTS_ENDPOINT: ${MMS_TTS_ENDPOINT:-http://mms-tts:5002}
-      # ── FreeSWITCH SIP — universal meeting dial-in ─────────────────────────
+      # â”€â”€ FreeSWITCH SIP â€” universal meeting dial-in â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       # Used by SipJoinAdapter to originate SIP calls into any meeting platform.
       # Active when the freeswitch service is running (--profile voice).
       FREESWITCH_ESL_HOST: ${FREESWITCH_ESL_HOST:-freeswitch}
       FREESWITCH_ESL_PORT: ${FREESWITCH_ESL_PORT:-8021}
       FREESWITCH_ESL_PASSWORD: ${FREESWITCH_ESL_PASSWORD:-ClueCon}
       FREESWITCH_SIP_PROFILE: ${FREESWITCH_SIP_PROFILE:-external}
-      # ── Meeting platform native SDK credentials ────────────────────────────
-      # Microsoft Teams — Graph API calling bot.
+      # â”€â”€ Meeting platform native SDK credentials â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      # Microsoft Teams â€” Graph API calling bot.
       # Requires: Calls.JoinGroupCall.All, OnlineMeetings.ReadWrite.All
       TEAMS_TENANT_ID: ${TEAMS_TENANT_ID:-}
       TEAMS_CLIENT_ID: ${TEAMS_CLIENT_ID:-}
@@ -367,9 +367,9 @@ services:
       # relays the FFmpeg HLS stream to the Teams media endpoint via the sidecar.
       TEAMS_MEDIA_BOT_URL: ${TEAMS_MEDIA_BOT_URL:-http://teams-media-bot:8090}
       # Public URL Teams can POST callbacks (ICE/DTLS negotiation) to.
-      # Must be reachable from Microsoft's servers — use ngrok or Azure Relay in dev.
+      # Must be reachable from Microsoft's servers â€” use ngrok or Azure Relay in dev.
       TEAMS_CALLBACK_BASE_URL: ${TEAMS_CALLBACK_BASE_URL:-}
-      # Zoom — Server-to-Server OAuth app (marketplace.zoom.us).
+      # Zoom â€” Server-to-Server OAuth app (marketplace.zoom.us).
       # Requires scopes: meeting:write:admin, meeting:read:admin
       ZOOM_ACCOUNT_ID: ${ZOOM_ACCOUNT_ID:-}
       ZOOM_CLIENT_ID: ${ZOOM_CLIENT_ID:-}
@@ -382,7 +382,7 @@ services:
       voxcpm:
         condition: service_healthy
     healthcheck:
-      test: [ 'CMD-SHELL', 'node -e "fetch(\"http://localhost:7799/health\").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"' ]
+      test: [ 'CMD-SHELL', 'node -e "fetch(\"http://127.0.0.1:7799/health\").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"' ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -402,7 +402,7 @@ services:
       PORT: '8765'
       SAMPLE_RATE: '22050'
     healthcheck:
-      test: [ 'CMD-SHELL', 'python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen(\"http://localhost:8765/health\").status==200 else 1)"' ]
+      test: [ 'CMD-SHELL', 'python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen(\"http://127.0.0.1:8765/health\").status==200 else 1)"' ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -411,19 +411,19 @@ services:
       - agentfarm
     restart: unless-stopped
 
-  # ── Self-hosted open-source voice stack (zero per-call cost) ─────────────────
+  # â”€â”€ Self-hosted open-source voice stack (zero per-call cost) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   #
   # Enable:  docker compose --profile voice up
   # Or add:  COMPOSE_PROFILES=voice  to your .env file
   #
   # These seven services replace paid APIs or add native platform capabilities:
-  #   whisper          → Sarvam AI / Deepgram  (STT, 99 languages)
-  #   kokoro           → Sarvam Bulbul / VoxCPM2 (TTS, English, OpenAI-compatible)
-  #   freeswitch       → Twilio SIP (universal meeting dial-in via SipJoinAdapter)
-  #   xtts             → Coqui XTTS v2 (TTS, 17 languages, zero cost)
-  #   mms-tts          → Meta MMS-TTS (TTS, 1100+ languages, zero cost)
-  #   teams-media-bot  → Teams native screen share (applicationHostedMediaConfig + DTLS-SRTP)
-  #   zoom-video-sidecar → Zoom native screen share (Playwright browser + xdotool)
+  #   whisper          â†’ Sarvam AI / Deepgram  (STT, 99 languages)
+  #   kokoro           â†’ Sarvam Bulbul / VoxCPM2 (TTS, English, OpenAI-compatible)
+  #   freeswitch       â†’ Twilio SIP (universal meeting dial-in via SipJoinAdapter)
+  #   xtts             â†’ Coqui XTTS v2 (TTS, 17 languages, zero cost)
+  #   mms-tts          â†’ Meta MMS-TTS (TTS, 1100+ languages, zero cost)
+  #   teams-media-bot  â†’ Teams native screen share (applicationHostedMediaConfig + DTLS-SRTP)
+  #   zoom-video-sidecar â†’ Zoom native screen share (Playwright browser + xdotool)
   #
   # First boot downloads models (whisper ~1.5 GB, kokoro ~300 MB, xtts ~2 GB).
   # MMS-TTS models download on first request per language (~30-100 MB each).
@@ -444,18 +444,18 @@ services:
     volumes:
       - whisper_models:/root/.cache/huggingface
     healthcheck:
-      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:8000/health || exit 1' ]
+      test: [ 'CMD-SHELL', 'wget -qO- http://127.0.0.1:8000/health || exit 1' ]
       interval: 15s
       timeout: 5s
       retries: 5
-      # Model download on first boot — allow up to 3 minutes.
+      # Model download on first boot â€” allow up to 3 minutes.
       start_period: 180s
     networks:
       - agentfarm
     restart: unless-stopped
 
   kokoro:
-    # OpenAI-compatible TTS — drop-in replacement for the /v1/audio/speech endpoint.
+    # OpenAI-compatible TTS â€” drop-in replacement for the /v1/audio/speech endpoint.
     # Works as SUPERTONIC_URL=http://kokoro:8880 for the meeting-agent /say path.
     image: ghcr.io/remsky/kokoro-fastapi-cpu:v0.2.2
     container_name: agentfarm-kokoro
@@ -465,7 +465,7 @@ services:
     volumes:
       - kokoro_models:/app/models
     healthcheck:
-      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:8880/health || exit 1' ]
+      test: [ 'CMD-SHELL', 'wget -qO- http://127.0.0.1:8880/health || exit 1' ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -475,20 +475,20 @@ services:
     restart: unless-stopped
 
   freeswitch:
-    # FreeSWITCH SIP server — used by SipJoinAdapter to dial into any meeting
+    # FreeSWITCH SIP server â€” used by SipJoinAdapter to dial into any meeting
     # platform (Teams, Zoom, Meet, Webex) as an audio-only participant.
-    # ESL password defaults to "ClueCon" — change via FREESWITCH_ESL_PASSWORD.
+    # ESL password defaults to "ClueCon" â€” change via FREESWITCH_ESL_PASSWORD.
     build:
       context: ./docker/freeswitch
       dockerfile: Dockerfile
     container_name: agentfarm-freeswitch
     profiles: [ voice ]
     ports:
-      - '5060:5060/udp'   # SIP signaling — internal profile
+      - '5060:5060/udp'   # SIP signaling â€” internal profile
       - '5060:5060/tcp'
-      - '5080:5080/udp'   # SIP signaling — external/outbound profile
+      - '5080:5080/udp'   # SIP signaling â€” external/outbound profile
       - '5080:5080/tcp'
-      - '8021:8021'       # ESL (Event Socket Layer) — used by SipJoinAdapter
+      - '8021:8021'       # ESL (Event Socket Layer) â€” used by SipJoinAdapter
       - '16384-16484:16384-16484/udp'  # RTP media (100-port range, ~50 calls)
     environment:
       ESL_PASSWORD: ${FREESWITCH_ESL_PASSWORD:-ClueCon}
@@ -506,8 +506,8 @@ services:
     restart: unless-stopped
 
   xtts:
-    # XTTS v2 — 17-language self-hosted TTS (Coqui).
-    # API: POST /tts_to_audio/ { text, language, speaker_wav? } → WAV bytes.
+    # XTTS v2 â€” 17-language self-hosted TTS (Coqui).
+    # API: POST /tts_to_audio/ { text, language, speaker_wav? } â†’ WAV bytes.
     # Used by meeting-agent when ttsProvider="xtts" (languages: es fr de it pt pl tr ru nl cs ar zh ja hu ko hi).
     # First start downloads the XTTS v2 model (~2 GB). Cached in xtts_models volume.
     image: daswer123/xtts-api-server:latest
@@ -518,19 +518,19 @@ services:
     volumes:
       - xtts_models:/root/.local/share/tts
     healthcheck:
-      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:5002/docs || exit 1' ]
+      test: [ 'CMD-SHELL', 'wget -qO- http://127.0.0.1:5002/docs || exit 1' ]
       interval: 15s
       timeout: 5s
       retries: 5
-      # Model download on first boot — allow up to 5 minutes.
+      # Model download on first boot â€” allow up to 5 minutes.
       start_period: 300s
     networks:
       - agentfarm
     restart: unless-stopped
 
   mms-tts:
-    # Meta MMS-TTS — 1100+ language self-hosted TTS fallback.
-    # API: POST /api/tts { text, language } → WAV bytes.
+    # Meta MMS-TTS â€” 1100+ language self-hosted TTS fallback.
+    # API: POST /api/tts { text, language } â†’ WAV bytes.
     # Used by meeting-agent when ttsProvider="mms_tts" (any language not covered by XTTS).
     # Models download on first request per language (~30-100 MB each). Cached in mms_tts_models volume.
     build:
@@ -543,7 +543,7 @@ services:
     volumes:
       - mms_tts_models:/root/.cache/huggingface
     healthcheck:
-      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:5002/health || exit 1' ]
+      test: [ 'CMD-SHELL', 'wget -qO- http://127.0.0.1:5002/health || exit 1' ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -553,13 +553,13 @@ services:
     restart: unless-stopped
 
   zoom-video-sidecar:
-    # Zoom screen share sidecar — Node.js 20 orchestration service.
+    # Zoom screen share sidecar â€” Node.js 20 orchestration service.
     # Manages Zoom browser sessions by delegating to the desktop-agent container:
-    #   POST /v1/sessions/join           → desktop-agent /v1/meeting/join (zoom)
-    #   POST /v1/sessions/:id/share/start → desktop-agent /v1/screen-share/inject (xdotool)
-    #   POST /v1/sessions/:id/share/stop  → session state update
-    #   POST /v1/sessions/:id/leave       → desktop-agent /v1/meeting/leave
-    # No extra downloads — uses the desktop-agent's existing Playwright + Chromium.
+    #   POST /v1/sessions/join           â†’ desktop-agent /v1/meeting/join (zoom)
+    #   POST /v1/sessions/:id/share/start â†’ desktop-agent /v1/screen-share/inject (xdotool)
+    #   POST /v1/sessions/:id/share/stop  â†’ session state update
+    #   POST /v1/sessions/:id/leave       â†’ desktop-agent /v1/meeting/leave
+    # No extra downloads â€” uses the desktop-agent's existing Playwright + Chromium.
     build:
       context: ./docker/zoom-video-sidecar
       dockerfile: Dockerfile
@@ -575,7 +575,7 @@ services:
       desktop-agent:
         condition: service_healthy
     healthcheck:
-      test: [ 'CMD-SHELL', 'node -e "fetch(\"http://localhost:8091/health\").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"' ]
+      test: [ 'CMD-SHELL', 'node -e "fetch(\"http://127.0.0.1:8091/health\").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"' ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -585,7 +585,7 @@ services:
     restart: unless-stopped
 
   teams-media-bot:
-    # Teams media bot sidecar — .NET 8 ASP.NET Core service that:
+    # Teams media bot sidecar â€” .NET 8 ASP.NET Core service that:
     #   1. Joins Teams calls using applicationHostedMediaConfig so the bot owns the media endpoint.
     #   2. Relays the desktop-agent FFmpeg HLS stream to the Teams media endpoint via RTP/SRTP.
     #   3. Handles Teams ICE/DTLS negotiation callbacks (POST /v1/callbacks/calls).
@@ -596,7 +596,7 @@ services:
     #   (a) TEAMS_CALLBACK_BASE_URL set to a public HTTPS URL so Teams can send ICE/DTLS data, OR
     #   (b) The Windows-only Microsoft.Graph.Communications.Calls.Media SDK in an Azure Container.
     # Without DTLS, the sidecar still correctly manages the call control-plane and the HLS
-    # pipeline is ready — only the crypto handshake is missing.
+    # pipeline is ready â€” only the crypto handshake is missing.
     build:
       context: ./docker/teams-media-bot
       dockerfile: Dockerfile
@@ -614,7 +614,7 @@ services:
       TEAMS_CLIENT_SECRET: ${TEAMS_CLIENT_SECRET:-}
       TEAMS_CALLBACK_BASE_URL: ${TEAMS_CALLBACK_BASE_URL:-}
     healthcheck:
-      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:8090/health || exit 1' ]
+      test: [ 'CMD-SHELL', 'wget -qO- http://127.0.0.1:8090/health || exit 1' ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -624,13 +624,13 @@ services:
     restart: unless-stopped
 
   ngrok:
-    # ngrok reverse tunnel — exposes teams-media-bot:8090 as a public HTTPS URL so
+    # ngrok reverse tunnel â€” exposes teams-media-bot:8090 as a public HTTPS URL so
     # Teams can POST ICE/DTLS callbacks to it during local development.
     #
     # Activate: COMPOSE_PROFILES=voice (same as the rest of the voice stack).
     # Requires: NGROK_AUTHTOKEN env var (free account at https://dashboard.ngrok.com).
     #
-    # The public URL is available at http://localhost:4040/api/tunnels once the
+    # The public URL is available at http://127.0.0.1:4040/api/tunnels once the
     # container is healthy. Run scripts/voice-dev.sh (or .ps1) to start the whole
     # voice stack and auto-inject the URL into teams-media-bot in one command.
     image: ngrok/ngrok:latest
@@ -645,7 +645,7 @@ services:
       teams-media-bot:
         condition: service_healthy
     healthcheck:
-      test: [ 'CMD-SHELL', 'wget -qO- http://localhost:4040/api/tunnels | grep -q "public_url" || exit 1' ]
+      test: [ 'CMD-SHELL', 'wget -qO- http://127.0.0.1:4040/api/tunnels | grep -q "public_url" || exit 1' ]
       interval: 5s
       timeout: 5s
       retries: 12
@@ -658,7 +658,7 @@ volumes:
   postgres_data:
   redis_data:
   agent_data:
-  # Voice model caches — persist across container restarts to avoid re-downloading.
+  # Voice model caches â€” persist across container restarts to avoid re-downloading.
   whisper_models:
   kokoro_models:
   xtts_models:
