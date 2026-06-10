@@ -60,9 +60,11 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages ./packages
 COPY --from=builder /app/services ./services
 
-# Copy compiled api-gateway output
+# Copy compiled api-gateway output and its node_modules (pnpm links workspace
+# packages as symlinks inside the app-level node_modules, not the root)
 COPY --from=builder /app/apps/api-gateway/dist ./apps/api-gateway/dist
 COPY --from=builder /app/apps/api-gateway/package.json ./apps/api-gateway/
+COPY --from=builder /app/apps/api-gateway/node_modules ./apps/api-gateway/node_modules
 
 EXPOSE 3000
 CMD ["node", "apps/api-gateway/dist/main.js"]
