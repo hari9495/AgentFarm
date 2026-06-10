@@ -3012,9 +3012,16 @@ async function runCommand(
             res({ stdout, stderr, exitCode: code ?? 1 });
         });
 
-        proc.on('error', (err) => {
+        proc.on('error', (err: NodeJS.ErrnoException) => {
             clearTimeout(timer);
-            rej(err);
+            // Treat command-not-found (ENOENT) as exit 127 instead of rejecting,
+            // matching bash behavior and preventing unhandled rejections from
+            // crashing the process when optional tools (pnpm, npm) are absent.
+            if (err.code === 'ENOENT') {
+                res({ stdout: '', stderr: `Command not found: ${cmd}`, exitCode: 127 });
+            } else {
+                rej(err);
+            }
         });
     });
 }
