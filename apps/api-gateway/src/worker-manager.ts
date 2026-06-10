@@ -6,27 +6,14 @@
  * need to know which individual workers exist — they only call startAll / stopAll.
  *
  * Adding or removing a worker is a one-file change here, not a change to main.ts.
+ *
+ * All worker imports are dynamic so they are never resolved when the container
+ * runs with AF_WORKERS_DISABLED=1 (e.g. the api-gateway service delegates worker
+ * execution to the standalone worker-runner service).
  */
 
 import type { FastifyBaseLogger } from 'fastify';
 import type { SecretStore } from './lib/secret-store.js';
-import { startProvisioningWorker, stopProvisioningWorker } from './services/provisioning-worker.js';
-import {
-    startConnectorTokenLifecycleWorker,
-    stopConnectorTokenLifecycleWorker,
-} from './services/connector-token-lifecycle-worker.js';
-import { startConnectorHealthWorker, stopConnectorHealthWorker } from './services/connector-health-worker.js';
-import { startNurtureWorker, stopNurtureWorker } from './services/nurture-worker.js';
-import { startSalesSequenceWorker, stopSalesSequenceWorker } from './services/sales-sequence-worker.js';
-import { startMarketSignalWorker, stopMarketSignalWorker } from './services/market-signal-worker.js';
-import { startNpsWorker, stopNpsWorker } from './services/nps-worker.js';
-import { startUpsellWorker, stopUpsellWorker } from './services/upsell-worker.js';
-import { startCrmSyncWorker, stopCrmSyncWorker } from './services/crm-sync-worker.js';
-import { startDrainSweep, stopDrainSweep } from './lib/task-queue.js';
-import {
-    startMemoryConsolidationWorker,
-    stopMemoryConsolidationWorker,
-} from './services/memory-consolidation-worker.js';
 import { prisma } from './lib/db.js';
 
 export type WorkerManagerDeps = {
@@ -36,44 +23,79 @@ export type WorkerManagerDeps = {
 };
 
 export class WorkerManager {
+    private stopFns: Array<() => void> = [];
+
     constructor(private readonly deps: WorkerManagerDeps) {}
 
-    startAll(): void {
+    async startAll(): Promise<void> {
         const log = this.makeLogger();
 
+        const [
+            { startProvisioningWorker, stopProvisioningWorker },
+            { startConnectorTokenLifecycleWorker, stopConnectorTokenLifecycleWorker },
+            { startConnectorHealthWorker, stopConnectorHealthWorker },
+            { startNurtureWorker, stopNurtureWorker },
+            { startSalesSequenceWorker, stopSalesSequenceWorker },
+            { startMarketSignalWorker, stopMarketSignalWorker },
+            { startNpsWorker, stopNpsWorker },
+            { startUpsellWorker, stopUpsellWorker },
+            { startCrmSyncWorker, stopCrmSyncWorker },
+            { startDrainSweep, stopDrainSweep },
+            { startMemoryConsolidationWorker, stopMemoryConsolidationWorker },
+        ] = await Promise.all([
+            import('./services/provisioning-worker.js'),
+            import('./services/connector-token-lifecycle-worker.js'),
+            import('./services/connector-health-worker.js'),
+            import('./services/nurture-worker.js'),
+            import('./services/sales-sequence-worker.js'),
+            import('./services/market-signal-worker.js'),
+            import('./services/nps-worker.js'),
+            import('./services/upsell-worker.js'),
+            import('./services/crm-sync-worker.js'),
+            import('./lib/task-queue.js'),
+            import('./services/memory-consolidation-worker.js'),
+        ]);
+
         startProvisioningWorker(log);
+        this.stopFns.push(stopProvisioningWorker);
 
         startConnectorTokenLifecycleWorker(log, { secretStore: this.deps.secretStore });
+        this.stopFns.push(stopConnectorTokenLifecycleWorker);
 
         startConnectorHealthWorker({ secretStore: this.deps.secretStore }, log);
+        this.stopFns.push(stopConnectorHealthWorker);
 
         startNurtureWorker(prisma);
+        this.stopFns.push(stopNurtureWorker);
+
         startSalesSequenceWorker(prisma);
+        this.stopFns.push(stopSalesSequenceWorker);
+
         startMarketSignalWorker(prisma);
+        this.stopFns.push(stopMarketSignalWorker);
+
         startNpsWorker(prisma);
+        this.stopFns.push(stopNpsWorker);
+
         startUpsellWorker(prisma);
+        this.stopFns.push(stopUpsellWorker);
+
         startCrmSyncWorker(prisma);
+        this.stopFns.push(stopCrmSyncWorker);
 
         startDrainSweep({
             agentRuntimeUrl: this.deps.agentRuntimeUrl,
             prisma: prisma as never,
         });
+        this.stopFns.push(stopDrainSweep);
 
         startMemoryConsolidationWorker();
+        this.stopFns.push(stopMemoryConsolidationWorker);
     }
 
     stopAll(): void {
-        stopProvisioningWorker();
-        stopConnectorTokenLifecycleWorker();
-        stopConnectorHealthWorker();
-        stopNurtureWorker();
-        stopSalesSequenceWorker();
-        stopMarketSignalWorker();
-        stopNpsWorker();
-        stopUpsellWorker();
-        stopCrmSyncWorker();
-        stopDrainSweep();
-        stopMemoryConsolidationWorker();
+        for (const fn of this.stopFns) fn();
+        this.stopFns = [];
     }
 
     private makeLogger() {

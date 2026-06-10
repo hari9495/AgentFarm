@@ -62,7 +62,7 @@ const start = async (): Promise<void> => {
     // Workers run in a dedicated process when AF_WORKERS_DISABLED=1 (worker-runner service).
     // In local dev (no env var) they run in-process as before for simplicity.
     if (!process.env['AF_WORKERS_DISABLED']) {
-        workerManager.startAll();
+        await workerManager.startAll();
         app.log.info('workers started in-process (AF_WORKERS_DISABLED not set)');
     } else {
         app.log.info('workers disabled — expecting standalone worker-runner process');
