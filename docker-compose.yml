@@ -102,6 +102,13 @@
       BROWSER_AGENT_URL: ${BROWSER_AGENT_URL:-http://browser-agent:5002}
       DESKTOP_AGENT_URL: ${DESKTOP_AGENT_URL:-http://desktop-agent:5003}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://127.0.0.1:3001}
+      # Portal email (password reset / email verification)
+      # Option 1 — Resend (https://resend.com, free tier: 3,000 emails/month)
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      PORTAL_EMAIL_FROM: ${PORTAL_EMAIL_FROM:-AgentFarm Support <noreply@agentfarm.io>}
+      PORTAL_APP_BASE_URL: ${PORTAL_APP_BASE_URL:-http://localhost:3001}
+      # Option 2 — generic webhook fallback (set if not using Resend)
+      PORTAL_RESET_WEBHOOK_URL: ${PORTAL_RESET_WEBHOOK_URL:-}
       # Workers run in the dedicated worker-runner service below.
       # Setting this flag prevents duplicate worker execution in both processes.
       AF_WORKERS_DISABLED: '1'
