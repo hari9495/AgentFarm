@@ -2083,6 +2083,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
     let runtimeState: RuntimeState = 'created';
     let startupAttempts = 0;
     let startupCompleted = false;
+    let verifierPurgeHandle: ReturnType<typeof setInterval> | null = null;
     let killSwitchEngaged = false;
     let configCache: RuntimeConfig | null = null;
     let capabilitySnapshotCache: BotCapabilitySnapshotRecord | null = null;
@@ -5384,8 +5385,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         }
 
         // Purge stale output-verifier entries every 15 minutes.
-        const verifierPurgeHandle = setInterval(() => { purgeStalePendingEntries(); }, 15 * 60 * 1_000);
-        app.addHook('onClose', async () => { clearInterval(verifierPurgeHandle); });
+        verifierPurgeHandle = setInterval(() => { purgeStalePendingEntries(); }, 15 * 60 * 1_000);
 
         workerLoop.running = true;
         workerLoop.handle = setInterval(() => {
@@ -7028,6 +7028,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
     });
 
     app.addHook('onClose', async () => {
+        if (verifierPurgeHandle) clearInterval(verifierPurgeHandle);
         stopWorkerLoop();
         stopHeartbeatLoop();
         stopBackgroundLoop();
