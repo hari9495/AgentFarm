@@ -131,6 +131,19 @@ export function middleware(request: NextRequest): NextResponse {
         return NextResponse.next();
     }
 
+    // Some /api/admin/* endpoints are also accessed from the customer portal
+    // dashboard. Route handlers enforce their own auth for these paths; the
+    // middleware falls through to let portal_session carry them.
+    const PORTAL_ACCESSIBLE_ADMIN_PREFIXES = ["/api/admin/bots"];
+    if (
+        hasPortalCookie(request) &&
+        PORTAL_ACCESSIBLE_ADMIN_PREFIXES.some(
+            (p) => pathname === p || pathname.startsWith(`${p}/`),
+        )
+    ) {
+        return NextResponse.next();
+    }
+
     // API routes get a 401 JSON response; page routes get a redirect.
     if (pathname.startsWith("/api/")) {
         return NextResponse.json({ error: "Authentication required." }, { status: 401 });
