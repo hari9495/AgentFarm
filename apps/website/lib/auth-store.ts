@@ -1473,6 +1473,42 @@ export const listTeamMembers = async (tenantId: string): Promise<UserPublic[]> =
     }));
 };
 
+export const createTeamMember = async (input: {
+    name: string;
+    email: string;
+    password: string;
+    role: "admin" | "member";
+    tenantId: string;
+    company: string;
+}): Promise<UserPublic> => {
+    const existing = await getDb()
+        .prepare(`SELECT id FROM users WHERE email = ?`)
+        .bind(input.email)
+        .first<{ id: string }>();
+    if (existing) throw Object.assign(new Error("Email already in use."), { code: "EMAIL_TAKEN" });
+
+    const userId = `usr_${randomHex(10)}`;
+    const createdAt = now();
+    const passwordHash = await hashPassword(input.password);
+
+    await getDb()
+        .prepare(
+            `INSERT INTO users (id, email, name, company, role, password_hash, tenant_id, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(userId, input.email, input.name, input.company, input.role, passwordHash, input.tenantId, createdAt)
+        .run();
+
+    return {
+        id: userId,
+        email: input.email,
+        name: input.name,
+        company: input.company,
+        role: input.role,
+        createdAt,
+    };
+};
+
 export const getUserById = async (id: string): Promise<UserPublic | null> => {
     const row = await getDb()
         .prepare(`SELECT id, email, name, company, role, created_at FROM users WHERE id = ?`)

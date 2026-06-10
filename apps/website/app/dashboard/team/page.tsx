@@ -7,6 +7,7 @@ import {
 import PremiumIcon from "@/components/shared/PremiumIcon";
 import ButtonLink from "@/components/shared/ButtonLink";
 import { getPortalUser } from "@/lib/portal-server";
+import { listTeamMembers } from "@/lib/auth-store";
 import TeamRosterClient from "./TeamRosterClient";
 
 export const metadata: Metadata = {
@@ -35,19 +36,30 @@ export default async function TeamPage() {
     const rosterRole = toRosterRole(portalUser?.role);
     const canManageMembers = rosterRole === "admin" || rosterRole === "superadmin";
 
-    // Build current-user roster entry from the portal session.
-    const members: UserPublic[] = portalUser
-        ? [
-              {
-                  id: portalUser.accountId,
-                  email: portalUser.email,
-                  name: portalUser.displayName ?? portalUser.email.split("@")[0] ?? "Account",
-                  company: portalUser.tenantId,
-                  role: rosterRole,
-                  createdAt: Date.now(),
-              },
-          ]
-        : [];
+    // Load all team members from the local DB when we have a tenantId.
+    let members: UserPublic[] = [];
+    if (portalUser?.tenantId) {
+        const dbMembers = await listTeamMembers(portalUser.tenantId);
+        members = dbMembers.map((m) => ({
+            ...m,
+            role: toRosterRole(m.role),
+        }));
+    }
+
+    // Ensure the current user always appears (fallback if not yet in local DB).
+    if (portalUser && !members.find((m) => m.id === portalUser.accountId)) {
+        members = [
+            {
+                id: portalUser.accountId,
+                email: portalUser.email,
+                name: portalUser.displayName ?? portalUser.email.split("@")[0] ?? "Account",
+                company: portalUser.tenantId,
+                role: rosterRole,
+                createdAt: Date.now(),
+            },
+            ...members,
+        ];
+    }
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950">

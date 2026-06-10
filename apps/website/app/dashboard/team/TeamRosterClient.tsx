@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Shield, ShieldCheck, UserCheck, UserMinus, Users } from "lucide-react";
+import { Mail, Plus, Shield, ShieldCheck, UserCheck, UserMinus, Users, X } from "lucide-react";
 import PremiumIcon from "@/components/shared/PremiumIcon";
 
 type UserPublic = {
@@ -40,6 +40,15 @@ export default function TeamRosterClient({
     const [updating, setUpdating] = useState<string | null>(null);
     const [toast, setToast] = useState<{ message: string; ok: boolean } | null>(null);
 
+    // Add member form
+    const [showAddForm, setShowAddForm] = useState(false);
+    const [addName, setAddName] = useState("");
+    const [addEmail, setAddEmail] = useState("");
+    const [addPassword, setAddPassword] = useState("");
+    const [addRole, setAddRole] = useState<"admin" | "member">("member");
+    const [adding, setAdding] = useState(false);
+    const [addError, setAddError] = useState<string | null>(null);
+
     const showToast = (message: string, ok: boolean) => {
         setToast({ message, ok });
         setTimeout(() => setToast(null), 3500);
@@ -67,6 +76,34 @@ export default function TeamRosterClient({
         }
     };
 
+    const handleAddMember = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setAdding(true);
+        setAddError(null);
+        try {
+            const res = await fetch("/api/team/members", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: addName.trim(), email: addEmail.trim(), password: addPassword, role: addRole }),
+            });
+            const data = (await res.json()) as { ok?: boolean; member?: UserPublic; error?: string };
+            if (!res.ok) {
+                setAddError(data.error ?? `Error ${res.status}`);
+                return;
+            }
+            if (data.member) {
+                setMembers((prev) => [...prev, data.member!]);
+            }
+            setShowAddForm(false);
+            setAddName(""); setAddEmail(""); setAddPassword(""); setAddRole("member");
+            showToast(`${addName} added to your team.`, true);
+        } catch {
+            setAddError("Network error. Please try again.");
+        } finally {
+            setAdding(false);
+        }
+    };
+
     const adminCount = members.filter((m) => m.role === "admin" || m.role === "superadmin").length;
     const memberCount = members.length - adminCount;
 
@@ -81,20 +118,109 @@ export default function TeamRosterClient({
                 </div>
             )}
 
-            <div className="mt-5 flex flex-wrap items-center gap-6 border-t border-white/10 pt-4">
-                <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
-                    <span className="text-white font-bold">{members.length}</span>
-                    {members.length === 1 ? "teammate" : "teammates"}
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-4">
+                <div className="flex flex-wrap items-center gap-6">
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
+                        <span className="text-white font-bold">{members.length}</span>
+                        {members.length === 1 ? "teammate" : "teammates"}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
+                        <span className="text-white font-bold">{adminCount}</span>
+                        {adminCount === 1 ? "admin" : "admins"}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
+                        <span className="text-white font-bold">{memberCount}</span>
+                        {memberCount === 1 ? "member" : "members"}
+                    </div>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
-                    <span className="text-white font-bold">{adminCount}</span>
-                    {adminCount === 1 ? "admin" : "admins"}
-                </div>
-                <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
-                    <span className="text-white font-bold">{memberCount}</span>
-                    {memberCount === 1 ? "member" : "members"}
-                </div>
+                {canManage && (
+                    <button
+                        onClick={() => { setShowAddForm((v) => !v); setAddError(null); }}
+                        className="inline-flex items-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white text-xs font-bold px-3.5 py-2 transition-colors"
+                    >
+                        {showAddForm ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                        {showAddForm ? "Cancel" : "Add Member"}
+                    </button>
+                )}
             </div>
+
+            {showAddForm && canManage && (
+                <form
+                    onSubmit={(e) => void handleAddMember(e)}
+                    className="mt-6 rounded-2xl border border-violet-200 dark:border-violet-800/60 bg-violet-50 dark:bg-violet-950/30 p-5 space-y-4"
+                >
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        <PremiumIcon icon={Users} tone="violet" containerClassName="w-6 h-6 rounded-lg bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400" iconClassName="w-3.5 h-3.5" />
+                        Add a new team member
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">Full name <span className="text-rose-500">*</span></label>
+                            <input
+                                type="text"
+                                placeholder="Jane Smith"
+                                value={addName}
+                                onChange={(e) => setAddName(e.target.value)}
+                                required
+                                className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">Email <span className="text-rose-500">*</span></label>
+                            <input
+                                type="email"
+                                placeholder="jane@company.com"
+                                value={addEmail}
+                                onChange={(e) => setAddEmail(e.target.value)}
+                                required
+                                className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">Temporary password <span className="text-rose-500">*</span></label>
+                            <input
+                                type="password"
+                                placeholder="Min. 8 characters"
+                                value={addPassword}
+                                onChange={(e) => setAddPassword(e.target.value)}
+                                required
+                                minLength={8}
+                                className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">Role</label>
+                            <select
+                                value={addRole}
+                                onChange={(e) => setAddRole(e.target.value as "admin" | "member")}
+                                className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                            >
+                                <option value="member">Member — read-only access</option>
+                                <option value="admin">Admin — full management access</option>
+                            </select>
+                        </div>
+                    </div>
+                    {addError && (
+                        <p className="text-xs font-medium text-rose-600 dark:text-rose-400">{addError}</p>
+                    )}
+                    <div className="flex justify-end gap-2">
+                        <button
+                            type="button"
+                            onClick={() => { setShowAddForm(false); setAddError(null); }}
+                            className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={adding}
+                            className="inline-flex items-center gap-2 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-60 text-white text-xs font-bold px-4 py-2 transition-colors"
+                        >
+                            {adding ? "Adding…" : "Add to team"}
+                        </button>
+                    </div>
+                </form>
+            )}
 
             <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden mt-6">
                 <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
