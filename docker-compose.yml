@@ -181,6 +181,8 @@
       DESKTOP_AGENT_TOKEN: ${DESKTOP_AGENT_TOKEN:-}
       NODE_ENV: production
       AF_ACTION_RESULT_LOG_PATH: /data/action-results.ndjson
+      AF_TENANT_ID: ${AF_TENANT_ID:-dev-tenant}
+      AF_WORKSPACE_ID: ${AF_WORKSPACE_ID:-dev-workspace}
     volumes:
       - agent_data:/data
     depends_on:
