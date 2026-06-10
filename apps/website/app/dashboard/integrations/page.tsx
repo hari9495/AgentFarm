@@ -265,6 +265,79 @@ const STATIC_CONNECTOR_CATALOG: AvailableConnector[] = [
         ],
         oauthScopes: null, connected: false,
     },
+    // ── Custom REST connectors ────────────────────────────────────────────
+    {
+        tool: "generic_rest", category: "task_tracker", displayName: "Custom REST API", logoUrl: "",
+        authMethod: "bearer_token",
+        supportedActions: ["send_request", "get_resource", "create_resource", "update_resource", "delete_resource", "list_resources"],
+        docsUrl: "",
+        configSchema: [
+            { key: "baseUrl", label: "API Base URL", type: "url", required: true, placeholder: "https://api.yourservice.com/v1", hint: "Root URL of your REST API. All requests will be relative to this." },
+            { key: "authType", label: "Authentication Type", type: "select", required: true, options: [
+                { value: "bearer_token", label: "Bearer Token" },
+                { value: "api_key", label: "API Key (header)" },
+                { value: "basic", label: "Basic Auth (username:password)" },
+                { value: "none", label: "No authentication" },
+            ]},
+            { key: "authValue", label: "Token / API Key / Credentials", type: "password", required: false, hint: "Bearer token, API key value, or username:password for Basic auth." },
+            { key: "authHeader", label: "API Key Header Name", type: "text", required: false, placeholder: "X-API-Key", hint: "Only for API Key auth. Defaults to Authorization." },
+        ],
+        oauthScopes: null, connected: false,
+    },
+    {
+        tool: "generic_rest_messaging", category: "messaging", displayName: "Custom Messaging API", logoUrl: "",
+        authMethod: "bearer_token",
+        supportedActions: ["send_message", "post_thread", "list_channels", "lookup_user"],
+        docsUrl: "",
+        configSchema: [
+            { key: "baseUrl", label: "API Base URL", type: "url", required: true, placeholder: "https://api.yourservice.com/v1", hint: "Root URL of your messaging REST API." },
+            { key: "authType", label: "Authentication Type", type: "select", required: true, options: [
+                { value: "bearer_token", label: "Bearer Token" },
+                { value: "api_key", label: "API Key (header)" },
+                { value: "basic", label: "Basic Auth (username:password)" },
+                { value: "none", label: "No authentication" },
+            ]},
+            { key: "authValue", label: "Token / API Key / Credentials", type: "password", required: false, hint: "Bearer token, API key value, or username:password for Basic auth." },
+            { key: "authHeader", label: "API Key Header Name", type: "text", required: false, placeholder: "X-API-Key", hint: "Only for API Key auth. Defaults to Authorization." },
+        ],
+        oauthScopes: null, connected: false,
+    },
+    {
+        tool: "generic_rest_code", category: "code", displayName: "Custom Code/VCS API", logoUrl: "",
+        authMethod: "bearer_token",
+        supportedActions: ["create_issue", "update_issue", "create_pr", "list_prs", "add_comment", "trigger_workflow"],
+        docsUrl: "",
+        configSchema: [
+            { key: "baseUrl", label: "API Base URL", type: "url", required: true, placeholder: "https://api.yourservice.com/v1", hint: "Root URL of your code/version control REST API." },
+            { key: "authType", label: "Authentication Type", type: "select", required: true, options: [
+                { value: "bearer_token", label: "Bearer Token" },
+                { value: "api_key", label: "API Key (header)" },
+                { value: "basic", label: "Basic Auth (username:password)" },
+                { value: "none", label: "No authentication" },
+            ]},
+            { key: "authValue", label: "Token / API Key / Credentials", type: "password", required: false, hint: "Bearer token, API key value, or username:password for Basic auth." },
+            { key: "authHeader", label: "API Key Header Name", type: "text", required: false, placeholder: "X-API-Key", hint: "Only for API Key auth. Defaults to Authorization." },
+        ],
+        oauthScopes: null, connected: false,
+    },
+    {
+        tool: "generic_rest_email", category: "email", displayName: "Custom Email API", logoUrl: "",
+        authMethod: "bearer_token",
+        supportedActions: ["send_email", "list_threads", "get_thread", "reply_email", "search_emails"],
+        docsUrl: "",
+        configSchema: [
+            { key: "baseUrl", label: "API Base URL", type: "url", required: true, placeholder: "https://api.yourservice.com/v1", hint: "Root URL of your email REST API." },
+            { key: "authType", label: "Authentication Type", type: "select", required: true, options: [
+                { value: "bearer_token", label: "Bearer Token" },
+                { value: "api_key", label: "API Key (header)" },
+                { value: "basic", label: "Basic Auth (username:password)" },
+                { value: "none", label: "No authentication" },
+            ]},
+            { key: "authValue", label: "Token / API Key / Credentials", type: "password", required: false, hint: "Bearer token, API key value, or username:password for Basic auth." },
+            { key: "authHeader", label: "API Key Header Name", type: "text", required: false, placeholder: "X-API-Key", hint: "Only for API Key auth. Defaults to Authorization." },
+        ],
+        oauthScopes: null, connected: false,
+    },
 ];
 
 // ── Emoji icon fallback ───────────────────────────────────────────────────
