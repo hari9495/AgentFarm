@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import {
     AlertTriangle,
     BadgeCheck,
@@ -14,33 +15,87 @@ import {
 } from "lucide-react";
 import ButtonLink from "@/components/shared/ButtonLink";
 import PremiumIcon from "@/components/shared/PremiumIcon";
+import { getPortalUser } from "@/lib/portal-server";
+import { listTeamMembers, listBots } from "@/lib/auth-store";
 
 export const metadata: Metadata = {
     title: "Admin Console - AgentFarms",
     description: "Manage organization users, permissions, policy controls, and billing for AgentFarms.",
 };
 
-const orgStats = [
-    { label: "Members", value: "28", icon: Users, iconBg: "bg-violet-100 dark:bg-violet-900/50", iconColor: "text-violet-600 dark:text-violet-400", sub: "4 pending invite" },
-    { label: "Active AI Workers", value: "14", icon: BadgeCheck, iconBg: "bg-emerald-100 dark:bg-emerald-900/50", iconColor: "text-emerald-600 dark:text-emerald-400", sub: "All healthy" },
-    { label: "Open Alerts", value: "3", icon: BellRing, iconBg: "bg-rose-100 dark:bg-rose-900/50", iconColor: "text-rose-600 dark:text-rose-400", sub: "Needs attention" },
-    { label: "Monthly Spend", value: "$6,920", icon: CreditCard, iconBg: "bg-amber-100 dark:bg-amber-900/50", iconColor: "text-amber-600 dark:text-amber-400", sub: "+9.1% vs last month" },
-];
+const initials = (name: string) =>
+    name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "U";
 
-const members = [
-    { name: "Alex Rivera", initials: "AR", role: "Org Admin", status: "active", lastLogin: "5m ago" },
-    { name: "Priya Nair", initials: "PN", role: "Engineering Lead", status: "active", lastLogin: "24m ago" },
-    { name: "Jordan Kim", initials: "JK", role: "Security Viewer", status: "pending", lastLogin: "Never" },
-    { name: "Sam Okafor", initials: "SO", role: "Finance Admin", status: "active", lastLogin: "2h ago" },
-];
+const ROLE_LABEL: Record<string, string> = {
+    superadmin: "Super Admin",
+    admin: "Org Admin",
+    member: "Member",
+};
 
-const alerts = [
-    { text: "MFA not enabled for 2 invited users", level: "high" },
-    { text: "One production approval rule has no fallback approver", level: "high" },
-    { text: "Billing seat limit at 92% of current plan", level: "medium" },
-];
+export default async function AdminPage() {
+    const portalUser = await getPortalUser();
+    if (!portalUser) redirect("/login?next=/admin");
 
-export default function AdminPage() {
+    const role = portalUser.role ?? "member";
+    if (role !== "owner" && role !== "admin" && role !== "superadmin") {
+        redirect("/dashboard");
+    }
+
+    const [teamMembers, bots] = await Promise.all([
+        portalUser.tenantId ? listTeamMembers(portalUser.tenantId) : Promise.resolve([]),
+        listBots(),
+    ]);
+
+    const activeBotsCount = bots.filter((b) => b.status === "active").length;
+    const memberCount = teamMembers.length;
+
+    // Show current user in the table if not yet in local DB
+    const rosterMembers = teamMembers.length > 0 ? teamMembers : [
+        {
+            id: portalUser.accountId,
+            email: portalUser.email,
+            name: portalUser.displayName ?? portalUser.email.split("@")[0] ?? "Account",
+            company: "",
+            role: role as "superadmin" | "admin" | "member",
+            createdAt: Date.now(),
+        },
+    ];
+
+    const orgStats = [
+        {
+            label: "Members",
+            value: memberCount.toString(),
+            icon: Users,
+            iconBg: "bg-violet-100 dark:bg-violet-900/50",
+            iconColor: "text-violet-600 dark:text-violet-400",
+            sub: memberCount === 1 ? "1 on your team" : `${memberCount} on your team`,
+        },
+        {
+            label: "Active AI Workers",
+            value: activeBotsCount.toString(),
+            icon: BadgeCheck,
+            iconBg: "bg-emerald-100 dark:bg-emerald-900/50",
+            iconColor: "text-emerald-600 dark:text-emerald-400",
+            sub: activeBotsCount > 0 ? "All healthy" : "None configured yet",
+        },
+        {
+            label: "Open Alerts",
+            value: "0",
+            icon: BellRing,
+            iconBg: "bg-rose-100 dark:bg-rose-900/50",
+            iconColor: "text-rose-600 dark:text-rose-400",
+            sub: "No issues detected",
+        },
+        {
+            label: "Monthly Spend",
+            value: "—",
+            icon: CreditCard,
+            iconBg: "bg-amber-100 dark:bg-amber-900/50",
+            iconColor: "text-amber-600 dark:text-amber-400",
+            sub: "Billing not configured",
+        },
+    ];
+
     return (
         <div className="site-shell min-h-screen">
             {/* Hero */}
@@ -101,68 +156,55 @@ export default function AdminPage() {
                     <div className="xl:col-span-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
                         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                             <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Team and Access</h2>
-                            <ButtonLink href="/admin/users" variant="outline" size="sm">Manage Members</ButtonLink>
+                            <ButtonLink href="/dashboard/team" variant="outline" size="sm">Manage Members</ButtonLink>
                         </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm min-w-[580px]">
-                                <thead>
-                                    <tr className="bg-slate-50 dark:bg-slate-800/50 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                        <th className="text-left px-5 py-3">Member</th>
-                                        <th className="text-left px-4 py-3">Role</th>
-                                        <th className="text-left px-4 py-3">Status</th>
-                                        <th className="text-left px-4 py-3">Last Login</th>
-                                        <th className="text-left px-4 py-3">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
-                                    {members.map((m) => (
-                                        <tr key={m.name} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                                            <td className="px-5 py-3.5">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-xs font-bold shrink-0">
-                                                        {m.initials}
-                                                    </span>
-                                                    <span className="font-semibold text-slate-900 dark:text-slate-100">{m.name}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300">{m.role}</td>
-                                            <td className="px-4 py-3.5">
-                                                <span className={`inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-1 ${m.status === "active" ? "text-emerald-700 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-900/40" : "text-amber-700 bg-amber-100 dark:text-amber-300 dark:bg-amber-900/40"}`}>
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${m.status === "active" ? "bg-emerald-500" : "bg-amber-500"}`} />
-                                                    {m.status === "active" ? "Active" : "Pending"}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3.5 text-slate-500 dark:text-slate-400 text-xs">{m.lastLogin}</td>
-                                            <td className="px-4 py-3.5">
-                                                <ButtonLink href="/admin/users" size="sm" variant="ghost" className="text-xs px-2 py-1 h-auto">
-                                                    Edit role
-                                                </ButtonLink>
-                                            </td>
+                        {rosterMembers.length === 0 ? (
+                            <p className="px-5 py-10 text-center text-sm text-slate-400 dark:text-slate-500">No team members found.</p>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm min-w-[480px]">
+                                    <thead>
+                                        <tr className="bg-slate-50 dark:bg-slate-800/50 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                            <th className="text-left px-5 py-3">Member</th>
+                                            <th className="text-left px-4 py-3">Email</th>
+                                            <th className="text-left px-4 py-3">Role</th>
+                                            <th className="text-left px-4 py-3">Joined</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
+                                        {rosterMembers.map((m) => (
+                                            <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                                                <td className="px-5 py-3.5">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-xs font-bold shrink-0">
+                                                            {initials(m.name)}
+                                                        </span>
+                                                        <span className="font-semibold text-slate-900 dark:text-slate-100">{m.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3.5 text-slate-500 dark:text-slate-400 text-xs">{m.email}</td>
+                                                <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300 text-xs">{ROLE_LABEL[m.role] ?? m.role}</td>
+                                                <td className="px-4 py-3.5 text-slate-400 dark:text-slate-500 text-xs">
+                                                    {new Date(m.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
 
                     {/* Risk and Alerts */}
                     <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
                         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                             <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Risk and Alerts</h2>
-                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 text-xs font-bold">
-                                {alerts.length}
-                            </span>
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 text-xs font-bold">0</span>
                         </div>
-                        <div className="p-4 space-y-3">
-                            {alerts.map((alert) => (
-                                <div key={alert.text} className={`rounded-xl border p-3.5 flex items-start gap-2.5 ${alert.level === "high" ? "border-rose-200 dark:border-rose-900/40 bg-rose-50 dark:bg-rose-950/20" : "border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/20"}`}>
-                                    <PremiumIcon icon={AlertTriangle} tone="slate" containerClassName={`w-6 h-6 mt-0.5 shrink-0 rounded-lg ${alert.level === "high" ? "bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400" : "bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400"}`} iconClassName="w-4 h-4" />
-                                    <p className={`text-sm leading-snug ${alert.level === "high" ? "text-rose-800 dark:text-rose-300" : "text-amber-800 dark:text-amber-300"}`}>{alert.text}</p>
-                                </div>
-                            ))}
-                            <div className="pt-1">
-                                <ButtonLink href="/admin/users" size="sm" className="w-full justify-center">Resolve Alerts</ButtonLink>
-                            </div>
+                        <div className="p-5 flex flex-col items-center justify-center gap-3 py-12 text-center">
+                            <PremiumIcon icon={ShieldCheck} tone="emerald" containerClassName="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400" iconClassName="w-5 h-5" />
+                            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">No open alerts</p>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 max-w-[180px]">All systems are operating normally.</p>
                         </div>
                     </div>
                 </div>
@@ -197,82 +239,6 @@ export default function AdminPage() {
                     </div>
                 </div>
 
-                {/* Enterprise readiness banner */}
-                {/* A2: Usage analytics panel */}
-                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-                    <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                            <PremiumIcon icon={Building2} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-3.5 h-3.5" />
-                            Usage Analytics
-                        </h2>
-                        <span className="text-[10px] text-slate-400 font-mono">Last 30 days</span>
-                    </div>
-                    <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-5">
-                        {/* Top agents by task volume */}
-                        <div>
-                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Top Agents by Tasks</p>
-                            <div className="space-y-2.5">
-                                {[
-                                    { name: "AI QA Engineer", tasks: 52, pct: 100 },
-                                    { name: "AI Backend Dev", tasks: 34, pct: 65 },
-                                    { name: "AI DevOps", tasks: 18, pct: 35 },
-                                    { name: "AI Security", tasks: 7, pct: 14 },
-                                ].map((a) => (
-                                    <div key={a.name}>
-                                        <div className="flex justify-between text-xs mb-1">
-                                            <span className="text-slate-700 dark:text-slate-300 font-medium truncate max-w-[140px]">{a.name}</span>
-                                            <span className="font-bold text-slate-900 dark:text-slate-100 ml-2">{a.tasks}</span>
-                                        </div>
-                                        <div className="w-full h-1.5 rounded-full bg-slate-100 dark:bg-slate-800">
-                                            <div className="h-1.5 rounded-full bg-sky-500" style={{ width: `${a.pct}%` }} />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        {/* API calls by connector */}
-                        <div>
-                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">API Calls by Connector</p>
-                            <div className="space-y-2.5">
-                                {[
-                                    { connector: "GitHub", calls: 4200, color: "bg-slate-700 dark:bg-slate-400" },
-                                    { connector: "Jira", calls: 1800, color: "bg-blue-500" },
-                                    { connector: "Linear", calls: 960, color: "bg-violet-500" },
-                                    { connector: "Teams", calls: 340, color: "bg-indigo-500" },
-                                ].map((c) => {
-                                    const pct = Math.round((c.calls / 4200) * 100);
-                                    return (
-                                        <div key={c.connector}>
-                                            <div className="flex justify-between text-xs mb-1">
-                                                <span className="text-slate-700 dark:text-slate-300">{c.connector}</span>
-                                                <span className="font-bold text-slate-900 dark:text-slate-100">{(c.calls / 1000).toFixed(1)}k</span>
-                                            </div>
-                                            <div className="w-full h-1.5 rounded-full bg-slate-100 dark:bg-slate-800">
-                                                <div className={`h-1.5 rounded-full ${c.color}`} style={{ width: `${pct}%` }} />
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                        {/* Seat utilization */}
-                        <div className="flex flex-col items-center justify-center gap-3">
-                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider self-start">Seat Utilization</p>
-                            <div className="relative w-24 h-24">
-                                <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90" aria-hidden>
-                                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="currentColor" strokeWidth="3.5" className="text-slate-100 dark:text-slate-800" />
-                                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="currentColor" strokeWidth="3.5" strokeDasharray="92 100" strokeLinecap="round" className="text-amber-500" />
-                                </svg>
-                                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                    <span className="text-xl font-extrabold text-slate-900 dark:text-slate-100">92%</span>
-                                    <span className="text-[9px] text-slate-500">46 / 50</span>
-                                </div>
-                            </div>
-                            <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold text-center">4 seats remaining</p>
-                        </div>
-                    </div>
-                </div>
-
                 {/* Data Exports */}
                 <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
                     <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
@@ -298,32 +264,26 @@ export default function AdminPage() {
                     </div>
                     <div className="px-5 pb-5 -mt-1">
                         <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                            Exports include only your organization's records — never other tenants' data or credentials (passwords, tokens are always excluded).
+                            Exports include only your organization&apos;s records — never other tenants&apos; data or credentials (passwords, tokens are always excluded).
                         </p>
                     </div>
                 </div>
 
-                {/* Enterprise readiness banner */}
+                {/* Billing placeholder */}
                 <div className="rounded-2xl border border-amber-200 dark:border-amber-800/40 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 p-5 flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-start gap-3">
                         <PremiumIcon icon={Building2} tone="amber" containerClassName="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/50 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" iconClassName="w-5 h-5" />
                         <div>
-                            <p className="font-bold text-slate-900 dark:text-slate-100">Enterprise readiness</p>
+                            <p className="font-bold text-slate-900 dark:text-slate-100">Billing and usage</p>
                             <p className="text-sm text-slate-600 dark:text-slate-300 mt-0.5">
-                                Your org meets <span className="font-semibold text-amber-700 dark:text-amber-400">17 of 19</span> enterprise controls. Finish MFA enforcement and add backup approvers.
+                                Connect a billing plan to track monthly spend, seat limits, and usage analytics.
                             </p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <div className="text-right hidden sm:block">
-                            <p className="text-xs text-slate-500 dark:text-slate-400">Completion</p>
-                            <p className="text-lg font-extrabold text-amber-700 dark:text-amber-400">89%</p>
-                        </div>
-                        <ButtonLink href="/book-demo" size="sm">
-                            <PremiumIcon icon={ShieldCheck} tone="amber" containerClassName="w-6 h-6 rounded-lg bg-white/60 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 mr-1" iconClassName="w-4 h-4" />
-                            Book Security Review
-                        </ButtonLink>
-                    </div>
+                    <ButtonLink href="/admin/billing" size="sm">
+                        <PremiumIcon icon={CreditCard} tone="amber" containerClassName="w-6 h-6 rounded-lg bg-white/60 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 mr-1" iconClassName="w-4 h-4" />
+                        Set Up Billing
+                    </ButtonLink>
                 </div>
 
             </div>
