@@ -1136,8 +1136,8 @@ async function resolveTaskOutputLanguage(task: TaskEnvelope): Promise<string> {
     const fromPayload = task.payload['resolvedLanguage'];
     if (typeof fromPayload === 'string' && fromPayload) return fromPayload;
     const resolved = await resolveLanguage({
-        tenantId: typeof task.payload['tenantId'] === 'string' ? task.payload['tenantId'] : '',
-        workspaceId: typeof task.payload['workspaceId'] === 'string' ? task.payload['workspaceId'] : undefined,
+        tenantId: typeof task.payload['tenantId'] === 'string' ? task.payload['tenantId'] : (process.env['AF_TENANT_ID'] ?? ''),
+        workspaceId: typeof task.payload['workspaceId'] === 'string' ? task.payload['workspaceId'] : (process.env['AF_WORKSPACE_ID'] ?? undefined),
         userId: typeof task.payload['userId'] === 'string' ? task.payload['userId'] : undefined,
     }).catch(() => null);
     return resolved?.language ?? 'en';

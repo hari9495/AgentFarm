@@ -19,8 +19,8 @@ async function resolveTaskLanguage(
     task: { taskId: string; payload: Record<string, unknown> },
 ): Promise<string> {
     const ctx: LanguageContext = {
-        tenantId: String(task.payload['tenantId'] ?? ''),
-        workspaceId: task.payload['workspaceId'] as string | undefined,
+        tenantId: String(task.payload['tenantId'] ?? process.env['AF_TENANT_ID'] ?? ''),
+        workspaceId: (task.payload['workspaceId'] as string | undefined) ?? process.env['AF_WORKSPACE_ID'],
         userId: task.payload['userId'] as string | undefined,
         inputText: task.payload['lastUserMessage'] as string | undefined,
     };

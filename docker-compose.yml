@@ -196,7 +196,7 @@
       AF_OPENAI_BASE_URL: ${AF_OPENAI_BASE_URL:-https://api.openai.com/v1}
       AF_OPENAI_MODEL: ${AF_OPENAI_MODEL:-gpt-4o}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      REDIS_URL: redis://redis:6379
     volumes:
       - agent_data:/data
     depends_on:

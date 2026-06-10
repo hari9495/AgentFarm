@@ -200,7 +200,7 @@ export async function handleDeveloperAction(
         // ====================================================================
         case 'workspace_dev_implement_feature': {
             const issueNumber = typeof payload['issue_number'] === 'number' ? payload['issue_number'] : null;
-            const description = str(payload['description']);
+            const description = str(payload['description']) || str(payload['prompt']);
             const repo        = str(payload['repo']);
             const dryRun      = payload['dry_run'] === true;
 
@@ -264,10 +264,10 @@ export async function handleDeveloperAction(
         //   dry_run?          — plan only
         // ====================================================================
         case 'workspace_dev_fix_bug': {
-            const errorMsg    = str(payload['error_message']);
+            const errorMsg    = str(payload['error_message']) || str(payload['prompt']);
             const issueNumber = typeof payload['issue_number'] === 'number' ? payload['issue_number'] : null;
             const filePath    = str(payload['file_path']);
-            const description = str(payload['description']);
+            const description = str(payload['description']) || str(payload['prompt']);
             const dryRun      = payload['dry_run'] === true;
 
             if (!errorMsg && !issueNumber && !description) {
@@ -933,7 +933,7 @@ export async function handleDeveloperAction(
         //   output_file?    — where to write the spec
         // ====================================================================
         case 'workspace_dev_api_design': {
-            const description = str(payload['description']);
+            const description = str(payload['description']) || str(payload['prompt']);
             const format      = str(payload['format'], 'openapi');
             const outputFile  = str(payload['output_file']);
 
@@ -981,7 +981,7 @@ export async function handleDeveloperAction(
         //   dry_run?        — plan only
         // ====================================================================
         case 'workspace_dev_db_migration': {
-            const description = str(payload['description']);
+            const description = str(payload['description']) || str(payload['prompt']);
             const orm         = str(payload['orm'], 'raw');
             const dryRun      = payload['dry_run'] === true;
 
@@ -1190,7 +1190,7 @@ export async function handleDeveloperAction(
         //   author?         — author name
         // ====================================================================
         case 'workspace_dev_tech_spec': {
-            const description = str(payload['description']);
+            const description = str(payload['description']) || str(payload['prompt']);
             const title       = str(payload['title']);
             const outputFile  = str(payload['output_file']);
             const author      = str(payload['author'], 'AI Developer Agent');
