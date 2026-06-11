@@ -2220,6 +2220,9 @@ enum ConnectorActionType {
   update_status
   send_message
   create_pr_comment
+  create_pr
+  merge_pr
+  list_prs
   send_email
 }
 
