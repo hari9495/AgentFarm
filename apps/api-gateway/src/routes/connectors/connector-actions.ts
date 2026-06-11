@@ -802,25 +802,27 @@ export const registerConnectorActionRoutes = async (
 
         const availability = classifyConnectorAvailability(metadata);
         if (!availability.allowed) {
-            await repo.createConnectorActionLog({
-                actionId,
-                tenantId,
-                workspaceId,
-                botId,
-                connectorId,
-                connectorType,
-                actionType,
-                contractVersion: CONTRACT_VERSION,
-                correlationId,
-                requestBody: requestBodyForLog,
-                resultStatus: 'failed',
-                providerResponseCode: '403',
-                resultSummary: availability.message ?? 'Connector unavailable for action execution.',
-                errorCode: availability.errorCode ?? 'permission_denied',
-                errorMessage: availability.message ?? null,
-                remediationHint: 'Reconnect connector or re-consent required scopes.',
-                completedAt: new Date(now()),
-            });
+            try {
+                await repo.createConnectorActionLog({
+                    actionId,
+                    tenantId,
+                    workspaceId,
+                    botId,
+                    connectorId,
+                    connectorType,
+                    actionType,
+                    contractVersion: CONTRACT_VERSION,
+                    correlationId,
+                    requestBody: requestBodyForLog,
+                    resultStatus: 'failed',
+                    providerResponseCode: '403',
+                    resultSummary: availability.message ?? 'Connector unavailable for action execution.',
+                    errorCode: availability.errorCode ?? 'permission_denied',
+                    errorMessage: availability.message ?? null,
+                    remediationHint: 'Reconnect connector or re-consent required scopes.',
+                    completedAt: new Date(now()),
+                });
+            } catch { /* audit log write must not block the response */ }
 
             return reply.code(409).send({
                 error: 'connector_unavailable',
@@ -894,25 +896,27 @@ export const registerConnectorActionRoutes = async (
         }
 
         if (!finalResult || finalResult.ok) {
-            await repo.createConnectorActionLog({
-                actionId,
-                tenantId,
-                workspaceId,
-                botId,
-                connectorId,
-                connectorType,
-                actionType,
-                contractVersion: CONTRACT_VERSION,
-                correlationId,
-                requestBody: requestBodyForLog,
-                resultStatus: 'success',
-                providerResponseCode: finalResult?.providerResponseCode ?? '200',
-                resultSummary: finalResult?.resultSummary ?? 'Action executed successfully.',
-                errorCode: null,
-                errorMessage: null,
-                remediationHint: null,
-                completedAt: new Date(now()),
-            });
+            try {
+                await repo.createConnectorActionLog({
+                    actionId,
+                    tenantId,
+                    workspaceId,
+                    botId,
+                    connectorId,
+                    connectorType,
+                    actionType,
+                    contractVersion: CONTRACT_VERSION,
+                    correlationId,
+                    requestBody: requestBodyForLog,
+                    resultStatus: 'success',
+                    providerResponseCode: finalResult?.providerResponseCode ?? '200',
+                    resultSummary: finalResult?.resultSummary ?? 'Action executed successfully.',
+                    errorCode: null,
+                    errorMessage: null,
+                    remediationHint: null,
+                    completedAt: new Date(now()),
+                });
+            } catch { /* audit log write must not block the response */ }
 
             if (auditWriter) {
                 await auditWriter.createEvent({
@@ -944,25 +948,27 @@ export const registerConnectorActionRoutes = async (
         const resolvedErrorCode = finalResult.errorCode ?? 'provider_unavailable';
         const status: ConnectorActionStatus = resolvedErrorCode === 'timeout' ? 'timeout' : 'failed';
 
-        await repo.createConnectorActionLog({
-            actionId,
-            tenantId,
-            workspaceId,
-            botId,
-            connectorId,
-            connectorType,
-            actionType,
-            contractVersion: CONTRACT_VERSION,
-            correlationId,
-            requestBody: requestBodyForLog,
-            resultStatus: status,
-            providerResponseCode: finalResult.providerResponseCode,
-            resultSummary: finalResult.resultSummary,
-            errorCode: resolvedErrorCode,
-            errorMessage: finalResult.errorMessage ?? null,
-            remediationHint: finalResult.remediationHint ?? null,
-            completedAt: new Date(now()),
-        });
+        try {
+            await repo.createConnectorActionLog({
+                actionId,
+                tenantId,
+                workspaceId,
+                botId,
+                connectorId,
+                connectorType,
+                actionType,
+                contractVersion: CONTRACT_VERSION,
+                correlationId,
+                requestBody: requestBodyForLog,
+                resultStatus: status,
+                providerResponseCode: finalResult.providerResponseCode,
+                resultSummary: finalResult.resultSummary,
+                errorCode: resolvedErrorCode,
+                errorMessage: finalResult.errorMessage ?? null,
+                remediationHint: finalResult.remediationHint ?? null,
+                completedAt: new Date(now()),
+            });
+        } catch { /* audit log write must not block the response */ }
 
         if (resolvedErrorCode === 'permission_denied') {
             await repo.updateAuthMetadata({
@@ -1420,6 +1426,52 @@ export const registerConnectorActionRoutes = async (
 
     type ActionLogParams = { connectorId: string };
     type ActionLogQuery = { limit?: string; cursor?: string };
+
+    // -------------------------------------------------------------------------
+    // DELETE /v1/connectors/:connectorId
+    // Generic disconnect for any connector type (OAuth or API key).
+    // Marks the connector as 'revoked' and clears credentials.
+    // -------------------------------------------------------------------------
+    type DisconnectParams = { connectorId: string };
+
+    app.delete<{ Params: DisconnectParams }>(
+        '/v1/connectors/:connectorId',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'unauthorized', message: 'Authentication required.' });
+            }
+
+            const { connectorId } = request.params;
+            const metadata = await repo.findAuthMetadata(connectorId);
+            if (!metadata) {
+                return reply.code(404).send({ error: 'connector_not_found', message: `No connector found with id ${connectorId}.` });
+            }
+            if (metadata.tenantId !== session.tenantId) {
+                return reply.code(403).send({ error: 'forbidden', message: 'Connector does not belong to your tenant.' });
+            }
+            if (!session.workspaceIds.includes(metadata.workspaceId)) {
+                return reply.code(403).send({ error: 'workspace_scope_violation', message: 'Connector workspace is not in your session scope.' });
+            }
+
+            const oauthTypes = new Set(['jira', 'teams', 'github', 'email']);
+            const authMode = oauthTypes.has(metadata.connectorType) ? 'oauth2' : 'api_key';
+
+            await repo.updateAuthMetadata({
+                connectorId,
+                tenantId: session.tenantId,
+                workspaceId: metadata.workspaceId,
+                connectorType: metadata.connectorType as ConnectorType,
+                status: 'revoked',
+                authMode,
+                secretRefId: null,
+                scopeStatus: null,
+                lastErrorClass: null,
+            });
+
+            return reply.code(200).send({ status: 'revoked', connector_id: connectorId });
+        },
+    );
 
     app.get<{ Params: ActionLogParams; Querystring: ActionLogQuery }>(
         '/v1/connectors/:connectorId/actions',

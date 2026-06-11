@@ -31,22 +31,18 @@ export async function DELETE(
     }
 
     const { id: connectorId } = await params;
-    const { searchParams } = new URL(request.url);
-    const workspaceId = searchParams.get("workspaceId") || connectorId.split(":")[2] || "";
-    const connectorType = connectorId.split(":")[0] ?? "";
 
     try {
-        const res = await fetch(`${API_GATEWAY_URL}/v1/connectors/oauth/revoke`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Cookie: `portal_session=${encodeURIComponent(portalToken)}`,
+        const res = await fetch(
+            `${API_GATEWAY_URL}/v1/connectors/${encodeURIComponent(connectorId)}`,
+            {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json",
+                    Cookie: `portal_session=${encodeURIComponent(portalToken)}`,
+                },
             },
-            body: JSON.stringify({
-                connector_type: connectorType,
-                workspace_id: workspaceId,
-            }),
-        });
+        );
 
         if (!res.ok) {
             const body = await res.json().catch(() => ({})) as { message?: string };
