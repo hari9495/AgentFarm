@@ -431,12 +431,19 @@ export const registerPortalAuthRoutes = async (
 
         await repo.updateSessionLastSeen(session.id);
 
+        const { prisma } = await import('../../lib/db.js');
+        const wsRows = await prisma.workspace.findMany({
+            where: { tenantId: session.tenantId },
+            select: { id: true },
+        });
+
         return reply.send({
             accountId: session.accountId,
             tenantId: session.tenantId,
             email: session.account.email,
             displayName: session.account.displayName,
             role: session.account.role,
+            workspaceIds: wsRows.map((w) => w.id),
         });
     });
 

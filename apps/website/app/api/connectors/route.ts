@@ -108,7 +108,20 @@ export async function GET(request: Request) {
         );
         const body: unknown = await res.json();
         if (!res.ok) {
-            return NextResponse.json({ error: "gateway_error", detail: body }, { status: 502 });
+            // Health/summary failed — still return a valid context using the workspace
+            // from the portal session so the page can proceed.
+            return NextResponse.json({
+                configured: [],
+                available: [],
+                context: {
+                    selectedWorkspaceId: user.workspaceIds[0] ?? "",
+                    selectedBotId: "",
+                    selectedRoleKey: "",
+                    selectedPolicyPackVersion: "",
+                    disallowed_tools_hidden_count: 0,
+                    options: [],
+                },
+            });
         }
         // Transform gateway shape { workspace_id, connectors[] } → page-expected shape
         // { configured[], available[], context }. The page merges available[] with the
@@ -137,7 +150,7 @@ export async function GET(request: Request) {
             configured,
             available: [],
             context: {
-                selectedWorkspaceId: gw.workspace_id ?? "",
+                selectedWorkspaceId: gw.workspace_id || user.workspaceIds[0] || "",
                 selectedBotId: "",
                 selectedRoleKey: "",
                 selectedPolicyPackVersion: "",
@@ -146,8 +159,19 @@ export async function GET(request: Request) {
             },
         });
     } catch (err) {
-        const detail = err instanceof Error ? err.message : String(err);
-        return NextResponse.json({ error: "gateway_error", detail }, { status: 502 });
+        // On network error, still return a valid context from the portal session.
+        return NextResponse.json({
+            configured: [],
+            available: [],
+            context: {
+                selectedWorkspaceId: user.workspaceIds[0] ?? "",
+                selectedBotId: "",
+                selectedRoleKey: "",
+                selectedPolicyPackVersion: "",
+                disallowed_tools_hidden_count: 0,
+                options: [],
+            },
+        });
     }
 }
 
@@ -182,8 +206,12 @@ export async function POST(request: Request) {
     const connectorType = TOOL_TO_CONNECTOR_TYPE[body.tool.trim()] ?? body.tool.trim();
     let workspaceId = body.workspaceId ?? "";
 
-    // If the page didn't supply a workspaceId (e.g. context hadn't loaded yet),
-    // ask the gateway for the session's first workspace via health/summary.
+    // Primary fallback: workspace already resolved by getPortalUserFromRequest.
+    if (!workspaceId) {
+        workspaceId = user.workspaceIds[0] ?? "";
+    }
+
+    // Secondary fallback: ask the gateway health/summary.
     if (!workspaceId) {
         try {
             const summaryRes = await gatewayFetch(

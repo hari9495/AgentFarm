@@ -12,6 +12,7 @@ export interface PortalRequestUser {
     email: string;
     displayName: string | null;
     role: string;
+    workspaceIds: string[];
 }
 
 export async function getPortalUserFromRequest(
@@ -51,8 +52,9 @@ export async function getPortalUserFromRequest(
             email: string;
             displayName: string | null;
             role: string;
+            workspaceIds?: string[];
         };
-        return { id: data.accountId, ...data };
+        return { id: data.accountId, workspaceIds: data.workspaceIds ?? [], ...data };
     } catch {
         return null;
     }
