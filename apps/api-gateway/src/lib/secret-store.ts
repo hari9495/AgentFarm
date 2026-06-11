@@ -4,11 +4,14 @@
  * The secretRefId stored on ConnectorAuthMetadata follows one of two URI schemes:
  *   - kv://<vault-name>/secrets/<secret-name>   (Azure Key Vault shorthand)
  *   - https://<vault-name>.vault.azure.net/secrets/<secret-name>  (full URL)
- *   - env://<VAR_NAME>  (dev / test: read from process.env)
+ *   - env://<VAR_NAME>  (dev / test: read from process.env, persisted to CONNECTOR_SECRETS_PATH file)
  *
  * In production the secret value is a JSON string with the shape defined by
  * ConnectorCredentials in provider-clients.ts.
  */
+
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 export type SecretStore = {
     getSecret(secretRefId: string): Promise<string | null>;
@@ -92,26 +95,58 @@ const createAzureKeyVaultSecretStore = (): SecretStore => {
 
 // ---------------------------------------------------------------------------
 // Env-var fallback (dev / CI / test)
-// Reads from env var named after the secret, e.g. env://JIRA_CREDENTIALS
+// Reads from process.env first, then from CONNECTOR_SECRETS_PATH file so
+// credentials survive container restarts without a Key Vault.
 // ---------------------------------------------------------------------------
+
+const readSecretsFile = (path: string): Record<string, string> => {
+    try {
+        return JSON.parse(readFileSync(path, 'utf8')) as Record<string, string>;
+    } catch {
+        return {};
+    }
+};
+
+const writeSecretsFile = (path: string, data: Record<string, string>): void => {
+    try {
+        mkdirSync(dirname(path), { recursive: true });
+        writeFileSync(path, JSON.stringify(data), 'utf8');
+    } catch {
+        // best-effort — if volume isn't writable, fall back to process.env only
+    }
+};
 
 const createEnvSecretStore = (): SecretStore => ({
     async getSecret(secretRefId) {
-        // env://<VAR>
         const envMatch = secretRefId.match(/^env:\/\/([A-Z0-9_]+)$/i);
-        if (envMatch) {
-            return process.env[envMatch[1]!] ?? null;
+        if (!envMatch) return null;
+        const varName = envMatch[1]!;
+        if (process.env[varName] !== undefined) {
+            return process.env[varName]!;
+        }
+        // Fall back to persisted secrets file so credentials survive restarts.
+        const secretsPath = process.env['CONNECTOR_SECRETS_PATH'];
+        if (secretsPath) {
+            const file = readSecretsFile(secretsPath);
+            return file[varName] ?? null;
         }
         return null;
     },
 
     async setSecret(secretRefId, value) {
-        // env:// writes are only supported in test/dev — mutate process.env
         const envMatch = secretRefId.match(/^env:\/\/([A-Z0-9_]+)$/i);
         if (!envMatch) {
             throw new Error(`Cannot write to secret ref: unsupported URI scheme for env store — ${secretRefId}`);
         }
-        process.env[envMatch[1]!] = value;
+        const varName = envMatch[1]!;
+        process.env[varName] = value;
+        // Persist to file so credentials survive process/container restarts.
+        const secretsPath = process.env['CONNECTOR_SECRETS_PATH'];
+        if (secretsPath) {
+            const file = readSecretsFile(secretsPath);
+            file[varName] = value;
+            writeSecretsFile(secretsPath, file);
+        }
         return secretRefId;
     },
 });

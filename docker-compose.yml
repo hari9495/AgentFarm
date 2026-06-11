@@ -112,9 +112,15 @@
       # Internal dashboard login — allow operators with @agentfarms.in email or owner role
       API_INTERNAL_LOGIN_ALLOWED_DOMAINS: ${API_INTERNAL_LOGIN_ALLOWED_DOMAINS:-agentfarms.in}
       API_INTERNAL_LOGIN_ADMIN_ROLES: ${API_INTERNAL_LOGIN_ADMIN_ROLES:-owner}
+      # Inter-service auth — connector execute endpoint
+      AGENTFARM_CONNECTOR_EXEC_SHARED_TOKEN: ${CONNECTOR_EXEC_SHARED_TOKEN}
+      # Persist env:// connector secrets across restarts (no Key Vault required in dev)
+      CONNECTOR_SECRETS_PATH: /data/connector-secrets.json
       # Workers run in the dedicated worker-runner service below.
       # Setting this flag prevents duplicate worker execution in both processes.
       AF_WORKERS_DISABLED: '1'
+    volumes:
+      - gateway_secrets:/data
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -191,9 +197,9 @@
       DESKTOP_AGENT_TOKEN: ${DESKTOP_AGENT_TOKEN:-}
       NODE_ENV: production
       AF_ACTION_RESULT_LOG_PATH: /data/action-results.ndjson
-      AF_TENANT_ID: ${AF_TENANT_ID:-dev-tenant}
-      AF_WORKSPACE_ID: ${AF_WORKSPACE_ID:-dev-workspace}
-      AF_BOT_ID: ${AF_BOT_ID:-dev-bot-001}
+      AF_TENANT_ID: ${AF_TENANT_ID:-yukthix-consulting-a2362a}
+      AF_WORKSPACE_ID: ${AF_WORKSPACE_ID:-cmq72f1fk003zkx4smdyay6yf}
+      AF_BOT_ID: ${AF_BOT_ID:-cmq72f1fr0044kx4s52rpy9px}
       AF_ROLE_PROFILE: ${AF_ROLE_PROFILE:-developer}
       AF_POLICY_PACK_VERSION: ${AF_POLICY_PACK_VERSION:-1.0.0}
       AF_APPROVAL_API_URL: ${AF_APPROVAL_API_URL:-http://api-gateway:3000}
@@ -201,6 +207,7 @@
       AF_LOG_LEVEL: ${AF_LOG_LEVEL:-info}
       AF_RUNTIME_CONTRACT_VERSION: ${AF_RUNTIME_CONTRACT_VERSION:-1.0.0}
       AGENTFARM_APPROVAL_INTAKE_SHARED_TOKEN: ${APPROVAL_INTAKE_SHARED_TOKEN:-dev-approval-token}
+      AGENTFARM_CONNECTOR_EXEC_SHARED_TOKEN: ${CONNECTOR_EXEC_SHARED_TOKEN}
       AF_MODEL_PROVIDER: ${AF_MODEL_PROVIDER:-openai}
       AF_OPENAI_API_KEY: ${AF_OPENAI_API_KEY:-}
       AF_OPENAI_BASE_URL: ${AF_OPENAI_BASE_URL:-https://api.openai.com/v1}
@@ -684,6 +691,7 @@ volumes:
   postgres_data:
   redis_data:
   agent_data:
+  gateway_secrets:
   # Voice model caches â€” persist across container restarts to avoid re-downloading.
   whisper_models:
   kokoro_models:
