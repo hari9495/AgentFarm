@@ -11,6 +11,7 @@ import {
     type ActionLogRow,
 } from './connector-actions.js';
 import { createInMemorySecretStore } from '../../lib/secret-store.js';
+import { createRealProviderExecutor, createRealConnectorHealthProbe } from '../../lib/provider-clients.js';
 
 type Metadata = {
     connectorId: string;
@@ -1641,6 +1642,570 @@ test('GET connector actions — returns hasMore true when results hit the limit'
         assert.equal(body.actions.length, 2);
         assert.equal(body.hasMore, true);
         assert.ok(body.nextCursor, 'nextCursor should be set');
+    } finally {
+        await app.close();
+    }
+});
+
+// ---------------------------------------------------------------------------
+// Helpers for custom_api tests
+// ---------------------------------------------------------------------------
+
+const seedCustomApiMetadata = (repo: ReturnType<typeof createFakeRepo>): void => {
+    repo.metadata.set('custom_api:tenant_1:ws_1', {
+        connectorId: 'custom_api:tenant_1:ws_1',
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        connectorType: 'custom_api',
+        status: 'not_configured',
+        secretRefId: null,
+        scopeStatus: null,
+        lastErrorClass: null,
+    });
+};
+
+const makeMockFetcher = () =>
+    async () => new Response(JSON.stringify({ ok: true }), { status: 200 }) as Response;
+
+// ---------------------------------------------------------------------------
+// Custom REST API — PUT /v1/connectors/:connectorId/credentials
+// ---------------------------------------------------------------------------
+
+test('PUT credentials validates custom_api bearer_token credentials and stores them', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    seedCustomApiMetadata(repo);
+    const store = createInMemorySecretStore({});
+
+    await registerConnectorActionRoutes(app, { getSession: () => sessionContext(), repo, secretStore: store });
+
+    try {
+        const connectorId = 'custom_api:tenant_1:ws_1';
+        const res = await app.inject({
+            method: 'PUT',
+            url: `/v1/connectors/${connectorId}/credentials`,
+            payload: {
+                credentials: {
+                    base_url: 'https://api.example.com',
+                    auth_type: 'bearer_token',
+                    bearer_token: 'tok-abc',
+                },
+            },
+        });
+
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { status: string; secret_ref_id: string };
+        assert.equal(body.status, 'token_received');
+
+        const stored = await store.getSecret(body.secret_ref_id);
+        assert.ok(stored !== null);
+        const creds = JSON.parse(stored!) as { base_url: string; bearer_token: string };
+        assert.equal(creds.base_url, 'https://api.example.com');
+        assert.equal(creds.bearer_token, 'tok-abc');
+
+        const metadata = await repo.findAuthMetadata(connectorId);
+        assert.equal(metadata?.status, 'token_received');
+        assert.equal(metadata?.secretRefId, body.secret_ref_id);
+    } finally {
+        await app.close();
+    }
+});
+
+test('PUT credentials validates custom_api api_key credentials correctly', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    seedCustomApiMetadata(repo);
+    const store = createInMemorySecretStore({});
+
+    await registerConnectorActionRoutes(app, { getSession: () => sessionContext(), repo, secretStore: store });
+
+    try {
+        const res = await app.inject({
+            method: 'PUT',
+            url: '/v1/connectors/custom_api:tenant_1:ws_1/credentials',
+            payload: {
+                credentials: {
+                    base_url: 'https://api.example.com',
+                    auth_type: 'api_key',
+                    api_key: 'my-api-key-123',
+                    api_key_header: 'X-Custom-Key',
+                },
+            },
+        });
+
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { status: string };
+        assert.equal(body.status, 'token_received');
+    } finally {
+        await app.close();
+    }
+});
+
+test('PUT credentials validates custom_api basic_auth credentials correctly', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    seedCustomApiMetadata(repo);
+    const store = createInMemorySecretStore({});
+
+    await registerConnectorActionRoutes(app, { getSession: () => sessionContext(), repo, secretStore: store });
+
+    try {
+        const res = await app.inject({
+            method: 'PUT',
+            url: '/v1/connectors/custom_api:tenant_1:ws_1/credentials',
+            payload: {
+                credentials: {
+                    base_url: 'https://api.example.com',
+                    auth_type: 'basic_auth',
+                    basic_user: 'admin',
+                    basic_pass: 'secret',
+                },
+            },
+        });
+
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { status: string };
+        assert.equal(body.status, 'token_received');
+    } finally {
+        await app.close();
+    }
+});
+
+test('PUT credentials accepts custom_api with auth_type none (no credentials required)', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    seedCustomApiMetadata(repo);
+    const store = createInMemorySecretStore({});
+
+    await registerConnectorActionRoutes(app, { getSession: () => sessionContext(), repo, secretStore: store });
+
+    try {
+        const res = await app.inject({
+            method: 'PUT',
+            url: '/v1/connectors/custom_api:tenant_1:ws_1/credentials',
+            payload: {
+                credentials: {
+                    base_url: 'https://public.api.example.com',
+                    auth_type: 'none',
+                },
+            },
+        });
+
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { status: string };
+        assert.equal(body.status, 'token_received');
+    } finally {
+        await app.close();
+    }
+});
+
+test('PUT credentials returns 400 when custom_api missing base_url', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    seedCustomApiMetadata(repo);
+    const store = createInMemorySecretStore({});
+
+    await registerConnectorActionRoutes(app, { getSession: () => sessionContext(), repo, secretStore: store });
+
+    try {
+        const res = await app.inject({
+            method: 'PUT',
+            url: '/v1/connectors/custom_api:tenant_1:ws_1/credentials',
+            payload: { credentials: { auth_type: 'bearer_token', bearer_token: 'tok' } },
+        });
+
+        assert.equal(res.statusCode, 400);
+        const body = res.json() as { error: string; message: string };
+        assert.equal(body.error, 'invalid_credentials');
+        assert.ok(body.message.includes('base_url'));
+    } finally {
+        await app.close();
+    }
+});
+
+test('PUT credentials returns 400 when custom_api bearer_token auth_type is missing its token', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    seedCustomApiMetadata(repo);
+    const store = createInMemorySecretStore({});
+
+    await registerConnectorActionRoutes(app, { getSession: () => sessionContext(), repo, secretStore: store });
+
+    try {
+        const res = await app.inject({
+            method: 'PUT',
+            url: '/v1/connectors/custom_api:tenant_1:ws_1/credentials',
+            payload: {
+                credentials: { base_url: 'https://api.example.com', auth_type: 'bearer_token' },
+            },
+        });
+
+        assert.equal(res.statusCode, 400);
+        const body = res.json() as { error: string; message: string };
+        assert.equal(body.error, 'invalid_credentials');
+        assert.ok(body.message.includes('bearer_token'));
+    } finally {
+        await app.close();
+    }
+});
+
+test('PUT credentials returns 400 when custom_api api_key auth_type is missing its key', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    seedCustomApiMetadata(repo);
+    const store = createInMemorySecretStore({});
+
+    await registerConnectorActionRoutes(app, { getSession: () => sessionContext(), repo, secretStore: store });
+
+    try {
+        const res = await app.inject({
+            method: 'PUT',
+            url: '/v1/connectors/custom_api:tenant_1:ws_1/credentials',
+            payload: {
+                credentials: { base_url: 'https://api.example.com', auth_type: 'api_key' },
+            },
+        });
+
+        assert.equal(res.statusCode, 400);
+        const body = res.json() as { error: string; message: string };
+        assert.equal(body.error, 'invalid_credentials');
+        assert.ok(body.message.includes('api_key'));
+    } finally {
+        await app.close();
+    }
+});
+
+test('PUT credentials returns 400 when custom_api basic_auth is missing basic_user', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    seedCustomApiMetadata(repo);
+    const store = createInMemorySecretStore({});
+
+    await registerConnectorActionRoutes(app, { getSession: () => sessionContext(), repo, secretStore: store });
+
+    try {
+        const res = await app.inject({
+            method: 'PUT',
+            url: '/v1/connectors/custom_api:tenant_1:ws_1/credentials',
+            payload: {
+                credentials: {
+                    base_url: 'https://api.example.com',
+                    auth_type: 'basic_auth',
+                    basic_pass: 'secret',
+                },
+            },
+        });
+
+        assert.equal(res.statusCode, 400);
+        const body = res.json() as { error: string; message: string };
+        assert.equal(body.error, 'invalid_credentials');
+        assert.ok(body.message.includes('basic_user'));
+    } finally {
+        await app.close();
+    }
+});
+
+test('PUT credentials returns 400 when custom_api basic_auth is missing basic_pass', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    seedCustomApiMetadata(repo);
+    const store = createInMemorySecretStore({});
+
+    await registerConnectorActionRoutes(app, { getSession: () => sessionContext(), repo, secretStore: store });
+
+    try {
+        const res = await app.inject({
+            method: 'PUT',
+            url: '/v1/connectors/custom_api:tenant_1:ws_1/credentials',
+            payload: {
+                credentials: {
+                    base_url: 'https://api.example.com',
+                    auth_type: 'basic_auth',
+                    basic_user: 'admin',
+                },
+            },
+        });
+
+        assert.equal(res.statusCode, 400);
+        const body = res.json() as { error: string; message: string };
+        assert.equal(body.error, 'invalid_credentials');
+        assert.ok(body.message.includes('basic_pass'));
+    } finally {
+        await app.close();
+    }
+});
+
+test('PUT credentials returns 400 when custom_api auth_type is an invalid value', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    seedCustomApiMetadata(repo);
+    const store = createInMemorySecretStore({});
+
+    await registerConnectorActionRoutes(app, { getSession: () => sessionContext(), repo, secretStore: store });
+
+    try {
+        const res = await app.inject({
+            method: 'PUT',
+            url: '/v1/connectors/custom_api:tenant_1:ws_1/credentials',
+            payload: {
+                credentials: {
+                    base_url: 'https://api.example.com',
+                    auth_type: 'oauth2',
+                },
+            },
+        });
+
+        assert.equal(res.statusCode, 400);
+        const body = res.json() as { error: string; message: string };
+        assert.equal(body.error, 'invalid_credentials');
+        assert.ok(body.message.includes('auth_type'));
+    } finally {
+        await app.close();
+    }
+});
+
+// ---------------------------------------------------------------------------
+// Custom REST API — Full end-to-end: add → health check → execute → log
+// ---------------------------------------------------------------------------
+
+test('custom_api e2e: PUT bearer_token credentials → health probe → execute read_task via GET → action log populated', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    const store = createInMemorySecretStore({});
+
+    const connectorId = 'custom_api:tenant_1:ws_1';
+    repo.metadata.set(connectorId, {
+        connectorId,
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        connectorType: 'custom_api',
+        status: 'not_configured',
+        secretRefId: null,
+        scopeStatus: null,
+        lastErrorClass: null,
+    });
+
+    const mockFetcher = makeMockFetcher();
+    const providerExecutor = createRealProviderExecutor(store, mockFetcher as typeof fetch);
+    const connectorHealthProbe = createRealConnectorHealthProbe(store, mockFetcher as typeof fetch);
+
+    await registerConnectorActionRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+        secretStore: store,
+        providerExecutor,
+        connectorHealthProbe,
+        sleep: async () => {},
+    });
+
+    try {
+        // Step 1: Add credentials via PUT
+        const putRes = await app.inject({
+            method: 'PUT',
+            url: `/v1/connectors/${connectorId}/credentials`,
+            payload: {
+                credentials: {
+                    base_url: 'https://api.example.com',
+                    auth_type: 'bearer_token',
+                    bearer_token: 'tok-e2e-xyz',
+                },
+            },
+        });
+        assert.equal(putRes.statusCode, 200);
+        const putBody = putRes.json() as { status: string };
+        assert.equal(putBody.status, 'token_received');
+
+        // Verify connector status updated in metadata
+        assert.equal((await repo.findAuthMetadata(connectorId))?.status, 'token_received');
+
+        // Step 2: Health probe — mock fetcher returns 200, so connector should become connected
+        const healthRes = await app.inject({
+            method: 'POST',
+            url: '/v1/connectors/health/check',
+            payload: { workspace_id: 'ws_1' },
+        });
+        assert.equal(healthRes.statusCode, 200);
+        const healthBody = healthRes.json() as {
+            totals: { healthy: number };
+            results: Array<{ probe_outcome: string; status_after: string }>;
+        };
+        assert.equal(healthBody.totals.healthy, 1);
+        assert.equal(healthBody.results[0]?.probe_outcome, 'ok');
+        assert.equal(healthBody.results[0]?.status_after, 'connected');
+        assert.equal((await repo.findAuthMetadata(connectorId))?.status, 'connected');
+
+        // Step 3: Execute a low-risk action (no approval required)
+        const execRes = await app.inject({
+            method: 'POST',
+            url: '/v1/connectors/actions/execute',
+            payload: {
+                connector_type: 'custom_api',
+                workspace_id: 'ws_1',
+                bot_id: 'bot_1',
+                role_key: 'developer',
+                action_type: 'read_task',
+                payload: { method: 'GET', path: '/tasks/99' },
+            },
+        });
+        assert.equal(execRes.statusCode, 200);
+        const execBody = execRes.json() as { status: string; attempts: number; connector_type: string };
+        assert.equal(execBody.status, 'success');
+        assert.equal(execBody.connector_type, 'custom_api');
+        assert.equal(execBody.attempts, 1);
+
+        // Step 4: Read action log — entry must exist with correct metadata
+        const logRes = await app.inject({
+            method: 'GET',
+            url: `/v1/connectors/${connectorId}/actions`,
+        });
+        assert.equal(logRes.statusCode, 200);
+        const logBody = logRes.json() as {
+            actions: Array<{ actionType: string; resultStatus: string; connectorType: string }>;
+            hasMore: boolean;
+        };
+        assert.equal(logBody.actions.length, 1);
+        assert.equal(logBody.actions[0]?.actionType, 'read_task');
+        assert.equal(logBody.actions[0]?.resultStatus, 'success');
+        assert.equal(logBody.actions[0]?.connectorType, 'custom_api');
+        assert.equal(logBody.hasMore, false);
+    } finally {
+        await app.close();
+    }
+});
+
+test('custom_api e2e: payload.method and payload.path are forwarded to the HTTP request', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    const store = createInMemorySecretStore({});
+
+    const connectorId = 'custom_api:tenant_1:ws_1';
+    const secretRef = 'kv://test/custom_api';
+    await store.setSecret(secretRef, JSON.stringify({
+        base_url: 'https://api.example.com',
+        auth_type: 'bearer_token',
+        bearer_token: 'tok-method-test',
+    }));
+    repo.metadata.set(connectorId, {
+        connectorId,
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        connectorType: 'custom_api',
+        status: 'connected',
+        secretRefId: secretRef,
+        scopeStatus: 'full',
+        lastErrorClass: null,
+    });
+
+    const capturedCalls: Array<{ url: string; method: string; hasAuthHeader: boolean }> = [];
+    const capturingFetcher = async (url: string | URL, init?: RequestInit): Promise<Response> => {
+        capturedCalls.push({
+            url: String(url),
+            method: (init?.method ?? 'GET').toUpperCase(),
+            hasAuthHeader: typeof (init?.headers as Record<string, string>)?.['Authorization'] === 'string',
+        });
+        return new Response(JSON.stringify({ result: 'ok' }), { status: 200 }) as Response;
+    };
+
+    const providerExecutor = createRealProviderExecutor(store, capturingFetcher as typeof fetch);
+
+    await registerConnectorActionRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+        providerExecutor,
+        sleep: async () => {},
+    });
+
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/connectors/actions/execute',
+            payload: {
+                connector_type: 'custom_api',
+                workspace_id: 'ws_1',
+                bot_id: 'bot_1',
+                role_key: 'developer',
+                action_type: 'read_task',
+                payload: { method: 'GET', path: '/items/42' },
+            },
+        });
+
+        assert.equal(res.statusCode, 200);
+        assert.equal(capturedCalls.length, 1);
+        assert.equal(capturedCalls[0]?.url, 'https://api.example.com/items/42');
+        assert.equal(capturedCalls[0]?.method, 'GET');
+        assert.equal(capturedCalls[0]?.hasAuthHeader, true, 'Bearer token should be set in Authorization header');
+    } finally {
+        await app.close();
+    }
+});
+
+test('custom_api e2e: health probe 401 → connector status updated to permission_invalid', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    const store = createInMemorySecretStore({});
+
+    const connectorId = 'custom_api:tenant_1:ws_1';
+    const secretRef = 'kv://test/custom_api_bad_token';
+    await store.setSecret(secretRef, JSON.stringify({
+        base_url: 'https://api.example.com',
+        auth_type: 'bearer_token',
+        bearer_token: 'expired-token',
+    }));
+    repo.metadata.set(connectorId, {
+        connectorId,
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        connectorType: 'custom_api',
+        status: 'connected',
+        secretRefId: secretRef,
+        scopeStatus: 'full',
+        lastErrorClass: null,
+    });
+
+    const authFailFetcher = async () => new Response(null, { status: 401 }) as Response;
+    const connectorHealthProbe = createRealConnectorHealthProbe(store, authFailFetcher as typeof fetch);
+
+    await registerConnectorActionRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+        connectorHealthProbe,
+        sleep: async () => {},
+    });
+
+    try {
+        const healthRes = await app.inject({
+            method: 'POST',
+            url: '/v1/connectors/health/check',
+            payload: { workspace_id: 'ws_1' },
+        });
+
+        assert.equal(healthRes.statusCode, 200);
+        const healthBody = healthRes.json() as {
+            totals: { remediation_required: number };
+            results: Array<{ probe_outcome: string; status_after: string; remediation: string }>;
+        };
+        assert.equal(healthBody.totals.remediation_required, 1);
+        assert.equal(healthBody.results[0]?.probe_outcome, 'auth_failure');
+        assert.equal(healthBody.results[0]?.status_after, 'permission_invalid');
+        assert.equal(healthBody.results[0]?.remediation, 're_auth');
+
+        // Execute is now blocked because connector is permission_invalid
+        const execRes = await app.inject({
+            method: 'POST',
+            url: '/v1/connectors/actions/execute',
+            payload: {
+                connector_type: 'custom_api',
+                workspace_id: 'ws_1',
+                bot_id: 'bot_1',
+                role_key: 'developer',
+                action_type: 'read_task',
+                payload: {},
+            },
+        });
+        assert.equal(execRes.statusCode, 409);
+        const execBody = execRes.json() as { error: string; error_code: string };
+        assert.equal(execBody.error, 'connector_unavailable');
+        assert.equal(execBody.error_code, 'permission_denied');
     } finally {
         await app.close();
     }
