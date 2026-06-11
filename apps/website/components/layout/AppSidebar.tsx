@@ -69,6 +69,7 @@ const dashboardGroups: NavGroup[] = [
         items: [
             { href: "/dashboard/deployments",  label: "Deployments",   icon: Rocket },
             { href: "/dashboard/bots",         label: "Bot Status",    icon: Radio },
+            { href: "/admin/bots",             label: "Manage Bots",   icon: Bot },
             { href: "/dashboard/activity",     label: "Activity",      icon: Activity },
             { href: "/dashboard/audit",        label: "Audit Log",     icon: ClipboardList },
             { href: "/dashboard/evidence",     label: "Evidence",      icon: FileArchive },
