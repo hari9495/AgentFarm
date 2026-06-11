@@ -207,10 +207,14 @@ export const createServer = async (): Promise<FastifyInstance> => {
                             select: { accountId: true, tenantId: true, account: { select: { role: true } } },
                         });
                         if (ps) {
+                            const wsRows = await prisma.workspace.findMany({
+                                where: { tenantId: ps.tenantId },
+                                select: { id: true },
+                            });
                             const portalSession: SessionPayload = {
                                 userId: ps.accountId,
                                 tenantId: ps.tenantId,
-                                workspaceIds: [],
+                                workspaceIds: wsRows.map((w) => w.id),
                                 scope: 'customer',
                                 role: ps.account.role,
                                 expiresAt: Date.now() + 300_000,

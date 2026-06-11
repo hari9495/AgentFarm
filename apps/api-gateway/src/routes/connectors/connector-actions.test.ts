@@ -66,6 +66,25 @@ const createFakeRepo = (): ConnectorActionRepo & {
             return metadata.get(connectorId) ?? null;
         },
 
+        async upsertAuthMetadata(input) {
+            const existing = metadata.get(input.connectorId);
+            if (!existing) {
+                const record: Metadata = {
+                    connectorId: input.connectorId,
+                    tenantId: input.tenantId,
+                    workspaceId: input.workspaceId,
+                    connectorType: input.connectorType,
+                    status: input.status,
+                    secretRefId: null,
+                    scopeStatus: null,
+                    lastErrorClass: null,
+                };
+                metadata.set(input.connectorId, record);
+                return record;
+            }
+            return existing;
+        },
+
         async listAuthMetadata(input) {
             const items = Array.from(metadata.values()).filter(
                 (entry) =>

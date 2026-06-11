@@ -166,13 +166,20 @@ type ActionMetadata = {
     lastHealthcheckAt?: Date | null;
 };
 
-const createFakeActionRepo = (): ConnectorActionRepo & {
-    upsertAuthMetadata: (input: ActionMetadata) => Promise<void>;
-} => {
+const createFakeActionRepo = (): ConnectorActionRepo & { seed: (input: ActionMetadata) => void } => {
     const metadata = new Map<string, ActionMetadata>();
     return {
-        async upsertAuthMetadata(input) {
+        seed(input) {
             metadata.set(input.connectorId, input);
+        },
+        async upsertAuthMetadata(input) {
+            const existing = metadata.get(input.connectorId);
+            if (!existing) {
+                const record = { ...input, secretRefId: null, scopeStatus: null, lastErrorClass: null, tokenExpiresAt: null, lastRefreshAt: null, lastHealthcheckAt: null } as unknown as ActionMetadata;
+                metadata.set(input.connectorId, record);
+                return record as never;
+            }
+            return existing as never;
         },
         async findAuthMetadata(connectorId) {
             return (metadata.get(connectorId) ?? null) as never;
@@ -881,7 +888,7 @@ test('health summary returns connected connector status when OAuth is complete',
     const repo = createFakeActionRepo();
 
     // Manually seed connected metadata before registering routes
-    await repo.upsertAuthMetadata({
+    repo.seed({
         connectorId: 'github:tenant_1:ws_1',
         tenantId: 'tenant_1',
         workspaceId: 'ws_1',

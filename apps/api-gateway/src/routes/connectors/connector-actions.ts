@@ -80,6 +80,14 @@ type ConnectorActionLogRecord = {
 
 type ConnectorActionRepo = {
     findAuthMetadata(connectorId: string): Promise<ConnectorAuthMetadata | null>;
+    upsertAuthMetadata(input: {
+        connectorId: string;
+        tenantId: string;
+        workspaceId: string;
+        connectorType: ConnectorType;
+        status: string;
+        authMode: string;
+    }): Promise<ConnectorAuthMetadata>;
     listAuthMetadata(input: {
         tenantId: string;
         workspaceId: string;
@@ -295,6 +303,31 @@ const defaultRepo: ConnectorActionRepo = {
         const prisma = await getPrisma();
         return prisma.connectorAuthMetadata.findUnique({
             where: { connectorId },
+            select: {
+                connectorId: true,
+                tenantId: true,
+                workspaceId: true,
+                connectorType: true,
+                status: true,
+                secretRefId: true,
+                scopeStatus: true,
+                lastErrorClass: true,
+            },
+        });
+    },
+    async upsertAuthMetadata(input) {
+        const prisma = await getPrisma();
+        return prisma.connectorAuthMetadata.upsert({
+            where: { connectorId: input.connectorId },
+            create: {
+                connectorId: input.connectorId,
+                tenantId: input.tenantId,
+                workspaceId: input.workspaceId,
+                connectorType: input.connectorType,
+                status: input.status as never,
+                authMode: input.authMode,
+            },
+            update: {},
             select: {
                 connectorId: true,
                 tenantId: true,
@@ -1254,12 +1287,39 @@ export const registerConnectorActionRoutes = async (
             }
 
             const connectorId = request.params.connectorId;
-            const metadata = await repo.findAuthMetadata(connectorId);
+            let metadata = await repo.findAuthMetadata(connectorId);
 
+            // Auto-register non-OAuth connectors on first credential write.
+            // connectorId format: {type}:{tenantId}:{workspaceId}
             if (!metadata) {
-                return reply.code(404).send({
-                    error: 'connector_not_found',
-                    message: `No connector found with id ${connectorId}.`,
+                const parts = connectorId.split(':');
+                if (parts.length !== 3) {
+                    return reply.code(404).send({
+                        error: 'connector_not_found',
+                        message: `No connector found with id ${connectorId}.`,
+                    });
+                }
+                const [rawType, rawTenantId, rawWorkspaceId] = parts as [string, string, string];
+                if (rawTenantId !== session.tenantId) {
+                    return reply.code(403).send({
+                        error: 'forbidden',
+                        message: 'Connector tenant does not match your session.',
+                    });
+                }
+                const inferredType = normalizeConnectorType(rawType);
+                if (!inferredType) {
+                    return reply.code(422).send({
+                        error: 'unsupported_connector_type',
+                        message: `Connector type '${rawType}' is not supported.`,
+                    });
+                }
+                metadata = await repo.upsertAuthMetadata({
+                    connectorId,
+                    tenantId: session.tenantId,
+                    workspaceId: rawWorkspaceId,
+                    connectorType: inferredType,
+                    status: 'not_configured',
+                    authMode: 'api_key',
                 });
             }
 
