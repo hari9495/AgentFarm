@@ -21,6 +21,7 @@ type BotRecord = {
 
 type TaskRecord = {
     id: string;
+    taskId: string;
     outcome: string;
     latencyMs: number;
     estimatedCostUsd: number | null;

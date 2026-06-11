@@ -19,6 +19,7 @@ import {
     LayoutDashboard,
     LifeBuoy,
     Link2,
+    ListTodo,
     Lock,
     LogOut,
     Menu,
@@ -61,6 +62,7 @@ const dashboardGroups: NavGroup[] = [
         items: [
             { href: "/dashboard",              label: "Overview",      icon: LayoutDashboard, exact: true },
             { href: "/dashboard/agents",       label: "Agents",        icon: Bot },
+            { href: "/dashboard/tasks",        label: "Tasks",         icon: ListTodo },
             { href: "/dashboard/approvals",    label: "Approvals",     icon: ClipboardCheck, badge: "approvals" },
         ],
     },

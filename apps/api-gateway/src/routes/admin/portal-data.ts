@@ -16,6 +16,7 @@ type BotRecord = {
 
 type TaskRecord = {
     id: string;
+    taskId: string;
     outcome: string;
     latencyMs: number;
     estimatedCostUsd: number | null;
@@ -166,6 +167,7 @@ const buildPrismaRepo = (prisma: PrismaClient): PortalDataRepo => ({
             where: { botId, tenantId },
             select: {
                 id: true,
+                taskId: true,
                 outcome: true,
                 latencyMs: true,
                 estimatedCostUsd: true,
@@ -366,6 +368,73 @@ export const registerPortalDataRoutes = async (
             return reply.send({ tasks, total: tasks.length });
         },
     );
+
+    // ── POST /portal/data/agents/:botId/tasks ────────────────────────────
+    app.post<{
+        Params: { botId: string };
+        Body: {
+            prompt?: string;
+            connector_type?: string;
+            action_type?: string;
+            connector_params?: Record<string, unknown>;
+        };
+    }>('/portal/data/agents/:botId/tasks', async (request, reply) => {
+        const session = await checkSession(request, reply);
+        if (!session) return;
+
+        const { botId } = request.params;
+        const { prompt, connector_type, action_type, connector_params } = request.body ?? {};
+
+        if (!prompt && !action_type) {
+            return reply.code(400).send({ error: 'prompt or action_type is required' });
+        }
+
+        const repo = await resolveRepo();
+        const bot = await repo.findBot(botId, session.tenantId);
+        if (!bot) {
+            return reply.code(404).send({ error: 'not_found' });
+        }
+
+        const goalPayload: Record<string, unknown> = {
+            tenantId: session.tenantId,
+            workspaceId: bot.workspaceId,
+            botId,
+            prompt: prompt ?? '',
+        };
+        if (connector_type) goalPayload['connector_type'] = connector_type;
+        if (action_type) goalPayload['action_type'] = action_type;
+        if (connector_params && typeof connector_params === 'object') {
+            Object.assign(goalPayload, connector_params);
+        }
+
+        const runtimeUrl = (process.env['AGENT_RUNTIME_URL'] ?? 'http://localhost:4000').replace(/\/+$/, '');
+        let runtimeRes: Response;
+        try {
+            runtimeRes = await fetch(`${runtimeUrl}/run-task`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                    tenantId: session.tenantId,
+                    agentId: botId,
+                    triggeredBy: 'portal',
+                    goal: JSON.stringify(goalPayload),
+                }),
+            });
+        } catch (err) {
+            return reply.code(502).send({ error: 'runtime_unreachable', detail: String(err) });
+        }
+
+        if (!runtimeRes.ok) {
+            const body = await runtimeRes.text().catch(() => '');
+            return reply.code(runtimeRes.status === 409 ? 409 : 502).send({
+                error: 'runtime_error',
+                detail: body,
+            });
+        }
+
+        const result = (await runtimeRes.json()) as { task_id: string; status: string };
+        return reply.code(202).send({ task_id: result.task_id, status: result.status ?? 'queued' });
+    });
 
     // ── GET /portal/data/usage ────────────────────────────────────────────
     app.get('/portal/data/usage', async (request, reply) => {
