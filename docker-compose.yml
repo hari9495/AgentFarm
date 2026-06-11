@@ -109,6 +109,9 @@
       PORTAL_APP_BASE_URL: ${PORTAL_APP_BASE_URL:-http://localhost:3001}
       # Option 2 — generic webhook fallback (set if not using Resend)
       PORTAL_RESET_WEBHOOK_URL: ${PORTAL_RESET_WEBHOOK_URL:-}
+      # Internal dashboard login — allow operators with @agentfarms.in email or owner role
+      API_INTERNAL_LOGIN_ALLOWED_DOMAINS: ${API_INTERNAL_LOGIN_ALLOWED_DOMAINS:-agentfarms.in}
+      API_INTERNAL_LOGIN_ADMIN_ROLES: ${API_INTERNAL_LOGIN_ADMIN_ROLES:-owner}
       # Workers run in the dedicated worker-runner service below.
       # Setting this flag prevents duplicate worker execution in both processes.
       AF_WORKERS_DISABLED: '1'
