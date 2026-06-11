@@ -21,6 +21,15 @@ const TOOL_TO_CONNECTOR_TYPE: Record<string, string> = {
     email: "email",
 };
 
+// Reverse map: gateway connector type → canonical tool name shown in the catalog
+const CONNECTOR_TYPE_TO_TOOL: Record<string, string> = {
+    custom_api: "generic_rest",
+    jira: "jira",
+    teams: "teams",
+    github: "github",
+    email: "generic_smtp",
+};
+
 // Forward portal_session cookie to gateway so its preHandler can inject the session.
 // The gateway already supports portal_session as a v1 auth fallback.
 function gatewayFetch(path: string, options: RequestInit, portalSessionToken: string): Promise<Response> {
@@ -101,7 +110,41 @@ export async function GET(request: Request) {
         if (!res.ok) {
             return NextResponse.json({ error: "gateway_error", detail: body }, { status: 502 });
         }
-        return NextResponse.json(body);
+        // Transform gateway shape { workspace_id, connectors[] } → page-expected shape
+        // { configured[], available[], context }. The page merges available[] with the
+        // static catalog, so returning [] lets the static catalog show all options.
+        const gw = body as {
+            workspace_id?: string;
+            connectors?: Array<{
+                connector_id: string;
+                connector_type: string;
+                is_connected: boolean;
+                status: string;
+                last_healthcheck_at: string | null;
+            }>;
+        };
+        const configured = (gw.connectors ?? []).map((c) => ({
+            connectorId: c.connector_id,
+            tool: CONNECTOR_TYPE_TO_TOOL[c.connector_type] ?? c.connector_type,
+            category: "task_tracker",
+            displayName: c.connector_type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+            status: c.is_connected ? "connected" : "disconnected",
+            authMethod: "api_key",
+            lastHealthcheckAt: c.last_healthcheck_at ?? null,
+            lastErrorClass: null,
+        }));
+        return NextResponse.json({
+            configured,
+            available: [],
+            context: {
+                selectedWorkspaceId: gw.workspace_id ?? "",
+                selectedBotId: "",
+                selectedRoleKey: "",
+                selectedPolicyPackVersion: "",
+                disallowed_tools_hidden_count: 0,
+                options: [],
+            },
+        });
     } catch (err) {
         const detail = err instanceof Error ? err.message : String(err);
         return NextResponse.json({ error: "gateway_error", detail }, { status: 502 });
@@ -137,7 +180,29 @@ export async function POST(request: Request) {
     }
 
     const connectorType = TOOL_TO_CONNECTOR_TYPE[body.tool.trim()] ?? body.tool.trim();
-    const workspaceId = body.workspaceId ?? "";
+    let workspaceId = body.workspaceId ?? "";
+
+    // If the page didn't supply a workspaceId (e.g. context hadn't loaded yet),
+    // ask the gateway for the session's first workspace via health/summary.
+    if (!workspaceId) {
+        try {
+            const summaryRes = await gatewayFetch(
+                "/v1/connectors/health/summary",
+                { method: "GET" },
+                portalToken,
+            );
+            if (summaryRes.ok) {
+                const summaryData = await summaryRes.json() as { workspace_id?: string };
+                workspaceId = summaryData.workspace_id ?? "";
+            }
+        } catch { /* fall through */ }
+    }
+    if (!workspaceId) {
+        return NextResponse.json(
+            { error: "workspace_required", detail: "No workspace found for your account. Please contact support." },
+            { status: 400 },
+        );
+    }
 
     // OAuth connectors redirect to provider auth
     const oauthTools = new Set(["teams"]);
