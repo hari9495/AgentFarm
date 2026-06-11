@@ -4,6 +4,7 @@ import {
     AlertTriangle,
     BadgeCheck,
     BellRing,
+    Bot,
     Building2,
     CreditCard,
     Download,
@@ -211,6 +212,15 @@ export default async function AdminPage() {
 
                 {/* Quick Action Cards */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    <div className="rounded-2xl border border-violet-200 dark:border-violet-800/40 bg-white dark:bg-slate-900 p-5">
+                        <div className="flex items-center gap-3 mb-3">
+                            <PremiumIcon icon={Bot} tone="violet" containerClassName="w-9 h-9 rounded-xl bg-violet-100 dark:bg-violet-900/50 text-violet-600 dark:text-violet-400" iconClassName="w-5 h-5" />
+                            <h3 className="font-bold text-slate-900 dark:text-slate-100">Bot Control</h3>
+                        </div>
+                        <p className="text-sm text-slate-600 dark:text-slate-300">Add bots, pause or resume workers, set autonomy levels, approval policies, and working hours.</p>
+                        <ButtonLink href="/admin/bots" size="sm" variant="outline" className="mt-4">Manage Bots</ButtonLink>
+                    </div>
+
                     <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
                         <div className="flex items-center gap-3 mb-3">
                             <PremiumIcon icon={Shield} tone="sky" containerClassName="w-9 h-9 rounded-xl bg-sky-100 dark:bg-sky-900/50 text-sky-600 dark:text-sky-400" iconClassName="w-5 h-5" />

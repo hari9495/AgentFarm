@@ -294,17 +294,30 @@ function SidebarContent({
                         </div>
                         <div className="space-y-0.5">
                             {userRole !== "member" && (
-                                <Link
-                                    href="/admin"
-                                    onClick={onClose}
-                                    className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all"
-                                >
-                                    <span className="flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 group-hover:text-slate-600 group-hover:bg-slate-200/70 transition-all">
-                                        <Shield className="w-[17px] h-[17px]" />
-                                    </span>
-                                    <span className="flex-1 truncate tracking-[-0.01em]">Admin Console</span>
-                                    <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                </Link>
+                                <>
+                                    <Link
+                                        href="/admin"
+                                        onClick={onClose}
+                                        className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all"
+                                    >
+                                        <span className="flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 group-hover:text-slate-600 group-hover:bg-slate-200/70 transition-all">
+                                            <Shield className="w-[17px] h-[17px]" />
+                                        </span>
+                                        <span className="flex-1 truncate tracking-[-0.01em]">Admin Console</span>
+                                        <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                    </Link>
+                                    <Link
+                                        href="/admin/bots"
+                                        onClick={onClose}
+                                        className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all"
+                                    >
+                                        <span className="flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 group-hover:text-slate-600 group-hover:bg-slate-200/70 transition-all">
+                                            <Bot className="w-[17px] h-[17px]" />
+                                        </span>
+                                        <span className="flex-1 truncate tracking-[-0.01em]">Manage Bots</span>
+                                        <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                    </Link>
+                                </>
                             )}
                             {showCompanyPortal && (
                                 <Link
