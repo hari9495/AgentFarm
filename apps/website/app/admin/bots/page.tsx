@@ -10,9 +10,11 @@ import {
     Clock,
     Pause,
     Play,
+    Plus,
     Settings2,
     ShieldCheck,
     Wrench,
+    X,
     Zap,
 } from "lucide-react";
 import Link from "next/link";
@@ -56,6 +58,8 @@ const toneClass: Record<string, string> = {
 
 const dayLabels = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
+const TONES = ["sky", "violet", "amber", "rose", "emerald"] as const;
+
 export default function AdminBotsPage() {
     const [bots, setBots] = useState<BotRecord[]>([]);
     const [loading, setLoading] = useState(true);
@@ -64,6 +68,9 @@ export default function AdminBotsPage() {
     const [saving, setSaving] = useState<string | null>(null);
     const [drafts, setDrafts] = useState<Record<string, Partial<BotRecord>>>({});
     const [toast, setToast] = useState<{ message: string; ok: boolean } | null>(null);
+    const [showAddForm, setShowAddForm] = useState(false);
+    const [addForm, setAddForm] = useState({ name: "", role: "", tone: "sky", autonomyLevel: "medium" as AutonomyLevel, approvalPolicy: "high-only" as ApprovalPolicy });
+    const [adding, setAdding] = useState(false);
 
     const fetchBots = useCallback(async () => {
         setLoading(true);
@@ -125,6 +132,31 @@ export default function AdminBotsPage() {
         setDrafts((prev) => ({ ...prev, [slug]: { ...(prev[slug] ?? {}), ...patch } }));
     };
 
+    const addBot = async () => {
+        if (!addForm.name.trim() || !addForm.role.trim()) return;
+        setAdding(true);
+        try {
+            const res = await fetch("/api/admin/bots", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(addForm),
+            });
+            const data = await res.json() as any;
+            if (res.ok) {
+                await fetchBots();
+                setAddForm({ name: "", role: "", tone: "sky", autonomyLevel: "medium", approvalPolicy: "high-only" });
+                setShowAddForm(false);
+                showToast("Bot added successfully.", true);
+            } else {
+                showToast(data.error ?? "Failed to add bot.", false);
+            }
+        } catch {
+            showToast("Network error.", false);
+        } finally {
+            setAdding(false);
+        }
+    };
+
     const saveDraft = (slug: string) => {
         const draft = drafts[slug];
         if (!draft) return;
@@ -176,6 +208,13 @@ export default function AdminBotsPage() {
                         <Link href="/admin" className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 border border-white/20 px-3.5 py-2 text-sm font-semibold text-white hover:bg-white/20 transition-colors">
                             Back to Admin
                         </Link>
+                        <button
+                            onClick={() => setShowAddForm(true)}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 border border-violet-500 px-3.5 py-2 text-sm font-semibold text-white hover:bg-violet-700 transition-colors"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Add Bot
+                        </button>
                     </div>
                 </div>
             </section>
@@ -201,12 +240,113 @@ export default function AdminBotsPage() {
                     </div>
                 )}
 
+                {/* Add Bot Modal */}
+                {showAddForm && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                        <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl">
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Add Bot</h2>
+                                <button onClick={() => setShowAddForm(false)} className="rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                                    <X className="w-4 h-4 text-slate-500" />
+                                </button>
+                            </div>
+                            <div className="px-6 py-5 space-y-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Bot Name *</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Developer Agent"
+                                        value={addForm.name}
+                                        onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))}
+                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Role *</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Full-Stack Developer"
+                                        value={addForm.role}
+                                        onChange={(e) => setAddForm((f) => ({ ...f, role: e.target.value }))}
+                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Tone</label>
+                                        <select
+                                            value={addForm.tone}
+                                            onChange={(e) => setAddForm((f) => ({ ...f, tone: e.target.value }))}
+                                            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                        >
+                                            {TONES.map((t) => <option key={t} value={t}>{t}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Autonomy</label>
+                                        <select
+                                            value={addForm.autonomyLevel}
+                                            onChange={(e) => setAddForm((f) => ({ ...f, autonomyLevel: e.target.value as AutonomyLevel }))}
+                                            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                        >
+                                            <option value="low">Low</option>
+                                            <option value="medium">Medium</option>
+                                            <option value="high">High</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Approval Policy</label>
+                                    <select
+                                        value={addForm.approvalPolicy}
+                                        onChange={(e) => setAddForm((f) => ({ ...f, approvalPolicy: e.target.value as ApprovalPolicy }))}
+                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                    >
+                                        <option value="all">All actions need approval</option>
+                                        <option value="medium-high">Medium + high risk</option>
+                                        <option value="high-only">High risk only</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 px-6 py-4 border-t border-slate-200 dark:border-slate-700">
+                                <button
+                                    disabled={adding || !addForm.name.trim() || !addForm.role.trim()}
+                                    onClick={addBot}
+                                    className="flex-1 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {adding ? "Adding…" : "Add Bot"}
+                                </button>
+                                <button
+                                    onClick={() => setShowAddForm(false)}
+                                    className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {loading ? (
                     <p className="text-slate-400 text-sm py-12 text-center">Loading bots…</p>
                 ) : error ? (
                     <p className="text-rose-500 text-sm py-12 text-center">{error}</p>
                 ) : (
                     <div className="space-y-4">
+                        {bots.length === 0 && (
+                            <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 p-12 text-center">
+                                <Bot className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+                                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">No bots yet</p>
+                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 mb-4">Add your first bot to start monitoring its status.</p>
+                                <button
+                                    onClick={() => setShowAddForm(true)}
+                                    className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 transition-colors"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Add Bot
+                                </button>
+                            </div>
+                        )}
                         {bots.map((bot) => {
                             const m = statusMeta[bot.status];
                             const isExpanded = expanded === bot.slug;

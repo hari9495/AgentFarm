@@ -1735,6 +1735,43 @@ export const listBots = async (): Promise<BotRecord[]> => {
     return result.results.map(mapBot);
 };
 
+export const createBot = async (input: {
+    slug: string;
+    name: string;
+    role: string;
+    tone?: string;
+    autonomyLevel?: AutonomyLevel;
+    approvalPolicy?: ApprovalPolicy;
+    shiftStart?: string;
+    shiftEnd?: string;
+    activeDays?: string;
+    notes?: string;
+}): Promise<BotRecord> => {
+    const ts = now();
+    await getDb()
+        .prepare(
+            `INSERT INTO bots (slug, name, role, tone, status, autonomy_level, approval_policy, tasks_completed, reliability_pct, shift_start, shift_end, active_days, notes, last_activity_at, created_at)
+             VALUES (?, ?, ?, ?, 'active', ?, ?, 0, 99.0, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(
+            input.slug,
+            input.name,
+            input.role,
+            input.tone ?? "sky",
+            input.autonomyLevel ?? "medium",
+            input.approvalPolicy ?? "high-only",
+            input.shiftStart ?? "09:00",
+            input.shiftEnd ?? "18:00",
+            input.activeDays ?? "mon,tue,wed,thu,fri",
+            input.notes ?? "",
+            ts,
+            ts,
+        )
+        .run();
+    const row = await getDb().prepare(`SELECT * FROM bots WHERE slug = ?`).bind(input.slug).first<Record<string, unknown>>();
+    return mapBot(row!);
+};
+
 export const getBotBySlug = async (slug: string): Promise<BotRecord | null> => {
     const row = await getDb().prepare(`SELECT * FROM bots WHERE slug = ?`).bind(slug).first<Record<string, unknown>>();
     return row ? mapBot(row) : null;
