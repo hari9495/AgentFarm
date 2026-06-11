@@ -43,33 +43,57 @@ function gatewayFetch(path: string, options: RequestInit, portalSessionToken: st
     });
 }
 
-// Map camelCase form values to the snake_case shape the gateway validator expects.
+// Map form configValues to the snake_case credential shape each gateway validator expects.
 function mapToGatewayCredentials(
+    connectorType: string,
     configValues: Record<string, string>,
 ): Record<string, unknown> {
+    // GitHub: { access_token, owner? }
+    if (connectorType === "github") {
+        const creds: Record<string, unknown> = { access_token: configValues["token"] ?? "" };
+        if (configValues["owner"]) creds["owner"] = configValues["owner"];
+        return creds;
+    }
+
+    // Jira: { base_url, email, api_token }
+    if (connectorType === "jira") {
+        return {
+            base_url: configValues["baseUrl"] ?? "",
+            email: configValues["email"] ?? "",
+            api_token: configValues["apiToken"] ?? configValues["token"] ?? "",
+        };
+    }
+
+    // Email: { type: "smtp"|"sendgrid", ... }
+    if (connectorType === "email") {
+        const type = configValues["type"] ?? "smtp";
+        if (type === "sendgrid") return { type, api_key: configValues["apiKey"] ?? configValues["token"] ?? "" };
+        return {
+            type,
+            host: configValues["host"] ?? "",
+            port: Number(configValues["port"] ?? 587),
+            user: configValues["user"] ?? "",
+            pass: configValues["pass"] ?? configValues["password"] ?? "",
+        };
+    }
+
+    // Custom REST API (default): { base_url, auth_type, bearer_token|api_key|basic_user+pass }
     const baseUrl = configValues["baseUrl"] ?? "";
     const rawAuthType = configValues["authType"] ?? "none";
     const authValue = configValues["authValue"] ?? "";
     const authHeader = configValues["authHeader"] ?? "";
-
-    // Website form uses "basic"; gateway expects "basic_auth"
     const authType = rawAuthType === "basic" ? "basic_auth" : rawAuthType;
-
     const creds: Record<string, unknown> = { base_url: baseUrl, auth_type: authType };
-
-    if (authType === "bearer_token" && authValue) {
-        creds["bearer_token"] = authValue;
-    }
+    if (authType === "bearer_token" && authValue) creds["bearer_token"] = authValue;
     if (authType === "api_key" && authValue) {
         creds["api_key"] = authValue;
         if (authHeader) creds["api_key_header"] = authHeader;
     }
     if (authType === "basic_auth" && authValue) {
-        const colonIdx = authValue.indexOf(":");
-        creds["basic_user"] = colonIdx >= 0 ? authValue.slice(0, colonIdx) : authValue;
-        creds["basic_pass"] = colonIdx >= 0 ? authValue.slice(colonIdx + 1) : "";
+        const idx = authValue.indexOf(":");
+        creds["basic_user"] = idx >= 0 ? authValue.slice(0, idx) : authValue;
+        creds["basic_pass"] = idx >= 0 ? authValue.slice(idx + 1) : "";
     }
-
     return creds;
 }
 
@@ -265,7 +289,7 @@ export async function POST(request: Request) {
     // Non-OAuth: build a stable connectorId and PUT credentials.
     // Gateway auto-creates the metadata record if it doesn't exist yet.
     const connectorId = `${connectorType}:${user.tenantId}:${workspaceId}`;
-    const credentials = mapToGatewayCredentials(body.configValues ?? {});
+    const credentials = mapToGatewayCredentials(connectorType, body.configValues ?? {});
 
     try {
         const res = await gatewayFetch(
