@@ -95,7 +95,9 @@ export async function GET(request: Request) {
             : null;
 
         const taskCount = agentStat ? agentStat.taskCount : (usage.totalTasks ?? 0);
-        const successRate = agentStat ? agentStat.successRate : (usage.successRate ?? 100);
+        // successRate from the usage APIs is a 0–1 fraction — convert to percent
+        const successRateFraction = agentStat ? agentStat.successRate : (usage.successRate ?? 1);
+        const successRate = Math.round(successRateFraction * 1000) / 10;
         const costUsd = agentStat ? agentStat.totalCostUsd : (usage.totalCostUsd ?? 0);
         const trend = buildTrend(usage.tasksByDay ?? []);
         const { delta, positive } = deltaLabel(trend);

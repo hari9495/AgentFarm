@@ -155,7 +155,8 @@ export default async function DashboardPage() {
             role: bot.role.split("_").map((w) => w[0]!.toUpperCase() + w.slice(1)).join(" "),
             status: bot.status === "active" ? "Active" : bot.status === "needs_review" ? "Needs review" : bot.status,
             tasks: stats?.taskCount ?? 0,
-            reliability: stats ? Math.round(stats.successRate * 10) / 10 : 0,
+            // successRate is a 0–1 fraction from /portal/data/usage/agents
+            reliability: stats ? Math.round(stats.successRate * 1000) / 10 : 0,
             color: style.color,
             ring: style.ring,
         };
@@ -168,8 +169,8 @@ export default async function DashboardPage() {
     // Timeline from real messages
     const timeline = (messagesData?.messages ?? []).map(messageToTimelineEvent);
 
-    // Health items — mix of real and computed
-    const successRatePct = usage ? Math.round(usage.successRate * 10) / 10 : null;
+    // Health items — mix of real and computed (successRate is a 0–1 fraction)
+    const successRatePct = usage ? Math.round(usage.successRate * 1000) / 10 : null;
     const healthItems = [
         { label: "Task success rate",       value: successRatePct !== null ? `${successRatePct}%` : "—", good: successRatePct === null || successRatePct >= 95 },
         { label: "Active AI teammates",     value: bots.length > 0 ? String(bots.filter(b => b.status === "active").length) : "—", good: true },

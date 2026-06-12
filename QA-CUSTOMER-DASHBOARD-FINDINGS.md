@@ -137,6 +137,16 @@ All findings above were fixed in one pass:
 | — | Governance KPIs 403 | Stopped passing `tenantId` as `workspace_id` (param is optional and session is tenant-scoped) |
 | — | OPA unhealthy | Compose now uses `openpolicyagent/opa:0.68.0-debug` (the `-static` image has no shell for healthchecks) |
 
+Two additional issues were found and fixed during re-verification:
+
+| # | Finding | Fix |
+|---|---------|-----|
+| — | `.env`'s `AGENT_RUNTIME_URL=localhost:4000` (host tooling) leaked into the gateway container via `${VAR:-default}` interpolation | Hardcoded `http://agent-runtime:4000` in the api-gateway compose block (matching worker-runner / trigger-service) |
+| — | Shared runtime recorded `TaskExecutionRecord` under its env-bound tenant (yukthix), so the submitting customer's Task History stayed empty and usage was billed to the wrong tenant | Runtime now attributes executions to the tenant/bot/workspace carried in the task payload, falling back to env config |
+| — | Success rate rendered as "1%" — usage APIs return a 0–1 fraction, UI treated it as a percent | Converted to percent on the overview page and `/api/dashboard/stats` |
+
+**End-to-end re-verification (rebuilt containers, fresh stack):** signup → provisioning job auto-completes (in-process worker) → agent activates → runtime self-bootstraps on restart → task submitted from the Tasks page executes (`success`, ~5s, OpenAI) and appears in the customer's Task History → approval simulation creates a real DB record → appears in the Approvals inbox → Approve persists the decision (latency tracked) and logs an audit event → Audit Log shows platform events → invited team member exists as a portal account and can log in → Billing shows the Starter plan with renewal date → OPA healthy.
+
 Verification: `pnpm --filter @agentfarm/{api-gateway,website,agent-runtime} typecheck` clean; portal-data + portal-auth tests 41/41 pass. (`connector-actions.test.ts` has one pre-existing failure on a clean tree — unrelated.)
 
 ## Notes / smaller items observed
