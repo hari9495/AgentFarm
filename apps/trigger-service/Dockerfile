@@ -53,6 +53,7 @@ COPY --from=builder /app/services ./services
 
 COPY --from=builder /app/apps/trigger-service/dist ./apps/trigger-service/dist
 COPY --from=builder /app/apps/trigger-service/package.json ./apps/trigger-service/
+COPY --from=builder /app/apps/trigger-service/node_modules ./apps/trigger-service/node_modules
 
 EXPOSE 3002
 CMD ["node", "apps/trigger-service/dist/main.js"]
