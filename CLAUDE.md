@@ -82,7 +82,7 @@ scripts/            30+ dev/ops scripts
 | `orchestrator` | 3011 | GOAP multi-agent planner, schedulers, handoffs |
 | `trigger-service` | 3002 | Inbound intake — webhooks, IMAP email, Slack |
 | `dashboard` | 3001 | Operator UI — 51 pages, 159 Next.js proxy routes |
-| `website` | varies | Marketing, signup, onboarding (Azure SWA in prod) |
+| `website` | varies | Marketing, signup, onboarding (Cloudflare in prod) |
 
 **Key services** (imported by api-gateway / agent-runtime):
 `approval-service`, `connector-gateway` (OAuth + mTLS + plugin loader), `identity-service`, `evidence-service` (HNSW vector search), `meeting-agent` (STT/TTS), `memory-service`, `notification-service`, `policy-engine`, `provisioning-service` (Azure VM state machine), `browser-actions` (Playwright), `audit-storage`.
