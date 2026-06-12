@@ -232,8 +232,8 @@ export function CommandPalette({ sections, workspaceId, isUnifiedView }: Command
     const filtered = query.trim()
         ? allItems.filter(
             (item) =>
-                item.label.toLowerCase().includes(query.toLowerCase()) ||
-                item.description.toLowerCase().includes(query.toLowerCase()),
+                (item.label ?? '').toLowerCase().includes(query.toLowerCase()) ||
+                (item.description ?? '').toLowerCase().includes(query.toLowerCase()),
         )
         : staticItems;
 
@@ -262,12 +262,14 @@ export function CommandPalette({ sections, workspaceId, isUnifiedView }: Command
         ]).then(([agents, tasks, playbooks]) => {
             const results: SearchResult[] = [];
 
+            // API objects can lack display fields (e.g. bots without a name) —
+            // fall back to ids so rendering/filtering never hits undefined.
             const agentData = agents.status === 'fulfilled' ? agents.value : { bots: [] };
             for (const bot of (agentData.bots ?? []).slice(0, 4)) {
                 results.push({
                     id: `agent-${bot.id}`,
-                    label: bot.name,
-                    description: `Agent · ${bot.role}`,
+                    label: bot.name || bot.id,
+                    description: `Agent · ${bot.role ?? 'unknown role'}`,
                     href: `/agents/${bot.id}`,
                     group: 'Agents',
                 });
@@ -277,8 +279,8 @@ export function CommandPalette({ sections, workspaceId, isUnifiedView }: Command
             for (const task of (taskData.tasks ?? []).slice(0, 4)) {
                 results.push({
                     id: `task-${task.task_id}`,
-                    label: task.goal,
-                    description: `Task · ${task.status}`,
+                    label: task.goal || task.task_id,
+                    description: `Task · ${task.status ?? 'unknown'}`,
                     href: `/tasks?highlight=${task.task_id}`,
                     group: 'Tasks',
                 });
@@ -288,7 +290,7 @@ export function CommandPalette({ sections, workspaceId, isUnifiedView }: Command
             for (const pb of (playbookData.playbooks ?? []).slice(0, 4)) {
                 results.push({
                     id: `pb-${pb.id}`,
-                    label: pb.name,
+                    label: pb.name || pb.id,
                     description: 'Playbook',
                     href: `/playbooks?highlight=${pb.id}`,
                     group: 'Playbooks',
