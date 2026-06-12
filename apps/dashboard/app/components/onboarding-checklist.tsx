@@ -32,7 +32,7 @@ const STEPS: Step[] = [
         id: 'task',
         label: 'Run your first task',
         description: 'Submit a task and watch your agent handle it end-to-end.',
-        href: '/tasks',
+        href: '/batch-tasks',
         cta: 'Create task',
     },
     {
