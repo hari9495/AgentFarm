@@ -31,7 +31,7 @@ type BotStatus = "active" | "paused" | "error" | "maintenance" | "created";
 
 const statusMeta: Record<string, { label: string; color: string }> = {
     active: { label: "Active", color: "bg-emerald-500" },
-    created: { label: "Active", color: "bg-emerald-500" },
+    created: { label: "Provisioning", color: "bg-sky-500" },
     paused: { label: "Paused", color: "bg-amber-500" },
     error: { label: "Needs review", color: "bg-rose-500" },
     maintenance: { label: "Maintenance", color: "bg-slate-400" },

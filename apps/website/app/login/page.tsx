@@ -164,6 +164,7 @@ function SSOView({ onBack }: { onBack: () => void }) {
 function LoginForm() {
     const searchParams = useSearchParams();
     const linkError = searchParams.get("error");
+    const justVerified = searchParams.get("verified") === "1";
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -353,6 +354,19 @@ function LoginForm() {
                     </button>
 
                     <Divider label="or sign in with password" />
+
+                    {/* Email-verification confirmation */}
+                    {justVerified && (
+                        <div
+                            className="mb-4 rounded-[12px] px-4 py-3 flex items-start gap-2.5"
+                            style={{ background: "rgba(52,199,89,0.08)", border: "1px solid rgba(52,199,89,0.25)" }}
+                        >
+                            <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#34c759" }} />
+                            <p className="text-[13px]" style={{ color: "#1d7a3a" }}>
+                                Email verified! Sign in below to access your workspace.
+                            </p>
+                        </div>
+                    )}
 
                     {/* Tier 3 — Email + Password (portal auth) */}
                     <form onSubmit={onSubmit} noValidate className="space-y-4">

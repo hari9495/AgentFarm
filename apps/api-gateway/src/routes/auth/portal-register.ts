@@ -222,6 +222,10 @@ export const registerPortalRegisterRoute = async (app: FastifyInstance): Promise
             });
         }
 
+        // Never expose the verification link in production responses — that
+        // would let anyone bypass email ownership verification. Dev/demo only.
+        const exposeVerifyUrl = process.env['NODE_ENV'] !== 'production' && verifyUrl;
+
         return reply.code(201).send({
             tenantId,
             accountId,
@@ -231,7 +235,7 @@ export const registerPortalRegisterRoute = async (app: FastifyInstance): Promise
             role: 'owner',
             plan: FREE_PLAN_ID,
             emailVerified: skipVerification,
-            ...(verifyUrl ? { verifyUrl } : {}),
+            ...(exposeVerifyUrl ? { verifyUrl } : {}),
         });
     });
 };

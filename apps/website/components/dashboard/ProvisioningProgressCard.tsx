@@ -52,7 +52,21 @@ type ProvisioningStatusPayload = {
     }>;
 };
 
-const POLL_INTERVAL_MS = 2000;
+// Poll fast while a job is actively provisioning; back way off when there is
+// no job or the job reached a terminal state (completed / failed / cleaned_up).
+const ACTIVE_POLL_INTERVAL_MS = 3000;
+const IDLE_POLL_INTERVAL_MS = 60_000;
+
+const ACTIVE_JOB_STATUSES: ReadonlySet<string> = new Set([
+    "queued",
+    "validating",
+    "creating_resources",
+    "bootstrapping_vm",
+    "starting_container",
+    "registering_runtime",
+    "healthchecking",
+    "cleanup_pending",
+]);
 
 const statusPillClass: Record<ProvisioningStatus, string> = {
     queued: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200",
@@ -218,7 +232,7 @@ export default function ProvisioningProgressCard() {
     const [error, setError] = useState<string | null>(null);
     const [payload, setPayload] = useState<ProvisioningStatusPayload | null>(null);
 
-    const load = useCallback(async () => {
+    const load = useCallback(async (): Promise<ProvisioningStatusPayload | null> => {
         setError(null);
 
         try {
@@ -234,20 +248,34 @@ export default function ProvisioningProgressCard() {
             }
 
             setPayload(body);
+            return body;
         } catch (loadError) {
             setError(loadError instanceof Error ? loadError.message : "Unable to load provisioning progress.");
+            return null;
         } finally {
             setLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        void load();
-        const timer = setInterval(() => {
-            void load();
-        }, POLL_INTERVAL_MS);
+        let cancelled = false;
+        let timer: ReturnType<typeof setTimeout> | null = null;
 
-        return () => clearInterval(timer);
+        const tick = async () => {
+            const body = await load();
+            if (cancelled) return;
+            const jobStatus = body?.provisioningJob?.status;
+            const interval = jobStatus && ACTIVE_JOB_STATUSES.has(jobStatus)
+                ? ACTIVE_POLL_INTERVAL_MS
+                : IDLE_POLL_INTERVAL_MS;
+            timer = setTimeout(() => void tick(), interval);
+        };
+
+        void tick();
+        return () => {
+            cancelled = true;
+            if (timer) clearTimeout(timer);
+        };
     }, [load]);
 
     const stableRefresh = useMemo(() => () => {

@@ -66,9 +66,10 @@ export async function PATCH(
             }),
         });
 
+        const data = (await res.json().catch(() => null)) as { approval?: unknown; error?: string } | null;
+
         if (res.ok) {
-            const data = (await res.json()) as { approval?: unknown };
-            return NextResponse.json({ status: "ok", approval: data.approval });
+            return NextResponse.json({ status: "ok", approval: data?.approval });
         }
 
         if (res.status === 404) {
@@ -81,18 +82,12 @@ export async function PATCH(
         if (res.status === 409) {
             return NextResponse.json({ error: "Approval already decided." }, { status: 409 });
         }
+
+        return NextResponse.json(
+            { error: data?.error ?? "Unable to record the decision." },
+            { status: res.status },
+        );
     } catch {
-        // Gateway unreachable — fall through to stub response
+        return NextResponse.json({ error: "Approval service unreachable." }, { status: 502 });
     }
-
-    // Stub: return a synthetic approved/rejected approval so the UI updates correctly
-    const stubApproval = {
-        id,
-        status: action === "approve" ? "approved" : "rejected",
-        decidedBy: session.email,
-        decidedAt: Date.now(),
-        reason: reason ?? null,
-    };
-
-    return NextResponse.json({ status: "ok", approval: stubApproval });
 }

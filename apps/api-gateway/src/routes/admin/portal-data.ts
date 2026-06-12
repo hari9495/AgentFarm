@@ -690,4 +690,542 @@ export const registerPortalDataRoutes = async (
             });
         },
     );
+
+    // ── Portal team management ────────────────────────────────────────────────
+    // Tenant roster backed by TenantPortalAccount — the same store portal login
+    // authenticates against, so invited members can actually sign in.
+
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const canManageTeam = (role: string): boolean =>
+        role === 'owner' || role === 'admin' || role === 'superadmin';
+
+    const toMemberView = (a: { id: string; email: string; displayName: string | null; role: string; createdAt: Date }) => ({
+        id: a.id,
+        email: a.email,
+        name: a.displayName?.trim() || a.email.split('@')[0] || 'Account',
+        role: a.role,
+        createdAt: a.createdAt.getTime(),
+    });
+
+    // ── GET /portal/data/team/members ─────────────────────────────────────────
+    app.get('/portal/data/team/members', async (request, reply) => {
+        const session = await checkSession(request, reply);
+        if (!session) return;
+
+        const prisma = await resolvePrisma();
+        const accounts = await prisma.tenantPortalAccount.findMany({
+            where: { tenantId: session.tenantId, isActive: true },
+            select: { id: true, email: true, displayName: true, role: true, createdAt: true },
+            orderBy: { createdAt: 'asc' },
+        });
+        return reply.send({ members: accounts.map(toMemberView) });
+    });
+
+    // ── POST /portal/data/team/members ────────────────────────────────────────
+    // Owner/admin invites a teammate with a temporary password. The account is
+    // created pre-verified so the temporary password works immediately.
+    app.post<{
+        Body: { name?: string; email?: string; password?: string; role?: string };
+    }>('/portal/data/team/members', async (request, reply) => {
+        const session = await checkSession(request, reply);
+        if (!session) return;
+        if (!canManageTeam(session.role)) {
+            return reply.code(403).send({ error: 'Only org admins can add team members.' });
+        }
+
+        const body = request.body ?? {};
+        const name = body.name?.trim() ?? '';
+        const email = body.email?.trim().toLowerCase() ?? '';
+        const password = body.password ?? '';
+        const role = body.role === 'admin' ? 'admin' : 'member';
+
+        if (!name) return reply.code(400).send({ error: 'Name is required.' });
+        if (!EMAIL_REGEX.test(email)) return reply.code(400).send({ error: 'Valid email is required.' });
+        if (password.length < 8) return reply.code(400).send({ error: 'Password must be at least 8 characters.' });
+
+        const prisma = await resolvePrisma();
+        const existing = await prisma.tenantPortalAccount.findFirst({
+            where: { tenantId: session.tenantId, email },
+            select: { id: true },
+        });
+        if (existing) {
+            return reply.code(409).send({ error: 'This email is already on your team.' });
+        }
+
+        const { hashPassword } = await import('../../lib/password.js');
+        const account = await prisma.tenantPortalAccount.create({
+            data: {
+                tenantId: session.tenantId,
+                email,
+                passwordHash: await hashPassword(password),
+                displayName: name,
+                role,
+                isActive: true,
+                isEmailVerified: true,
+                emailVerifiedAt: new Date(),
+            },
+            select: { id: true, email: true, displayName: true, role: true, createdAt: true },
+        });
+
+        return reply.code(201).send({ ok: true, member: toMemberView(account) });
+    });
+
+    // ── PATCH /portal/data/team/members/:id ───────────────────────────────────
+    // Promote / demote between member and admin. Owner accounts are protected
+    // and you cannot change your own role.
+    app.patch<{
+        Params: { id: string };
+        Body: { role?: string };
+    }>('/portal/data/team/members/:id', async (request, reply) => {
+        const session = await checkSession(request, reply);
+        if (!session) return;
+        if (!canManageTeam(session.role)) {
+            return reply.code(403).send({ error: 'Only org admins can change roles.' });
+        }
+
+        const newRole = request.body?.role;
+        if (newRole !== 'admin' && newRole !== 'member') {
+            return reply.code(400).send({ error: "role must be 'admin' or 'member'." });
+        }
+        if (request.params.id === session.accountId) {
+            return reply.code(400).send({ error: 'You cannot change your own role.' });
+        }
+
+        const prisma = await resolvePrisma();
+        const target = await prisma.tenantPortalAccount.findFirst({
+            where: { id: request.params.id, tenantId: session.tenantId },
+            select: { id: true, role: true },
+        });
+        if (!target) return reply.code(404).send({ error: 'Member not found.' });
+        if (target.role === 'owner' || target.role === 'superadmin') {
+            return reply.code(403).send({ error: 'Owner accounts are protected.' });
+        }
+
+        const updated = await prisma.tenantPortalAccount.update({
+            where: { id: target.id },
+            data: { role: newRole },
+            select: { id: true, email: true, displayName: true, role: true, createdAt: true },
+        });
+        return reply.send({ ok: true, member: toMemberView(updated) });
+    });
+
+    // ── GET /portal/data/audit/events ─────────────────────────────────────────
+    // Tenant-scoped view over the platform's append-only AuditEvent log
+    // (approval decisions, provisioning, connector requests, agent actions).
+    app.get<{ Querystring: { limit?: string } }>('/portal/data/audit/events', async (request, reply) => {
+        const session = await checkSession(request, reply);
+        if (!session) return;
+
+        const rawLimit = parseInt(request.query.limit ?? '200', 10);
+        const limit = Math.min(Number.isNaN(rawLimit) ? 200 : rawLimit, 500);
+
+        const prisma = await resolvePrisma();
+        const events = await prisma.auditEvent.findMany({
+            where: { tenantId: session.tenantId },
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+            select: {
+                id: true,
+                botId: true,
+                eventType: true,
+                severity: true,
+                summary: true,
+                sourceSystem: true,
+                createdAt: true,
+            },
+        });
+
+        return reply.send({
+            events: events.map((e) => ({
+                id: e.id,
+                actorId: e.sourceSystem,
+                actorEmail: e.sourceSystem,
+                action: String(e.eventType),
+                targetType: 'agent',
+                targetId: e.botId,
+                tenantId: session.tenantId,
+                beforeState: '',
+                afterState: '',
+                reason: e.summary,
+                severity: String(e.severity),
+                createdAt: e.createdAt.getTime(),
+            })),
+        });
+    });
+
+    // ── GET /portal/data/provisioning/status ─────────────────────────────────
+    // Live provisioning state for the tenant: latest job + entity statuses.
+    app.get('/portal/data/provisioning/status', async (request, reply) => {
+        const session = await checkSession(request, reply);
+        if (!session) return;
+
+        const prisma = await resolvePrisma();
+        const tenant = await prisma.tenant.findUnique({
+            where: { id: session.tenantId },
+            select: { id: true, status: true },
+        });
+
+        const job = await prisma.provisioningJob.findFirst({
+            where: { tenantId: session.tenantId },
+            orderBy: { createdAt: 'desc' },
+        });
+
+        let workspace: { id: string; status: string } | null = null;
+        let bot: { id: string; status: string } | null = null;
+        if (job) {
+            workspace = await prisma.workspace.findUnique({
+                where: { id: job.workspaceId },
+                select: { id: true, status: true },
+            });
+            bot = (await prisma.bot.findUnique({
+                where: { id: job.botId },
+                select: { id: true, status: true },
+            })) as { id: string; status: string } | null;
+        }
+
+        const TARGET_SECONDS = 600;
+        const TIMEOUT_SECONDS = 1800;
+        const ACTIVE_STATUSES = new Set([
+            'queued', 'validating', 'creating_resources', 'bootstrapping_vm',
+            'starting_container', 'registering_runtime', 'healthchecking',
+        ]);
+        const isActive = job ? ACTIVE_STATUSES.has(job.status) : false;
+        const elapsedSeconds = job
+            ? Math.max(0, Math.floor((Date.now() - job.createdAt.getTime()) / 1000))
+            : 0;
+
+        const timeline: Array<{ status: string; at: number; reason: string | null }> = [];
+        if (job) {
+            timeline.push({ status: 'queued', at: job.createdAt.getTime(), reason: null });
+            if (job.startedAt) timeline.push({ status: 'validating', at: job.startedAt.getTime(), reason: null });
+            if (job.failedAt) timeline.push({ status: 'failed', at: job.failedAt.getTime(), reason: job.failureReason ?? null });
+            if (job.completedAt) timeline.push({ status: 'completed', at: job.completedAt.getTime(), reason: null });
+        }
+
+        return reply.send({
+            status: 'ok',
+            tenant: tenant ? { id: tenant.id, tenantStatus: tenant.status } : null,
+            workspace: workspace ? { id: workspace.id, workspaceStatus: workspace.status } : null,
+            bot: bot ? { id: bot.id, botStatus: bot.status } : null,
+            provisioningJob: job
+                ? {
+                    id: job.id,
+                    status: job.status,
+                    failureReason: job.failureReason,
+                    remediationHint: job.remediationHint,
+                    updatedAt: job.updatedAt.getTime(),
+                }
+                : null,
+            provisioningTimeline: timeline,
+            estimatedSecondsRemaining: isActive ? Math.max(0, TARGET_SECONDS - elapsedSeconds) : null,
+            slaMetrics: job && isActive
+                ? {
+                    elapsedSeconds,
+                    targetSeconds: TARGET_SECONDS,
+                    timeoutSeconds: TIMEOUT_SECONDS,
+                    stuckThresholdSeconds: TARGET_SECONDS,
+                    withinTarget: elapsedSeconds <= TARGET_SECONDS,
+                    breachedTarget: elapsedSeconds > TARGET_SECONDS,
+                    isStuck: elapsedSeconds > TARGET_SECONDS,
+                    isTimedOut: elapsedSeconds > TIMEOUT_SECONDS,
+                }
+                : null,
+            provisioningAlerts: job && isActive && elapsedSeconds > TARGET_SECONDS
+                ? [{
+                    level: elapsedSeconds > TIMEOUT_SECONDS ? 'critical' : 'warning',
+                    code: 'provisioning_slow',
+                    message: `Provisioning has been running for ${Math.floor(elapsedSeconds / 60)} minutes.`,
+                }]
+                : [],
+            autoProcessed: { processed: 0, completed: 0, failed: 0 },
+        });
+    });
+
+    // ── Portal approvals ──────────────────────────────────────────────────────
+    // Customer-facing view over the same Approval table the runtime intake
+    // writes to. actionSummary uses the approval-packet line convention
+    // ("Change summary: …" / "Risk reason: …" — see lib/approval-packet.ts) so
+    // records render consistently in the operator dashboard and the portal.
+
+    const summaryLine = (summary: string, prefix: string): string | null => {
+        for (const raw of summary.split(/\r?\n/)) {
+            const line = raw.trim();
+            if (line.toLowerCase().startsWith(prefix.toLowerCase())) {
+                const value = line.slice(prefix.length).trim();
+                if (value) return value;
+            }
+        }
+        return null;
+    };
+
+    const roleDisplayName = (role: string): string =>
+        role
+            .split(/[_\-\s]+/)
+            .filter(Boolean)
+            .map((w) => w[0]!.toUpperCase() + w.slice(1))
+            .join(' ');
+
+    type PortalApprovalRow = {
+        id: string;
+        botId: string;
+        taskId: string;
+        riskLevel: string;
+        actionSummary: string;
+        requestedBy: string;
+        decision: string;
+        decisionReason: string | null;
+        decisionLatencySeconds: number | null;
+        escalationTimeoutSeconds: number;
+        escalatedAt: Date | null;
+        createdAt: Date;
+        decidedAt: Date | null;
+    };
+
+    const mapApprovalForPortal = (a: PortalApprovalRow, roleByBotId: Map<string, string>) => {
+        const role = roleByBotId.get(a.botId) ?? 'agent';
+        return {
+            id: a.id,
+            title: summaryLine(a.actionSummary, 'Change summary:') ?? a.actionSummary,
+            agentSlug: a.botId,
+            agent: roleDisplayName(role),
+            requestedBy: a.requestedBy,
+            channel: summaryLine(a.actionSummary, 'Channel:') ?? 'Agent Runtime',
+            reason: summaryLine(a.actionSummary, 'Risk reason:') ?? '',
+            risk: a.riskLevel,
+            status: a.decision === 'timeout_rejected' ? 'rejected' : a.decision,
+            createdAt: a.createdAt.getTime(),
+            decidedAt: a.decidedAt?.getTime() ?? null,
+            decisionReason: a.decisionReason,
+            decisionLatencySeconds: a.decisionLatencySeconds,
+            escalationTimeoutSeconds: a.escalationTimeoutSeconds,
+            escalatedAt: a.escalatedAt?.getTime() ?? null,
+        };
+    };
+
+    const tenantBotRoles = async (tenantId: string): Promise<Map<string, string>> => {
+        const prisma = await resolvePrisma();
+        const bots = await prisma.bot.findMany({
+            where: { workspace: { tenantId } },
+            select: { id: true, role: true },
+        });
+        return new Map(bots.map((b) => [b.id, b.role]));
+    };
+
+    // ── GET /portal/data/approvals ────────────────────────────────────────────
+    app.get<{ Querystring: { status?: string; limit?: string; agentSlug?: string } }>(
+        '/portal/data/approvals',
+        async (request, reply) => {
+            const session = await checkSession(request, reply);
+            if (!session) return;
+
+            const status = request.query.status ?? 'pending';
+            const rawLimit = parseInt(request.query.limit ?? '100', 10);
+            const limit = Math.min(Number.isNaN(rawLimit) ? 100 : rawLimit, 200);
+            const agentSlug = request.query.agentSlug?.trim();
+
+            const decisionFilter =
+                status === 'pending' ? { decision: 'pending' as const }
+                : status === 'approved' ? { decision: 'approved' as const }
+                : status === 'rejected' ? { decision: { in: ['rejected' as const, 'timeout_rejected' as const] } }
+                : {};
+
+            const prisma = await resolvePrisma();
+            const roleByBotId = await tenantBotRoles(session.tenantId);
+
+            // agentSlug is the bot id (agent detail pages link by bot.id) but
+            // accept a role key too so both filter styles work.
+            let botFilter: { botId?: string | { in: string[] } } = {};
+            if (agentSlug) {
+                if (roleByBotId.has(agentSlug)) {
+                    botFilter = { botId: agentSlug };
+                } else {
+                    const ids = [...roleByBotId.entries()].filter(([, role]) => role === agentSlug).map(([id]) => id);
+                    botFilter = { botId: { in: ids } };
+                }
+            }
+
+            const rows = await prisma.approval.findMany({
+                where: { tenantId: session.tenantId, ...decisionFilter, ...botFilter },
+                orderBy: { createdAt: 'desc' },
+                take: limit,
+            }) as unknown as PortalApprovalRow[];
+
+            return reply.send({ approvals: rows.map((a) => mapApprovalForPortal(a, roleByBotId)) });
+        },
+    );
+
+    // ── POST /portal/data/approvals ───────────────────────────────────────────
+    // Manual / simulated approval request raised from the portal UI.
+    app.post<{
+        Body: {
+            title?: string;
+            agentSlug?: string;
+            agent?: string;
+            requestedBy?: string;
+            channel?: string;
+            reason?: string;
+            risk?: string;
+            escalationTimeoutSeconds?: number;
+        };
+    }>('/portal/data/approvals', async (request, reply) => {
+        const session = await checkSession(request, reply);
+        if (!session) return;
+
+        const body = request.body ?? {};
+        const title = body.title?.trim() ?? '';
+        const agentSlug = body.agentSlug?.trim() ?? '';
+        const reason = body.reason?.trim() ?? '';
+        const risk = body.risk;
+
+        if (title.length < 6 || title.length > 100) {
+            return reply.code(400).send({ error: 'Title must be 6–100 characters.' });
+        }
+        if (reason.length < 8) {
+            return reply.code(400).send({ error: 'Reason must be at least 8 characters.' });
+        }
+        if (!risk || !['low', 'medium', 'high'].includes(risk)) {
+            return reply.code(400).send({ error: 'Risk must be low, medium, or high.' });
+        }
+
+        const prisma = await resolvePrisma();
+        const bot =
+            (agentSlug
+                ? await prisma.bot.findFirst({
+                    where: { workspace: { tenantId: session.tenantId }, OR: [{ id: agentSlug }, { role: agentSlug }] },
+                    select: { id: true, role: true, workspaceId: true },
+                })
+                : null)
+            ?? await prisma.bot.findFirst({
+                where: { workspace: { tenantId: session.tenantId } },
+                select: { id: true, role: true, workspaceId: true },
+            });
+        if (!bot) {
+            return reply.code(404).send({ error: 'No agent found for this workspace.' });
+        }
+
+        const channel = body.channel?.trim() || 'Dashboard';
+        const requestedBy = body.requestedBy?.trim() || session.email;
+        const escalationTimeoutSeconds = Number.isFinite(body.escalationTimeoutSeconds)
+            ? Math.max(60, Math.floor(body.escalationTimeoutSeconds!))
+            : 3600;
+
+        const marker = `portal-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+        const created = await prisma.approval.create({
+            data: {
+                tenantId: session.tenantId,
+                workspaceId: bot.workspaceId,
+                botId: bot.id,
+                taskId: marker,
+                actionId: marker,
+                riskLevel: risk as never,
+                actionSummary: `Change summary: ${title}\nRisk reason: ${reason}\nChannel: ${channel}`,
+                requestedBy,
+                policyPackVersion: 'portal',
+                escalationTimeoutSeconds,
+            },
+        }) as unknown as PortalApprovalRow;
+
+        const roleByBotId = new Map([[bot.id, bot.role]]);
+        return reply.code(201).send({ approval: mapApprovalForPortal(created, roleByBotId) });
+    });
+
+    // ── POST /portal/data/approvals/:id/decide ────────────────────────────────
+    app.post<{
+        Params: { id: string };
+        Body: { decision?: string; decidedBy?: string; reason?: string };
+    }>('/portal/data/approvals/:id/decide', async (request, reply) => {
+        const session = await checkSession(request, reply);
+        if (!session) return;
+
+        const decision = request.body?.decision;
+        if (decision !== 'approved' && decision !== 'rejected') {
+            return reply.code(400).send({ error: "decision must be 'approved' or 'rejected'." });
+        }
+        const reason = request.body?.reason?.trim() || null;
+        if (decision === 'rejected' && (!reason || reason.length < 8)) {
+            return reply.code(400).send({ error: 'Rejection reason must be at least 8 characters.' });
+        }
+
+        const prisma = await resolvePrisma();
+        const approval = await prisma.approval.findFirst({
+            where: { id: request.params.id, tenantId: session.tenantId },
+        }) as unknown as (PortalApprovalRow & { workspaceId: string }) | null;
+        if (!approval) {
+            return reply.code(404).send({ error: 'approval_not_found' });
+        }
+        if (approval.decision !== 'pending') {
+            return reply.code(409).send({ error: 'approval_already_decided', decision: approval.decision });
+        }
+
+        const decidedAt = new Date();
+        const decisionLatencySeconds = Math.max(
+            0,
+            Math.floor((decidedAt.getTime() - approval.createdAt.getTime()) / 1000),
+        );
+        const decidedBy = request.body?.decidedBy?.trim() || session.email;
+
+        const updated = await prisma.approval.update({
+            where: { id: approval.id },
+            data: {
+                decision: decision as never,
+                decisionReason: reason,
+                approverId: decidedBy,
+                decidedAt,
+                decisionLatencySeconds,
+            },
+        }) as unknown as PortalApprovalRow;
+
+        await prisma.auditEvent.create({
+            data: {
+                tenantId: session.tenantId,
+                workspaceId: approval.workspaceId,
+                botId: approval.botId,
+                eventType: 'approval_event',
+                severity: decision === 'approved' ? 'info' : 'warn',
+                summary: `Approval ${approval.id} decided as ${decision} by ${decidedBy} (portal).`,
+                sourceSystem: 'portal-approvals',
+                correlationId: `portal_approval_decision_${approval.id}_${Date.now()}`,
+            },
+        });
+
+        // Notify the agent runtime so a task paused on this approval resumes.
+        // Best-effort: portal-raised simulations have no waiting task.
+        const runtime = await prisma.runtimeInstance.findFirst({
+            where: {
+                tenantId: session.tenantId,
+                workspaceId: approval.workspaceId,
+                botId: approval.botId,
+                endpoint: { not: null },
+            },
+            orderBy: { updatedAt: 'desc' },
+            select: { endpoint: true },
+        });
+        if (runtime?.endpoint) {
+            const runtimeToken =
+                process.env['AGENTFARM_RUNTIME_DECISION_SHARED_TOKEN']
+                ?? process.env['RUNTIME_DECISION_SHARED_TOKEN']
+                ?? null;
+            try {
+                await fetch(new URL('/decision', runtime.endpoint).toString(), {
+                    method: 'POST',
+                    headers: {
+                        'content-type': 'application/json',
+                        ...(runtimeToken ? { 'x-runtime-decision-token': runtimeToken } : {}),
+                    },
+                    body: JSON.stringify({
+                        task_id: approval.taskId,
+                        decision,
+                        reason,
+                        actor: decidedBy,
+                    }),
+                    signal: AbortSignal.timeout(4_000),
+                });
+            } catch {
+                // best-effort — decision is already persisted
+            }
+        }
+
+        const roleByBotId = await tenantBotRoles(session.tenantId);
+        return reply.send({ approval: mapApprovalForPortal(updated, roleByBotId) });
+    });
 };

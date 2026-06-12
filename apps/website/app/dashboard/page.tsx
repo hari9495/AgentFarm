@@ -217,7 +217,7 @@ export default async function DashboardPage() {
                                 <Zap className="w-3.5 h-3.5" />
                                 Add AI Teammate
                             </ButtonLink>
-                            <ButtonLink href="/checkout" size="sm" variant="outline" className="!bg-white/10 !text-white !border-white/20 hover:!bg-white/20 hover:!border-white/30">
+                            <ButtonLink href="/dashboard/billing" size="sm" variant="outline" className="!bg-white/10 !text-white !border-white/20 hover:!bg-white/20 hover:!border-white/30">
                                 Manage Plan
                             </ButtonLink>
                         </div>

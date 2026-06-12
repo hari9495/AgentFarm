@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import ButtonLink from "@/components/shared/ButtonLink";
 import PremiumIcon from "@/components/shared/PremiumIcon";
+import { portalFetch } from "@/lib/portal-server";
 import ShiftScheduleTable from "@/components/dashboard/ShiftScheduleTable";
 import ApplyPolicyPresetButton from "@/components/dashboard/ApplyPolicyPresetButton";
 import NotificationPreferencesPanel from "@/components/dashboard/NotificationPreferencesPanel";
@@ -34,11 +35,25 @@ const policyBadge: Record<ApprovalPolicy, { label: string; className: string }> 
 };
 
 export default async function SettingsPage() {
-    // Shift agents populate when agents are deployed.
-    const shiftAgents: import("@/components/dashboard/ShiftScheduleTable").ShiftScheduleAgent[] = [];
+    // Load the tenant's agents so shift schedule and policy reflect reality.
+    type PortalAgent = { id: string; role: string; status: string };
+    const agentsData = await portalFetch<{ agents: PortalAgent[] }>("/portal/data/agents?limit=100");
+    const agents = agentsData?.agents ?? [];
 
-    // No agents deployed yet — all policy counts are zero.
-    const policyRows: Array<{ policy: ApprovalPolicy; count: number }> = [];
+    const tones = ["sky", "violet", "amber", "rose"];
+    const shiftAgents: import("@/components/dashboard/ShiftScheduleTable").ShiftScheduleAgent[] =
+        agents.map((agent, index) => ({
+            slug: agent.id,
+            name: agent.role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+            tone: tones[index % tones.length]!,
+            start: "09:00",
+            end: "18:00",
+            days: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+        }));
+
+    // Agents start on the default "high-only" preset until a custom policy is applied.
+    const policyRows: Array<{ policy: ApprovalPolicy; count: number }> =
+        agents.length > 0 ? [{ policy: "high-only", count: agents.length }] : [];
 
     // Default notification preferences.
     const defaultPrefs: Record<NotificationPrefKey, boolean> = {

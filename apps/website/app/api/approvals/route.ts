@@ -55,14 +55,17 @@ export async function GET(request: Request) {
         });
 
         if (!res.ok) {
-            // Gateway approval endpoint may not exist yet — return empty list gracefully
-            return NextResponse.json({ status: "ok", approvals: [] });
+            const body = (await res.json().catch(() => null)) as { error?: string } | null;
+            return NextResponse.json(
+                { error: body?.error ?? "Unable to load approvals." },
+                { status: res.status },
+            );
         }
 
         const data = (await res.json()) as { approvals?: unknown[] };
         return NextResponse.json({ status: "ok", approvals: data.approvals ?? [] });
     } catch {
-        return NextResponse.json({ status: "ok", approvals: [] });
+        return NextResponse.json({ error: "Approval service unreachable." }, { status: 502 });
     }
 }
 
@@ -93,7 +96,7 @@ export async function POST(request: Request) {
     if (reason.length < 8) return NextResponse.json({ error: "Reason must be at least 8 characters." }, { status: 400 });
     if (!risk || !["low", "medium", "high"].includes(risk)) return NextResponse.json({ error: "Risk must be low, medium, or high." }, { status: 400 });
 
-    // Proxy to the gateway runtime approvals intake endpoint
+    // Proxy to the gateway portal approvals endpoint
     try {
         const token = extractPortalToken(request.headers.get("cookie"));
         const res = await fetch(`${GATEWAY_URL}/portal/data/approvals`, {
@@ -105,33 +108,17 @@ export async function POST(request: Request) {
             body: JSON.stringify({ title, agentSlug, agent, requestedBy, channel, reason, risk, escalationTimeoutSeconds: payload.escalationTimeoutSeconds }),
         });
 
+        const data = (await res.json().catch(() => null)) as { approval?: unknown; error?: string } | null;
         if (res.ok) {
-            const data = (await res.json()) as { approval?: unknown };
-            return NextResponse.json({ status: "ok", approval: data.approval }, { status: 201 });
+            return NextResponse.json({ status: "ok", approval: data?.approval }, { status: 201 });
         }
+        return NextResponse.json(
+            { error: data?.error ?? "Unable to create approval request." },
+            { status: res.status },
+        );
     } catch {
-        // fall through to stub
+        return NextResponse.json({ error: "Approval service unreachable." }, { status: 502 });
     }
-
-    // Stub approval for UI feedback when gateway endpoint isn't available
-    const stubApproval = {
-        id: `approval-${Date.now()}`,
-        title,
-        agentSlug,
-        agent,
-        requestedBy,
-        channel,
-        reason,
-        risk,
-        status: "pending",
-        createdAt: Date.now(),
-        decidedAt: null,
-        decisionReason: null,
-        decisionLatencySeconds: null,
-        escalationTimeoutSeconds: payload.escalationTimeoutSeconds ?? 3600,
-        escalatedAt: null,
-    };
-    return NextResponse.json({ status: "ok", approval: stubApproval }, { status: 201 });
 }
 
 export async function PATCH(request: Request) {

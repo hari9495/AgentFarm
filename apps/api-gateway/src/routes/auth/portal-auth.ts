@@ -296,14 +296,16 @@ export const registerPortalAuthRoutes = async (
 
         // Issue a verification token and send email — fire-and-forget
         const verificationToken = randomUUID();
+        // 3002 is the website's port (apps/website/package.json) — keep in sync
+        // with portal-register.ts so verify links land on the customer app.
+        const appBaseUrl = process.env['PORTAL_APP_BASE_URL'] ?? 'http://localhost:3002';
         void repo.setVerificationToken(account.id, verificationToken).then(async () => {
-            const appBaseUrl = process.env['PORTAL_APP_BASE_URL'] ?? 'http://localhost:3001';
             const verifyUrl = `${appBaseUrl}/portal/verify-email?token=${encodeURIComponent(verificationToken)}`;
             void sendVerificationEmail({ to: normalizedEmail, tenantId, verifyUrl }).catch(() => {/* best-effort */});
         }).catch(() => {/* best-effort */});
 
         const extra = process.env['NODE_ENV'] !== 'production' ? {
-            verifyUrl: `${process.env['PORTAL_APP_BASE_URL'] ?? 'http://localhost:3001'}/portal/verify-email?token=${encodeURIComponent(verificationToken)}`,
+            verifyUrl: `${appBaseUrl}/portal/verify-email?token=${encodeURIComponent(verificationToken)}`,
         } : {};
 
         return reply.code(201).send({

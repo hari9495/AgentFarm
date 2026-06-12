@@ -57,7 +57,7 @@ export default function TeamRosterClient({
     const changeRole = async (userId: string, newRole: "admin" | "member") => {
         setUpdating(userId);
         try {
-            const res = await fetch(`/api/admin/users/${userId}`, {
+            const res = await fetch(`/api/team/members/${userId}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ role: newRole }),

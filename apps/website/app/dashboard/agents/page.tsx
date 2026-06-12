@@ -19,7 +19,7 @@ const statusLabel: Record<string, string> = {
     active: "Active",
     paused: "Paused",
     error: "Needs review",
-    created: "Active",       // freshly provisioned bots start as "created"
+    created: "Provisioning", // bot exists but its runtime hasn't activated yet
     maintenance: "Maintenance",
 };
 
@@ -192,6 +192,7 @@ const toneDot: Record<string, string> = {
 
 const statusConfig: Record<string, { dot: string; text: string; pulse: boolean }> = {
     "Active":       { dot: "bg-emerald-400", text: "text-emerald-600 dark:text-emerald-400", pulse: true  },
+    "Provisioning": { dot: "bg-sky-400",     text: "text-sky-600 dark:text-sky-400",         pulse: true  },
     "Needs review": { dot: "bg-rose-400",    text: "text-rose-600 dark:text-rose-400",       pulse: false },
     "Paused":       { dot: "bg-amber-400",   text: "text-amber-600 dark:text-amber-400",     pulse: false },
     "Maintenance":  { dot: "bg-slate-400",   text: "text-slate-500 dark:text-slate-400",     pulse: false },
@@ -215,8 +216,8 @@ export default async function AgentsIndexPage({
         name: bot.role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
         role: bot.role,
         status: statusLabel[bot.status] ?? "Active",
-        tasks: 0,          // real task counts come from usage API — shown as 0 for new tenants
-        reliability: 100,  // defaults to 100% until the agent has run tasks
+        tasks: 0,                          // real task counts come from usage API — shown as 0 for new tenants
+        reliability: null as number | null, // unknown until the agent has run tasks
         tone: tones[index % tones.length]!,
         heatSeed: seedFromSlug(bot.id),
     }));
@@ -240,8 +241,9 @@ export default async function AgentsIndexPage({
     // Summary stats
     const activeCount    = agents.filter((a) => a.status === "Active").length;
     const totalTasks     = agents.reduce((sum, a) => sum + a.tasks, 0);
-    const avgReliability = agents.length > 0
-        ? (agents.reduce((sum, a) => sum + a.reliability, 0) / agents.length).toFixed(1)
+    const knownReliability = agents.map((a) => a.reliability).filter((r): r is number => r !== null);
+    const avgReliability = knownReliability.length > 0
+        ? (knownReliability.reduce((sum, r) => sum + r, 0) / knownReliability.length).toFixed(1)
         : "—";
 
     // Range label
@@ -294,7 +296,7 @@ export default async function AgentsIndexPage({
                             </div>
                             <div className="w-px h-8 bg-slate-700 self-center" />
                             <div className="text-center">
-                                <p className="text-xl font-bold text-white leading-none">{avgReliability}%</p>
+                                <p className="text-xl font-bold text-white leading-none">{avgReliability === "—" ? "—" : `${avgReliability}%`}</p>
                                 <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wide">Avg Reliability</p>
                             </div>
                         </div>
@@ -473,7 +475,7 @@ export default async function AgentsIndexPage({
                                             <Shield className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">{agent.reliability}%</p>
+                                            <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">{agent.reliability !== null ? `${agent.reliability}%` : "—"}</p>
                                             <p className="text-[10px] text-slate-400 mt-0.5">reliability</p>
                                         </div>
                                     </div>

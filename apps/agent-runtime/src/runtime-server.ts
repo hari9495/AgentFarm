@@ -7721,6 +7721,37 @@ export async function startRuntimeServer(options: RuntimeServerOptions = {}): Pr
     await app.listen({ host: '0.0.0.0', port });
     app.log.info({ port }, 'agent-runtime listening');
 
+    // AF_RUNTIME_AUTOSTART: run the /startup bootstrap automatically so a
+    // container restart doesn't leave the runtime stuck in state=created until
+    // an external dispatcher posts /startup. Retries cover the window where the
+    // api-gateway (approval/evidence dependency) is still coming up.
+    const autostart = String(env['AF_RUNTIME_AUTOSTART'] ?? '').trim();
+    if (autostart === '1' || autostart.toLowerCase() === 'true') {
+        const AUTOSTART_RETRY_MS = 10_000;
+        const AUTOSTART_MAX_ATTEMPTS = 30;
+        let attempts = 0;
+        const tryStartup = async (): Promise<void> => {
+            attempts += 1;
+            try {
+                const res = await app.inject({ method: 'POST', url: '/startup' });
+                const body = JSON.parse(res.body) as { state?: string };
+                if (res.statusCode < 400 && (body.state === 'active' || body.state === 'ready')) {
+                    app.log.info({ attempts, state: body.state }, 'runtime autostart completed');
+                    return;
+                }
+                app.log.warn({ attempts, status: res.statusCode, state: body.state }, 'runtime autostart attempt did not activate');
+            } catch (err) {
+                app.log.warn({ attempts, err }, 'runtime autostart attempt failed');
+            }
+            if (attempts < AUTOSTART_MAX_ATTEMPTS) {
+                setTimeout(() => void tryStartup(), AUTOSTART_RETRY_MS).unref();
+            } else {
+                app.log.error({ attempts }, 'runtime autostart gave up — POST /startup manually');
+            }
+        };
+        void tryStartup();
+    }
+
     // ---- Gap 6: Desktop agent watchdog — auto-detect when the VM display goes down ----
     const desktopAgentUrl = env['DESKTOP_AGENT_URL'] as string | undefined;
     if (desktopAgentUrl) {

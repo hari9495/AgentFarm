@@ -6,8 +6,7 @@ import {
 } from "lucide-react";
 import PremiumIcon from "@/components/shared/PremiumIcon";
 import ButtonLink from "@/components/shared/ButtonLink";
-import { getPortalUser } from "@/lib/portal-server";
-import { listTeamMembers } from "@/lib/auth-store";
+import { getPortalUser, portalFetch } from "@/lib/portal-server";
 import TeamRosterClient from "./TeamRosterClient";
 
 export const metadata: Metadata = {
@@ -36,17 +35,23 @@ export default async function TeamPage() {
     const rosterRole = toRosterRole(portalUser?.role);
     const canManageMembers = rosterRole === "admin" || rosterRole === "superadmin";
 
-    // Load all team members from the local DB when we have a tenantId.
+    // Load the roster from the gateway's portal accounts — the store portal
+    // login authenticates against, so every listed member can actually sign in.
+    type PortalMember = { id: string; email: string; name: string; role: string; createdAt: number };
     let members: UserPublic[] = [];
     if (portalUser?.tenantId) {
-        const dbMembers = await listTeamMembers(portalUser.tenantId);
-        members = dbMembers.map((m) => ({
-            ...m,
+        const data = await portalFetch<{ members: PortalMember[] }>("/portal/data/team/members");
+        members = (data?.members ?? []).map((m) => ({
+            id: m.id,
+            email: m.email,
+            name: m.name,
+            company: portalUser.tenantId,
             role: toRosterRole(m.role),
+            createdAt: m.createdAt,
         }));
     }
 
-    // Ensure the current user always appears (fallback if not yet in local DB).
+    // Ensure the current user always appears (fallback if the roster is empty).
     if (portalUser && !members.find((m) => m.id === portalUser.accountId)) {
         members = [
             {

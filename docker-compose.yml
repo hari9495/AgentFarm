@@ -35,7 +35,9 @@
       - agentfarm
 
   opa:
-    image: openpolicyagent/opa:0.68.0-static
+    # NOTE: must be the -debug variant — the -static image is distroless (no
+    # /bin/sh, no wget), which makes any CMD-SHELL healthcheck fail forever.
+    image: openpolicyagent/opa:0.68.0-debug
     container_name: agentfarm-opa
     command: [ 'run', '--server', '--addr', '0.0.0.0:8181' ]
     ports:
@@ -106,7 +108,7 @@
       # Option 1 — Resend (https://resend.com, free tier: 3,000 emails/month)
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       PORTAL_EMAIL_FROM: ${PORTAL_EMAIL_FROM:-AgentFarm Support <noreply@agentfarm.io>}
-      PORTAL_APP_BASE_URL: ${PORTAL_APP_BASE_URL:-http://localhost:3001}
+      PORTAL_APP_BASE_URL: ${PORTAL_APP_BASE_URL:-http://localhost:3002}
       # Option 2 — generic webhook fallback (set if not using Resend)
       PORTAL_RESET_WEBHOOK_URL: ${PORTAL_RESET_WEBHOOK_URL:-}
       # Internal dashboard login — allow operators with @agentfarms.in email or owner role
@@ -116,9 +118,15 @@
       AGENTFARM_CONNECTOR_EXEC_SHARED_TOKEN: ${CONNECTOR_EXEC_SHARED_TOKEN}
       # Persist env:// connector secrets across restarts (no Key Vault required in dev)
       CONNECTOR_SECRETS_PATH: /data/connector-secrets.json
-      # Workers run in the dedicated worker-runner service below.
-      # Setting this flag prevents duplicate worker execution in both processes.
-      AF_WORKERS_DISABLED: '1'
+      # Agent runtime — portal task submission proxies to this service.
+      AGENT_RUNTIME_URL: ${AGENT_RUNTIME_URL:-http://agent-runtime:4000}
+      # Workers run in-process by default. Set AF_WORKERS_DISABLED=1 only when
+      # running the standalone worker-runner service (profile: split-workers)
+      # to prevent duplicate worker execution in both processes.
+      AF_WORKERS_DISABLED: ${AF_WORKERS_DISABLED:-}
+      # Single-host deployments have no per-tenant Azure VMs: provisioning jobs
+      # activate the bot directly. Set to 'false' when Azure provisioning is used.
+      AF_SKIP_PROVISIONING: ${AF_SKIP_PROVISIONING:-true}
     volumes:
       - gateway_secrets:/data
     depends_on:
@@ -140,6 +148,9 @@
       context: .
       dockerfile: apps/api-gateway/Dockerfile
     container_name: agentfarm-worker-runner
+    # Opt-in split-worker mode: start with `docker compose --profile split-workers up`
+    # AND set AF_WORKERS_DISABLED=1 on api-gateway to avoid duplicate workers.
+    profiles: [ split-workers ]
     # Same image as api-gateway; different entrypoint runs workers only.
     command: [ 'node', 'apps/api-gateway/dist/worker-main.js' ]
     environment:
@@ -208,6 +219,9 @@
       AF_RUNTIME_CONTRACT_VERSION: ${AF_RUNTIME_CONTRACT_VERSION:-1.0.0}
       AGENTFARM_APPROVAL_INTAKE_SHARED_TOKEN: ${APPROVAL_INTAKE_SHARED_TOKEN:-dev-approval-token}
       AGENTFARM_CONNECTOR_EXEC_SHARED_TOKEN: ${CONNECTOR_EXEC_SHARED_TOKEN}
+      # Self-activate on boot: run the /startup bootstrap automatically so a
+      # container restart doesn't leave the runtime stuck in state=created.
+      AF_RUNTIME_AUTOSTART: ${AF_RUNTIME_AUTOSTART:-1}
       AF_MODEL_PROVIDER: ${AF_MODEL_PROVIDER:-openai}
       AF_OPENAI_API_KEY: ${AF_OPENAI_API_KEY:-}
       AF_OPENAI_BASE_URL: ${AF_OPENAI_BASE_URL:-https://api.openai.com/v1}
@@ -220,11 +234,13 @@
       api-gateway:
         condition: service_healthy
     healthcheck:
-      test: [ 'CMD-SHELL', 'wget -qO- http://127.0.0.1:4000/health || exit 1' ]
+      # /health returns 200 even while the runtime is still in state=created,
+      # so assert the body reports ok:true (startup bootstrap completed).
+      test: [ 'CMD-SHELL', 'wget -qO- http://127.0.0.1:4000/health | grep -q ''"ok":true'' || exit 1' ]
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 20s
+      start_period: 60s
     networks:
       - agentfarm
     restart: unless-stopped

@@ -40,10 +40,12 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Invalid to timestamp." }, { status: 400 });
     }
 
+    const limit = Number.isFinite(limitRaw) ? limitRaw : 100;
+
     // Scope strictly to this tenant. Users not yet attached to a tenant have no
     // shared log to scope to — fall back to their own actions only, never an
     // unscoped query (which would otherwise leak every tenant's audit events).
-    const events = await listAuditEvents(
+    const localEvents = await listAuditEvents(
         user.tenantId
             ? {
                   actorEmail,
@@ -51,16 +53,46 @@ export async function GET(request: Request) {
                   tenantId: user.tenantId,
                   sinceTs: fromDate ? fromDate.getTime() : undefined,
                   untilTs: toDate ? toDate.getTime() : undefined,
-                  limit: Number.isFinite(limitRaw) ? limitRaw : 100,
+                  limit,
               }
             : {
                   actorEmail: actorEmail ?? user.email,
                   action,
                   sinceTs: fromDate ? fromDate.getTime() : undefined,
                   untilTs: toDate ? toDate.getTime() : undefined,
-                  limit: Number.isFinite(limitRaw) ? limitRaw : 100,
+                  limit,
               },
     );
+
+    // Merge in the platform's append-only audit log (approval decisions,
+    // provisioning, agent actions) from the gateway — best-effort.
+    type PlatformEvent = Record<string, unknown> & { createdAt: number };
+    let platformEvents: PlatformEvent[] = [];
+    if (user.tenantId) {
+        try {
+            const gatewayUrl =
+                process.env.API_GATEWAY_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+            const res = await fetch(`${gatewayUrl}/portal/data/audit/events?limit=${limit}`, {
+                headers: { cookie: request.headers.get("cookie") ?? "" },
+                cache: "no-store",
+            });
+            if (res.ok) {
+                const data = (await res.json()) as { events?: PlatformEvent[] };
+                platformEvents = (data.events ?? []).filter((e) => {
+                    if (fromDate && e.createdAt < fromDate.getTime()) return false;
+                    if (toDate && e.createdAt > toDate.getTime()) return false;
+                    if (action && e.action !== action) return false;
+                    return true;
+                });
+            }
+        } catch {
+            // platform log unreachable — still return local events
+        }
+    }
+
+    const events = [...localEvents, ...platformEvents]
+        .sort((a, b) => (b.createdAt as number) - (a.createdAt as number))
+        .slice(0, limit);
 
     return NextResponse.json({
         status: "ok",

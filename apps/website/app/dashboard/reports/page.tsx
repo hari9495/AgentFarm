@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { BarChart3, CheckCircle2, ChevronRight, Clock, ShieldAlert, TrendingUp, Users } from "lucide-react";
 import PremiumIcon from "@/components/shared/PremiumIcon";
+import { portalFetch } from "@/lib/portal-server";
 
 export const metadata: Metadata = {
     title: "Reports & Analytics - AgentFarms Dashboard",
@@ -62,45 +63,88 @@ function SparkBars({ values, labels }: { values: number[]; labels: string[] }) {
     );
 }
 
+type AgentUsage = { botId: string; botRole: string; taskCount: number; successRate: number };
+type PortalApproval = {
+    agentSlug: string;
+    risk: ApprovalRisk;
+    status: string;
+    createdAt: number;
+    decidedAt: number | null;
+    decisionLatencySeconds: number | null;
+};
+
 export default async function DashboardReportsPage() {
-    // Reports populate as agents deploy and take actions.
-    const agentRows: {
-        agent: string;
-        slug: string;
-        initials: string;
-        tasks: number;
-        pending: number;
-        decided7d: number;
-        reliability: number;
-        riskScore: string;
-        tone: (typeof tones)[number];
-    }[] = [];
+    const now = Date.now();
+    const sevenDaysAgo = now - 7 * DAY_MS;
+
+    // Live data: per-agent task usage + approval activity from the portal API.
+    const [agentUsageData, approvalsData] = await Promise.all([
+        portalFetch<{ agents: AgentUsage[] }>("/portal/data/usage/agents"),
+        portalFetch<{ approvals: PortalApproval[] }>("/portal/data/approvals?status=all&limit=200"),
+    ]);
+    const agentUsage = agentUsageData?.agents ?? [];
+    const approvals = approvalsData?.approvals ?? [];
+    const approvals7d = approvals.filter((a) => a.createdAt >= sevenDaysAgo);
+
+    const agentRows = agentUsage.map((agent, index) => {
+        const name = agent.botRole.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+        const agentApprovals = approvals.filter((a) => a.agentSlug === agent.botId);
+        const highRisk = agentApprovals.some((a) => a.risk === "high");
+        const mediumRisk = agentApprovals.some((a) => a.risk === "medium");
+        return {
+            agent: name,
+            slug: agent.botId,
+            initials: name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "AG",
+            tasks: agent.taskCount,
+            pending: agentApprovals.filter((a) => a.status === "pending").length,
+            decided7d: agentApprovals.filter((a) => a.decidedAt !== null && a.decidedAt >= sevenDaysAgo).length,
+            reliability: agent.taskCount > 0 ? Math.round(agent.successRate * 1000) / 10 : 0,
+            riskScore: highRisk ? "High" : mediumRisk ? "Medium" : agentApprovals.length > 0 ? "Low" : "—",
+            tone: tones[index % tones.length]!,
+        };
+    });
+
+    const totalTasks = agentUsage.reduce((sum, a) => sum + a.taskCount, 0);
+    const agentsWithTasks = agentUsage.filter((a) => a.taskCount > 0);
+    const avgReliability = agentsWithTasks.length > 0
+        ? `${(agentsWithTasks.reduce((sum, a) => sum + a.successRate, 0) / agentsWithTasks.length * 100).toFixed(1)}%`
+        : "—";
 
     const summaryCards = [
-        { label: "Total Tasks Completed", value: "0", icon: CheckCircle2, tone: "sky" as const },
-        { label: "Approval Requests (7d)", value: "0", icon: BarChart3, tone: "violet" as const },
-        { label: "Avg Reliability", value: "—", icon: TrendingUp, tone: "emerald" as const },
-        { label: "High-Risk Actions (7d)", value: "0", icon: ShieldAlert, tone: "rose" as const },
+        { label: "Total Tasks Completed", value: String(totalTasks), icon: CheckCircle2, tone: "sky" as const },
+        { label: "Approval Requests (7d)", value: String(approvals7d.length), icon: BarChart3, tone: "violet" as const },
+        { label: "Avg Reliability", value: avgReliability, icon: TrendingUp, tone: "emerald" as const },
+        { label: "High-Risk Actions (7d)", value: String(approvals7d.filter((a) => a.risk === "high").length), icon: ShieldAlert, tone: "rose" as const },
     ];
 
     const riskCounts: Record<ApprovalRisk, number> = { low: 0, medium: 0, high: 0 };
-    const riskTotal = 0;
+    for (const a of approvals) {
+        if (a.risk in riskCounts) riskCounts[a.risk] += 1;
+    }
+    const riskTotal = riskCounts.low + riskCounts.medium + riskCounts.high;
     const riskDist = (["low", "medium", "high"] as ApprovalRisk[]).map((risk) => ({
         label: `${riskLabel[risk]} Risk`,
         count: riskCounts[risk],
-        pct: 0,
+        pct: riskTotal > 0 ? Math.round((riskCounts[risk] / riskTotal) * 100) : 0,
         color: riskColor[risk],
     }));
 
-    const now = Date.now();
     const dailyVolume: number[] = [];
     const dailyLabels: string[] = [];
     for (let i = 6; i >= 0; i -= 1) {
-        const dayStart = now - i * DAY_MS;
-        const date = new Date(dayStart);
-        dailyVolume.push(0);
-        dailyLabels.push(dayInitials[date.getDay()] ?? "?");
+        const dayStart = new Date(now - i * DAY_MS);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = dayStart.getTime() + DAY_MS;
+        dailyVolume.push(approvals.filter((a) => a.createdAt >= dayStart.getTime() && a.createdAt < dayEnd).length);
+        dailyLabels.push(dayInitials[dayStart.getDay()] ?? "?");
     }
+
+    const latencies = approvals
+        .map((a) => a.decisionLatencySeconds)
+        .filter((s): s is number => typeof s === "number");
+    const avgLatencyLabel = latencies.length > 0
+        ? `${Math.round(latencies.reduce((sum, s) => sum + s, 0) / latencies.length)}s`
+        : "—";
 
     return (
         <div className="min-h-screen bg-slate-50">
@@ -245,7 +289,7 @@ export default async function DashboardReportsPage() {
                             <SparkBars values={dailyVolume} labels={dailyLabels} />
                             <div className="mt-3 flex items-center justify-between text-xs">
                                 <span className="text-slate-500 dark:text-slate-400">7-day total</span>
-                                <span className="font-bold text-emerald-600 dark:text-emerald-400">0</span>
+                                <span className="font-bold text-emerald-600 dark:text-emerald-400">{approvals7d.length}</span>
                             </div>
                         </div>
 
@@ -255,12 +299,14 @@ export default async function DashboardReportsPage() {
                                 <PremiumIcon icon={Clock} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-3.5 h-3.5" />
                                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Avg. Decision Latency</h3>
                             </div>
-                            <p className="text-3xl font-extrabold text-sky-600 dark:text-sky-400 tabular-nums">—</p>
+                            <p className="text-3xl font-extrabold text-sky-600 dark:text-sky-400 tabular-nums">{avgLatencyLabel}</p>
                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                No decided approvals recorded yet
+                                {latencies.length > 0
+                                    ? `Across ${latencies.length} decided ${latencies.length === 1 ? "approval" : "approvals"}`
+                                    : "No decided approvals recorded yet"}
                             </p>
                             <div className="mt-3 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 font-semibold">
-                                <Users className="w-3.5 h-3.5" /> 0 agents active
+                                <Users className="w-3.5 h-3.5" /> {agentRows.length} {agentRows.length === 1 ? "agent" : "agents"} active
                             </div>
                         </div>
                     </div>

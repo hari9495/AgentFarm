@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import PremiumIcon from "@/components/shared/PremiumIcon";
 
-type BotStatus = "active" | "paused" | "error" | "maintenance";
+type BotStatus = "active" | "provisioning" | "paused" | "error" | "maintenance";
 
 type BotRecord = {
     slug: string;
@@ -40,6 +40,12 @@ const statusMeta: Record<BotStatus, { label: string; dot: string; badge: string;
         dot: "bg-emerald-500 animate-pulse",
         badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
         icon: <PremiumIcon icon={CheckCircle2} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400" iconClassName="w-4 h-4" />,
+    },
+    provisioning: {
+        label: "Provisioning",
+        dot: "bg-sky-400 animate-pulse",
+        badge: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
+        icon: <PremiumIcon icon={Clock} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-4 h-4" />,
     },
     paused: {
         label: "Paused",
@@ -99,7 +105,7 @@ export default function DashboardBotsPage() {
     const fetchBots = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch("/api/admin/bots");
+            const res = await fetch("/api/dashboard/bot-status");
             const data = await res.json() as any;
             if (res.ok) { setBots(data.bots ?? []); setLastRefresh(new Date()); }
             else setError(data.error ?? "Failed to load");
@@ -244,8 +250,8 @@ export default function DashboardBotsPage() {
                                                 </div>
                                                 <div className="rounded-lg bg-slate-50 dark:bg-slate-800 px-3 py-2.5 flex flex-col gap-0.5 min-w-0">
                                                     <span className="text-slate-400 dark:text-slate-500 uppercase tracking-wide text-[10px] font-semibold truncate">Reliability</span>
-                                                    <span className={`font-bold flex items-center gap-1 min-w-0 ${bot.reliabilityPct >= 99 ? "text-emerald-600 dark:text-emerald-400" : bot.reliabilityPct >= 97 ? "text-amber-600 dark:text-amber-400" : "text-rose-600 dark:text-rose-400"}`}>
-                                                        <PremiumIcon icon={Zap} tone="amber" containerClassName="w-5 h-5 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400" iconClassName="w-3 h-3" /><span className="truncate">{bot.reliabilityPct}%</span>
+                                                    <span className={`font-bold flex items-center gap-1 min-w-0 ${bot.tasksCompleted === 0 ? "text-slate-500 dark:text-slate-400" : bot.reliabilityPct >= 99 ? "text-emerald-600 dark:text-emerald-400" : bot.reliabilityPct >= 97 ? "text-amber-600 dark:text-amber-400" : "text-rose-600 dark:text-rose-400"}`}>
+                                                        <PremiumIcon icon={Zap} tone="amber" containerClassName="w-5 h-5 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400" iconClassName="w-3 h-3" /><span className="truncate">{bot.tasksCompleted === 0 ? "—" : `${bot.reliabilityPct}%`}</span>
                                                     </span>
                                                 </div>
                                                 <div className="rounded-lg bg-slate-50 dark:bg-slate-800 px-3 py-2.5 flex flex-col gap-0.5 min-w-0">

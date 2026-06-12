@@ -10,12 +10,14 @@ function portalCookie(request: Request): string {
     return request.headers.get("cookie") ?? "";
 }
 
-// GET — list registered adapters for this workspace
+// GET — list registered adapters for this tenant.
+// Gateway route is /v1/adapters (tenant-scoped from the session) — there is
+// no /v1/workspaces/:id/adapters route.
 export async function GET(request: Request) {
     const user = await getPortalUserFromRequest(request);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const url = `${GATEWAY_URL}/v1/workspaces/${encodeURIComponent(user.tenantId)}/adapters`;
+    const url = `${GATEWAY_URL}/v1/adapters`;
     try {
         const res = await fetch(url, { headers: { cookie: portalCookie(request) }, cache: "no-store" });
         const body = await res.json().catch(() => ({ adapters: [] }));
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
     let body: unknown;
     try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
-    const url = `${GATEWAY_URL}/v1/workspaces/${encodeURIComponent(user.tenantId)}/adapters`;
+    const url = `${GATEWAY_URL}/v1/adapters`;
     try {
         const res = await fetch(url, {
             method: "POST",

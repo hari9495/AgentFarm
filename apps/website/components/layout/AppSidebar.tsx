@@ -286,8 +286,10 @@ function SidebarContent({
                     </div>
                 ))}
 
-                {/* Internal links (admin / company portal) */}
-                {(userRole !== "member" || showCompanyPortal) && (
+                {/* Internal links (admin / company portal) — staff only.
+                    Customer owners/admins manage their org from the ACCOUNT
+                    group; the Admin Console is platform-staff tooling. */}
+                {(userRole === "superadmin" || showCompanyPortal) && (
                     <div>
                         <div className="flex items-center gap-2 px-3 mb-2">
                             <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
@@ -296,7 +298,7 @@ function SidebarContent({
                             <div className="flex-1 h-px bg-slate-200" />
                         </div>
                         <div className="space-y-0.5">
-                            {userRole !== "member" && (
+                            {userRole === "superadmin" && (
                                 <>
                                     <Link
                                         href="/admin"

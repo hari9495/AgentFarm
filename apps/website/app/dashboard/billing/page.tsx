@@ -89,9 +89,9 @@ export default async function BillingPage() {
 
     const sixMonths = Array.from({ length: 6 }, (_, i) => monthRange(5 - i));
 
-    const [plansData, subscription, ordersData, currentPeriod, agentsData, ...trendPeriods] = await Promise.all([
+    const [plansData, subscriptionData, ordersData, currentPeriod, agentsData, ...trendPeriods] = await Promise.all([
         fetchPlans().then((p) => ({ plans: p })),
-        portalFetch<PortalSubscription>("/portal/data/billing/subscription"),
+        portalFetch<{ subscription: PortalSubscription | null }>("/portal/data/billing/subscription"),
         portalFetch<{ orders: PortalOrder[] }>("/portal/data/billing/orders"),
         portalFetch<MeteringPeriodSummary>("/portal/data/usage"),
         portalFetch<{ total?: number }>("/portal/data/agents?limit=1"),
@@ -102,12 +102,17 @@ export default async function BillingPage() {
     ]);
 
     const plans = plansData?.plans ?? [];
+    const subscription = subscriptionData?.subscription ?? null;
     const orders = ordersData?.orders ?? [];
 
+    // The subscription is the source of truth for the current plan (free plans
+    // never produce a paid order); fall back to the latest paid order.
     const latestPaidOrder = [...orders]
         .filter((o) => o.status === "paid")
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-    const currentPlan = latestPaidOrder ? plans.find((p) => p.id === latestPaidOrder.planId) ?? null : null;
+    const currentPlanId =
+        (subscription?.status === "active" ? subscription.planId : null) ?? latestPaidOrder?.planId ?? null;
+    const currentPlan = currentPlanId ? plans.find((p) => p.id === currentPlanId) ?? null : null;
 
     const seatsUsed = agentsData?.total ?? 0;
     const seatLimit = currentPlan?.agentSlots ?? null;
