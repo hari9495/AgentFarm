@@ -17,6 +17,7 @@
       retries: 5
     networks:
       - agentfarm
+    restart: unless-stopped
 
   redis:
     image: redis:7
@@ -33,6 +34,7 @@
       retries: 5
     networks:
       - agentfarm
+    restart: unless-stopped
 
   opa:
     # NOTE: must be the -debug variant — the -static image is distroless (no
@@ -51,6 +53,7 @@
       start_period: 5s
     networks:
       - agentfarm
+    restart: unless-stopped
 
   voicebox:
     image: ghcr.io/voicebox-ai/voicebox:latest
