@@ -213,12 +213,19 @@ export function GovernanceKPIPanel({ workspaceId, language = 'en' }: Props) {
                 : `/api/governance/kpis?time_window_seconds=86400${langParam}`;
 
             const res = await fetch(url, { cache: 'no-store' });
-            const body = (await res.json().catch(() => null)) as Partial<KPIData> | null;
+            const body = (await res.json().catch(() => null)) as Record<string, unknown> | null;
 
             if (!res.ok || !body) {
                 setKpis(MOCK_KPI); setIsMock(true);
             } else {
-                setKpis(body as KPIData); setIsMock(false);
+                // The gateway nests the numbers under `kpis` ({ period_end, kpis: {...} }).
+                // Reading the envelope as if it were flat coerces every metric to 0
+                // (rendered as a red 0.0% SLA breach). Unwrap it; accept flat legacy shape too.
+                const nested = body.kpis;
+                const flat = nested && typeof nested === 'object'
+                    ? { snapshot_at: body.period_end, ...(nested as object) }
+                    : body;
+                setKpis(flat as KPIData); setIsMock(false);
             }
         } catch {
             setKpis(MOCK_KPI); setIsMock(true);

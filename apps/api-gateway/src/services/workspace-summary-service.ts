@@ -21,16 +21,20 @@ import {
 // ---------------------------------------------------------------------------
 
 export const getTenantSummary = async (tenantId: string) => {
-    const [totalWorkspaces, activeBots, tenant] = await Promise.all([
+    const [totalWorkspaces, activeBots, tenant, subscription] = await Promise.all([
         prisma.workspace.count({ where: { tenantId } }),
         prisma.bot.count({ where: { workspace: { tenantId }, status: 'active' } }),
         prisma.tenant.findUnique({ where: { id: tenantId } }),
+        prisma.tenantSubscription.findUnique({
+            where: { tenantId },
+            include: { plan: true },
+        }),
     ]);
 
     return {
         tenant_id: tenantId,
         tenant_name: tenant?.name ?? 'Tenant',
-        plan_name: 'Growth',
+        plan_name: subscription?.plan?.name ?? 'Starter',
         tenant_status: tenant?.status ?? 'pending',
         total_workspaces: totalWorkspaces,
         active_bots: activeBots,

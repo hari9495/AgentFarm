@@ -257,9 +257,11 @@ export function registerGovernanceKPIRoutes(
                     }),
                 ]);
 
+                // No executions in the window = no SLA misses — report 100, not an
+                // arbitrary sub-target number that renders as a breach on fresh installs.
                 snapshot.kpis.sla_compliance_pct = taskCount > 0
                     ? Math.round((successCount / taskCount) * 100)
-                    : 95;
+                    : 100;
 
                 return reply.send(snapshot);
             } catch {
