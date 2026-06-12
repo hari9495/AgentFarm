@@ -285,6 +285,9 @@
       NODE_ENV: production
       DASHBOARD_API_TOKEN: ${DASHBOARD_API_TOKEN}
       REDIS_URL: redis://redis:6379
+      # OTP/MFA email domain allowlist (defaults to agentfarms.in when unset)
+      DASHBOARD_ALLOWED_DOMAINS: ${DASHBOARD_ALLOWED_DOMAINS:-}
+      DASHBOARD_PRIMARY_DOMAIN: ${DASHBOARD_PRIMARY_DOMAIN:-}
       # Meeting-agent live controls (join, stop, transcript, chat)
       MEETING_AGENT_URL: http://meeting-agent:7799
       MEETING_AGENT_TOKEN: ${MEETING_AGENT_TOKEN:-}
