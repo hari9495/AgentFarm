@@ -4585,10 +4585,19 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 ? estimateCostUsd({ modelProvider, modelProfile, promptTokens, completionTokens })
                 : null;
 
+        // Attribute the execution to the submitting tenant/bot when the task
+        // payload carries identity (portal /run-task submissions on a shared
+        // runtime) — otherwise usage and task history land on the runtime's
+        // env-configured tenant instead of the customer who ran the task.
+        const payloadString = (key: string): string | null => {
+            const value = task.payload[key];
+            return typeof value === 'string' && value.trim() ? value.trim() : null;
+        };
+
         taskExecutionRecordWriter.write({
-            botId: config.botId,
-            tenantId: config.tenantId,
-            workspaceId: config.workspaceId,
+            botId: payloadString('botId') ?? payloadString('agentId') ?? config.botId,
+            tenantId: payloadString('tenantId') ?? config.tenantId,
+            workspaceId: payloadString('workspaceId') ?? config.workspaceId,
             taskId: task.taskId,
             modelProvider,
             modelProfile,

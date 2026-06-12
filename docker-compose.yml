@@ -119,7 +119,9 @@
       # Persist env:// connector secrets across restarts (no Key Vault required in dev)
       CONNECTOR_SECRETS_PATH: /data/connector-secrets.json
       # Agent runtime — portal task submission proxies to this service.
-      AGENT_RUNTIME_URL: ${AGENT_RUNTIME_URL:-http://agent-runtime:4000}
+      # Hardcoded (not ${AGENT_RUNTIME_URL}) because .env sets localhost:4000
+      # for host tooling, which is unreachable from inside this container.
+      AGENT_RUNTIME_URL: http://agent-runtime:4000
       # Workers run in-process by default. Set AF_WORKERS_DISABLED=1 only when
       # running the standalone worker-runner service (profile: split-workers)
       # to prevent duplicate worker execution in both processes.
