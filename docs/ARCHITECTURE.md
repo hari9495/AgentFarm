@@ -7,6 +7,60 @@
 
 ---
 
+## Product Architecture Diagram (verified 2026-06-13)
+
+```mermaid
+flowchart TB
+    subgraph surfaces["Customer surfaces"]
+        WEB["Website (Next.js)<br/>signup · customer dashboard · portal"]
+        DASH["Operator dashboard (Next.js :3001)<br/>approvals · audit · billing"]
+        SDKC["SDK · CLI · API clients"]
+    end
+    subgraph channels["Inbound channels"]
+        IN["Email (IMAP) · Slack · webhooks"]
+    end
+
+    WEB --> GW
+    DASH -->|X-Dashboard-Token proxy| GW
+    SDKC --> GW
+    IN --> TRG["Trigger service :3002<br/>events → tasks"]
+
+    GW["API gateway · Fastify :3000<br/>auth · billing · approvals · audit · 110 route files in 14 domains"]
+
+    GW -->|HMAC shared tokens| RT
+    TRG --> RT
+    GW --> ORC["Orchestrator :3011<br/>GOAP A* planner · schedulers · handoffs"]
+    GW --> WRK["Worker runner<br/>billing sweep · token lifecycle (when AF_WORKERS_DISABLED=1)"]
+    ORC --> RT
+
+    RT["Agent runtime :4000<br/>15 agents · risk classification · 12 action tiers · RAG flywheel"]
+
+    subgraph caps["Action tiers & integrations"]
+        LLM["LLM providers<br/>9 external + auto failover"]
+        CON["Connector gateway<br/>23 tools · OAuth/mTLS"]
+        AUTO["Browser + desktop agents<br/>Playwright · noVNC vision loop"]
+        VOICE["Voice stack<br/>whisper STT · kokoro/xtts/mms TTS · FreeSWITCH · Zoom/Teams bots"]
+    end
+    RT --> LLM
+    RT --> CON
+    RT --> AUTO
+    RT --> VOICE
+
+    subgraph data["Data plane"]
+        PG[("PostgreSQL 16 + pgvector<br/>105 models")]
+        RD[("Redis 7<br/>cache · rate limits")]
+        BLOB[("Azure Blob<br/>audit evidence")]
+        OPA["OPA :8181<br/>policy engine"]
+    end
+    GW --- PG
+    GW --- RD
+    RT --- PG
+    GW --- OPA
+    RT --- BLOB
+```
+
+---
+
 ## System Overview
 
 AgentFarm is a TypeScript pnpm monorepo. It provides a production-grade platform for running AI agents inside enterprise teams. Every agent action passes through a risk classification pipeline, an approval gate, an audit log, and a compliance evidence chain before or after execution. The platform supports 12 agent roles, 8+ LLM providers, 18 external connectors, dual-provider payments (Stripe + Razorpay), Zoho Sign e-signature with auto-provisioning, Azure VM runtime provisioning, and a full voice/meeting pipeline.
