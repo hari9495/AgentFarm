@@ -3,6 +3,7 @@
 
 > AgentFarm testing conventions, patterns, and quality gate reference.
 > Last updated: 2026-05-29 (Sprint 18)
+> **Freshness (2026-06-13 audit):** Test totals are unverified since Sprint 18 - re-run pnpm test / pnpm quality:gate to re-baseline. CI now runs 12 jobs (added dependency-audit SCA, Semgrep SAST, Playwright E2E, ESLint). Full verified inventory: [docs/audit/2026-06-13](audit/2026-06-13/README.md).
 
 ---
 

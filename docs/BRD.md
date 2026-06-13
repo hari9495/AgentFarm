@@ -1,7 +1,8 @@
-﻿> **Status:** Sprint 18 complete. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status tracker.
+> **Status:** Sprint 18 complete. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status tracker.
 # AgentFarm Business Requirements Document (BRD)
 
 > Last updated: 2026-05-29 (Sprint 18)
+> **Freshness (2026-06-13 audit):** Implementation has exceeded several objectives: 15 agent roles implemented (objective: 12), 23 connectors (objective: 9+). Objective-by-objective status: see the Business Analysis Report in the audit set. Full verified inventory: [docs/audit/2026-06-13](audit/2026-06-13/README.md).
 
 ---
 

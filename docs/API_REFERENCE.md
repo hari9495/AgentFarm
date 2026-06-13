@@ -1,7 +1,8 @@
-﻿> **Status:** Sprint 18 complete. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status tracker.
+> **Status:** Sprint 18 complete. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status tracker.
 # AgentFarm API Reference
 
 > Last updated: 2026-05-29 (Sprint 18)
+> **Freshness (2026-06-13 audit):** The gateway now has 110 route files in 14 domain groups (src/route-registry.ts). Domains added after this doc was written and NOT covered below: sales (13 route files incl. leads, prospects, deals, outreach, KPI, browser-tasks, and booking/contract/calls/NPS/Twilio/ZohoSign webhooks), support (issue, chat session, voice session), portal auth + portal data, SSO + MFA, content/comms drafts, tenant branding, agent budget + batch dispatch, task templates, deliverables, wake runs, routine scheduler, ops provisioning-SLA. See SALES_SYSTEM.md and SUPPORT_SYSTEM.md. Full verified inventory: [docs/audit/2026-06-13](audit/2026-06-13/README.md).
 
 Complete HTTP route reference for all services. Routes are served from **`apps/api-gateway`** (port 3000) unless noted otherwise.
 

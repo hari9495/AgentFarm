@@ -1,3 +1,5 @@
+> **Note (2026-06-13):** this changelog has not been maintained since 2026-05-29 - 411 commits (incl. the sales/support/portal domains and the voice stack) are unrecorded. Use git history as the authoritative record until backfilled.
+
 # Changelog
 
 All notable changes to AgentFarm are documented here.

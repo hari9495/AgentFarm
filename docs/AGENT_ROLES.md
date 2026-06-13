@@ -3,6 +3,7 @@
 
 > AgentFarm — 12 agent role profiles with connectors, capabilities, and risk posture.
 > Last updated: 2026-05-29 (Sprint 18)
+> **Freshness (2026-06-13 audit):** All 15 agent roles are implemented (apps/agent-runtime/src/agents/). Treat any "planned" or "profile only" status in this doc as outdated. Full verified inventory: [docs/audit/2026-06-13](audit/2026-06-13/README.md).
 
 ---
 

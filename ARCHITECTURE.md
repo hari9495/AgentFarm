@@ -1,3 +1,5 @@
+> **Freshness (2026-06-13 audit):** counts below are stale - the system now has 17 domain services, 16 shared packages, and 23 docker-compose services (incl. the voice/telephony stack). Current architecture reference: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) + [docs/audit/2026-06-13](docs/audit/2026-06-13/README.md).
+
 # Architecture
 
 AgentFarm is a TypeScript pnpm monorepo. The system is composed of six applications, fifteen domain services, thirteen shared packages, and external dependencies. All runtime services are containerised and orchestrated via Docker Compose. The website is deployed separately to Azure Static Web Apps.

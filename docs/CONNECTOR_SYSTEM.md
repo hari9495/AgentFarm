@@ -2,6 +2,7 @@
 # AgentFarm Connector System
 
 > Last updated: 2026-05-29 (Sprint 18)
+> **Freshness (2026-06-13 audit):** The registry now has 23 connectors across 5 categories including telephony (Twilio, Vonage, Amazon Connect, Genesys) and 34 normalized action types (packages/connector-contracts/src/index.ts). Full verified inventory: [docs/audit/2026-06-13](audit/2026-06-13/README.md).
 
 Full reference for the connector gateway in `services/connector-gateway`.
 

@@ -36,11 +36,11 @@
 | **Security documentation** (consolidated; AUTH_SYSTEM.md covers auth only) | ✅ Created: [docs/SECURITY.md](../../SECURITY.md) |
 | **Operations & maintenance overview** (runbooks exist but no index/ops guide) | ✅ Created: [docs/OPERATIONS.md](../../OPERATIONS.md) |
 | **Developer onboarding guide** (setup steps scattered across README/DEPLOYMENT/CONTRIBUTING) | ✅ Created: [docs/DEVELOPER_ONBOARDING.md](../../DEVELOPER_ONBOARDING.md) |
-| Voice/meeting stack documentation (whisper/kokoro/xtts/mms-tts/freeswitch/zoom/teams containers) | ❌ **Still missing** — highest-value next doc; owners of model/license choices: Unknown |
-| Sales domain documentation (13+ models, 9 sales route files, webhook flows) | ❌ Still missing |
-| Support domain documentation (SupportIssue/CSAT/chat/voice routes) | ❌ Still missing |
-| Customer portal / website dashboard user guide | ❌ Still missing (QA checklist exists at `docs/testing/dashboard-test-checklist.md` for internal dashboard only) |
-| `arcads/` project README explaining its relationship to AgentFarm | ❌ Missing — purpose Unknown |
+| Voice/meeting stack documentation (whisper/kokoro/xtts/mms-tts/freeswitch/zoom/teams containers) | ✅ Created: [docs/VOICE_SYSTEM.md](../../VOICE_SYSTEM.md) (model licenses still Unknown — flagged inside) |
+| Sales domain documentation (13 route files, 13+ models, webhook flows) | ✅ Created: [docs/SALES_SYSTEM.md](../../SALES_SYSTEM.md) |
+| Support domain documentation (SupportIssue/CSAT/chat/voice routes) | ✅ Already covered by [docs/SUPPORT_AGENT.md](../../SUPPORT_AGENT.md) (2026-06-05, current) — initial "missing" assessment corrected |
+| Customer portal / website dashboard user guide | ✅ Created: [docs/USER_GUIDE_CUSTOMER_DASHBOARD.md](../../USER_GUIDE_CUSTOMER_DASHBOARD.md) |
+| `arcads/` project README explaining its relationship to AgentFarm | ❌ Missing — purpose Unknown (blocked on product-owner decision) |
 | `worker-runner` operational requirements (QA blocker #3 root cause) | Partially covered in OPERATIONS.md (created); needs deploy-checklist integration |
 
 ## 4. Redundant / Conflicting Documentation
@@ -58,6 +58,8 @@
 4. `docs/IMPLEMENTATION_STATUS.md` — corrected agent-role status to reflect the 15 implemented agents; re-stamped with verification basis.
 5. `audit_security.md` — prepended remediation status header (findings fixed as of 2026-06-13).
 6. Created PRD.md, SECURITY.md, OPERATIONS.md, DEVELOPER_ONBOARDING.md.
+7. **Second pass (same day):** tailored freshness banners added to all 19 remaining Sprint-18/16-stamped docs (AGENT_ROLES, AGENT_SYSTEM, API_REFERENCE, ARCHITECTURE, AUTH_SYSTEM, BRD, CONNECTOR_SYSTEM, DATA_MODEL, DEPLOYMENT, DESKTOP_OPERATOR, FILE_INVENTORY, LANGUAGE_SYSTEM, MCP_REGISTRY, MEMORY_SYSTEM, PAYMENTS, TESTING, TEST_STRATEGY, TRIGGER_SYSTEM, RAG_SYSTEM) plus agent-capabilities.md, llm-configuration.md, ARCHITECTURE-FULL.md; `docs/API.md` and `docs/PROJECT-AUDIT.md` marked SUPERSEDED; root ARCHITECTURE.md bannered; CHANGELOG.md flagged unmaintained since 2026-05-29.
+8. **Second pass:** created VOICE_SYSTEM.md, SALES_SYSTEM.md, USER_GUIDE_CUSTOMER_DASHBOARD.md. Docs untouched (verified recent, 2026-06-02→13): `docs/dashboard/*`, INTERNAL_DASHBOARD_NAVIGATION.md, SUPPORT_AGENT.md, SUPPORT_AGENT_SPRINT_PLAN.md, testing/dashboard-test-checklist.md; DESIGN.md and CONTRIBUTING.md left as evergreen.
 
 ## 6. Documentation Process Recommendation
 

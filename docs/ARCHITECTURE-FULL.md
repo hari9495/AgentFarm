@@ -1,3 +1,5 @@
+> **Freshness (2026-06-13 audit):** written 2026-05-29; 411 commits have landed since. Structure remains broadly accurate; counts and inventories are stale. Verified figures: [docs/audit/2026-06-13](audit/2026-06-13/README.md).
+
 # AgentFarm — Full System Architecture
 
 > Built from direct source code inspection of every service, package, and schema file.  

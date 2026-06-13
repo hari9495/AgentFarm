@@ -194,6 +194,10 @@ pnpm --filter @agentfarm/api-gateway typecheck
 | [SECURITY.md](SECURITY.md) | Consolidated platform security reference |
 | [OPERATIONS.md](OPERATIONS.md) | Operations & maintenance guide, runbook index |
 | [DEVELOPER_ONBOARDING.md](DEVELOPER_ONBOARDING.md) | Clone-to-contribution onboarding path |
+| [VOICE_SYSTEM.md](VOICE_SYSTEM.md) | Voice/meeting/telephony stack (STT, TTS, FreeSWITCH, Zoom/Teams bots) |
+| [SALES_SYSTEM.md](SALES_SYSTEM.md) | Sales automation domain (prospects → deals → contracts → NPS) |
+| [USER_GUIDE_CUSTOMER_DASHBOARD.md](USER_GUIDE_CUSTOMER_DASHBOARD.md) | Customer-facing dashboard user guide (apps/website) |
+| [SUPPORT_AGENT.md](SUPPORT_AGENT.md) | AgentFarm support agent + support domain (issues, CSAT, chat/voice) |
 | [audit/2026-06-13/](audit/2026-06-13/README.md) | Full repository audit: verified inventory, gap analysis, tech debt, action plan |
 
 > ⚠ **Freshness note (2026-06-13):** documents stamped "2026-05-29 (Sprint 18)" pre-date 411 commits of development (sales domain, support domain, customer portal, voice/telephony stack, worker-runner, SSO/MFA). Their structure remains accurate; their counts generally do not. See the [Documentation Gap Analysis](audit/2026-06-13/05-DOCUMENTATION-GAP-ANALYSIS.md) for corrected figures.

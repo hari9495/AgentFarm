@@ -1,3 +1,5 @@
+> **Freshness (2026-06-13 audit):** written 2026-05-29. All 15 agent roles are now implemented (apps/agent-runtime/src/agents/); treat any narrower capability claims as outdated. Verified inventory: [docs/audit/2026-06-13](audit/2026-06-13/README.md).
+
 # AgentFarm — Agent Capabilities Reference
 
 **Platform:** AgentFarm Multi-Tenant AI Agent Orchestration  

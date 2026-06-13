@@ -1,9 +1,10 @@
-﻿> **Status:** Sprint 18 complete. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status tracker.
+> **Status:** Sprint 18 complete. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status tracker.
 # API Reference
 
 > AgentFarm API Gateway â€” Fastify v5, port 3000 (default)
 > All endpoints are prefixed `/v1` unless noted.
 > Last updated: 2026-05-29 (Sprint 18)
+> **SUPERSEDED (2026-06-13):** use [API_REFERENCE.md](API_REFERENCE.md) (with its freshness note) instead. Retained for history only.
 
 ---
 

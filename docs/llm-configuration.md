@@ -1,3 +1,5 @@
+> **Freshness (2026-06-13 audit):** written 2026-05-29. Provider list has since grown: DeepSeek is now supported alongside OpenAI, Azure OpenAI, GitHub Models, Anthropic, Google, xAI, Mistral, Together, plus auto failover mode (apps/agent-runtime/src/llm-decision-adapter.ts:62). Verified inventory: [docs/audit/2026-06-13](audit/2026-06-13/README.md).
+
 # AgentFarm — LLM Configuration & Functionality Reference
 
 **Service:** `apps/agent-runtime`  

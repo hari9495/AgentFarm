@@ -1,7 +1,8 @@
-﻿> **Status:** Sprint 18 complete. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status tracker.
+> **Status:** Sprint 18 complete. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status tracker.
 # AgentFarm File Inventory
 
 > Last updated: 2026-05-29 (Sprint 18)
+> **Freshness (2026-06-13 audit):** This file-level inventory is significantly stale (411 commits since). Use the Repository Audit Report for current counts and regenerate this inventory before relying on it. Full verified inventory: [docs/audit/2026-06-13](audit/2026-06-13/README.md).
 
 Complete file-by-file inventory of all source files in the AgentFarm monorepo.  
 Excludes: `node_modules/`, `dist/`, `.next/`, `.git/`, `build/`, `generated/`, `migrations/`.  

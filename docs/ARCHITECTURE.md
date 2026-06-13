@@ -1,7 +1,8 @@
-﻿> **Status:** Sprint 18 complete. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status tracker.
+> **Status:** Sprint 18 complete. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status tracker.
 # AgentFarm Architecture â€” Full System
 
 > Last updated: 2026-05-29 (Sprint 18)
+> **Freshness (2026-06-13 audit):** Added since this doc was written: worker-runner, browser-agent and desktop-agent containers, the full voice/telephony stack (whisper, kokoro, xtts, mms-tts, voxcpm, freeswitch, zoom-video-sidecar, teams-media-bot - see VOICE_SYSTEM.md), and the sales/support/portal domains. docker-compose now defines 23 services. See the Technical Architecture Report in the audit set. Full verified inventory: [docs/audit/2026-06-13](audit/2026-06-13/README.md).
 > AgentFarm â€” Multi-tenant AI agent platform with enterprise control gates, audit trails, and governed autonomy.
 
 ---

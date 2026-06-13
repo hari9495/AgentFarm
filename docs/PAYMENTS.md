@@ -3,6 +3,7 @@
 
 > AgentFarm dual-provider payment infrastructure (Stripe + Razorpay) with Zoho Sign e-signature contract workflow.
 > Last updated: 2026-05-29 (Sprint 16)
+> **Freshness (2026-06-13 audit):** Billing routes and subscription models verified present. Note: 2026-06-12 manual QA found the customer billing page showing "No active plan" despite an active subscription (root QA-CUSTOMER-DASHBOARD-FINDINGS.md, finding 5). Full verified inventory: [docs/audit/2026-06-13](audit/2026-06-13/README.md).
 
 ---
 

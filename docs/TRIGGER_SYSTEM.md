@@ -1,7 +1,8 @@
-﻿> **Status:** Sprint 18 complete. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status tracker.
+> **Status:** Sprint 18 complete. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status tracker.
 # AgentFarm Trigger System
 
 > Last updated: 2026-05-29 (Sprint 18)
+> **Freshness (2026-06-13 audit):** 411 commits have landed since this doc was written; structure remains accurate but verify counts and paths against code. Full verified inventory: [docs/audit/2026-06-13](audit/2026-06-13/README.md).
 
 Full reference for the trigger service in `apps/trigger-service`.
 

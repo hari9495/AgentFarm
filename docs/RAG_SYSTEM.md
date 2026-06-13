@@ -1,6 +1,6 @@
 # RAG System — Retrieval-Augmented Generation
 
-> **Status:** Production. All 15 agents wired. Last updated: 2026-05-29
+> **Status:** Production. All 15 agents wired. Last updated: 2026-05-29; re-verified accurate 2026-06-13 (all 15 agent directories present)
 
 ---
 

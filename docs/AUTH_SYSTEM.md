@@ -2,6 +2,7 @@
 # AgentFarm Auth System
 
 > Last updated: 2026-05-29 (Sprint 18)
+> **Freshness (2026-06-13 audit):** Added since: SSO (routes/auth/sso.ts) and MFA (routes/auth/mfa.ts), and the tenant portal account/session system with an explicit public-path allowlist (server.ts:33-51). The dev-secret session fallback has been removed. Consolidated security reference: SECURITY.md. Full verified inventory: [docs/audit/2026-06-13](audit/2026-06-13/README.md).
 
 Full reference for authentication and session management across the monorepo.
 

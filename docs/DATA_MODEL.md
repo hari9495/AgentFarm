@@ -1,7 +1,8 @@
-> **Status:** 75+ models shipped. Requires PostgreSQL 16 + pgvector extension. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for details.
+> **Status:** 105 models shipped (verified 2026-06-13). Requires PostgreSQL 16 + pgvector extension. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for details.
 # AgentFarm Data Model
 
 > Last updated: 2026-05-29 (Sprint 18)
+> **Freshness (2026-06-13 audit):** The schema now has 105 models, 35 enums, 44 migrations. Added since this doc: sales domain (Prospect, SalesDeal, SalesActivity, Lead, NurtureSequenceEntry, SalesSequenceEntry, CallRecord, SalesNegotiation, SalesProposal, NpsResponse, WinLossEvent, BookingEvent, ContractEvent), support domain (SupportIssue, SupportCsatResponse, SupportChatMessage, SupportDiagnosisStep), portal (TenantPortalAccount, TenantPortalSession, TenantPasswordResetToken), plus TenantSsoConfig, TenantBranding, AgentPersona, SetupWizardSession, WorkspaceVm, AgentBudgetConfig, AgentMemoryEdge, MeetingAuditEvent, AgentMessage, WebhookSource, InboundWebhookEvent, TaskTemplate, AgentKnowledgeBase. Full verified inventory: [docs/audit/2026-06-13](audit/2026-06-13/README.md).
 
 Full Prisma schema reference for `packages/db-schema/prisma/schema.prisma` — PostgreSQL 16 + pgvector.
 

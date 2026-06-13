@@ -2,6 +2,7 @@
 # AgentFarm Memory System
 
 > Last updated: 2026-05-29 (Sprint 18)
+> **Freshness (2026-06-13 audit):** 411 commits have landed since this doc was written; structure remains accurate but verify counts and paths against code. Full verified inventory: [docs/audit/2026-06-13](audit/2026-06-13/README.md).
 
 Full reference for the agent memory architecture spanning `apps/agent-runtime/src/`, `services/memory-service/src/`, and `packages/db-schema`.
 

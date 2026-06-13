@@ -1,3 +1,5 @@
+> **SUPERSEDED (2026-06-13):** this audit is superseded by the full evidence-based audit set at [docs/audit/2026-06-13](audit/2026-06-13/README.md). Retained for history only.
+
 # AgentFarm — Complete Project Audit
 
 **Date:** 2026-05-29 (Sprint 18 update)  

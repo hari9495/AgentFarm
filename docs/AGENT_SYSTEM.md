@@ -1,7 +1,8 @@
-﻿> **Status:** Sprint 18 complete. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status tracker.
+> **Status:** Sprint 18 complete. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the authoritative status tracker.
 # AgentFarm Agent System
 
 > Last updated: 2026-05-29 (Sprint 18)
+> **Freshness (2026-06-13 audit):** All 15 agents are implemented. LLM providers now include DeepSeek (9 external providers + auto failover; apps/agent-runtime/src/llm-decision-adapter.ts:62). Full verified inventory: [docs/audit/2026-06-13](audit/2026-06-13/README.md).
 
 Full reference for the agent execution pipeline in `apps/agent-runtime`.
 

@@ -2,6 +2,7 @@
 # AgentFarm Deployment Guide
 
 > Last updated: 2026-05-29 (Sprint 18)
+> **Freshness (2026-06-13 audit):** docker-compose.yml now defines 23 services (voice/telephony stack, worker-runner, browser-agent, desktop-agent, ngrok). Critical wiring: AGENT_RUNTIME_URL must be set on api-gateway, and worker-runner is mandatory when AF_WORKERS_DISABLED=1 (root QA-CUSTOMER-DASHBOARD-FINDINGS.md blockers 1 and 3). See also OPERATIONS.md. Full verified inventory: [docs/audit/2026-06-13](audit/2026-06-13/README.md).
 
 ---
 
