@@ -82,8 +82,9 @@ export default function BatchTasksClient({ workspaceIds }: { workspaceIds: strin
         void (async () => {
             const res = await fetch('/api/agents');
             if (!res.ok) return;
-            const data = (await res.json()) as { agents?: Bot[] };
-            const botsData = data.agents ?? [];
+            // The gateway returns { bots: [...] }; accept legacy { agents } too.
+            const data = (await res.json()) as { bots?: Bot[]; agents?: Bot[] };
+            const botsData = data.bots ?? data.agents ?? [];
             setBots(botsData);
             if (botsData.length > 0 && !toAgentId) setToAgentId(botsData[0]?.id ?? '');
         })();
