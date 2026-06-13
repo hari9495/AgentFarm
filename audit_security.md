@@ -1,10 +1,12 @@
 # Security Review Audit
 
+> **STATUS (2026-06-13): REMEDIATED.** All four lead findings below were re-verified against the current tree and are fixed: the `agentfarm-dev-secret` fallback no longer exists; `tenant-branding.ts` uses parameterized queries; the blanket `/portal/*` auth bypass was replaced with an explicit path allowlist (`server.ts:33-51`); CORS now fails closed when `ALLOWED_ORIGINS` is unset (`server.ts:130-138`). Residual items (per-handler portal session checks, `/health/detail` rate limit) are tracked in [docs/audit/2026-06-13/06-TECHNICAL-DEBT-REPORT.md](docs/audit/2026-06-13/06-TECHNICAL-DEBT-REPORT.md). This file is retained as historical record. Current security reference: [docs/SECURITY.md](docs/SECURITY.md).
+
 > Generated from direct source analysis of `apps/api-gateway/src/`
 
 ## Summary
 
-**2 HIGH · 2 MEDIUM · 2 LOW/INFO findings**
+**2 HIGH · 2 MEDIUM · 2 LOW/INFO findings** *(historical — see status above)*
 
 ---
 

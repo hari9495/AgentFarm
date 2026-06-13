@@ -20,10 +20,11 @@ AgentFarm is a production-grade, multi-tenant AI agent orchestration platform bu
                                               │  (Fastify)    │
                                               └───────────────┘
 
-Domain Services Layer (15 services)
-  agent-observability · approval-service · browser-actions · connector-gateway
-  evidence-service · identity-service · meeting-agent · memory-service
-  notification-service · policy-engine · provisioning-service · + 4 more
+Domain Services Layer (17 services)
+  agent-observability · approval-service · browser-actions · browser-agent
+  connector-gateway · desktop-agent · evidence-service · identity-service
+  meeting-agent · memory-service · notification-service · policy-engine
+  provisioning-service · + 4 more
 ```
 
 The **API Gateway** is the single control-plane entry point. All dashboard traffic is proxied through it. It owns authentication, rate limiting, billing enforcement, audit logging, and all database writes.
@@ -48,7 +49,7 @@ apps/
   agent-runtime/    AI task execution engine: LLM routing, skills, orchestration, desktop
   orchestrator/     Multi-agent workflow coordinator: GOAP planner, schedulers, handoffs (port 3011)
   trigger-service/  Inbound webhook, email, and Slack trigger ingestion (port 3002)
-  dashboard/        Next.js 15 operator dashboard (51 pages, 159 proxy routes) (port 3001)
+  dashboard/        Next.js 15 operator dashboard (95 pages, 294 proxy routes) (port 3001)
   website/          Next.js 15 marketing, signup, and onboarding site (Azure SWA in prod)
 
 services/
@@ -99,7 +100,7 @@ packages/
 
 ### Task execution
 - Multi-step task planning with LLM-backed planner loop
-- 9 LLM providers: OpenAI, Azure OpenAI, Anthropic, Google, xAI, Mistral, Together AI, GitHub Models, Auto (health-score failover)
+- 9 LLM providers: OpenAI, Azure OpenAI, Anthropic, Google, xAI, Mistral, Together AI, GitHub Models, DeepSeek — plus Auto mode (health-score failover)
 - Auto mode: 5-minute rolling health score (error rate + latency) with per-profile priority lists
 - 12 original action tiers + **Tier 20** (testing tools: Selenium, Cypress, Appium, Playwright, k6/Artillery, Newman, OWASP ZAP, Semgrep, visual regression) + **Tier 28** (content writer: prose, research, SEO, CMS publish, image sourcing, tone, revisions, brand voice, scheduling)
 - **Role enforcement** — `role-enforcer.ts` hard-blocks out-of-role tasks before any LLM call; `task-classifier.ts` provides LLM-based role membership checks
@@ -196,7 +197,7 @@ packages/
 
 ## Dashboard
 
-51 pages covering 159 proxy routes to the API Gateway.
+95 pages covering 294 proxy routes to the API Gateway (selection below; counts verified 2026-06-13).
 
 | URL | Description |
 |-----|-------------|
@@ -256,7 +257,7 @@ packages/
 
 ## API
 
-62 backend route files. Routes grouped by domain:
+110 backend route files under `apps/api-gateway/src/routes/`, organized into 14 domain subdirectories (auth, connectors, governance, memory, agents, runtime, workspace, platform, sales, admin, meetings, content/comms, support, ops) and registered via `src/route-registry.ts`. Representative groups (verified 2026-06-13):
 
 **Auth and identity**: `auth.ts`, `workspace-session.ts`, `roles.ts`, `internal-login-policy.ts`
 
@@ -286,7 +287,7 @@ packages/
 
 ## Database
 
-75+ Prisma models across 8 domains (70 core + sprint additions):
+105 Prisma models and 35 enums (44 migrations; verified 2026-06-13) spanning identity/tenancy, agents/personas, task execution, memory, billing, connectors/marketplace, governance/audit, communication/devtools, plus the sales, support, and tenant-portal domains. Core families:
 
 **Identity and tenancy** (8): `Tenant`, `TenantUser`, `Workspace`, `WorkspaceSessionState`, `TenantLanguageConfig`, `WorkspaceLanguageConfig`, `UserLanguageProfile`, `TenantMcpServer`
 
@@ -376,7 +377,7 @@ Test framework: Node.js built-in `node:test`. No Jest, no Vitest.
 
 ## CI/CD
 
-Seven GitHub Actions jobs in `.github/workflows/ci.yml`. Quality gate script (`pnpm quality:gate`) runs 47 checks including typechecks, test suites, coverage gates, and regression lanes.
+Twelve GitHub Actions jobs in `.github/workflows/ci.yml` (verified 2026-06-13): `secret-scan` (gitleaks), `dependency-audit` (SCA), `sast` (Semgrep), `website-permissions`, `validate`, `db-integration`, `install`, `typecheck` (matrix), `test` (matrix), `build` (Docker matrix), E2E tests, and `lint` (ESLint). Quality gate script (`pnpm quality:gate`) runs 47 checks including typechecks, test suites, coverage gates, and regression lanes.
 
 | Job | Purpose |
 |-----|---------|
@@ -392,7 +393,7 @@ Seven GitHub Actions jobs in `.github/workflows/ci.yml`. Quality gate script (`p
 
 ## Docker
 
-Nine services in `docker-compose.yml`. All 8 runtime services have healthchecks. `migrate` is a one-shot init container (no healthcheck — intentional).
+Twenty-three services in `docker-compose.yml` (verified 2026-06-13). Beyond the core set below, the stack includes `worker-runner`, `browser-agent`, `desktop-agent`, `meeting-agent`, the voice/telephony tier (`whisper`, `kokoro`, `xtts`, `mms-tts`, `voxcpm`, `freeswitch`), meeting media bots (`zoom-video-sidecar`, `teams-media-bot`), `ngrok`, and `agentfarm`. Runtime services have healthchecks; `migrate` is a one-shot init container (no healthcheck — intentional). Core services:
 
 | Service | Port | Healthcheck | Notes |
 |---------|------|-------------|-------|
@@ -410,7 +411,7 @@ Nine services in `docker-compose.yml`. All 8 runtime services have healthchecks.
 
 ## Shared packages
 
-13 shared packages under `packages/`. TypeScript path aliases enable in-process resolution in development — no compiled `dist/` output required to run or test locally.
+16 shared packages under `packages/` (table below predates `document-converter`, `memory-service`, and `redis-client`). TypeScript path aliases enable in-process resolution in development — no compiled `dist/` output required to run or test locally.
 
 | Package | Purpose | Has `dist/`? | Notes |
 |---------|---------|--------------|-------|

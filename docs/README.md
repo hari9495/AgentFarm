@@ -1,7 +1,7 @@
-> **Status:** Sprint 18 complete. 47/47 quality gate checks PASS. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for gap tracker.
 # AgentFarm Documentation Index
 
-> Last updated: May 29, 2026 | Sprint 18 — Content Writer Gap Closure
+> Last verified: 2026-06-13 (full repository audit at commit `3507f49`) — see [audit/2026-06-13/](audit/2026-06-13/README.md) for the verified current-state reports.
+> Prior status: Sprint 18 complete (2026-05-29), 47/47 quality gate checks PASS. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
 
 AgentFarm is a **multi-tenant AI agent platform** that deploys specialised AI teammates (agents) for engineering teams. Agents handle code, QA, docs, recruiting, meetings, and more — with every action gated by a human-approval workflow.
 
@@ -19,14 +19,16 @@ d:\AgentFarm\
 │   ├── trigger-service/         # External event → agent task bridge (port 3002)
 │   └── website/                 # Public marketing site + customer portal (port 3002*)
 │                                # (*trigger-service + website both default 3002; set TRIGGER_SERVICE_PORT)
-├── services/                    # Domain services — control and evidence planes
+├── services/                    # Domain services (17) — control and evidence planes
 │   ├── agent-observability/     # Action interception, audit log writing, scoring
 │   ├── agent-question-service/  # Agent pause/ask/resume human-question flow
 │   ├── approval-service/        # Approval enforcement and governance workflow mgr
 │   ├── audit-storage/           # Azure Blob screenshot uploader and audit types
 │   ├── browser-actions/         # Web action helpers (web-actions.ts)
+│   ├── browser-agent/           # Containerized browser automation agent
 │   ├── compliance-export/       # Compliance data export service
 │   ├── connector-gateway/       # Connector adapters: Slack, GitHub, Linear, etc.
+│   ├── desktop-agent/           # Desktop VM operator (Xvfb/noVNC vision loop)
 │   ├── evidence-service/        # HNSW index for evidence retrieval + KPI scoring
 │   ├── identity-service/        # Identity resolution stub
 │   ├── meeting-agent/           # Meeting lifecycle and voice pipeline
@@ -35,18 +37,21 @@ d:\AgentFarm\
 │   ├── policy-engine/           # Governance routing policy evaluator
 │   ├── provisioning-service/    # Azure VM/container provisioning job processor
 │   └── retention-cleanup/       # Scheduled retention cleanup job
-├── packages/                    # Shared libraries (13 packages)
+├── packages/                    # Shared libraries (16 packages)
 │   ├── auth-utils/              # JWT/HMAC auth and session helpers
 │   ├── cli/                     # CLI developer tooling
 │   ├── config/                  # Shared configuration utilities
-│   ├── connector-contracts/     # Connector type contracts (TypeScript)
+│   ├── connector-contracts/     # Connector registry (23 tools), action types, role policies
 │   ├── crm-service/             # CRM integration types/stubs
-│   ├── db-schema/               # Prisma schema + migrations (PostgreSQL)
-│   ├── e2e/                     # End-to-end test utilities
+│   ├── db-schema/               # Prisma schema + migrations (105 models, 44 migrations)
+│   ├── document-converter/      # Document format conversion utilities
+│   ├── e2e/                     # Playwright end-to-end test suite
 │   ├── erp-service/             # ERP integration types/stubs
+│   ├── memory-service/          # Memory-service library (semantic/episodic helpers)
 │   ├── notification-service/    # Shared notification adapter contracts
 │   ├── observability/           # Shared telemetry/observability helpers
 │   ├── queue-contracts/         # Queue message type contracts
+│   ├── redis-client/            # Shared Redis client wrapper
 │   ├── sdk/                     # AgentFarm SDK
 │   └── shared-types/            # Canonical shared TypeScript types
 ├── infrastructure/
@@ -185,6 +190,13 @@ pnpm --filter @agentfarm/api-gateway typecheck
 | [TESTING.md](TESTING.md) | Test patterns, mock conventions, quality gate |
 | [API.md](API.md) | Older API overview (see API_REFERENCE.md for full list) |
 | [AGENT_ROLES.md](AGENT_ROLES.md) | Agent role capability summaries |
+| [PRD.md](PRD.md) | Product requirements document (as-built, 2026-06-13) |
+| [SECURITY.md](SECURITY.md) | Consolidated platform security reference |
+| [OPERATIONS.md](OPERATIONS.md) | Operations & maintenance guide, runbook index |
+| [DEVELOPER_ONBOARDING.md](DEVELOPER_ONBOARDING.md) | Clone-to-contribution onboarding path |
+| [audit/2026-06-13/](audit/2026-06-13/README.md) | Full repository audit: verified inventory, gap analysis, tech debt, action plan |
+
+> ⚠ **Freshness note (2026-06-13):** documents stamped "2026-05-29 (Sprint 18)" pre-date 411 commits of development (sales domain, support domain, customer portal, voice/telephony stack, worker-runner, SSO/MFA). Their structure remains accurate; their counts generally do not. See the [Documentation Gap Analysis](audit/2026-06-13/05-DOCUMENTATION-GAP-ANALYSIS.md) for corrected figures.
 
 ---
 

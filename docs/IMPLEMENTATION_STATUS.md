@@ -1,7 +1,10 @@
 # AgentFarm — Implementation Status
 
 > **Source of truth** for what's actually shipped vs. planned in the codebase.
-> Last updated: 2026-05-29 (Sprint 18 — Content Writer Gap Closure)
+> Last updated: 2026-06-13 (full repository audit — agent-role section corrected; see [audit/2026-06-13/](audit/2026-06-13/README.md))
+> Previous update: 2026-05-29 (Sprint 18 — Content Writer Gap Closure)
+>
+> ⚠ Sections other than "Agent Roles" below still reflect Sprint 18 state. 411 commits have landed since; the audit reports carry the verified current inventory (105 DB models, 110 gateway route files, 23 connectors, 23 compose services, 12 CI jobs).
 
 ## Legend
 - ✅ **Shipped** — code in `main`, typechecked, tested, used in the production task path.
@@ -75,19 +78,26 @@ All 6 gaps from the May audit — all shipped.
 - ✅ MCP protocol client (URL store + headers)
 - 🚧 Jira, Teams, GitLab — OAuth connector implementation (connector-gateway) partially complete
 
-### Agent Roles
-- ✅ `developer` — full, 12-tier actions, autonomous loop, PR review, CI triage, DB migration, dependency upgrade
-- ✅ `tester` — full, 18 connectors, 62 actions, Tier 20 testing tools (Selenium/Cypress/Appium/Playwright/k6/ZAP/Semgrep/TestRail/Zephyr)
-- ✅ `technical_writer` — full
-- ✅ `content_writer` — full, 10 capability modules (prose, research, SEO, CMS, images, tone, revisions, brand voice, scheduling)
-- ✅ `corporate_assistant` — full
-- 📋 `fullstack_developer` — profile defined, handlers not yet built
-- 📋 `business_analyst` — profile defined
-- 📋 `project_manager_product_owner_scrum_master` — profile defined
-- 📋 `sales_rep` — profile defined (SalesAgentConfig, Prospect, SalesDeal models exist)
-- 📋 `marketing_specialist` — profile defined
-- 📋 `recruiter` — profile defined
-- 📋 `customer_support_executive` — profile defined
+### Agent Roles (corrected 2026-06-13 — all 15 implemented)
+
+All agents below have an implementation directory under `apps/agent-runtime/src/agents/` with a RAG retriever and lesson pipeline (see the RAG coverage table in `CLAUDE.md`):
+
+- ✅ `developer` — 12-tier actions, autonomous loop, PR review, CI triage, DB migration, dependency upgrade
+- ✅ `tester` — Tier 20 testing tools (Selenium/Cypress/Appium/Playwright/k6/ZAP/Semgrep/TestRail/Zephyr)
+- ✅ `technical-writer`
+- ✅ `content-writer` — 10 capability modules (prose, research, SEO, CMS, images, tone, revisions, brand voice, scheduling)
+- ✅ `corporate-assistant`
+- ✅ `full-stack-developer` — note: known graceful-degradation gaps (never hard-fails; can mask failures — see tech-debt report)
+- ✅ `business-analyst`
+- ✅ `project-manager`
+- ✅ `sales-agent` — full sales domain (Prospect, SalesDeal, SalesActivity, Lead, sequences, calls, proposals, negotiations, NPS, win/loss)
+- ✅ `marketing-specialist`
+- ✅ `recruiter`
+- ✅ `customer-support-executive`
+- ✅ `devops`
+- ✅ `mobile`
+- ✅ `agentfarm-support` — platform's own support agent (SupportIssue/CSAT/chat/voice)
+- ✅ `meeting-agent` — voice-presence **sub-agent** (joins/transcribes/speaks in meetings; not a standalone sellable role)
 
 ### Memory
 - ✅ Short-term memory (7-day TTL, per-workspace, Prisma-backed)

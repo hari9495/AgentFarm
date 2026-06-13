@@ -20,7 +20,7 @@ pnpm build
 # Build single app
 pnpm --filter @agentfarm/<app> build
 
-# Run all tests (1,853 tests, node:test framework)
+# Run all tests (node:test framework)
 pnpm test
 
 # Run tests for a single app
@@ -68,7 +68,7 @@ AgentFarm is a **multi-tenant AI agent orchestration platform** — a TypeScript
 
 ```
 apps/               6 runtime services
-services/           18 domain modules (imported into apps, not standalone containers)
+services/           17 domain modules (imported into apps, not standalone containers)
 packages/           16 shared packages (no dist/ in dev — resolved via TS path aliases)
 scripts/            30+ dev/ops scripts
 ```
@@ -81,14 +81,14 @@ scripts/            30+ dev/ops scripts
 | `agent-runtime` | 4000 | Execution engine — LLM dispatch, 12 action tiers |
 | `orchestrator` | 3011 | GOAP multi-agent planner, schedulers, handoffs |
 | `trigger-service` | 3002 | Inbound intake — webhooks, IMAP email, Slack |
-| `dashboard` | 3001 | Operator UI — 51 pages, 159 Next.js proxy routes |
+| `dashboard` | 3001 | Operator UI — 95 pages, 294 Next.js proxy routes |
 | `website` | varies | Marketing, signup, onboarding (Cloudflare in prod) |
 
 **Key services** (imported by api-gateway / agent-runtime):
 `approval-service`, `connector-gateway` (OAuth + mTLS + plugin loader), `identity-service`, `evidence-service` (HNSW vector search), `meeting-agent` (STT/TTS), `memory-service`, `notification-service`, `policy-engine`, `provisioning-service` (Azure VM state machine), `browser-actions` (Playwright), `audit-storage`.
 
 **Key packages:**
-`db-schema` (Prisma schema + 14-phase migrations), `shared-types` (100+ TS contracts, only package with a compiled `dist/`), `connector-contracts` (18 connectors, 18 action types, 12 role profiles), `observability` (OTEL + Azure Monitor), `sdk` (AgentFarmClient), `config` (service URLs + constants).
+`db-schema` (Prisma schema + 44 migrations), `shared-types` (100+ TS contracts, only package with a compiled `dist/`), `connector-contracts` (23 connectors incl. telephony, 34 normalized action types, 13 role keys), `observability` (OTEL + Azure Monitor), `sdk` (AgentFarmClient), `config` (service URLs + constants).
 
 ### Request flow
 
@@ -140,7 +140,7 @@ Voicebox / VoxCPM2  — STT / TTS
 
 ### Database
 
-Schema at `packages/db-schema/prisma/schema.prisma` — 70 models across 8 domains: Identity & Tenancy, Agents & Bots, Task Execution, Memory & Knowledge, Billing & Subscriptions, Connectors & Marketplace, Governance & Audit, Communication & Developer Tools.
+Schema at `packages/db-schema/prisma/schema.prisma` — 105 models and 35 enums across 11 domains: Identity & Tenancy (incl. SSO, branding, portal accounts), Agents & Bots (incl. personas), Task Execution, Memory & Knowledge, Billing & Subscriptions, Connectors & Marketplace, Governance & Audit, Communication & Developer Tools, Sales (prospects/deals/calls/contracts/NPS), Support (issues/CSAT/chat/diagnosis), Provisioning & VMs.
 
 ### Environment variables
 
@@ -165,11 +165,11 @@ All variables documented in `.env.example`. Minimum required to run locally:
 
 ### Docker services
 
-`docker-compose.yml` defines 9 services: `postgres` (5432), `redis` (6379), `opa` (8181), `voicebox` (17493), `migrate` (one-shot), `api-gateway`, `agent-runtime`, `trigger-service`, `dashboard`. All except migrate have healthchecks at `GET /health`.
+`docker-compose.yml` defines 23 services: core (`postgres` 5432, `redis` 6379, `opa` 8181, `migrate` one-shot, `api-gateway`, `agent-runtime`, `trigger-service`, `dashboard`, `worker-runner`), automation (`browser-agent`, `desktop-agent`), voice/telephony (`voicebox` 17493, `whisper`, `kokoro`, `xtts`, `mms-tts`, `voxcpm`, `freeswitch`), meetings (`meeting-agent`, `zoom-video-sidecar`, `teams-media-bot`), plus `ngrok` and `agentfarm`. Runtime services have healthchecks at `GET /health` (migrate intentionally has none).
 
 ### CI pipeline
 
-`.github/workflows/ci.yml` runs 7 jobs: `secret-scan` (gitleaks), `website-permissions`, `validate` (typecheck + build), `db-integration`, `install` (cache), `typecheck` (matrix: 6 apps), `test` (matrix: 6 apps), `build` (Docker matrix: 4 apps).
+`.github/workflows/ci.yml` runs 12 jobs: `secret-scan` (gitleaks), `dependency-audit` (SCA), `sast` (Semgrep), `website-permissions`, `validate` (typecheck + build), `db-integration`, `install` (cache), `typecheck` (matrix), `test` (matrix), `build` (Docker matrix), E2E tests (Playwright), `lint` (ESLint).
 
 ## RAG (Retrieval-Augmented Generation)
 
