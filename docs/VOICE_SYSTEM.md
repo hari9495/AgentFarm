@@ -4,6 +4,33 @@
 
 ---
 
+## 0. Topology
+
+```mermaid
+flowchart TB
+    subgraph platforms["Meeting platforms"]
+        ZOOM["zoom-video-sidecar :8091"]
+        TEAMS["teams-media-bot :8090"]
+        MEET["Google Meet (pilot runbook)"]
+    end
+    platforms --> MA["meeting-agent :7799<br/>join · capture · transcribe · speak"]
+    DA["desktop-agent<br/>PulseAudio virtual mic/speaker"] --- MA
+    MA --- FS["FreeSWITCH<br/>SIP · ESL :8021"]
+    MA --> STT
+    MA --> TTS
+    subgraph STT["Speech to text"]
+        WH["whisper :8000<br/>faster-whisper-medium · int8"]
+        VB["voicebox :17493"]
+    end
+    subgraph TTS["Text to speech"]
+        KO["kokoro :8880"]
+        XT["xtts :5002"]
+        MMS["mms-tts :5002"]
+        VOX["voxcpm (VoxCPM2)"]
+    end
+    MA --> DISC["EU AI Act Art. 52 disclosure<br/>spoken on first utterance · audited per bot"]
+```
+
 ## 1. Components (verified in docker-compose.yml and .env.example)
 
 | Service | Default endpoint | Role | Image source |

@@ -59,6 +59,21 @@ flowchart TB
     RT --- BLOB
 ```
 
+### Task lifecycle (verified 2026-06-13)
+
+```mermaid
+flowchart TB
+    IN["Task intake<br/>UI · API · email · Slack · schedules"] --> PLAN["LLM planning<br/>role enforcer · RAG context injection"]
+    PLAN --> RISK{"Risk classification<br/>confidence &lt; 0.6 escalates"}
+    RISK -->|low| EXEC["Execute actions<br/>12 tiers · connectors · desktop"]
+    RISK -->|medium · high| Q["Approval queue<br/>HMAC intake at gateway"]
+    Q --> OP["Operator decision<br/>locked on re-decide (409) · latency tracked"]
+    OP -->|approve| EXEC
+    OP -->|reject| LESSON["Lesson pipeline<br/>classifyFeedback → AgentLongTermMemory"]
+    EXEC --> EV["Evidence & audit<br/>screenshots · append-only AuditEvent"]
+    EV --> LEARN["Learn & bill<br/>approved work → AgentKnowledgeBase · usage metering"]
+```
+
 ---
 
 ## System Overview

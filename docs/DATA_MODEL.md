@@ -6,6 +6,29 @@
 
 Full Prisma schema reference for `packages/db-schema/prisma/schema.prisma` — PostgreSQL 16 + pgvector.
 
+## Domain map (verified 2026-06-13 — 105 models, 35 enums, 44 migrations)
+
+```mermaid
+flowchart TB
+    subgraph core["Documented since Sprint 18"]
+        ID["Identity & tenancy (~13)<br/>Tenant · Workspace · SSO · branding · portal accounts"]
+        AG["Agents & bots (~8)<br/>Bot · AgentPersona · snapshots · sessions"]
+        TASK["Task execution (~10)<br/>TaskQueueEntry · Plan · ActionRecord · dispatch"]
+        MEM["Memory & knowledge (~8)<br/>short/long-term · episodic · AgentKnowledgeBase (pgvector)"]
+        BILL["Billing (~8)<br/>Order · Invoice · Tenant/AgentSubscription · budget"]
+        CONN["Connectors (~8)<br/>auth sessions · actions · marketplace"]
+        GOV["Governance & audit (~13)<br/>Approval · AuditEvent · evidence · retention · plugins"]
+        COMM["Comms & dev tools (~17)<br/>chat · questions · webhooks · ApiKey · IDE/desktop state"]
+        PROV["Provisioning & VMs (~3)<br/>ProvisioningJob · WorkspaceVm · RuntimeInstance"]
+    end
+    subgraph new["Added after Sprint-18 docs"]
+        SALES["Sales (~15)<br/>Prospect · Lead · SalesDeal · sequences · CallRecord · proposals · NPS · win/loss"]
+        SUP["Support (4)<br/>SupportIssue · CSAT · chat · diagnosis steps"]
+    end
+```
+
+> Counts are approximate domain groupings of the 105 verified models; see the full model sections below (pre-Sprint-18 models) and the freshness banner above for everything added since.
+
 **Sprint 8–18 model additions:**
 - `AgentPersona` — per-bot identity (display name, email, avatar, communication style, disclosure statement)
 - `SetupWizardSession` — multi-step agent onboarding state
