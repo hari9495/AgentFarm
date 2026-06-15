@@ -112,6 +112,9 @@
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       PORTAL_EMAIL_FROM: ${PORTAL_EMAIL_FROM:-AgentFarm Support <noreply@agentfarm.io>}
       PORTAL_APP_BASE_URL: ${PORTAL_APP_BASE_URL:-http://localhost:3002}
+      # Bypass email verification on portal signup when no SMTP is configured
+      # (single-host / demo deployments). Leave false in production.
+      PORTAL_SKIP_EMAIL_VERIFICATION: ${PORTAL_SKIP_EMAIL_VERIFICATION:-}
       # Option 2 — generic webhook fallback (set if not using Resend)
       PORTAL_RESET_WEBHOOK_URL: ${PORTAL_RESET_WEBHOOK_URL:-}
       # Internal dashboard login — allow operators with @agentfarms.in email or owner role
@@ -296,6 +299,41 @@
         condition: service_healthy
     healthcheck:
       test: [ 'CMD-SHELL', 'wget -qO /dev/null http://127.0.0.1:3001 || exit 1' ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
+  website:
+    build:
+      context: .
+      dockerfile: apps/website/Dockerfile
+    container_name: agentfarm-website
+    ports:
+      - '3002:3002'
+    environment:
+      NODE_ENV: production
+      # Portal API + auth proxy target (server-side calls to the gateway)
+      API_GATEWAY_URL: http://api-gateway:3000
+      # Public site URL — used for magic links and email callbacks. Override
+      # with the externally reachable URL (Cloudflare tunnel / domain) at deploy.
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3002}
+      # Internal dashboard URL shown to company members after login
+      AGENTFARM_INTERNAL_DASHBOARD_URL: ${AGENTFARM_INTERNAL_DASHBOARD_URL:-http://localhost:3001}
+      # Signup allowlist — comma-separated domains/emails (empty = open signup)
+      AGENTFARM_ALLOWED_SIGNUP_DOMAINS: ${AGENTFARM_ALLOWED_SIGNUP_DOMAINS:-}
+      AGENTFARM_ALLOWED_SIGNUP_EMAILS: ${AGENTFARM_ALLOWED_SIGNUP_EMAILS:-}
+      # NOTE: the customer portal proxies all auth to the api-gateway (cookie-based
+      # portal sessions), so the website's SQLite D1 fallback is not required here.
+      # Set WEBSITE_AUTH_DB_PATH only if the marketing-site magic-link auth is needed.
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: [ 'CMD-SHELL', 'wget -qO /dev/null http://127.0.0.1:3002 || exit 1' ]
       interval: 30s
       timeout: 10s
       retries: 3
