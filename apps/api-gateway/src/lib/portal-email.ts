@@ -5,11 +5,12 @@
  * email verification).
  *
  * Priority chain — first configured provider wins:
- *   1. Resend  — set RESEND_API_KEY  (+ optional PORTAL_EMAIL_FROM)
- *   2. Generic webhook — set PORTAL_RESET_WEBHOOK_URL
- *   3. Console log  — always available; dev-only fallback
+ *   1. Zoho ZeptoMail — set ZEPTOMAIL_API_TOKEN (+ ZEPTOMAIL_API_URL for region)
+ *   2. Resend  — set RESEND_API_KEY  (+ optional PORTAL_EMAIL_FROM)
+ *   3. Generic webhook — set PORTAL_RESET_WEBHOOK_URL
+ *   4. Console log  — always available; dev-only fallback
  *
- * No npm dependencies — Resend is called via plain fetch.
+ * No npm dependencies — every provider is called via plain fetch.
  */
 
 export interface PasswordResetEmailOptions {
@@ -19,7 +20,72 @@ export interface PasswordResetEmailOptions {
     expiresAt: string; // ISO string
 }
 
-const FROM = (): string => process.env['PORTAL_EMAIL_FROM'] ?? 'AgentFarm Support <noreply@agentfarm.io>';
+const FROM = (): string => process.env['PORTAL_EMAIL_FROM'] ?? 'AgentFarms <noreply@agentfarms.in>';
+
+const VERIFY_SUBJECT = 'Verify your AgentFarms portal email';
+const RESET_SUBJECT = 'Reset your AgentFarms portal password';
+
+// ── Zoho ZeptoMail (transactional, HTTP API — no SMTP dependency) ───────────
+// Region matters: India accounts use api.zeptomail.in, global accounts
+// api.zeptomail.com. Override the full URL via ZEPTOMAIL_API_URL if needed.
+const ZEPTO_URL = (): string =>
+    process.env['ZEPTOMAIL_API_URL'] ?? 'https://api.zeptomail.in/v1.1/email';
+
+/** Parse a "Name <addr@x>" or bare "addr@x" FROM string into ZeptoMail shape. */
+function parseFrom(raw: string): { address: string; name?: string } {
+    const m = raw.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
+    if (m && m[2]) return { address: m[2].trim(), name: m[1]?.trim() || undefined };
+    return { address: raw.trim() };
+}
+
+interface ZeptoSendArgs {
+    to: string;
+    subject: string;
+    html: string;
+    text: string;
+}
+
+/**
+ * Send one email via the ZeptoMail HTTP API.
+ * Returns `true` on success, `false` if not configured or the send failed.
+ */
+async function sendViaZeptoMail(args: ZeptoSendArgs): Promise<boolean> {
+    const rawToken = process.env['ZEPTOMAIL_API_TOKEN'];
+    if (!rawToken) return false;
+
+    // The Send Mail token may be stored with or without the scheme prefix.
+    const authValue = rawToken.startsWith('Zoho-enczapikey')
+        ? rawToken
+        : `Zoho-enczapikey ${rawToken}`;
+    const from = parseFrom(FROM());
+
+    try {
+        const res = await fetch(ZEPTO_URL(), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                Authorization: authValue,
+            },
+            body: JSON.stringify({
+                from: { address: from.address, ...(from.name ? { name: from.name } : {}) },
+                to: [{ email_address: { address: args.to } }],
+                subject: args.subject,
+                htmlbody: args.html,
+                textbody: args.text,
+            }),
+            signal: AbortSignal.timeout(10_000),
+        });
+        if (res.ok) {
+            console.info(`[portal-email] "${args.subject}" sent via ZeptoMail to ${args.to}`);
+            return true;
+        }
+        console.warn(`[portal-email] ZeptoMail error ${res.status}: ${await res.text()}`);
+    } catch (e) {
+        console.warn(`[portal-email] ZeptoMail fetch failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    return false;
+}
 
 function buildResetHtml(opts: PasswordResetEmailOptions): string {
     return `<!DOCTYPE html>
@@ -121,6 +187,16 @@ export async function sendVerificationEmail(opts: VerificationEmailOptions): Pro
     const resendKey = process.env['RESEND_API_KEY'];
     const webhookUrl = process.env['PORTAL_RESET_WEBHOOK_URL'];
 
+    if (process.env['ZEPTOMAIL_API_TOKEN']) {
+        const sent = await sendViaZeptoMail({
+            to: opts.to,
+            subject: VERIFY_SUBJECT,
+            html: buildVerifyHtml(opts),
+            text: `Verify your email\n\nVerification link: ${opts.verifyUrl}\n\n— AgentFarms`,
+        });
+        if (sent) return true;
+    }
+
     if (resendKey) {
         try {
             const res = await fetch('https://api.resend.com/emails', {
@@ -129,9 +205,9 @@ export async function sendVerificationEmail(opts: VerificationEmailOptions): Pro
                 body: JSON.stringify({
                     from: FROM(),
                     to: [opts.to],
-                    subject: 'Verify your AgentFarm portal email',
+                    subject: VERIFY_SUBJECT,
                     html: buildVerifyHtml(opts),
-                    text: `Verify your email\n\nVerification link: ${opts.verifyUrl}\n\n— AgentFarm`,
+                    text: `Verify your email\n\nVerification link: ${opts.verifyUrl}\n\n— AgentFarms`,
                 }),
                 signal: AbortSignal.timeout(10_000),
             });
@@ -174,6 +250,17 @@ export async function sendPasswordResetEmail(opts: PasswordResetEmailOptions): P
     const resendKey = process.env['RESEND_API_KEY'];
     const webhookUrl = process.env['PORTAL_RESET_WEBHOOK_URL'];
 
+    // ── 0. Zoho ZeptoMail ───────────────────────────────────────────────────────
+    if (process.env['ZEPTOMAIL_API_TOKEN']) {
+        const sent = await sendViaZeptoMail({
+            to: opts.to,
+            subject: RESET_SUBJECT,
+            html: buildResetHtml(opts),
+            text: buildResetText(opts),
+        });
+        if (sent) return true;
+    }
+
     // ── 1. Resend ──────────────────────────────────────────────────────────────
     if (resendKey) {
         try {
@@ -186,7 +273,7 @@ export async function sendPasswordResetEmail(opts: PasswordResetEmailOptions): P
                 body: JSON.stringify({
                     from: FROM(),
                     to: [opts.to],
-                    subject: 'Reset your AgentFarm portal password',
+                    subject: RESET_SUBJECT,
                     html: buildResetHtml(opts),
                     text: buildResetText(opts),
                 }),
@@ -212,7 +299,7 @@ export async function sendPasswordResetEmail(opts: PasswordResetEmailOptions): P
                 body: JSON.stringify({
                     to: opts.to,
                     tenantId: opts.tenantId,
-                    subject: 'Reset your AgentFarm portal password',
+                    subject: RESET_SUBJECT,
                     resetUrl: opts.resetUrl,
                     expiresAt: opts.expiresAt,
                     html: buildResetHtml(opts),
