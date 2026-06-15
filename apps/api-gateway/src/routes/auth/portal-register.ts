@@ -8,6 +8,22 @@ import { sendVerificationEmail } from '../../lib/portal-email.js';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LEN = 8;
 
+// Free / personal email providers — self-serve signup requires a company domain.
+// Disable entirely with SIGNUP_BLOCK_FREE_EMAIL=false; extend the list via
+// SIGNUP_BLOCKED_EMAIL_DOMAINS (comma-separated).
+const FREE_EMAIL_DOMAINS = new Set([
+    'gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.co.in', 'yahoo.co.uk',
+    'ymail.com', 'rocketmail.com', 'outlook.com', 'hotmail.com', 'hotmail.co.uk',
+    'live.com', 'msn.com', 'icloud.com', 'me.com', 'mac.com', 'aol.com',
+    'proton.me', 'protonmail.com', 'pm.me', 'gmx.com', 'gmx.net', 'mail.com',
+    'zoho.com', 'zohomail.com', 'yandex.com', 'rediffmail.com', 'tutanota.com', 'hey.com',
+]);
+const blockFreeEmailSignup = process.env['SIGNUP_BLOCK_FREE_EMAIL'] !== 'false';
+const extraBlockedDomains = (process.env['SIGNUP_BLOCKED_EMAIL_DOMAINS'] ?? '')
+    .split(',')
+    .map((d) => d.trim().toLowerCase())
+    .filter(Boolean);
+
 // Free starter plan — seeded in the Plan table (priceUsd=0, agentSlots=1).
 const FREE_PLAN_ID = 'starter';
 
@@ -66,6 +82,17 @@ export const registerPortalRegisterRoute = async (app: FastifyInstance): Promise
         }
 
         const normalizedEmail = email.trim().toLowerCase();
+
+        // Company-domain enforcement — reject free / personal email providers.
+        const emailDomain = normalizedEmail.split('@')[1] ?? '';
+        if (blockFreeEmailSignup && (FREE_EMAIL_DOMAINS.has(emailDomain) || extraBlockedDomains.includes(emailDomain))) {
+            return reply.code(400).send({
+                error: 'validation_failed',
+                field: 'email',
+                message: 'Please sign up with your company email address. Free email providers (Gmail, Yahoo, Outlook, etc.) are not allowed.',
+            });
+        }
+
         const slug = toSlug(companyName.trim());
         const skipVerification = process.env['PORTAL_SKIP_EMAIL_VERIFICATION'] === 'true';
         const appBaseUrl = process.env['PORTAL_APP_BASE_URL'] ?? 'http://localhost:3002';
