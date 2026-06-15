@@ -128,6 +128,10 @@
       API_INTERNAL_LOGIN_ADMIN_ROLES: ${API_INTERNAL_LOGIN_ADMIN_ROLES:-owner}
       # Inter-service auth — connector execute endpoint
       AGENTFARM_CONNECTOR_EXEC_SHARED_TOKEN: ${CONNECTOR_EXEC_SHARED_TOKEN}
+      # Inter-service auth — approval intake (runtime → gateway). REQUIRED, else
+      # the runtime's POST /v1/approvals/intake gets 401 and high-risk actions
+      # never reach the approval inbox (human-approval feature silently breaks).
+      AGENTFARM_APPROVAL_INTAKE_SHARED_TOKEN: ${APPROVAL_INTAKE_SHARED_TOKEN:-dev-approval-token}
       # Persist env:// connector secrets across restarts (no Key Vault required in dev)
       CONNECTOR_SECRETS_PATH: /data/connector-secrets.json
       # Agent runtime — portal task submission proxies to this service.
