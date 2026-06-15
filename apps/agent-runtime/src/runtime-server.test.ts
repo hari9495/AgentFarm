@@ -2862,6 +2862,7 @@ test('startup resolves tester aliases and applies tester-only action guardrails'
             'playwright', 'postman', 'selenium', 'slack', 'soapui', 'teams',
             'testrail', 'zephyr',
             'google_meet', 'microsoft_teams', 'zoom',
+            'custom_api',
         ].sort());
         assert.ok(snapshotBody.snapshot.allowedActions.includes('list_prs'));
         assert.ok(snapshotBody.snapshot.allowedActions.includes('create_pr_comment'));
@@ -5230,6 +5231,7 @@ test('startup resolves technical writer aliases and applies tw-only action guard
         assert.equal(snapshotBody.snapshot.roleKey, 'technical_writer');
         assert.deepEqual(snapshotBody.snapshot.allowedConnectorTools.sort(), [
             'confluence', 'github', 'gitlab', 'google_drive', 'slack',
+            'custom_api',
         ].sort());
         assert.ok(snapshotBody.snapshot.allowedActions.includes('workspace_tw_doc_diff'));
         assert.ok(snapshotBody.snapshot.allowedActions.includes('workspace_tw_api_doc_openapi'));

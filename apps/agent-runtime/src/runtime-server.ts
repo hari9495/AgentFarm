@@ -264,7 +264,7 @@ type ConnectorActionExecuteClient = (input: {
     workspaceId: string;
     botId: string;
     roleKey: RoleKey;
-    connectorType: 'jira' | 'teams' | 'github' | 'email' | 'slack';
+    connectorType: 'jira' | 'teams' | 'github' | 'email' | 'slack' | 'custom_api';
     actionType:
     | 'read_task'
     | 'create_comment'
@@ -891,7 +891,11 @@ type RuntimeConnectorType =
     | 'aws' | 'azure' | 'gcp' | 'terraform_cloud'
     | 'rancher' | 'lens'
     | 'grafana' | 'prometheus' | 'new_relic' | 'cloudwatch'
-    | 'vault' | 'aws_secrets_manager';
+    | 'vault' | 'aws_secrets_manager'
+    // Generic arbitrary REST API — tenant-configured base URL + auth.
+    // Available to every role (the tenant opts in by configuring the connector);
+    // the agent drives it via the read_task action with {path, method, body} params.
+    | 'custom_api';
 type RuntimeConnectorActionType =
     | 'read_task'
     | 'create_comment'
@@ -905,21 +909,27 @@ type RuntimeConnectorActionType =
 
 type RuntimeLocalWorkspaceActionType = LocalWorkspaceActionType;
 
+// Connectors available to every role regardless of domain. custom_api is a
+// generic, tenant-configured REST escape hatch — the tenant explicitly opts in
+// by creating the connector with a specific base URL + auth, so it is not gated
+// per role the way domain connectors are.
+const UNIVERSAL_CONNECTORS: RuntimeConnectorType[] = ['custom_api'];
+
 const ROLE_CONNECTOR_POLICY: Record<RoleKey, RuntimeConnectorType[]> = {
-    recruiter: [...RECRUITER_ROLE_ALLOWED_CONNECTORS],
-    developer: [...DEVELOPER_ROLE_ALLOWED_CONNECTORS],
-    fullstack_developer: [...FSD_ROLE_ALLOWED_CONNECTORS],
-    tester: [...TESTER_ROLE_ALLOWED_CONNECTORS],
-    business_analyst: [...BUSINESS_ANALYST_ROLE_ALLOWED_CONNECTORS],
-    technical_writer: [...TECHNICAL_WRITER_ROLE_ALLOWED_CONNECTORS],
-    content_writer: [...CONTENT_WRITER_ROLE_ALLOWED_CONNECTORS],
-    sales_rep: [...SALES_REP_ROLE_ALLOWED_CONNECTORS],
-    marketing_specialist: [...MARKETING_SPECIALIST_ROLE_ALLOWED_CONNECTORS],
-    corporate_assistant: [...CORPORATE_ASSISTANT_ROLE_ALLOWED_CONNECTORS],
-    customer_support_executive: [...CUSTOMER_SUPPORT_EXECUTIVE_ROLE_ALLOWED_CONNECTORS],
-    project_manager_product_owner_scrum_master: [...PROJECT_MANAGER_ROLE_ALLOWED_CONNECTORS],
-    devops_engineer: [...DEVOPS_ROLE_ALLOWED_CONNECTORS],
-    mobile_engineer: [...MOBILE_ROLE_ALLOWED_CONNECTORS],
+    recruiter: [...RECRUITER_ROLE_ALLOWED_CONNECTORS, ...UNIVERSAL_CONNECTORS],
+    developer: [...DEVELOPER_ROLE_ALLOWED_CONNECTORS, ...UNIVERSAL_CONNECTORS],
+    fullstack_developer: [...FSD_ROLE_ALLOWED_CONNECTORS, ...UNIVERSAL_CONNECTORS],
+    tester: [...TESTER_ROLE_ALLOWED_CONNECTORS, ...UNIVERSAL_CONNECTORS],
+    business_analyst: [...BUSINESS_ANALYST_ROLE_ALLOWED_CONNECTORS, ...UNIVERSAL_CONNECTORS],
+    technical_writer: [...TECHNICAL_WRITER_ROLE_ALLOWED_CONNECTORS, ...UNIVERSAL_CONNECTORS],
+    content_writer: [...CONTENT_WRITER_ROLE_ALLOWED_CONNECTORS, ...UNIVERSAL_CONNECTORS],
+    sales_rep: [...SALES_REP_ROLE_ALLOWED_CONNECTORS, ...UNIVERSAL_CONNECTORS],
+    marketing_specialist: [...MARKETING_SPECIALIST_ROLE_ALLOWED_CONNECTORS, ...UNIVERSAL_CONNECTORS],
+    corporate_assistant: [...CORPORATE_ASSISTANT_ROLE_ALLOWED_CONNECTORS, ...UNIVERSAL_CONNECTORS],
+    customer_support_executive: [...CUSTOMER_SUPPORT_EXECUTIVE_ROLE_ALLOWED_CONNECTORS, ...UNIVERSAL_CONNECTORS],
+    project_manager_product_owner_scrum_master: [...PROJECT_MANAGER_ROLE_ALLOWED_CONNECTORS, ...UNIVERSAL_CONNECTORS],
+    devops_engineer: [...DEVOPS_ROLE_ALLOWED_CONNECTORS, ...UNIVERSAL_CONNECTORS],
+    mobile_engineer: [...MOBILE_ROLE_ALLOWED_CONNECTORS, ...UNIVERSAL_CONNECTORS],
 };
 
 const CONNECTOR_ACTION_POLICY: Partial<Record<RuntimeConnectorType, RuntimeConnectorActionType[]>> = {
@@ -927,6 +937,9 @@ const CONNECTOR_ACTION_POLICY: Partial<Record<RuntimeConnectorType, RuntimeConne
     teams: ['send_message'],
     github: ['create_pr_comment', 'create_pr', 'merge_pr', 'list_prs'],
     email: ['send_email'],
+    // Generic REST connector: read_task carries the HTTP verb in its params
+    // ({path, method, body}), so a single action covers arbitrary REST calls.
+    custom_api: ['read_task'],
 };
 
 const ROLE_CONNECTOR_ACTION_OVERRIDES: Partial<
@@ -1640,13 +1653,21 @@ const defaultApprovalIntakeClient: ApprovalIntakeClient = async (input) => {
     }
 };
 
-const normalizeConnectorType = (value: unknown): 'jira' | 'teams' | 'github' | 'email' | null => {
+const normalizeConnectorType = (
+    value: unknown,
+): 'jira' | 'teams' | 'github' | 'email' | 'custom_api' | null => {
     if (typeof value !== 'string' || !value.trim()) {
         return null;
     }
 
     const normalized = value.trim().toLowerCase();
-    if (normalized === 'jira' || normalized === 'teams' || normalized === 'github' || normalized === 'email') {
+    if (
+        normalized === 'jira' ||
+        normalized === 'teams' ||
+        normalized === 'github' ||
+        normalized === 'email' ||
+        normalized === 'custom_api'
+    ) {
         return normalized;
     }
 
@@ -2610,7 +2631,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             route: 'execute' | 'approval';
             reason: string;
         };
-        connectorType: 'jira' | 'teams' | 'github' | 'email';
+        connectorType: 'jira' | 'teams' | 'github' | 'email' | 'custom_api';
         source: 'approval_decision_webhook' | 'approval_decision_cache' | 'direct_execute';
         payloadOverrideSource: PayloadOverrideSource;
     }): Promise<ProcessedTaskResult> => {
