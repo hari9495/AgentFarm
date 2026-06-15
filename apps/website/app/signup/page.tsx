@@ -117,7 +117,7 @@ export default function SignupPage() {
                                 </button>
                             </div>
                             <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-                                Save this — you&apos;ll need it every time you log in.
+                                Save this for API access and support — to sign in, you only need your email and password.
                             </p>
                         </div>
 
@@ -289,7 +289,7 @@ export default function SignupPage() {
                             By signing up you agree to our{" "}
                             <Link href="/privacy" className="underline hover:text-slate-600">Privacy Policy</Link>
                             {" "}and{" "}
-                            <Link href="/cookies" className="underline hover:text-slate-600">Terms of Service</Link>.
+                            <Link href="/terms" className="underline hover:text-slate-600">Terms of Service</Link>.
                         </p>
                     </form>
                 </div>

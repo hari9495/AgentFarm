@@ -176,7 +176,7 @@ export default function ApiKeysPage() {
                             </div>
                             <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">Programmatic access</h1>
                             <p className="mt-2 text-slate-400 text-base max-w-lg">
-                                Generate scoped API keys to call AgentFarm from your own scripts and integrations. Keys inherit a role that limits what they can do.
+                                Generate scoped API keys to call AgentFarms from your own scripts and integrations. Keys inherit a role that limits what they can do.
                             </p>
                         </div>
                         <button
@@ -271,7 +271,7 @@ export default function ApiKeysPage() {
                     )}
                     {loadState === "ready" && keys.length === 0 && (
                         <div className="px-5 py-10 text-center text-sm text-slate-400 dark:text-slate-500">
-                            No API keys yet. Create one to call AgentFarm from your own scripts and integrations.
+                            No API keys yet. Create one to call AgentFarms from your own scripts and integrations.
                         </div>
                     )}
                     {loadState === "ready" && keys.length > 0 && (
