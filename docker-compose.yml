@@ -752,6 +752,18 @@
       - agentfarm
     restart: unless-stopped
 
+  # Cloudflare named tunnel — exposes api/dashboard/runtime.agentfarms.in publicly
+  # without inbound ports. Routing (public hostnames) is managed in the Cloudflare
+  # Zero Trust dashboard for tunnel "agentfarm". host networking so the dashboard's
+  # localhost:3000/3001/4000 ingress rules resolve to the published service ports.
+  # Requires CLOUDFLARE_TUNNEL_TOKEN in .env. No-op if the token is unset.
+  cloudflared-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-tunnel
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    network_mode: host
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
