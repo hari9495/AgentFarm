@@ -108,9 +108,12 @@
       DESKTOP_AGENT_URL: ${DESKTOP_AGENT_URL:-http://desktop-agent:5003}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://127.0.0.1:3001}
       # Portal email (password reset / email verification)
-      # Option 1 — Resend (https://resend.com, free tier: 3,000 emails/month)
+      # Option 1 — Zoho ZeptoMail (https://zeptomail.com) — transactional API
+      ZEPTOMAIL_API_TOKEN: ${ZEPTOMAIL_API_TOKEN:-}
+      ZEPTOMAIL_API_URL: ${ZEPTOMAIL_API_URL:-https://api.zeptomail.in/v1.1/email}
+      # Option 2 — Resend (https://resend.com, free tier: 3,000 emails/month)
       RESEND_API_KEY: ${RESEND_API_KEY:-}
-      PORTAL_EMAIL_FROM: ${PORTAL_EMAIL_FROM:-AgentFarm Support <noreply@agentfarm.io>}
+      PORTAL_EMAIL_FROM: ${PORTAL_EMAIL_FROM:-AgentFarms <noreply@agentfarms.in>}
       PORTAL_APP_BASE_URL: ${PORTAL_APP_BASE_URL:-http://localhost:3002}
       # Bypass email verification on portal signup when no SMTP is configured
       # (single-host / demo deployments). Leave false in production.
