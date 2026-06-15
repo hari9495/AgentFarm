@@ -80,6 +80,10 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
     const [submitting, setSubmitting] = useState(false);
     const [lastSubmitted, setLastSubmitted] = useState<string | null>(null);
     const [submitError, setSubmitError] = useState<string | null>(null);
+    // Bumped on every successful submit to drive a short polling window — the
+    // POST returns 202 before the task is queryable, so a single delayed fetch
+    // can miss it and (with no pending task loaded) the 10s auto-refresh never starts.
+    const [submitNonce, setSubmitNonce] = useState(0);
 
     const availableActions = ACTION_OPTIONS[connectorType] ?? [];
 
@@ -108,6 +112,20 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
         const id = setInterval(() => void fetchTasks(selectedBotId), 10_000);
         return () => clearInterval(id);
     }, [tasks, selectedBotId, fetchTasks]);
+
+    // After a successful submit, poll for a short window so the new task surfaces
+    // even though the POST returns 202 before the task is queryable. Independent
+    // of the pending-task guard above so it works from an empty list.
+    useEffect(() => {
+        if (submitNonce === 0) return;
+        let count = 0;
+        const id = setInterval(() => {
+            count += 1;
+            void fetchTasks(selectedBotId);
+            if (count >= 8) clearInterval(id);
+        }, 2_000);
+        return () => clearInterval(id);
+    }, [submitNonce, selectedBotId, fetchTasks]);
 
     const handleConnectorChange = (val: string) => {
         setConnectorType(val);
@@ -151,8 +169,8 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
             } else {
                 setLastSubmitted(data.task_id ?? null);
                 setPrompt("");
-                // Refresh task list after short delay
-                setTimeout(() => void fetchTasks(selectedBotId), 1_500);
+                // Kick off the post-submit polling window (see effect above).
+                setSubmitNonce((n) => n + 1);
             }
         } catch (err) {
             setSubmitError(String(err));

@@ -145,7 +145,7 @@ export default function CustomerWebhooksPage() {
                         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
                             <div>
                                 <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">Inbound Webhooks</h1>
-                                <p className="mt-2 text-slate-400 text-base max-w-lg">Register external services to push events into AgentFarm.</p>
+                                <p className="mt-2 text-slate-400 text-base max-w-lg">Register external services to push events into AgentFarms.</p>
                             </div>
                             {activeTab === "sources" && (
                                 <button onClick={() => setShowForm(v => !v)}
