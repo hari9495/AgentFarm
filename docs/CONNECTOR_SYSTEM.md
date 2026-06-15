@@ -243,3 +243,57 @@ Every connector action produces a `ConnectorAction` audit record.
 | `ConnectorAction` | Audit log of every connector action executed |
 
 See [DATA_MODEL.md](./DATA_MODEL.md) for full field specs.
+
+## Secret Storage & Deployment
+
+A connector's credentials are stored in **two separate places** — this split is a
+security measure (secrets never live in the regular application database):
+
+| Location | Holds | Example |
+|---|---|---|
+| Database (`ConnectorAuthMetadata.secretRef`) | A **pointer**, not the value | `env://CONNECTOR_CUSTOM_API_<TYPE>_<TENANT>_<WORKSPACE>` |
+| Secret store | The **actual value** the pointer resolves to | base URL, API key, OAuth token |
+
+The secret store is one of:
+- **Production:** Azure Key Vault / AWS Secrets Manager
+- **Single-host / dev:** a JSON file at `CONNECTOR_SECRETS_PATH` (default
+  `/data/connector-secrets.json` inside the api-gateway container, persisted on
+  the `gateway_secrets` volume). Keys are the `env://` ref name (minus the
+  `env://` prefix); values are JSON-encoded strings.
+
+### `custom_api` secret format
+
+```json
+{
+  "base_url": "https://api.example.com",
+  "auth_type": "none | api_key | bearer_token | basic_auth",
+  "api_key": "...",            // when auth_type=api_key
+  "api_key_header": "X-API-Key",
+  "bearer_token": "...",       // when auth_type=bearer_token
+  "basic_user": "...", "basic_pass": "..."  // when auth_type=basic_auth
+}
+```
+
+### ⚠️ Deployment / migration caveat
+
+When you **restore or migrate the database** to a new environment (new VM, DR
+restore, prod replica), the DB carries only the *pointers*. You **must also carry
+over the secret store** (`connector-secrets.json` / Key Vault entries) or every
+connector will fail at execution time with:
+
+```
+502  Secret not found for ref: env://CONNECTOR_<...>
+```
+
+…even though the connector still shows **"connected"** in the dashboard (its
+status lives in the DB; the missing piece is the value). Re-create the missing
+secret with the correct format above, then restart the api-gateway so it reloads.
+
+### Credential rotation
+
+Connector credentials (PATs, OAuth tokens, API keys) are long-lived. Rotate any
+credential that may have been exposed:
+1. Revoke + regenerate at the provider (e.g. GitHub → Settings → Developer
+   settings → Personal access tokens).
+2. Update the value in the secret store (`connector-secrets.json` key or Key Vault).
+3. Restart the api-gateway to reload the secret cache.
