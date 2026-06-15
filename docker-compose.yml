@@ -118,6 +118,9 @@
       # Bypass email verification on portal signup when no SMTP is configured
       # (single-host / demo deployments). Leave false in production.
       PORTAL_SKIP_EMAIL_VERIFICATION: ${PORTAL_SKIP_EMAIL_VERIFICATION:-}
+      # Require company email on signup (block free providers). Default on.
+      SIGNUP_BLOCK_FREE_EMAIL: ${SIGNUP_BLOCK_FREE_EMAIL:-true}
+      SIGNUP_BLOCKED_EMAIL_DOMAINS: ${SIGNUP_BLOCKED_EMAIL_DOMAINS:-}
       # Option 2 — generic webhook fallback (set if not using Resend)
       PORTAL_RESET_WEBHOOK_URL: ${PORTAL_RESET_WEBHOOK_URL:-}
       # Internal dashboard login — allow operators with @agentfarms.in email or owner role
