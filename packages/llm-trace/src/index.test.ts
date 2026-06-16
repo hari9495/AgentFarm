@@ -10,6 +10,7 @@ import {
     flushLangfuse,
     getPromptText,
     recordTraceScore,
+    runWithLlmTraceContext,
     type LangfuseLike,
     type LangfuseTraceHandle,
     type LangfuseGenerationHandle,
@@ -284,4 +285,41 @@ test('recordTraceScore swallows client errors', () => {
     __setLangfuseClientForTests(client);
     assert.doesNotThrow(() => recordTraceScore({ traceId: 't', name: 'quality', value: 0.5 }));
     resetLangfuseForTests();
+});
+
+// ─── Ambient context (build: chokepoints) ────────────────────────────────────
+
+test('traceGeneration inherits tenant/task from runWithLlmTraceContext', () => {
+    resetLangfuseForTests();
+    const { client, captured } = makeFake();
+    __setLangfuseClientForTests(client);
+    try {
+        runWithLlmTraceContext({ traceId: 'ctx-task', taskId: 'ctx-task', tenantId: 'ctx-tenant', agentId: 'ctx-agent' }, () => {
+            // Caller supplies only model/usage — context fills the rest.
+            traceGeneration({ model: 'claude-opus-4-7', provider: 'anthropic', promptTokens: 5, completionTokens: 2 });
+        });
+        assert.equal(captured.traces.length, 1);
+        assert.equal(captured.traces[0]!['id'], 'ctx-task');
+        assert.equal(captured.traces[0]!['userId'], 'ctx-tenant');
+        const meta = captured.generations[0]!['metadata'] as Record<string, unknown>;
+        assert.equal(meta['agentId'], 'ctx-agent');
+        assert.equal(meta['tenantId'], 'ctx-tenant');
+    } finally {
+        resetLangfuseForTests();
+    }
+});
+
+test('explicit traceGeneration fields override the ambient context', () => {
+    resetLangfuseForTests();
+    const { client, captured } = makeFake();
+    __setLangfuseClientForTests(client);
+    try {
+        runWithLlmTraceContext({ traceId: 'ctx-task', tenantId: 'ctx-tenant' }, () => {
+            traceGeneration({ traceId: 'explicit', tenantId: 'explicit-tenant', model: 'gpt-4o' });
+        });
+        assert.equal(captured.traces[0]!['id'], 'explicit');
+        assert.equal(captured.traces[0]!['userId'], 'explicit-tenant');
+    } finally {
+        resetLangfuseForTests();
+    }
 });

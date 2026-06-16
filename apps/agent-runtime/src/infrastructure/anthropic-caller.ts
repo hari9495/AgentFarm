@@ -18,6 +18,8 @@
  */
 
 import { resolveModelChain, type AnthropicModelTier } from './anthropic-model-registry.js';
+import { traceGeneration } from '@agentfarm/llm-trace';
+import { estimateCostUsd } from '../cost-calculator.js';
 
 const ANTHROPIC_BASE_URL = 'https://api.anthropic.com';
 const ANTHROPIC_VERSION  = '2023-06-01';
@@ -164,8 +166,40 @@ export async function callAnthropic(params: AnthropicCallParams): Promise<Anthro
         if (response.ok) {
             const parsed = await response.json() as {
                 content?: AnthropicContentBlock[];
-                usage?: { input_tokens: number; output_tokens: number };
+                usage?: {
+                    input_tokens: number;
+                    output_tokens: number;
+                    cache_creation_input_tokens?: number;
+                    cache_read_input_tokens?: number;
+                };
             };
+
+            // Emit a Langfuse generation. Tenant/task/trace come from the ambient
+            // context (runWithLlmTraceContext) established at the task entry point.
+            const u = parsed.usage;
+            const promptTokens = u
+                ? (u.input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0)
+                : undefined;
+            const completionTokens = u?.output_tokens;
+            const { costUsd, modelTier } = estimateCostUsd({
+                modelProvider: model,
+                modelProfile: '',
+                promptTokens: promptTokens ?? 0,
+                completionTokens: completionTokens ?? 0,
+            });
+            traceGeneration({
+                name: 'llm.anthropic',
+                provider: 'anthropic',
+                model,
+                input: { system: params.system, messages: params.messages },
+                output: extractText(parsed.content ?? []),
+                promptTokens,
+                completionTokens,
+                costUsd: costUsd > 0 ? costUsd : undefined,
+                modelTier,
+                tags: ['anthropic-caller'],
+            });
+
             return {
                 content:   parsed.content ?? [],
                 modelUsed: model,
