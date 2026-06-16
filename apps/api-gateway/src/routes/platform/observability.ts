@@ -15,6 +15,9 @@ type SessionContext = {
 
 type RegisterObservabilityRoutesOptions = {
     getSession: (request: FastifyRequest) => SessionContext | null;
+    /** Customer-portal session fallback (portal_session cookie). Always treated
+     *  as customer scope so portal users are tenant-locked and get redacted views. */
+    getPortalSession?: (cookies: string) => Promise<{ userId: string; tenantId: string; workspaceIds: string[]; expiresAt: number } | null>;
     findRuntimeEndpoint?: (input: {
         tenantId: string;
         workspaceId: string;
@@ -23,6 +26,27 @@ type RegisterObservabilityRoutesOptions = {
     fetchImpl?: typeof fetch;
     /** Langfuse connection override (defaults to env). Injectable for tests. */
     langfuse?: { host: string; publicKey: string; secretKey: string };
+};
+
+/**
+ * Resolve either an API session (internal/customer scope) or a customer-portal
+ * session. Portal sessions are forced to customer scope so they are tenant
+ * -locked and receive redacted (metadata-only) trace views.
+ */
+const resolveAnySession = async (
+    request: FastifyRequest,
+    options: RegisterObservabilityRoutesOptions,
+): Promise<SessionContext | null> => {
+    const apiSession = options.getSession(request);
+    if (apiSession) return apiSession;
+    if (options.getPortalSession) {
+        const cookies = typeof request.headers.cookie === 'string' ? request.headers.cookie : '';
+        const portal = await options.getPortalSession(cookies);
+        if (portal) {
+            return { ...portal, scope: 'customer' };
+        }
+    }
+    return null;
 };
 
 // ─── Langfuse trace proxy ──────────────────────────────────────────────────────
@@ -58,6 +82,32 @@ const resolveTraceTenantFilter = (
         return t ? { userId: t } : {};
     }
     return { userId: session.tenantId };
+};
+
+/**
+ * Strip raw prompt input / model output from a trace for customer-facing views.
+ * Customers see metadata only (model, usage, cost, latency, action) — never the
+ * system prompt or RAG context. Enforced server-side so it holds even if the
+ * customer calls the API directly. Internal operators receive the full trace.
+ */
+const redactTraceForCustomer = (trace: Record<string, unknown>): Record<string, unknown> => {
+    const redacted: Record<string, unknown> = { ...trace };
+    delete redacted['input'];
+    delete redacted['output'];
+    const observations = trace['observations'];
+    if (Array.isArray(observations)) {
+        redacted['observations'] = observations.map((obs) => {
+            if (obs && typeof obs === 'object') {
+                const o = { ...(obs as Record<string, unknown>) };
+                delete o['input'];
+                delete o['output'];
+                return o;
+            }
+            return obs;
+        });
+    }
+    redacted['redacted'] = true;
+    return redacted;
 };
 
 const resolveRuntimeToken = (): string | null => {
@@ -295,7 +345,7 @@ export const registerObservabilityRoutes = async (
             limit?: string;
         };
     }>('/v1/observability/llm-traces', async (request, reply) => {
-        const session = options.getSession(request);
+        const session = await resolveAnySession(request, options);
         if (!session) {
             return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
         }
@@ -338,7 +388,7 @@ export const registerObservabilityRoutes = async (
 
     // ── GET /v1/observability/llm-traces/:taskId — single trace drill-down ──────
     app.get<{ Params: { taskId: string } }>('/v1/observability/llm-traces/:taskId', async (request, reply) => {
-        const session = options.getSession(request);
+        const session = await resolveAnySession(request, options);
         if (!session) {
             return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
         }
@@ -367,14 +417,15 @@ export const registerObservabilityRoutes = async (
                 return reply.code(502).send({ error: 'observability_upstream_error', status: response.status });
             }
 
-            const trace = await response.json() as { userId?: string };
+            const trace = await response.json() as Record<string, unknown> & { userId?: string };
             // Defense-in-depth: never return another tenant's trace to a customer,
             // even if they guess a taskId. 404 (not 403) avoids leaking existence.
             if (session.scope !== 'internal' && trace.userId !== session.tenantId) {
                 return reply.code(404).send({ error: 'trace_not_found' });
             }
 
-            return trace;
+            // Customers get metadata only — strip raw prompt/output server-side.
+            return session.scope === 'internal' ? trace : redactTraceForCustomer(trace);
         } catch (error) {
             return reply.code(502).send({
                 error: 'observability_request_failed',
