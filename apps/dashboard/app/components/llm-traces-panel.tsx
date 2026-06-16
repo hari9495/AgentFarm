@@ -22,7 +22,9 @@ type Observation = {
     metadata?: Record<string, unknown>;
 };
 
-type TraceDetail = TraceRow & { observations?: Observation[] };
+type TraceDetail = TraceRow & { observations?: Observation[]; sessionId?: string };
+
+type AuditEvent = { id: string; eventType?: string; severity?: string; summary?: string; createdAt?: string };
 
 const fmtTime = (iso?: string): string => (iso ? new Date(iso).toLocaleString() : '—');
 
@@ -55,6 +57,7 @@ export function LlmTracesPanel() {
     const [selected, setSelected] = useState<string | null>(null);
     const [detail, setDetail] = useState<TraceDetail | null>(null);
     const [detailLoading, setDetailLoading] = useState(false);
+    const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
 
     const loadList = useCallback(async () => {
         setLoading(true);
@@ -86,10 +89,30 @@ export function LlmTracesPanel() {
     const openTrace = useCallback(async (taskId: string) => {
         setSelected(taskId);
         setDetail(null);
+        setAuditEvents([]);
         setDetailLoading(true);
         try {
             const res = await fetch(`/api/observability/llm-traces/${encodeURIComponent(taskId)}`, { cache: 'no-store' });
-            if (res.ok) setDetail((await res.json()) as TraceDetail);
+            if (res.ok) {
+                const d = (await res.json()) as TraceDetail;
+                setDetail(d);
+                // Cross-link to the audit log on the shared correlationId.
+                const correlationId = d.sessionId;
+                if (correlationId) {
+                    try {
+                        const auditRes = await fetch(
+                            `/api/audit/events?correlation_id=${encodeURIComponent(correlationId)}&limit=20`,
+                            { cache: 'no-store' },
+                        );
+                        if (auditRes.ok) {
+                            const body = (await auditRes.json()) as { events?: AuditEvent[]; data?: AuditEvent[] };
+                            setAuditEvents(body.events ?? body.data ?? []);
+                        }
+                    } catch {
+                        /* audit cross-link is best-effort */
+                    }
+                }
+            }
         } catch {
             /* surfaced via empty detail */
         } finally {
@@ -184,6 +207,28 @@ export function LlmTracesPanel() {
                                     </details>
                                 </div>
                             ))}
+                            {detail.sessionId && (
+                                <div style={{ borderTop: '1px solid #eee', paddingTop: '0.6rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <strong style={{ fontSize: '0.9rem' }}>Related audit events</strong>
+                                        <a href={`/audit?correlation_id=${encodeURIComponent(detail.sessionId)}`} style={{ fontSize: '0.8rem' }}>
+                                            Open in Audit Log →
+                                        </a>
+                                    </div>
+                                    {auditEvents.length === 0 ? (
+                                        <p style={{ fontSize: '0.8rem', color: '#666' }}>No audit events linked to this task&apos;s correlation id.</p>
+                                    ) : (
+                                        <ul style={{ fontSize: '0.8rem', margin: '0.4rem 0 0', paddingLeft: '1rem' }}>
+                                            {auditEvents.map((e) => (
+                                                <li key={e.id}>
+                                                    <code>{e.eventType ?? 'event'}</code> · {e.summary ?? ''}{' '}
+                                                    <span style={{ color: '#888' }}>({fmtTime(e.createdAt)})</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
