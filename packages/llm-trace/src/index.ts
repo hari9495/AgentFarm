@@ -78,6 +78,22 @@ export interface LangfuseLike {
     getPrompt?(name: string, version?: number, options?: Record<string, unknown>): Promise<LangfusePromptHandle>;
     /** Optional — present on the real SDK; used for persistent eval scores. */
     score?(body: Record<string, unknown>): unknown;
+    /** Optional — present on the real SDK; used for offline eval datasets. */
+    createDataset?(body: Record<string, unknown>): Promise<unknown>;
+    createDatasetItem?(body: Record<string, unknown>): Promise<unknown>;
+    getDataset?(name: string): Promise<LangfuseDatasetHandle>;
+}
+
+export interface LangfuseDatasetItemHandle {
+    id: string;
+    input?: unknown;
+    expectedOutput?: unknown;
+    /** Link a trace to this item under a named experiment run. */
+    link(trace: unknown, runName: string, options?: Record<string, unknown>): Promise<unknown>;
+}
+
+export interface LangfuseDatasetHandle {
+    items: LangfuseDatasetItemHandle[];
 }
 
 // ─── Config & input types ──────────────────────────────────────────────────────
@@ -360,6 +376,87 @@ export const recordTraceScore = (input: TraceScoreInput): void => {
     } catch {
         // scoring must never disrupt the caller
     }
+};
+
+// ─── Datasets & offline evaluation ─────────────────────────────────────────────
+
+/** Create (or no-op if it exists) a Langfuse dataset. Returns false when off. */
+export const upsertDataset = async (name: string, description?: string): Promise<boolean> => {
+    const lf = getLangfuseClient();
+    if (!lf || typeof lf.createDataset !== 'function') return false;
+    try {
+        await lf.createDataset({ name, description });
+        return true;
+    } catch {
+        return false;
+    }
+};
+
+/** Add an item to a dataset (e.g. an approved/rejected artifact for regression). */
+export const addDatasetItem = async (
+    datasetName: string,
+    item: { input: unknown; expectedOutput?: unknown; metadata?: Record<string, unknown>; id?: string },
+): Promise<boolean> => {
+    const lf = getLangfuseClient();
+    if (!lf || typeof lf.createDatasetItem !== 'function') return false;
+    try {
+        await lf.createDatasetItem({
+            datasetName,
+            input: item.input,
+            expectedOutput: item.expectedOutput,
+            metadata: item.metadata,
+            id: item.id,
+        });
+        return true;
+    } catch {
+        return false;
+    }
+};
+
+export interface DatasetRunItemResult {
+    output: unknown;
+    /** Numeric score (e.g. 1 = matched expected, 0 = mismatch). */
+    score?: number;
+    comment?: string;
+}
+
+/**
+ * Run an offline experiment over a dataset: for each item, call `runner`, link
+ * the resulting trace to the item under `runName`, and attach an `eval` score.
+ * Returns a small summary. No-op (ran: 0) when Langfuse is unconfigured.
+ */
+export const runDatasetExperiment = async (
+    datasetName: string,
+    runName: string,
+    runner: (item: { input: unknown; expectedOutput?: unknown }) => Promise<DatasetRunItemResult>,
+): Promise<{ ran: number; scored: number; avgScore: number | null }> => {
+    const lf = getLangfuseClient();
+    if (!lf || typeof lf.getDataset !== 'function') return { ran: 0, scored: 0, avgScore: null };
+    let ran = 0;
+    let scored = 0;
+    let scoreSum = 0;
+    try {
+        const dataset = await lf.getDataset(datasetName);
+        for (const item of dataset.items) {
+            const result = await runner({ input: item.input, expectedOutput: item.expectedOutput });
+            const trace = lf.trace({ name: runName, input: item.input, output: result.output });
+            try {
+                await item.link(trace, runName);
+            } catch {
+                /* linking is best-effort */
+            }
+            if (typeof result.score === 'number' && typeof lf.score === 'function') {
+                lf.score({ traceId: trace.id, name: 'eval', value: result.score, dataType: 'NUMERIC', comment: result.comment });
+                scored += 1;
+                scoreSum += result.score;
+            }
+            ran += 1;
+        }
+        await lf.flushAsync();
+    } catch {
+        // experiment failures must not throw to the caller
+    }
+    return { ran, scored, avgScore: scored > 0 ? Number((scoreSum / scored).toFixed(3)) : null };
 };
 
 // ─── Prompt management ───────────────────────────────────────────────────────────
