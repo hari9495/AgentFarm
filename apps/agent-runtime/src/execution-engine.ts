@@ -42,6 +42,24 @@ import { createHash } from 'node:crypto';
 import { getRedisClient } from '@agentfarm/redis-client';
 import { getCompressedEpisodicContext } from './infrastructure/episodic-summarizer.js';
 import { createCodeGenFn } from './infrastructure/llm-provider-factory.js';
+import { runWithLlmTraceContext, type LlmTraceContext } from '@agentfarm/llm-trace';
+
+/**
+ * Build the ambient LLM-trace context for a task so every LLM call made during
+ * its execution (decision, code-gen, shared Anthropic caller, agent-specific
+ * callers) nests under one trace (traceId = taskId) and is tenant-scoped.
+ */
+const buildTaskTraceContext = (task: TaskEnvelope): LlmTraceContext => {
+    const p = task.payload ?? {};
+    const str = (k: string): string | undefined => (typeof p[k] === 'string' ? (p[k] as string) : undefined);
+    return {
+        traceId: task.taskId,
+        taskId: task.taskId,
+        tenantId: str('tenantId'),
+        agentId: str('botId') ?? str('agentId') ?? str('agentInstanceId'),
+        sessionId: typeof task.lease?.correlationId === 'string' ? task.lease.correlationId : undefined,
+    };
+};
 import { recordEpisode } from './application/episodic-recorder.js';
 
 // ---------------------------------------------------------------------------
@@ -378,6 +396,12 @@ async function executeTaskWithRetries(
 // ---------------------------------------------------------------------------
 
 export async function processApprovedTask(
+    ...args: Parameters<typeof processApprovedTaskInner>
+): Promise<ProcessedTaskResult> {
+    return runWithLlmTraceContext(buildTaskTraceContext(args[0]), () => processApprovedTaskInner(...args));
+}
+
+async function processApprovedTaskInner(
     task: TaskEnvelope,
     options?: {
         maxAttempts?: number;
@@ -441,6 +465,12 @@ export async function processApprovedTask(
 }
 
 export async function processDeveloperTask(
+    ...args: Parameters<typeof processDeveloperTaskInner>
+): Promise<ProcessedTaskResult> {
+    return runWithLlmTraceContext(buildTaskTraceContext(args[0]), () => processDeveloperTaskInner(...args));
+}
+
+async function processDeveloperTaskInner(
     task: TaskEnvelope,
     options?: {
         maxAttempts?: number;

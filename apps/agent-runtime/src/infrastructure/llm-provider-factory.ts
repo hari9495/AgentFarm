@@ -14,6 +14,7 @@
  */
 
 import type { LlmCodeGenFn, AutonomousStep } from '../local-workspace-executor.js';
+import { traceGeneration } from '@agentfarm/llm-trace';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -284,7 +285,14 @@ const buildAnthropicCodeGenFn = (apiKey: string, model: string): LlmCodeGenFn =>
             const s = text.indexOf('[');
             const e = text.lastIndexOf(']');
             if (s === -1 || e === -1) return [];
-            return parseStepsFromJson(JSON.parse(text.slice(s, e + 1)));
+            const steps = parseStepsFromJson(JSON.parse(text.slice(s, e + 1)));
+            // Lightweight generation — streaming discards usage, so no exact
+            // tokens. Tenant/task/trace come from the ambient context.
+            traceGeneration({
+                name: 'llm.codegen', provider: 'anthropic', model,
+                input: taskPrompt.slice(0, 1000), output: `${steps.length} step(s)`, tags: ['codegen'],
+            });
+            return steps;
         } catch {
             return [];
         }
@@ -356,7 +364,12 @@ const buildOpenAICompatibleCodeGenFn = (
             const s = text.indexOf('[');
             const e = text.lastIndexOf(']');
             if (s === -1 || e === -1) return [];
-            return parseStepsFromJson(JSON.parse(text.slice(s, e + 1)));
+            const steps = parseStepsFromJson(JSON.parse(text.slice(s, e + 1)));
+            traceGeneration({
+                name: 'llm.codegen', provider: isAzure ? 'azure_openai' : 'openai', model,
+                input: taskPrompt.slice(0, 1000), output: `${steps.length} step(s)`, tags: ['codegen'],
+            });
+            return steps;
         } catch {
             return [];
         }

@@ -23,6 +23,32 @@
  */
 
 import { Langfuse } from 'langfuse';
+import { AsyncLocalStorage } from 'node:async_hooks';
+
+// ─── Ambient task context (AsyncLocalStorage) ──────────────────────────────────
+//
+// Established once at the task entry point so low-level LLM callers (the shared
+// Anthropic caller, the code-gen provider factory, and any agent-specific
+// caller) emit properly tenant-scoped, task-nested generations WITHOUT threading
+// context through every call site. traceGeneration() fills any field the caller
+// omits from this context.
+
+export interface LlmTraceContext {
+    traceId?: string;
+    taskId?: string;
+    tenantId?: string;
+    agentId?: string;
+    sessionId?: string;
+}
+
+const traceContextStore = new AsyncLocalStorage<LlmTraceContext>();
+
+/** Run `fn` with an ambient LLM-trace context that downstream calls inherit. */
+export const runWithLlmTraceContext = <T>(ctx: LlmTraceContext, fn: () => T): T =>
+    traceContextStore.run(ctx, fn);
+
+/** Read the current ambient LLM-trace context, if any. */
+export const getLlmTraceContext = (): LlmTraceContext | undefined => traceContextStore.getStore();
 
 // ─── Structural client interface (satisfied by the real SDK and test fakes) ────
 
@@ -226,10 +252,21 @@ export const startTaskTrace = (input: StartTaskTraceInput): string | null => {
  * trace when `traceId` is supplied, otherwise mints a standalone trace.
  * Returns the traceId used, or null when disabled / on error. Never throws.
  */
-export const traceGeneration = (input: TraceGenerationInput): string | null => {
+export const traceGeneration = (rawInput: TraceGenerationInput): string | null => {
     const lf = getLangfuseClient();
     if (!lf) return null;
     try {
+        // Fill any omitted field from the ambient task context.
+        const ctx = getLlmTraceContext() ?? {};
+        const input: TraceGenerationInput = {
+            ...rawInput,
+            taskId: rawInput.taskId ?? ctx.taskId,
+            tenantId: rawInput.tenantId ?? ctx.tenantId,
+            agentId: rawInput.agentId ?? ctx.agentId,
+            sessionId: rawInput.sessionId ?? ctx.sessionId,
+            traceId: rawInput.traceId ?? ctx.traceId,
+        };
+
         const traceId = input.traceId ?? generateTraceId(input.taskId);
         const trace = lf.trace({
             id: traceId,
