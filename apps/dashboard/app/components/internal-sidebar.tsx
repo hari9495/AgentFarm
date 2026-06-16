@@ -318,6 +318,7 @@ export function InternalSidebar({
                         <SidebarLink href="/analytics"           label="Overview"           Icon={BarChart2}   color="blue"   />
                         <SidebarLink href="/roi"                 label="ROI Dashboard"      Icon={Trophy}      color="gold"   />
                         <SidebarLink href="/cost-dashboard"      label="Cost Dashboard"     Icon={PieChart}    color="green"  />
+                        <SidebarLink href="/observability"       label="LLM Traces"         Icon={Network}     color="blue"   />
                         <SidebarLink href="/historical-metrics"  label="Historical Metrics" Icon={LineChart}   color="violet" />
                         <SidebarLink href="/deliverables"        label="Deliverables"       Icon={ListChecks}  color="teal"   />
                         <SidebarLink href="/scheduled-tasks"     label="Scheduled Tasks"    Icon={CalendarDays} color="orange" />
