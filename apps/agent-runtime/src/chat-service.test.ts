@@ -90,3 +90,69 @@ test('getChatReply: throws when upstream returns non-ok status', async () => {
         globalThis.fetch = original;
     }
 });
+
+// ── Langfuse tracing (build #3 — chat path) ──────────────────────────────────
+import {
+    __setLangfuseClientForTests,
+    resetLangfuseForTests,
+    type LangfuseLike,
+    type LangfuseTraceHandle,
+    type LangfuseGenerationHandle,
+} from '@agentfarm/llm-trace';
+
+test('getChatReply emits a Langfuse generation with model, provider and usage', async () => {
+    const gens: Array<Record<string, unknown>> = [];
+    const ends: Array<Record<string, unknown>> = [];
+    const client: LangfuseLike = {
+        trace() {
+            const h: LangfuseTraceHandle = {
+                id: 't',
+                generation(g) { gens.push(g); const ge: LangfuseGenerationHandle = { end(e) { ends.push(e ?? {}); return undefined; }, update() { return undefined; } }; return ge; },
+                update() { return undefined; },
+            };
+            return h;
+        },
+        async flushAsync() {}, async shutdownAsync() {},
+    };
+    resetLangfuseForTests();
+    __setLangfuseClientForTests(client);
+
+    const original = globalThis.fetch;
+    globalThis.fetch = async () => ({
+        ok: true, status: 200,
+        json: async () => ({ choices: [{ message: { content: 'World' } }], usage: { prompt_tokens: 30, completion_tokens: 8 } }),
+    }) as Response;
+
+    try {
+        await getChatReply({
+            messages: [{ role: 'user', content: 'Hello' }],
+            tenantId: 'tenant_1', agentId: 'agent_x', provider: 'openai',
+            env: { LLM_BASE_URL: 'http://x', LLM_API_KEY: 'k', LLM_MODEL: 'gpt-4o' },
+        });
+        assert.equal(gens.length, 1);
+        assert.equal(gens[0]!['model'], 'gpt-4o');
+        assert.equal((gens[0]!['metadata'] as Record<string, unknown>)['provider'], 'openai');
+        const usage = ends[0]!['usage'] as Record<string, unknown>;
+        assert.equal(usage['input'], 30);
+        assert.equal(usage['output'], 8);
+    } finally {
+        globalThis.fetch = original;
+        resetLangfuseForTests();
+    }
+});
+
+test('getChatReply (mock provider) does not emit a generation', async () => {
+    const gens: Array<Record<string, unknown>> = [];
+    const client: LangfuseLike = {
+        trace() { const h: LangfuseTraceHandle = { id: 't', generation(g) { gens.push(g); return { end() { return undefined; }, update() { return undefined; } }; }, update() { return undefined; } }; return h; },
+        async flushAsync() {}, async shutdownAsync() {},
+    };
+    resetLangfuseForTests();
+    __setLangfuseClientForTests(client);
+    try {
+        await getChatReply({ messages: [{ role: 'user', content: 'hi' }], tenantId: 't', provider: 'mock' });
+        assert.equal(gens.length, 0);
+    } finally {
+        resetLangfuseForTests();
+    }
+});
