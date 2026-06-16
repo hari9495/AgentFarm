@@ -45,6 +45,7 @@ type AuditRepo = {
         botId?: string;
         eventType?: string;
         severity?: AuditSeverity;
+        correlationId?: string;
         from?: Date;
         to?: Date;
         before?: Date;
@@ -94,6 +95,7 @@ type AuditQuery = {
     to?: string;
     cursor?: string;
     limit?: string;
+    correlation_id?: string;
 };
 
 type RetentionBody = {
@@ -190,6 +192,7 @@ const defaultRepo: AuditRepo = {
                 ...(input.botId ? { botId: input.botId } : {}),
                 ...(input.eventType ? { eventType: input.eventType as never } : {}),
                 ...(input.severity ? { severity: input.severity as never } : {}),
+                ...(input.correlationId ? { correlationId: input.correlationId } : {}),
                 createdAt: {
                     ...(input.from ? { gte: input.from } : {}),
                     ...(input.to ? { lte: input.to } : {}),
@@ -378,6 +381,7 @@ export const registerAuditRoutes = async (
             botId: request.query?.bot_id?.trim() || undefined,
             eventType: request.query?.event_type?.trim() || undefined,
             severity: severity ?? undefined,
+            correlationId: request.query?.correlation_id?.trim() || undefined,
             from: from ?? undefined,
             to: to ?? undefined,
             before: before ?? undefined,

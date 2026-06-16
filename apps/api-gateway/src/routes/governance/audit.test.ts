@@ -43,6 +43,7 @@ const createRepo = () => {
                 botId?: string;
                 eventType?: string;
                 severity?: 'info' | 'warn' | 'error';
+                correlationId?: string;
                 from?: Date;
                 to?: Date;
                 before?: Date;
@@ -53,6 +54,7 @@ const createRepo = () => {
                     .filter((event) => (input.botId ? event.botId === input.botId : true))
                     .filter((event) => (input.eventType ? event.eventType === input.eventType : true))
                     .filter((event) => (input.severity ? event.severity === input.severity : true))
+                    .filter((event) => (input.correlationId ? event.correlationId === input.correlationId : true))
                     .filter((event) => (input.from ? event.createdAt >= input.from : true))
                     .filter((event) => (input.to ? event.createdAt <= input.to : true))
                     .filter((event) => (input.before ? event.createdAt < input.before : true))
@@ -367,6 +369,26 @@ test('audit export: CSV rows contain correct field values', async () => {
         assert.ok(dataRow.includes('"warn"'));
         assert.ok(dataRow.includes('"Export test event"'));
         assert.ok(dataRow.includes('"2026-05-10T08:00:00.000Z"'));
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET /v1/audit/events filters by correlation_id (traces ↔ audit link)', async () => {
+    const app = Fastify();
+    const fake = createRepo();
+    fake.events.push(
+        { id: 'evt_a', tenantId: 'tenant_1', workspaceId: 'ws_1', botId: 'bot_1', eventType: 'approval_event', severity: 'info', summary: 'A', sourceSystem: 's', correlationId: 'corr_match', createdAt: new Date('2026-04-22T10:00:00.000Z') },
+        { id: 'evt_b', tenantId: 'tenant_1', workspaceId: 'ws_1', botId: 'bot_1', eventType: 'approval_event', severity: 'info', summary: 'B', sourceSystem: 's', correlationId: 'corr_other', createdAt: new Date('2026-04-22T11:00:00.000Z') },
+    );
+    await registerAuditRoutes(app, { getSession: () => session(), repo: fake.repo });
+    try {
+        const response = await app.inject({ method: 'GET', url: '/v1/audit/events?workspace_id=ws_1&correlation_id=corr_match' });
+        assert.equal(response.statusCode, 200);
+        const body = response.json() as { count: number; events: Array<{ event_id: string; correlation_id: string }> };
+        assert.equal(body.count, 1);
+        assert.equal(body.events[0]?.event_id, 'evt_a');
+        assert.equal(body.events[0]?.correlation_id, 'corr_match');
     } finally {
         await app.close();
     }
