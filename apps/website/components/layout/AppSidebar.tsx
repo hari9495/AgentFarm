@@ -74,6 +74,7 @@ const dashboardGroups: NavGroup[] = [
             { href: "/admin/bots",             label: "Manage Bots",   icon: Bot },
             { href: "/dashboard/activity",     label: "Activity",      icon: Activity },
             { href: "/dashboard/audit",        label: "Audit Log",     icon: ClipboardList },
+            { href: "/dashboard/traces",       label: "LLM Traces",    icon: Activity },
             { href: "/dashboard/evidence",     label: "Evidence",      icon: FileArchive },
             { href: "/dashboard/reports",      label: "Reports",       icon: BarChart3 },
         ],
