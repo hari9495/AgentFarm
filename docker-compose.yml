@@ -759,6 +759,170 @@
       - agentfarm
     restart: unless-stopped
 
+  # ── Langfuse — self-hosted LLM observability (traces, token/cost, prompts, evals) ──
+  #
+  # Enable:  docker compose --profile langfuse up
+  # Or add:  COMPOSE_PROFILES=langfuse  to your .env file
+  #
+  # Reuses the existing agentfarm `postgres` (separate `langfuse` database) and
+  # `redis` (isolated logical DB index 3). Adds two heavy components Langfuse v3
+  # requires for trace storage: ClickHouse (OLAP) and MinIO (S3-compatible blob).
+  # These are fine locally but heavy for the B2as_v2 dev VM — keep profile off there.
+  #
+  # First boot: langfuse-db-init creates the `langfuse` DB, langfuse-minio-init
+  # creates the bucket, then langfuse-worker + langfuse-web run schema migrations.
+  # UI: http://localhost:3030  (create the first user + project, then copy the
+  # public/secret API keys into LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY for the
+  # @agentfarm/llm-trace SDK wiring in the next build step).
+
+  langfuse-db-init:
+    # One-shot: ensure a dedicated `langfuse` database exists on the shared
+    # postgres server. CREATE DATABASE IF NOT EXISTS is unsupported, so guard it.
+    image: pgvector/pgvector:pg16
+    container_name: agentfarm-langfuse-db-init
+    profiles: [ langfuse ]
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    entrypoint:
+      - sh
+      - -c
+      - >
+        psql -h postgres -U ${POSTGRES_USER:-agentfarm} -d ${POSTGRES_DB:-agentfarm}
+        -tc "SELECT 1 FROM pg_database WHERE datname='langfuse'" | grep -q 1 ||
+        psql -h postgres -U ${POSTGRES_USER:-agentfarm} -d ${POSTGRES_DB:-agentfarm}
+        -c "CREATE DATABASE langfuse"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agentfarm
+    restart: on-failure
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3
+    container_name: agentfarm-clickhouse
+    profiles: [ langfuse ]
+    user: '101:101'
+    environment:
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-clickhouse}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+    ports:
+      - '8123:8123'   # HTTP interface (Langfuse CLICKHOUSE_URL)
+      - '9001:9000'   # native protocol (CLICKHOUSE_MIGRATION_URL) — 9000 reserved by MinIO console mapping
+    healthcheck:
+      test: [ 'CMD-SHELL', 'wget -qO- http://127.0.0.1:8123/ping || exit 1' ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: agentfarm-minio
+    profiles: [ langfuse ]
+    command: server /data --console-address ":9090"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-miniosecret}
+    volumes:
+      - minio_data:/data
+    ports:
+      - '9000:9000'   # S3 API (Langfuse LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT)
+      - '9091:9090'   # MinIO console UI (9091 host — avoids whisper's 9090)
+    healthcheck:
+      test: [ 'CMD-SHELL', 'curl -sf http://127.0.0.1:9000/minio/health/live || exit 1' ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
+  langfuse-minio-init:
+    # One-shot: create the `langfuse` bucket (Langfuse does not auto-create it).
+    image: minio/mc:latest
+    container_name: agentfarm-langfuse-minio-init
+    profiles: [ langfuse ]
+    entrypoint:
+      - sh
+      - -c
+      - >
+        mc alias set lf http://minio:9000 ${MINIO_ROOT_USER:-minio} ${MINIO_ROOT_PASSWORD:-miniosecret} &&
+        mc mb --ignore-existing lf/${LANGFUSE_S3_BUCKET:-langfuse} &&
+        echo "bucket ready"
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - agentfarm
+    restart: on-failure
+
+  langfuse-worker:
+    image: langfuse/langfuse-worker:3
+    container_name: agentfarm-langfuse-worker
+    profiles: [ langfuse ]
+    environment: &langfuse-env
+      DATABASE_URL: postgresql://${POSTGRES_USER:-agentfarm}:${POSTGRES_PASSWORD}@postgres:5432/langfuse
+      SALT: ${LANGFUSE_SALT:-changeme-langfuse-salt}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-changeme-nextauth-secret}
+      NEXTAUTH_URL: ${LANGFUSE_NEXTAUTH_URL:-http://localhost:3030}
+      TELEMETRY_ENABLED: ${LANGFUSE_TELEMETRY_ENABLED:-false}
+      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: 'true'
+      CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-clickhouse}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
+      CLICKHOUSE_CLUSTER_ENABLED: 'false'
+      REDIS_CONNECTION_STRING: redis://redis:6379/3
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: ${LANGFUSE_S3_BUCKET:-langfuse}
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minio}
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-miniosecret}
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: 'true'
+      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: 'events/'
+    depends_on:
+      langfuse-db-init:
+        condition: service_completed_successfully
+      clickhouse:
+        condition: service_healthy
+      langfuse-minio-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
+  langfuse-web:
+    image: langfuse/langfuse:3
+    container_name: agentfarm-langfuse-web
+    profiles: [ langfuse ]
+    environment:
+      <<: *langfuse-env
+    ports:
+      - '3030:3000'
+    depends_on:
+      langfuse-worker:
+        condition: service_started
+    healthcheck:
+      test: [ 'CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/api/public/health || exit 1' ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
   # Cloudflare named tunnel — exposes api/dashboard/runtime.agentfarms.in publicly
   # without inbound ports. Routing (public hostnames) is managed in the Cloudflare
   # Zero Trust dashboard for tunnel "agentfarm". host networking so the dashboard's
@@ -784,6 +948,10 @@ volumes:
   # FreeSWITCH persistent state (call records, certificates).
   freeswitch_db:
   freeswitch_log:
+  # Langfuse self-hosted trace storage (profile: langfuse).
+  clickhouse_data:
+  clickhouse_logs:
+  minio_data:
 
 networks:
   agentfarm:
