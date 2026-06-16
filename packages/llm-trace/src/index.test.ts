@@ -11,6 +11,9 @@ import {
     getPromptText,
     recordTraceScore,
     runWithLlmTraceContext,
+    upsertDataset,
+    addDatasetItem,
+    runDatasetExperiment,
     type LangfuseLike,
     type LangfuseTraceHandle,
     type LangfuseGenerationHandle,
@@ -322,4 +325,62 @@ test('explicit traceGeneration fields override the ambient context', () => {
     } finally {
         resetLangfuseForTests();
     }
+});
+
+// ─── Datasets & experiments (build: datasets) ─────────────────────────────────
+
+test('upsertDataset and addDatasetItem forward to the client', async () => {
+    resetLangfuseForTests();
+    const datasets: unknown[] = [];
+    const items: unknown[] = [];
+    const client: LangfuseLike = {
+        trace() { return { id: 't', generation() { return { end() {}, update() {} }; }, update() {} }; },
+        async flushAsync() {}, async shutdownAsync() {},
+        async createDataset(b) { datasets.push(b); return undefined; },
+        async createDatasetItem(b) { items.push(b); return undefined; },
+    };
+    __setLangfuseClientForTests(client);
+    assert.equal(await upsertDataset('agent-decision-evals', 'desc'), true);
+    assert.equal(await addDatasetItem('agent-decision-evals', { input: 'fix bug', expectedOutput: 'code_edit' }), true);
+    assert.equal((datasets[0] as Record<string, unknown>)['name'], 'agent-decision-evals');
+    assert.equal((items[0] as Record<string, unknown>)['datasetName'], 'agent-decision-evals');
+    resetLangfuseForTests();
+});
+
+test('upsertDataset is false / no-op when unconfigured', async () => {
+    resetLangfuseForTests();
+    __setLangfuseClientForTests(null);
+    assert.equal(await upsertDataset('x'), false);
+    assert.equal(await addDatasetItem('x', { input: 'i' }), false);
+    resetLangfuseForTests();
+});
+
+test('runDatasetExperiment runs each item, links, scores and averages', async () => {
+    resetLangfuseForTests();
+    const links: Array<{ runName: string }> = [];
+    const scores: Array<Record<string, unknown>> = [];
+    const client: LangfuseLike = {
+        trace() { return { id: 'tr-' + Math.random(), generation() { return { end() {}, update() {} }; }, update() {} }; },
+        async flushAsync() {}, async shutdownAsync() {},
+        score(b) { scores.push(b); return undefined; },
+        async getDataset() {
+            return {
+                items: [
+                    { id: 'i1', input: 'fix bug', expectedOutput: 'code_edit', async link(_t, runName) { links.push({ runName }); } },
+                    { id: 'i2', input: 'scan deps', expectedOutput: 'workspace_dependency_audit', async link(_t, runName) { links.push({ runName }); } },
+                ],
+            };
+        },
+    };
+    __setLangfuseClientForTests(client);
+    const summary = await runDatasetExperiment('agent-decision-evals', 'run-1', async ({ input, expectedOutput }) => {
+        const output = input === 'fix bug' ? 'code_edit' : 'wrong';
+        return { output, score: output === expectedOutput ? 1 : 0, comment: 'exact-match' };
+    });
+    assert.equal(summary.ran, 2);
+    assert.equal(summary.scored, 2);
+    assert.equal(summary.avgScore, 0.5); // 1 match, 1 miss
+    assert.equal(links.length, 2);
+    assert.equal(links[0]!.runName, 'run-1');
+    resetLangfuseForTests();
 });
