@@ -37,10 +37,19 @@ export interface LangfuseTraceHandle {
     update(body: Record<string, unknown>): unknown;
 }
 
+export interface LangfusePromptHandle {
+    /** Raw prompt content (string for text prompts). */
+    prompt?: unknown;
+    /** Substitute {{variables}} and return the compiled prompt. */
+    compile(variables?: Record<string, unknown>): unknown;
+}
+
 export interface LangfuseLike {
     trace(body: Record<string, unknown>): LangfuseTraceHandle;
     flushAsync(): Promise<unknown>;
     shutdownAsync(): Promise<unknown>;
+    /** Optional — present on the real SDK; used for prompt management. */
+    getPrompt?(name: string, version?: number, options?: Record<string, unknown>): Promise<LangfusePromptHandle>;
 }
 
 // ─── Config & input types ──────────────────────────────────────────────────────
@@ -272,6 +281,50 @@ export const shutdownLangfuse = async (): Promise<void> => {
         await lf.shutdownAsync();
     } catch {
         // ignore
+    }
+};
+
+// ─── Prompt management ───────────────────────────────────────────────────────────
+
+const compileFallback = (fallback: string, variables?: Record<string, unknown>): string => {
+    if (!variables) return fallback;
+    return Object.entries(variables).reduce(
+        (acc, [key, value]) => acc.replaceAll(`{{${key}}}`, String(value)),
+        fallback,
+    );
+};
+
+/**
+ * Fetch a text prompt from the Langfuse prompt registry, falling back to the
+ * provided default. Returns the compiled string. NEVER throws and NEVER blocks
+ * on a cold cache beyond the SDK's own behaviour — when Langfuse is unconfigured
+ * or unreachable, the fallback is returned. The SDK caches fetched prompts, so
+ * steady-state calls are local.
+ *
+ * @param name      Prompt name in Langfuse (e.g. 'role-system-prompt:developer').
+ * @param fallback  The in-code prompt to use if Langfuse has none / is down.
+ * @param options   variables for {{mustache}} compilation; label/version pin.
+ */
+export const getPromptText = async (
+    name: string,
+    fallback: string,
+    options?: { variables?: Record<string, unknown>; label?: string; version?: number; cacheTtlSeconds?: number },
+): Promise<string> => {
+    const lf = getLangfuseClient();
+    if (!lf || typeof lf.getPrompt !== 'function') {
+        return compileFallback(fallback, options?.variables);
+    }
+    try {
+        const prompt = await lf.getPrompt(name, options?.version, {
+            type: 'text',
+            fallback,
+            label: options?.label,
+            cacheTtlSeconds: options?.cacheTtlSeconds ?? 300,
+        });
+        const compiled = options?.variables ? prompt.compile(options.variables) : prompt.prompt;
+        return typeof compiled === 'string' ? compiled : compileFallback(fallback, options?.variables);
+    } catch {
+        return compileFallback(fallback, options?.variables);
     }
 };
 
