@@ -16,7 +16,7 @@ const UNKNOWN_PRICING: PricingEntry = { inputPerMillion: 0, outputPerMillion: 0,
 // Exact normalized model-id keys. Lookup is O(1) and order-independent.
 // Normalization strips provider prefixes so "anthropic/claude-haiku-4-5" and
 // "claude-haiku-4-5" both resolve correctly.
-const PRICING_MAP: Record<string, PricingEntry> = {
+export const PRICING_MAP: Record<string, PricingEntry> = {
     'claude-haiku-4-5':           { inputPerMillion: 0.80,  outputPerMillion: 4.00,  tier: 'haiku' },
     'claude-haiku-4-5-20251001':  { inputPerMillion: 0.80,  outputPerMillion: 4.00,  tier: 'haiku' },
     'claude-sonnet-4-6':          { inputPerMillion: 3.00,  outputPerMillion: 15.00, tier: 'sonnet' },
