@@ -19,6 +19,8 @@ import { getProviderQualityPenalty } from './llm-quality-tracker.js';
 import { getRoutingAdvice } from './routing-history-advisor.js';
 import { emitBudgetAlert } from './budget-alert-emitter.js';
 import { globalLearningStore } from './loop-learning-store.js';
+import { estimateCostUsd } from './cost-calculator.js';
+import { traceGeneration } from '@agentfarm/llm-trace';
 
 // ---------------------------------------------------------------------------
 // Persona-aware system prompt builder
@@ -1450,6 +1452,91 @@ const consumeTokenBudget = (scope: string, tokenCount: number): void => {
     writeTokenBudgetState(state);
 };
 
+// ---------------------------------------------------------------------------
+// Langfuse tracing
+//
+// Emits one Langfuse generation per LLM-backed decision. Placed inside the
+// single wrapper (withTokenBudgetGuard) that every provider resolver passes
+// through, so all 9 providers + auto-failover are covered by one call site.
+// Only fires when an actual model produced the decision (metadata.model set);
+// heuristic / budget-denied decisions are skipped. Never throws — the helper
+// itself swallows errors, and this guard adds a belt-and-braces try/catch.
+// ---------------------------------------------------------------------------
+
+type DecisionResult = {
+    decision: ActionDecision;
+    metadata: Omit<import('./execution-engine.js').LlmDecisionMetadata, 'classificationSource'>;
+    payloadOverrides?: Record<string, unknown>;
+};
+
+const emitDecisionTrace = (
+    task: TaskEnvelope,
+    tenantId: string | undefined,
+    result: DecisionResult,
+): void => {
+    try {
+        const meta = result.metadata;
+        // Only trace real LLM calls — skip heuristic / budget-guard fallbacks.
+        if (!meta.model) return;
+
+        const payload = task.payload ?? {};
+        const agentId =
+            (typeof payload['agentInstanceId'] === 'string' && payload['agentInstanceId']) ||
+            (typeof payload['botId'] === 'string' && payload['botId']) ||
+            (typeof payload['agentId'] === 'string' && payload['agentId']) ||
+            undefined;
+        const roleKey = typeof payload['roleKey'] === 'string' ? payload['roleKey'] : undefined;
+        const instruction =
+            (typeof payload['instruction'] === 'string' && payload['instruction']) ||
+            (typeof payload['description'] === 'string' && payload['description']) ||
+            (typeof payload['prompt'] === 'string' && payload['prompt']) ||
+            undefined;
+
+        const promptTokens = meta.promptTokens ?? undefined;
+        const completionTokens = meta.completionTokens ?? undefined;
+        const { costUsd, modelTier } = estimateCostUsd({
+            modelProvider: meta.model ?? meta.modelProvider,
+            modelProfile: meta.modelProfile ?? '',
+            promptTokens: promptTokens ?? 0,
+            completionTokens: completionTokens ?? 0,
+        });
+
+        traceGeneration({
+            traceId: task.taskId,
+            traceName: 'task.decision',
+            name: 'llm.decision',
+            tenantId,
+            agentId,
+            taskId: task.taskId,
+            sessionId: task.lease?.correlationId,
+            provider: meta.modelProvider,
+            model: meta.model ?? undefined,
+            input: instruction ? { roleKey, instruction: instruction.slice(0, 2000) } : { roleKey },
+            output: {
+                actionType: result.decision.actionType,
+                route: result.decision.route,
+                riskLevel: result.decision.riskLevel,
+                confidence: result.decision.confidence,
+                reason: result.decision.reason,
+            },
+            promptTokens,
+            completionTokens,
+            totalTokens: meta.totalTokens ?? undefined,
+            costUsd: costUsd > 0 ? costUsd : undefined,
+            modelTier,
+            metadata: {
+                modelProfile: meta.modelProfile ?? undefined,
+                ...(meta.fallbackReason ? { fallbackReason: meta.fallbackReason } : {}),
+            },
+            level: meta.fallbackReason ? 'WARNING' : 'DEFAULT',
+            statusMessage: meta.fallbackReason,
+            tags: roleKey ? ['decision', roleKey] : ['decision'],
+        });
+    } catch {
+        // tracing must never disrupt the decision path
+    }
+};
+
 const withTokenBudgetGuard = (
     resolver: LlmDecisionResolver,
 ): LlmDecisionResolver => {
@@ -1497,6 +1584,8 @@ const withTokenBudgetGuard = (
         if (typeof result.metadata.totalTokens === 'number' && result.metadata.totalTokens > 0) {
             consumeTokenBudget(scope, result.metadata.totalTokens);
         }
+
+        emitDecisionTrace(task, tenantId, result);
 
         if (budget.warning) {
             return {
