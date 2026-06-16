@@ -3,7 +3,60 @@
  *
  * Each prompt encodes the mindset, priorities, and constraints of the role so the
  * LLM classifies and plans tasks the way a specialist in that role would.
+ *
+ * Prompt management (build #5): the in-code ROLE_SYSTEM_PROMPTS below are the
+ * source of truth and the always-safe fallback. When Langfuse is configured,
+ * getRoleSystemPrompt also consults a Langfuse-registered prompt named
+ * `role-system-prompt:<roleKey>` so operators can version / A/B / roll back a
+ * prompt from the Langfuse UI without a code deploy. The lookup is eventually
+ * consistent and never blocks: the first call after a change returns the cached
+ * (or code) value and triggers a background refresh; subsequent calls use the
+ * registered prompt. Seed the registry with scripts/register-langfuse-prompts.mjs.
  */
+import { getPromptText, isLangfuseEnabled } from '@agentfarm/llm-trace';
+
+const PROMPT_OVERRIDE_TTL_MS = 5 * 60 * 1000;
+const promptOverrideCache = new Map<string, { text: string; fetchedAt: number }>();
+const promptRefreshInFlight = new Set<string>();
+
+const langfusePromptName = (roleKey: string): string => `role-system-prompt:${roleKey}`;
+
+/** Fire-and-forget refresh of a role prompt from Langfuse. Never throws. */
+const refreshRolePromptOverride = (roleKey: string, codeDefault: string): void => {
+    if (promptRefreshInFlight.has(roleKey)) return;
+    promptRefreshInFlight.add(roleKey);
+    void getPromptText(langfusePromptName(roleKey), codeDefault)
+        .then((text) => {
+            promptOverrideCache.set(roleKey, { text, fetchedAt: Date.now() });
+        })
+        .catch(() => {
+            /* observability/prompt fetch must never disrupt the runtime */
+        })
+        .finally(() => {
+            promptRefreshInFlight.delete(roleKey);
+        });
+};
+
+/**
+ * Resolve the base role prompt, preferring a fresh Langfuse override when one
+ * is cached, otherwise returning the in-code default and refreshing in the
+ * background. Synchronous and side-effect-light: a no-op when Langfuse is off.
+ */
+const resolveBaseRolePrompt = (roleKey: string, codeDefault: string): string => {
+    if (!isLangfuseEnabled()) return codeDefault;
+    const cached = promptOverrideCache.get(roleKey);
+    if (cached && Date.now() - cached.fetchedAt < PROMPT_OVERRIDE_TTL_MS) {
+        return cached.text;
+    }
+    refreshRolePromptOverride(roleKey, codeDefault);
+    return cached?.text ?? codeDefault;
+};
+
+/** Test helper — clear the prompt override cache between tests. */
+export const resetRolePromptOverridesForTests = (): void => {
+    promptOverrideCache.clear();
+    promptRefreshInFlight.clear();
+};
 
 /**
  * Payload schemas for devops action types, keyed by action type name.
@@ -756,7 +809,8 @@ const DEFAULT_SYSTEM_PROMPT =
  */
 export function getRoleSystemPrompt(roleKey: string, repoName?: string): string {
     const normalised = (roleKey ?? '').trim().toLowerCase();
-    const basePrompt = ROLE_SYSTEM_PROMPTS[normalised] ?? DEFAULT_SYSTEM_PROMPT;
+    const codeDefault = ROLE_SYSTEM_PROMPTS[normalised] ?? DEFAULT_SYSTEM_PROMPT;
+    const basePrompt = resolveBaseRolePrompt(normalised, codeDefault);
     if (repoName && repoName.trim()) {
         return `${basePrompt}\nCurrent repo: ${repoName}. All memory and actions are scoped to this repo.`;
     }

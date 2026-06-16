@@ -8,6 +8,7 @@ import {
     startTaskTrace,
     traceGeneration,
     flushLangfuse,
+    getPromptText,
     type LangfuseLike,
     type LangfuseTraceHandle,
     type LangfuseGenerationHandle,
@@ -192,5 +193,54 @@ test('flushLangfuse calls flushAsync when enabled and is a no-op when disabled',
     __setLangfuseClientForTests(null);
     await assert.doesNotReject(flushLangfuse());
 
+    resetLangfuseForTests();
+});
+
+// ─── getPromptText (build #5) ─────────────────────────────────────────────────
+
+test('getPromptText returns the fallback when no client configured', async () => {
+    resetLangfuseForTests();
+    __setLangfuseClientForTests(null);
+    const text = await getPromptText('role-system-prompt:dev', 'CODE FALLBACK');
+    assert.equal(text, 'CODE FALLBACK');
+    resetLangfuseForTests();
+});
+
+test('getPromptText compiles variables into the fallback when no client', async () => {
+    resetLangfuseForTests();
+    __setLangfuseClientForTests(null);
+    const text = await getPromptText('p', 'Hello {{name}}', { variables: { name: 'Ada' } });
+    assert.equal(text, 'Hello Ada');
+    resetLangfuseForTests();
+});
+
+test('getPromptText returns the Langfuse-registered prompt when present', async () => {
+    resetLangfuseForTests();
+    let askedName = '';
+    const client: LangfuseLike = {
+        trace() { return { id: 't', generation() { return { end() {}, update() {} }; }, update() {} }; },
+        async flushAsync() {}, async shutdownAsync() {},
+        async getPrompt(name: string) {
+            askedName = name;
+            return { prompt: 'REGISTERED PROMPT', compile: () => 'REGISTERED PROMPT' };
+        },
+    };
+    __setLangfuseClientForTests(client);
+    const text = await getPromptText('role-system-prompt:developer', 'FALLBACK');
+    assert.equal(text, 'REGISTERED PROMPT');
+    assert.equal(askedName, 'role-system-prompt:developer');
+    resetLangfuseForTests();
+});
+
+test('getPromptText falls back when getPrompt throws', async () => {
+    resetLangfuseForTests();
+    const client: LangfuseLike = {
+        trace() { return { id: 't', generation() { return { end() {}, update() {} }; }, update() {} }; },
+        async flushAsync() {}, async shutdownAsync() {},
+        async getPrompt() { throw new Error('boom'); },
+    };
+    __setLangfuseClientForTests(client);
+    const text = await getPromptText('p', 'SAFE FALLBACK');
+    assert.equal(text, 'SAFE FALLBACK');
     resetLangfuseForTests();
 });
