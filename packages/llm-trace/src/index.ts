@@ -50,6 +50,8 @@ export interface LangfuseLike {
     shutdownAsync(): Promise<unknown>;
     /** Optional — present on the real SDK; used for prompt management. */
     getPrompt?(name: string, version?: number, options?: Record<string, unknown>): Promise<LangfusePromptHandle>;
+    /** Optional — present on the real SDK; used for persistent eval scores. */
+    score?(body: Record<string, unknown>): unknown;
 }
 
 // ─── Config & input types ──────────────────────────────────────────────────────
@@ -281,6 +283,45 @@ export const shutdownLangfuse = async (): Promise<void> => {
         await lf.shutdownAsync();
     } catch {
         // ignore
+    }
+};
+
+// ─── Eval scores ─────────────────────────────────────────────────────────────────
+
+export interface TraceScoreInput {
+    /** Trace to attach the score to (AgentFarm uses traceId = taskId). */
+    traceId: string;
+    /** Optional observation (generation) to scope the score to. */
+    observationId?: string;
+    /** Stable score name, e.g. 'quality' or 'quality:create_pr'. */
+    name: string;
+    /** Numeric (0..1), categorical label, or boolean. */
+    value: number | string | boolean;
+    dataType?: 'NUMERIC' | 'CATEGORICAL' | 'BOOLEAN';
+    /** Free-text rationale (e.g. the feedback reason). */
+    comment?: string;
+}
+
+/**
+ * Persist a quality/eval score on a Langfuse trace. Unlike the in-memory
+ * quality tracker, these survive restarts and roll up in Langfuse dashboards
+ * (per model / tenant / time). Fire-and-forget; never throws; no-op when
+ * Langfuse is unconfigured.
+ */
+export const recordTraceScore = (input: TraceScoreInput): void => {
+    const lf = getLangfuseClient();
+    if (!lf || typeof lf.score !== 'function') return;
+    try {
+        lf.score({
+            traceId: input.traceId,
+            observationId: input.observationId,
+            name: input.name,
+            value: input.value,
+            dataType: input.dataType ?? (typeof input.value === 'number' ? 'NUMERIC' : undefined),
+            comment: input.comment,
+        });
+    } catch {
+        // scoring must never disrupt the caller
     }
 };
 

@@ -1,4 +1,5 @@
 import type { QualitySignalType } from '@agentfarm/shared-types';
+import { recordTraceScore } from '@agentfarm/llm-trace';
 
 type QualitySignalInput = {
     provider: string;
@@ -173,6 +174,20 @@ export const recordQualitySignal = (input: QualitySignalInput): QualitySignalEve
     qualityEvents.push(event);
     while (qualityEvents.length > MAX_SIGNAL_EVENTS) {
         qualityEvents.shift();
+    }
+
+    // Persist the signal as a Langfuse score on the task's trace (traceId =
+    // taskId) so quality survives restarts and rolls up in dashboards. The
+    // in-memory store above stays the fast path for provider routing. No-op
+    // when Langfuse is off; never throws.
+    if (event.taskId) {
+        recordTraceScore({
+            traceId: event.taskId,
+            name: 'quality',
+            value: event.score,
+            dataType: 'NUMERIC',
+            comment: [event.signal, event.source, event.reason].filter(Boolean).join(' · ') || undefined,
+        });
     }
 
     return event;
