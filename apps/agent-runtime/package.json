@@ -211,6 +211,7 @@
         "@agentfarm/agent-observability": "workspace:*",
         "@agentfarm/redis-client": "workspace:*",
         "@agentfarm/config": "workspace:*",
+        "@agentfarm/llm-trace": "workspace:*",
         "@agentfarm/observability": "workspace:*",
         "@agentfarm/audit-storage": "workspace:*",
         "@agentfarm/browser-actions": "workspace:*",

@@ -11,6 +11,13 @@ import {
 } from './llm-decision-adapter.js';
 import { recordQualitySignal, resetQualitySignals } from './llm-quality-tracker.js';
 import type { ActionDecision, TaskEnvelope } from './execution-engine.js';
+import {
+    __setLangfuseClientForTests,
+    resetLangfuseForTests,
+    type LangfuseLike,
+    type LangfuseTraceHandle,
+    type LangfuseGenerationHandle,
+} from '@agentfarm/llm-trace';
 
 const makeTask = (payload: Record<string, unknown>, taskId = 'task-1'): TaskEnvelope => ({
     taskId,
@@ -1010,4 +1017,96 @@ test('token budget guard hard-stops and routes to approval when exhausted', asyn
             globalThis.fetch = originalFetch;
         }
     });
+});
+
+// ─── Langfuse tracing (Build #3) ──────────────────────────────────────────────
+
+type CapturedTrace = { traces: Array<Record<string, unknown>>; gens: Array<Record<string, unknown>>; ends: Array<Record<string, unknown>> };
+
+const makeFakeLangfuse = (): { client: LangfuseLike; cap: CapturedTrace } => {
+    const cap: CapturedTrace = { traces: [], gens: [], ends: [] };
+    const client: LangfuseLike = {
+        trace(body) {
+            cap.traces.push(body);
+            const handle: LangfuseTraceHandle = {
+                id: (body['id'] as string) ?? 'gen-id',
+                generation(g) {
+                    cap.gens.push(g);
+                    const gen: LangfuseGenerationHandle = {
+                        end(e) { cap.ends.push(e ?? {}); return undefined; },
+                        update() { return undefined; },
+                    };
+                    return gen;
+                },
+                update() { return undefined; },
+            };
+            return handle;
+        },
+        async flushAsync() {},
+        async shutdownAsync() {},
+    };
+    return { client, cap };
+};
+
+test('decision path emits a Langfuse generation with provider, model, tokens and cost', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (_url: string | URL | Request, _init?: RequestInit) => new Response(JSON.stringify({
+        choices: [{ message: { content: JSON.stringify(mediumRiskDecision) } }],
+        usage: { prompt_tokens: 100, completion_tokens: 20, total_tokens: 120 },
+    }), { status: 200, headers: { 'content-type': 'application/json' } })) as typeof fetch;
+
+    const { client, cap } = makeFakeLangfuse();
+    resetLangfuseForTests();
+    __setLangfuseClientForTests(client);
+
+    try {
+        const resolver = createLlmDecisionResolverFromConfig({
+            provider: 'openai',
+            openai: { api_key: 'sk-test', model: 'gpt-4o' },
+        });
+        assert.ok(resolver);
+        await resolver!({
+            task: makeTask({ action_type: 'create_pr', roleKey: 'developer', botId: 'bot-123', instruction: 'open a PR' }, 'task-trace-1'),
+            heuristicDecision: mediumRiskDecision,
+        });
+
+        assert.equal(cap.traces.length, 1, 'one trace created');
+        assert.equal(cap.traces[0]!['id'], 'task-trace-1', 'trace id is the taskId');
+
+        assert.equal(cap.gens.length, 1, 'one generation recorded');
+        const gen = cap.gens[0]!;
+        assert.equal(gen['name'], 'llm.decision');
+        assert.equal(gen['model'], 'gpt-4o');
+        const gmeta = gen['metadata'] as Record<string, unknown>;
+        assert.equal(gmeta['provider'], 'openai');
+        assert.equal(gmeta['agentId'], 'bot-123');
+        assert.equal(typeof gmeta['estimatedCostUsd'], 'number');
+
+        const end = cap.ends[0]!;
+        const usage = end['usage'] as Record<string, unknown>;
+        assert.equal(usage['input'], 100);
+        assert.equal(usage['output'], 20);
+        assert.equal(usage['total'], 120);
+        const out = end['output'] as Record<string, unknown>;
+        assert.equal(out['actionType'], 'create_pr');
+        assert.equal(out['route'], 'approval');
+    } finally {
+        globalThis.fetch = originalFetch;
+        resetLangfuseForTests();
+    }
+});
+
+test('decision path does NOT emit a generation when no model produced it (heuristic/mock)', async () => {
+    const { client, cap } = makeFakeLangfuse();
+    resetLangfuseForTests();
+    __setLangfuseClientForTests(client);
+
+    try {
+        // No provider configured → resolver is undefined; nothing to trace.
+        const resolver = createLlmDecisionResolverFromConfig({ provider: 'agentfarm' } as never);
+        assert.equal(resolver, undefined);
+        assert.equal(cap.gens.length, 0);
+    } finally {
+        resetLangfuseForTests();
+    }
 });

@@ -58,6 +58,9 @@ importers:
       '@agentfarm/erp-adapters':
         specifier: workspace:*
         version: link:../../packages/erp-service
+      '@agentfarm/llm-trace':
+        specifier: workspace:*
+        version: link:../../packages/llm-trace
       '@agentfarm/memory-service':
         specifier: workspace:*
         version: link:../../packages/memory-service
