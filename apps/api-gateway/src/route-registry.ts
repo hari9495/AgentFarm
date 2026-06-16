@@ -273,12 +273,24 @@ export const registerAllRoutes = async (
     await registerDesktopSessionsRoutes(app, { getSession });
     await registerDeliverableRoutes(app, { getSession });
 
+    // Customer-portal session resolver (portal_session cookie). Defined here so
+    // both the observability trace proxy (below) and the support routes can use it.
+    const getPortalSession = async (cookies: string) => {
+        const { verifyPortalSession } = await import('./lib/portal-session.js');
+        const item = cookies.split(';').map((v) => v.trim()).find((v) => v.startsWith('portal_session='));
+        if (!item) return null;
+        const token = decodeURIComponent(item.slice('portal_session='.length));
+        const data = await verifyPortalSession(token, prisma);
+        if (!data) return null;
+        return { userId: data.accountId, tenantId: data.tenantId, workspaceIds: [], expiresAt: Date.now() + 3_600_000 };
+    };
+
     // Platform
     await registerLanguageRoutes(app, { getSession });
     await registerBillingRoutes(app, { getSession });
     await registerAnalyticsRoutes(app, { getSession });
     registerNotificationRoutes(app, { getSession });
-    await registerObservabilityRoutes(app, { getSession });
+    await registerObservabilityRoutes(app, { getSession, getPortalSession });
     await registerChatRoutes(app, { getSession });
     await registerAbTestRoutes(app, { getSession });
     await registerScheduledReportRoutes(app, { getSession, prisma: prisma as never });
@@ -313,16 +325,7 @@ export const registerAllRoutes = async (
     registerContentDraftRoutes(app, { getSession });
     registerCommsDraftRoutes(app, { getSession });
 
-    // Support — also accept portal_session cookie for WS connections
-    const getPortalSession = async (cookies: string) => {
-        const { verifyPortalSession } = await import('./lib/portal-session.js');
-        const item = cookies.split(';').map((v) => v.trim()).find((v) => v.startsWith('portal_session='));
-        if (!item) return null;
-        const token = decodeURIComponent(item.slice('portal_session='.length));
-        const data = await verifyPortalSession(token, prisma);
-        if (!data) return null;
-        return { userId: data.accountId, tenantId: data.tenantId, workspaceIds: [], expiresAt: Date.now() + 3_600_000 };
-    };
+    // Support — also accepts the portal_session cookie (getPortalSession defined above).
     await registerSupportIssueRoutes(app, { getSession, prisma });
     await registerSupportChatSessionRoutes(app, { getSession, getPortalSession });
     await registerSupportVoiceSessionRoutes(app, { getSession, getPortalSession });

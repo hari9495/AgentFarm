@@ -248,3 +248,102 @@ test('GET llm-traces/:taskId returns the trace when it belongs to the customer',
         await app.close();
     }
 });
+
+test('GET llm-traces/:taskId redacts input/output for customers but keeps metadata', async () => {
+    const app = Fastify({ logger: false });
+    await registerObservabilityRoutes(app, {
+        getSession: () => customerSession, // tenant-acme, customer scope
+        langfuse,
+        fetchImpl: (async () => new Response(JSON.stringify({
+            id: 'task-9', userId: 'tenant-acme', input: 'SYSTEM PROMPT SECRET', output: 'raw',
+            observations: [{ id: 'o1', model: 'gpt-4o', usage: { input: 100, output: 20, total: 120 },
+                input: 'RAG CONTEXT SECRET', output: 'decision text', metadata: { provider: 'openai', estimatedCostUsd: 0.004 } }],
+        }), { status: 200, headers: { 'content-type': 'application/json' } })) as typeof fetch,
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/observability/llm-traces/task-9' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as Record<string, any>;
+        assert.equal(body.redacted, true);
+        assert.equal(body.input, undefined, 'trace input stripped');
+        assert.equal(body.output, undefined, 'trace output stripped');
+        const obs = body.observations[0];
+        assert.equal(obs.input, undefined, 'observation input stripped');
+        assert.equal(obs.output, undefined, 'observation output stripped');
+        // metadata preserved
+        assert.equal(obs.model, 'gpt-4o');
+        assert.equal(obs.usage.total, 120);
+        assert.equal(obs.metadata.estimatedCostUsd, 0.004);
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET llm-traces/:taskId returns full input/output for internal operators', async () => {
+    const app = Fastify({ logger: false });
+    await registerObservabilityRoutes(app, {
+        getSession: () => session, // internal scope
+        langfuse,
+        fetchImpl: (async () => new Response(JSON.stringify({
+            id: 'task-9', userId: 'tenant-acme', input: 'full prompt',
+            observations: [{ id: 'o1', model: 'gpt-4o', input: 'ctx', output: 'out' }],
+        }), { status: 200, headers: { 'content-type': 'application/json' } })) as typeof fetch,
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/observability/llm-traces/task-9' });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as Record<string, any>;
+        assert.equal(body.input, 'full prompt', 'operator sees full input');
+        assert.equal(body.observations[0].output, 'out');
+        assert.notEqual(body.redacted, true);
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET llm-traces accepts a portal session (customer scope, redacted)', async () => {
+    let requestedUrl = '';
+    const app = Fastify({ logger: false });
+    await registerObservabilityRoutes(app, {
+        getSession: () => null, // no API session
+        getPortalSession: async () => ({ userId: 'acct-1', tenantId: 'tenant-portal', workspaceIds: [], expiresAt: Date.now() + 60_000 }),
+        langfuse,
+        fetchImpl: (async (url: string | URL | Request) => {
+            requestedUrl = String(url);
+            return new Response(JSON.stringify({ data: [{ id: 'task-1', userId: 'tenant-portal' }], meta: {} }), {
+                status: 200, headers: { 'content-type': 'application/json' },
+            });
+        }) as typeof fetch,
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/observability/llm-traces', headers: { cookie: 'portal_session=xyz' } });
+        assert.equal(res.statusCode, 200);
+        assert.equal(new URL(requestedUrl).searchParams.get('userId'), 'tenant-portal', 'portal user is tenant-locked');
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET llm-traces/:taskId redacts for portal sessions too', async () => {
+    const app = Fastify({ logger: false });
+    await registerObservabilityRoutes(app, {
+        getSession: () => null,
+        getPortalSession: async () => ({ userId: 'acct-1', tenantId: 'tenant-portal', workspaceIds: [], expiresAt: Date.now() + 60_000 }),
+        langfuse,
+        fetchImpl: (async () => new Response(JSON.stringify({
+            id: 'task-1', userId: 'tenant-portal', input: 'SECRET',
+            observations: [{ id: 'o1', model: 'gpt-4o', input: 'ctx', output: 'out', metadata: { estimatedCostUsd: 0.01 } }],
+        }), { status: 200, headers: { 'content-type': 'application/json' } })) as typeof fetch,
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/observability/llm-traces/task-1', headers: { cookie: 'portal_session=xyz' } });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as Record<string, any>;
+        assert.equal(body.redacted, true);
+        assert.equal(body.input, undefined);
+        assert.equal(body.observations[0].input, undefined);
+        assert.equal(body.observations[0].metadata.estimatedCostUsd, 0.01);
+    } finally {
+        await app.close();
+    }
+});
