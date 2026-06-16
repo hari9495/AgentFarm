@@ -9,6 +9,7 @@ import {
     traceGeneration,
     flushLangfuse,
     getPromptText,
+    recordTraceScore,
     type LangfuseLike,
     type LangfuseTraceHandle,
     type LangfuseGenerationHandle,
@@ -242,5 +243,45 @@ test('getPromptText falls back when getPrompt throws', async () => {
     __setLangfuseClientForTests(client);
     const text = await getPromptText('p', 'SAFE FALLBACK');
     assert.equal(text, 'SAFE FALLBACK');
+    resetLangfuseForTests();
+});
+
+// ─── recordTraceScore (build #6) ──────────────────────────────────────────────
+
+test('recordTraceScore is a no-op when no client configured', () => {
+    resetLangfuseForTests();
+    __setLangfuseClientForTests(null);
+    assert.doesNotThrow(() => recordTraceScore({ traceId: 't1', name: 'quality', value: 0.8 }));
+    resetLangfuseForTests();
+});
+
+test('recordTraceScore forwards a numeric score to the client', () => {
+    resetLangfuseForTests();
+    const scores: Array<Record<string, unknown>> = [];
+    const client: LangfuseLike = {
+        trace() { return { id: 't', generation() { return { end() {}, update() {} }; }, update() {} }; },
+        async flushAsync() {}, async shutdownAsync() {},
+        score(body) { scores.push(body); return undefined; },
+    };
+    __setLangfuseClientForTests(client);
+    recordTraceScore({ traceId: 'task-9', name: 'quality:create_pr', value: 0.8, comment: 'approved' });
+    assert.equal(scores.length, 1);
+    assert.equal(scores[0]!['traceId'], 'task-9');
+    assert.equal(scores[0]!['name'], 'quality:create_pr');
+    assert.equal(scores[0]!['value'], 0.8);
+    assert.equal(scores[0]!['dataType'], 'NUMERIC');
+    assert.equal(scores[0]!['comment'], 'approved');
+    resetLangfuseForTests();
+});
+
+test('recordTraceScore swallows client errors', () => {
+    resetLangfuseForTests();
+    const client: LangfuseLike = {
+        trace() { return { id: 't', generation() { return { end() {}, update() {} }; }, update() {} }; },
+        async flushAsync() {}, async shutdownAsync() {},
+        score() { throw new Error('boom'); },
+    };
+    __setLangfuseClientForTests(client);
+    assert.doesNotThrow(() => recordTraceScore({ traceId: 't', name: 'quality', value: 0.5 }));
     resetLangfuseForTests();
 });
