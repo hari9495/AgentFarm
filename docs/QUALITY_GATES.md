@@ -1,6 +1,6 @@
 # Quality Gates
 
-Three complementary mechanisms that prevent false completions, validate output correctness, and reduce LLM context costs. Inspired by the MiMo-Code open-source framework, adapted for AgentFarm's multi-tenant architecture.
+Five complementary mechanisms that prevent false completions, validate output correctness, reduce LLM context costs, and enable continuous self-improvement. Inspired by the MiMo-Code open-source framework, adapted for AgentFarm's multi-tenant architecture.
 
 ---
 
@@ -182,49 +182,6 @@ Exported as `microcompact(messages, model)` — takes OpenAI-format messages, re
 
 ---
 
-## Combined Flow
-
-When all five are enabled, the full quality pipeline for a completed task is:
-
-```
-executeTaskWithRetries → status: 'success'
-        ↓
-CompletionGate.check()       ← DB truth validation
-  (re-queue if open children)
-        ↓
-GoalJudge.evaluate()         ← independent LLM verification
-  (re-queue if not satisfied)
-        ↓
-distillLesson()              ← fire-and-forget lesson extraction (Dream/Distill)
-        ↓
-recordEpisode()              ← write to episodic memory
-        ↓
-Return result to caller
-```
-
-Context compression (Headroom + Microcompact) runs at the LLM call layer, before results are produced, not after.
-
----
-
-## Testing
-
-Each module has its own test file:
-- `apps/agent-runtime/src/goal-judge.test.ts`
-- `apps/agent-runtime/src/completion-gate.test.ts`
-- `apps/agent-runtime/src/microcompact.test.ts`
-- `apps/agent-runtime/src/dream-distill.test.ts`
-
-Run with:
-```bash
-pnpm --filter @agentfarm/agent-runtime test src/goal-judge.test.ts
-pnpm --filter @agentfarm/agent-runtime test src/completion-gate.test.ts
-pnpm --filter @agentfarm/agent-runtime test src/microcompact.test.ts
-pnpm --filter @agentfarm/agent-runtime test src/dream-distill.test.ts
-pnpm --filter @agentfarm/agent-runtime test src/agents/shared/rag-context-limiter.test.ts
-```
-
----
-
 ## 4. Token-Budgeted RAG
 
 **File:** `apps/agent-runtime/src/agents/shared/rag-context-limiter.ts`
@@ -355,4 +312,50 @@ Called fire-and-forget from `execution-engine.ts` after `evaluateGoal` returns `
 // fire-and-forget — never awaited, never throws
 distillLesson({ payload: taskWithAuditContext.payload, agentOutput, workspaceId, tenantId, taskId: task.taskId })
     .catch(() => {});
+```
+
+---
+
+## Combined Flow
+
+When all five are enabled, the full quality pipeline for a completed task is:
+
+```
+executeTaskWithRetries → status: 'success'
+        ↓
+CompletionGate.check()       ← DB truth validation
+  (re-queue if open children)
+        ↓
+GoalJudge.evaluate()         ← independent LLM verification
+  (re-queue if not satisfied)
+        ↓
+distillLesson()              ← fire-and-forget lesson extraction (Dream/Distill)
+        ↓
+recordEpisode()              ← write to episodic memory
+        ↓
+Return result to caller
+```
+
+Context compression (Headroom + Microcompact) runs at the LLM call layer, before results are produced, not after.
+
+Token-Budgeted RAG runs at the retrieval layer, before the system prompt is assembled for each LLM call.
+
+---
+
+## Testing
+
+Each module has its own test file:
+- `apps/agent-runtime/src/goal-judge.test.ts`
+- `apps/agent-runtime/src/completion-gate.test.ts`
+- `apps/agent-runtime/src/microcompact.test.ts`
+- `apps/agent-runtime/src/dream-distill.test.ts`
+- `apps/agent-runtime/src/agents/shared/rag-context-limiter.test.ts`
+
+Run with:
+```bash
+pnpm --filter @agentfarm/agent-runtime test src/goal-judge.test.ts
+pnpm --filter @agentfarm/agent-runtime test src/completion-gate.test.ts
+pnpm --filter @agentfarm/agent-runtime test src/microcompact.test.ts
+pnpm --filter @agentfarm/agent-runtime test src/dream-distill.test.ts
+pnpm --filter @agentfarm/agent-runtime test src/agents/shared/rag-context-limiter.test.ts
 ```
