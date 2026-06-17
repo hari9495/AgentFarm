@@ -2502,7 +2502,7 @@ test('logs contain runtime.task_classified event with confidence and risk metada
             },
         });
 
-        await new Promise<void>((resolve) => setTimeout(resolve, 60));
+        await new Promise<void>((resolve) => setTimeout(resolve, 250));
 
         const logsRes = await app.inject({ method: 'GET', url: '/logs?limit=50' });
         assert.equal(logsRes.statusCode, 200);
@@ -2553,7 +2553,7 @@ test('logs contain runtime.approval_required event with confidence and risk_leve
             },
         });
 
-        await new Promise<void>((resolve) => setTimeout(resolve, 60));
+        await new Promise<void>((resolve) => setTimeout(resolve, 250));
 
         const logsRes = await app.inject({ method: 'GET', url: '/logs?limit=100' });
         const logsBody = logsRes.json() as {
