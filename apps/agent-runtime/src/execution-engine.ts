@@ -43,9 +43,10 @@ import { getRedisClient } from '@agentfarm/redis-client';
 import { getCompressedEpisodicContext } from './infrastructure/episodic-summarizer.js';
 import { createCodeGenFn } from './infrastructure/llm-provider-factory.js';
 import { runWithLlmTraceContext, type LlmTraceContext } from '@agentfarm/llm-trace';
-import { evaluateGoal } from './goal-judge.js';
+import { evaluateGoal, judgeScore, resolveSpec } from './goal-judge.js';
 import { checkCompletion } from './completion-gate.js';
 import { distillLesson } from './dream-distill.js';
+import { runMaxMode, isMaxModeEnabled, getMaxModeCandidates, shouldSkipMaxMode } from './max-mode.js';
 
 /**
  * Build the ambient LLM-trace context for a task so every LLM call made during
@@ -450,7 +451,11 @@ async function processApprovedTaskInner(
     await reportProgress(progressCtx, 'coding_started', 'Executing approved task.', sink);
     const resolvedWorkerFn = options?.llmCodeGenFn ?? createCodeGenFn(process.env, 'cost_balanced');
     const resolvedPlannerFn = options?.llmPlannerFn ?? createCodeGenFn(process.env, 'quality_first');
-    let approvedResult = await executeTaskWithRetries(taskWithAuditContext, approvedDecision, 'none', llmExecution, { ...options, llmCodeGenFn: resolvedWorkerFn, llmPlannerFn: resolvedPlannerFn });
+    const approvedExecFn = () => executeTaskWithRetries(taskWithAuditContext, approvedDecision, 'none', llmExecution, { ...options, llmCodeGenFn: resolvedWorkerFn, llmPlannerFn: resolvedPlannerFn });
+    const approvedSpec = resolveSpec(taskWithAuditContext.payload);
+    let approvedResult = isMaxModeEnabled() && !shouldSkipMaxMode(taskWithAuditContext.payload)
+        ? await runMaxMode(approvedExecFn, (out) => judgeScore(approvedSpec, out), getMaxModeCandidates())
+        : await approvedExecFn();
 
     await reportProgress(
         progressCtx,
@@ -704,11 +709,15 @@ async function processDeveloperTaskInner(
     // Planner (initial plan generation) uses quality_first; worker (fix attempts) uses cost_balanced.
     const plannerFn: LlmCodeGenFn | undefined = createCodeGenFn(process.env, 'quality_first');
     const workerFn: LlmCodeGenFn | undefined = createCodeGenFn(process.env, 'cost_balanced');
-    const execResult = await executeTaskWithRetries(
+    const devExecFn = () => executeTaskWithRetries(
         { ...taskWithAuditContext, payload: executionPayload },
         decision, payloadOverrideSource, llmExecution,
         { ...options, llmCodeGenFn: workerFn, llmPlannerFn: plannerFn },
     );
+    const devSpec = resolveSpec(taskWithAuditContext.payload);
+    const execResult = isMaxModeEnabled() && !shouldSkipMaxMode(taskWithAuditContext.payload)
+        ? await runMaxMode(devExecFn, (out) => judgeScore(devSpec, out), getMaxModeCandidates())
+        : await devExecFn();
 
     await reportProgress(
         progressCtx,

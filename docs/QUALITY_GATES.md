@@ -1,6 +1,6 @@
 # Quality Gates
 
-Five complementary mechanisms that prevent false completions, validate output correctness, reduce LLM context costs, and enable continuous self-improvement. Inspired by the MiMo-Code open-source framework, adapted for AgentFarm's multi-tenant architecture.
+Six complementary mechanisms that prevent false completions, validate output correctness, reduce LLM context costs, improve output quality through parallel sampling, and enable continuous self-improvement. Inspired by the MiMo-Code open-source framework, adapted for AgentFarm's multi-tenant architecture.
 
 ---
 
@@ -316,12 +316,79 @@ distillLesson({ payload: taskWithAuditContext.payload, agentOutput, workspaceId,
 
 ---
 
-## Combined Flow
+## 6. Max Mode
 
-When all five are enabled, the full quality pipeline for a completed task is:
+**File:** `apps/agent-runtime/src/max-mode.ts`
+
+### Purpose
+
+For tasks where output quality matters more than cost, Max Mode runs N parallel LLM candidates for the same task and lets Goal Judge score each one. The highest-scoring successful candidate is returned. Failed candidates are discarded.
+
+The key insight: running three independent LLM chains for the same task and picking the best one is cheaper and faster than asking a human to review every output, yet dramatically improves the hit rate on complex tasks.
+
+### How It Works
 
 ```
-executeTaskWithRetries → status: 'success'
+executeTaskWithRetries called N times in parallel
+        ↓
+Promise.allSettled([candidate1, candidate2, ... candidateN])
+        ↓
+  Filter for status: 'success' results
+        ↓
+  0 successes → return first settled result (any status)
+  1 success   → return it directly (no scoring needed)
+  N successes → score each via judgeScore(spec, output)
+                pick highest-confidence candidate
+        ↓
+Return winning result to quality gates pipeline
+```
+
+Scoring uses `judgeScore()` from `goal-judge.ts` — the same Haiku call as the Goal Judge, but here used purely to produce a confidence number rather than a pass/fail verdict. If the judge is unavailable (no API key), Max Mode falls back to picking the candidate with the longest `actionOutput` as a heuristic proxy for effort.
+
+### Configuration
+
+| Env Var | Default | Description |
+|---|---|---|
+| `AF_MAX_MODE_ENABLED` | `false` | Enable/disable Max Mode |
+| `AF_MAX_MODE_CANDIDATES` | `3` | Number of parallel candidates to run |
+
+**Cost note:** Max Mode multiplies LLM cost by N. At N=3, a task that normally costs $0.01 costs $0.03. Enable only for high-value tasks or workspaces where output quality justifies the cost.
+
+### Skip Conditions
+
+Max Mode is skipped (single candidate path taken) when:
+- `AF_MAX_MODE_ENABLED` is not `true`
+- `payload.skip_max_mode = true`
+- Read-only action types (`code_read`, `workspace_read_file`, `workspace_list_files`, `workspace_grep`, `workspace_scout`, etc.) — no quality gain from multiple parallel reads
+
+### Integration Point
+
+Called from `execution-engine.ts` in place of the single `executeTaskWithRetries` call when Max Mode is enabled. The quality gates pipeline (CompletionGate → GoalJudge → Dream/Distill) runs on the winning candidate result, exactly as in normal mode.
+
+```ts
+import { runMaxMode, isMaxModeEnabled, getMaxModeCandidates } from './max-mode.js';
+import { judgeScore, resolveSpec } from './goal-judge.js';
+
+const spec = resolveSpec(taskWithAuditContext.payload);
+const result = isMaxModeEnabled() && !shouldSkipMaxMode(payload)
+    ? await runMaxMode(
+          () => executeTaskWithRetries(...),
+          (output) => judgeScore(spec, output),
+          getMaxModeCandidates(),
+      )
+    : await executeTaskWithRetries(...);
+```
+
+---
+
+## Combined Flow
+
+When all six are enabled, the full quality pipeline for a completed task is:
+
+```
+Max Mode: run N parallel candidates, pick highest-scoring
+        ↓
+executeTaskWithRetries → status: 'success'  (winning candidate)
         ↓
 CompletionGate.check()       ← DB truth validation
   (re-queue if open children)
@@ -349,6 +416,7 @@ Each module has its own test file:
 - `apps/agent-runtime/src/completion-gate.test.ts`
 - `apps/agent-runtime/src/microcompact.test.ts`
 - `apps/agent-runtime/src/dream-distill.test.ts`
+- `apps/agent-runtime/src/max-mode.test.ts`
 - `apps/agent-runtime/src/agents/shared/rag-context-limiter.test.ts`
 
 Run with:
@@ -357,5 +425,6 @@ pnpm --filter @agentfarm/agent-runtime test src/goal-judge.test.ts
 pnpm --filter @agentfarm/agent-runtime test src/completion-gate.test.ts
 pnpm --filter @agentfarm/agent-runtime test src/microcompact.test.ts
 pnpm --filter @agentfarm/agent-runtime test src/dream-distill.test.ts
+pnpm --filter @agentfarm/agent-runtime test src/max-mode.test.ts
 pnpm --filter @agentfarm/agent-runtime test src/agents/shared/rag-context-limiter.test.ts
 ```

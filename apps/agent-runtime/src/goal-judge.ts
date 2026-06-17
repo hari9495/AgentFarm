@@ -126,7 +126,7 @@ async function callJudge(spec: string, agentOutput: string): Promise<GoalVerdict
     }
 }
 
-function resolveSpec(payload: Record<string, unknown>): string {
+export function resolveSpec(payload: Record<string, unknown>): string {
     if (typeof payload['goal_spec'] === 'string' && payload['goal_spec']) return payload['goal_spec'];
     if (typeof payload['summary'] === 'string' && payload['summary']) return payload['summary'];
     if (typeof payload['description'] === 'string' && payload['description']) return payload['description'];
@@ -198,4 +198,19 @@ export async function evaluateGoal(
 
 export function isGoalJudgeEnabled(): boolean {
     return ENABLED;
+}
+
+/**
+ * Score a single agent output against a task spec.
+ * Returns confidence 0–1 (0.5 when judge is unavailable or errors).
+ * Used by Max Mode to rank parallel candidates without a pass/fail verdict.
+ */
+export async function judgeScore(spec: string, agentOutput: string): Promise<number> {
+    if (!spec || !agentOutput) return 0.5;
+    try {
+        const verdict = await callJudge(spec, agentOutput);
+        return verdict?.confidence ?? 0.5;
+    } catch {
+        return 0.5;
+    }
 }
