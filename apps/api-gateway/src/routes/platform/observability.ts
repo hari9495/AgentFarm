@@ -481,7 +481,13 @@ export const registerObservabilityRoutes = async (
             metrics: process.env['AXIOM_DATASET_METRICS'] ?? 'agentfarm-metrics',
             audit: process.env['AXIOM_DATASET_AUDIT'] ?? 'axiom-audit',
         };
-        const dataset = allowed[request.query.dataset ?? 'logs'] ?? allowed['logs']!;
+        const datasetKey = (request.query.dataset && allowed[request.query.dataset]) ? request.query.dataset : 'logs';
+        const dataset = allowed[datasetKey]!;
+
+        // Tenant field differs by source: the audit mirror writes a flat
+        // `tenant_id` (events API); the collector's OTLP logs/metrics nest it as
+        // the flattened `resource.tenant_id`. Both need bracket-quoting in APL.
+        const tenantField = datasetKey === 'audit' ? 'tenant_id' : 'resource.tenant_id';
 
         // Tenant scope: customers locked to their own tenant; internal optional.
         const tenant = session.scope === 'internal' ? request.query.tenantId?.trim() : session.tenantId;
@@ -491,7 +497,7 @@ export const registerObservabilityRoutes = async (
         const now = Date.now();
 
         const clauses = [`['${dataset}']`];
-        if (tenant) clauses.push(`| where tenant_id == ${aplString(tenant)}`);
+        if (tenant) clauses.push(`| where ['${tenantField}'] == ${aplString(tenant)}`);
         if (request.query.q?.trim()) clauses.push(`| search ${aplString(request.query.q.trim())}`);
         clauses.push('| sort by _time desc');
         clauses.push(`| limit ${limit}`);
