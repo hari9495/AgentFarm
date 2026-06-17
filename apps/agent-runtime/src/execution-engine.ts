@@ -43,6 +43,8 @@ import { getRedisClient } from '@agentfarm/redis-client';
 import { getCompressedEpisodicContext } from './infrastructure/episodic-summarizer.js';
 import { createCodeGenFn } from './infrastructure/llm-provider-factory.js';
 import { runWithLlmTraceContext, type LlmTraceContext } from '@agentfarm/llm-trace';
+import { evaluateGoal } from './goal-judge.js';
+import { checkCompletion } from './completion-gate.js';
 
 /**
  * Build the ambient LLM-trace context for a task so every LLM call made during
@@ -447,21 +449,63 @@ async function processApprovedTaskInner(
     await reportProgress(progressCtx, 'coding_started', 'Executing approved task.', sink);
     const resolvedWorkerFn = options?.llmCodeGenFn ?? createCodeGenFn(process.env, 'cost_balanced');
     const resolvedPlannerFn = options?.llmPlannerFn ?? createCodeGenFn(process.env, 'quality_first');
-    const result = await executeTaskWithRetries(taskWithAuditContext, approvedDecision, 'none', llmExecution, { ...options, llmCodeGenFn: resolvedWorkerFn, llmPlannerFn: resolvedPlannerFn });
+    let approvedResult = await executeTaskWithRetries(taskWithAuditContext, approvedDecision, 'none', llmExecution, { ...options, llmCodeGenFn: resolvedWorkerFn, llmPlannerFn: resolvedPlannerFn });
 
     await reportProgress(
         progressCtx,
-        result.status === 'success' ? 'completed' : 'failed',
-        result.status === 'success' ? 'Approved task execution completed.' : `Approved task execution failed: ${result.errorMessage ?? 'Unknown error'}`,
+        approvedResult.status === 'success' ? 'completed' : 'failed',
+        approvedResult.status === 'success' ? 'Approved task execution completed.' : `Approved task execution failed: ${approvedResult.errorMessage ?? 'Unknown error'}`,
         sink,
     );
 
     const workspaceId = typeof taskWithAuditContext.payload['workspaceId'] === 'string'
         ? taskWithAuditContext.payload['workspaceId'] : task.taskId;
-    recordEpisode({ task: taskWithAuditContext, result, decision: approvedDecision, workspaceId })
+
+    // Quality gates — run only on success, never block on failure
+    if (approvedResult.status === 'success') {
+        const tenantId = typeof taskWithAuditContext.payload['tenantId'] === 'string'
+            ? taskWithAuditContext.payload['tenantId'] : '';
+
+        const gateResult = await checkCompletion(
+            task.taskId,
+            tenantId,
+            typeof taskWithAuditContext.payload['_completion_gate_reentry'] === 'number'
+                ? taskWithAuditContext.payload['_completion_gate_reentry'] as number : 0,
+        ).catch(() => ({ pass: true as const }));
+
+        if (!gateResult.pass) {
+            approvedResult = {
+                ...approvedResult,
+                status: 'failed',
+                errorMessage: gateResult.reentryText,
+                failureClass: 'runtime_exception',
+            };
+        }
+
+        if (approvedResult.status === 'success') {
+            const agentOutput = approvedResult.actionOutput ?? '';
+            const judgeResult = await evaluateGoal(
+                taskWithAuditContext.payload,
+                agentOutput,
+                typeof taskWithAuditContext.payload['_goal_judge_requeue'] === 'number'
+                    ? taskWithAuditContext.payload['_goal_judge_requeue'] as number : 0,
+            ).catch(() => ({ action: 'accept' as const }));
+
+            if (judgeResult.action === 'abandon') {
+                approvedResult = {
+                    ...approvedResult,
+                    status: 'failed',
+                    errorMessage: `[GOAL_JUDGE_IMPOSSIBLE] ${judgeResult.reason}`,
+                    failureClass: 'runtime_exception',
+                };
+            }
+        }
+    }
+
+    recordEpisode({ task: taskWithAuditContext, result: approvedResult, decision: approvedDecision, workspaceId })
         .catch(() => { /* best-effort — never fail the task */ });
 
-    return result;
+    return approvedResult;
 }
 
 export async function processDeveloperTask(
@@ -662,12 +706,54 @@ async function processDeveloperTaskInner(
         sink,
     );
 
+    // Quality gates — run only on success, never block on failure
+    let finalResult = execResult;
+    if (finalResult.status === 'success') {
+        const tenantId = typeof taskWithAuditContext.payload['tenantId'] === 'string'
+            ? taskWithAuditContext.payload['tenantId'] : '';
+
+        const gateResult = await checkCompletion(
+            task.taskId,
+            tenantId,
+            typeof taskWithAuditContext.payload['_completion_gate_reentry'] === 'number'
+                ? taskWithAuditContext.payload['_completion_gate_reentry'] as number : 0,
+        ).catch(() => ({ pass: true as const }));
+
+        if (!gateResult.pass) {
+            finalResult = {
+                ...finalResult,
+                status: 'failed',
+                errorMessage: gateResult.reentryText,
+                failureClass: 'runtime_exception',
+            };
+        }
+
+        if (finalResult.status === 'success') {
+            const agentOutput = finalResult.actionOutput ?? '';
+            const judgeResult = await evaluateGoal(
+                taskWithAuditContext.payload,
+                agentOutput,
+                typeof taskWithAuditContext.payload['_goal_judge_requeue'] === 'number'
+                    ? taskWithAuditContext.payload['_goal_judge_requeue'] as number : 0,
+            ).catch(() => ({ action: 'accept' as const }));
+
+            if (judgeResult.action === 'abandon') {
+                finalResult = {
+                    ...finalResult,
+                    status: 'failed',
+                    errorMessage: `[GOAL_JUDGE_IMPOSSIBLE] ${judgeResult.reason}`,
+                    failureClass: 'runtime_exception',
+                };
+            }
+        }
+    }
+
     if (workspaceIdForMemory) {
-        recordEpisode({ task: taskWithAuditContext, result: execResult, decision, workspaceId: workspaceIdForMemory })
+        recordEpisode({ task: taskWithAuditContext, result: finalResult, decision, workspaceId: workspaceIdForMemory })
             .catch(() => { /* best-effort */ });
     }
 
-    return execResult;
+    return finalResult;
 }
 
 /**

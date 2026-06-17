@@ -1,6 +1,10 @@
 import { compress } from 'headroom-ai';
+import { microcompact, type MicrocompactStats } from './microcompact.js';
 
 const ENABLED = process.env['HEADROOM_ENABLED'] === '1' || process.env['HEADROOM_ENABLED'] === 'true';
+
+// Re-export so callers can use the combined stats type
+export type { MicrocompactStats };
 const BASE_URL = process.env['HEADROOM_BASE_URL'] || undefined;
 const API_KEY = process.env['HEADROOM_API_KEY'] || undefined;
 const TOKEN_BUDGET = process.env['HEADROOM_TOKEN_BUDGET']
@@ -20,10 +24,15 @@ export async function compressOpenAiMessages(
     messages: OpenAiMessage[],
     model: string,
 ): Promise<{ messages: OpenAiMessage[]; stats: HeadroomStats | null }> {
-    if (!ENABLED) return { messages, stats: null };
+    // Apply microcompact first — clears regeneratable tool outputs before headroom.
+    // Cast through unknown because microcompact accepts broader content types.
+    const { messages: precompacted } = microcompact(messages as Parameters<typeof microcompact>[0]);
+    const narrowed = precompacted as OpenAiMessage[];
+
+    if (!ENABLED) return { messages: narrowed, stats: null };
 
     try {
-        const result = await compress(messages, {
+        const result = await compress(narrowed, {
             model,
             ...(BASE_URL ? { baseUrl: BASE_URL } : {}),
             ...(API_KEY ? { apiKey: API_KEY } : {}),
@@ -41,7 +50,7 @@ export async function compressOpenAiMessages(
         }
         return { messages: result.messages as OpenAiMessage[], stats };
     } catch {
-        return { messages, stats: null };
+        return { messages: narrowed, stats: null };
     }
 }
 
