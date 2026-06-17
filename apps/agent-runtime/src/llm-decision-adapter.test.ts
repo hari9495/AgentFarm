@@ -1,3 +1,5 @@
+process.env['HEADROOM_ENABLED'] = '0';
+
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import assert from 'node:assert/strict';
 import { tmpdir } from 'os';
