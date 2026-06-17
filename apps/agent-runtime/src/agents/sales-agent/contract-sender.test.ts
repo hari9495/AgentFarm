@@ -117,7 +117,7 @@ describe('sendContractInvite', () => {
         mockFetch = null;
 
         assert.equal(result.sent, false);
-        assert.ok(result.error?.includes('LLM'));
+        assert.ok(result.error?.includes('anthropic_request_failed'));
     });
 
     test('calls email provider and creates DB records on success', async () => {

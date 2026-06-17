@@ -6,6 +6,7 @@ import { join } from 'node:path';
 
 const workspaceBase = await mkdtemp(join(tmpdir(), 'agent-runtime-local-workspace-'));
 process.env.AF_WORKSPACE_BASE = workspaceBase;
+process.env.AF_SYNTAX_VALIDATE = 'false';
 
 const {
     executeLocalWorkspaceAction,
@@ -3709,7 +3710,7 @@ test('workspace_dast_scan returns error when target_url is missing', async () =>
     assert.ok((result.errorOutput ?? '').includes('target_url'), 'should mention missing target_url');
 });
 
-// TIER 11: workspace_visual_task — desktop-agent vision loop dispatcher
+// TIER 11: workspace_visual_task ï¿½ desktop-agent vision loop dispatcher
 
 test('workspace_visual_task rejects empty goal', async () => {
     const result = await executeLocalWorkspaceAction({

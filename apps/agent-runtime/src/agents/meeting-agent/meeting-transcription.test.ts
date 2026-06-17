@@ -297,7 +297,7 @@ describe('runFullMeetingPipeline', () => {
                     },
                     executor,
                 ),
-            /Anthropic API failed with HTTP 500/,
+            /anthropic_request_failed:500/,
         );
 
         assert.ok(patchedStatuses.includes('error'), 'should patch status to error on failure');

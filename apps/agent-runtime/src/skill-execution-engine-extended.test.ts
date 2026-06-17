@@ -28,8 +28,8 @@ describe('skill-execution-engine: 38-skill registry', () => {
         'secrets-scanner', 'refactor-advisor',
     ];
 
-    it('registers exactly 38 skill handlers', () => {
-        assert.equal(listRegisteredSkillIds().length, 38);
+    it('registers exactly 45 skill handlers', () => {
+        assert.equal(listRegisteredSkillIds().length, 45);
     });
 
     it('has a handler for every expected skill id', () => {

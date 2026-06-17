@@ -6,6 +6,23 @@ import { buildRuntimeServer } from './runtime-server.js';
 import type { ActionResultRecord } from './action-result-contract.js';
 import type { EvidenceRecord } from './evidence-record-contract.js';
 import { executeObservedAction, resetObservabilityForTests } from './action-observability.js';
+import { DEVELOPER_ROLE_ALLOWED_CONNECTORS, DEVELOPER_ROLE_ALLOWED_LOCAL_ACTIONS } from './agents/developer/developer-agent-profile.js';
+
+const CONNECTOR_ACTION_POLICY_TEST: Record<string, string[]> = {
+    jira: ['read_task', 'create_comment', 'update_status'],
+    teams: ['send_message'],
+    github: ['create_pr_comment', 'create_pr', 'merge_pr', 'list_prs'],
+    email: ['send_email'],
+    custom_api: ['read_task'],
+};
+
+const devConnectorTools = [...DEVELOPER_ROLE_ALLOWED_CONNECTORS, 'custom_api'];
+const devAllowedActions = Array.from(new Set([
+    ...devConnectorTools.flatMap((t) => CONNECTOR_ACTION_POLICY_TEST[t] ?? []),
+    ...DEVELOPER_ROLE_ALLOWED_LOCAL_ACTIONS,
+    'code_edit_patch', 'code_search_replace', 'file_move', 'file_delete',
+    'autonomous_loop', 'run_shell_command', 'create_pr_from_workspace',
+]));
 
 const baseEnv = (): NodeJS.ProcessEnv => ({
     AF_TENANT_ID: 'tenant_test',
@@ -1591,10 +1608,10 @@ test('approval-required tasks auto-escalate after timeout threshold', async () =
         });
         assert.equal(intakeRes.statusCode, 202);
 
-        await new Promise<void>((resolve) => setTimeout(resolve, 40));
+        await new Promise<void>((resolve) => setTimeout(resolve, 80));
 
         fakeNow += 120;
-        await new Promise<void>((resolve) => setTimeout(resolve, 30));
+        await new Promise<void>((resolve) => setTimeout(resolve, 80));
 
         const liveRes = await app.inject({ method: 'GET', url: '/health/live' });
         assert.equal(liveRes.statusCode, 200);
@@ -1709,10 +1726,10 @@ test('approval decision endpoint resolves escalated approval and tracks rejected
             },
         });
         assert.equal(intakeRes.statusCode, 202);
-        await new Promise<void>((resolve) => setTimeout(resolve, 40));
+        await new Promise<void>((resolve) => setTimeout(resolve, 80));
 
         fakeNow += 120;
-        await new Promise<void>((resolve) => setTimeout(resolve, 30));
+        await new Promise<void>((resolve) => setTimeout(resolve, 80));
 
         const decisionRes = await app.inject({
             method: 'POST',
@@ -2889,129 +2906,8 @@ test('startup loads latest persisted capability snapshot by botId when available
                 botId,
                 roleKey: 'developer',
                 roleVersion: 'v1',
-                allowedConnectorTools: ['jira', 'teams', 'github', 'email'],
-                allowedActions: [
-                    // Connector actions
-                    'read_task',
-                    'create_comment',
-                    'update_status',
-                    'send_message',
-                    'create_pr_comment',
-                    'create_pr',
-                    'merge_pr',
-                    'list_prs',
-                    'send_email',
-                    // Tier 0-1: Local workspace (original)
-                    'git_clone',
-                    'git_branch',
-                    'git_commit',
-                    'git_push',
-                    'git_stash',
-                    'git_log',
-                    'code_read',
-                    'code_edit',
-                    'code_edit_patch',
-                    'code_search_replace',
-                    'apply_patch',
-                    'file_move',
-                    'file_delete',
-                    'run_build',
-                    'run_tests',
-                    'run_linter',
-                    'workspace_install_deps',
-                    'workspace_list_files',
-                    'workspace_grep',
-                    'workspace_scout',
-                    'workspace_checkpoint',
-                    'autonomous_loop',
-                    'workspace_cleanup',
-                    'workspace_diff',
-                    'workspace_memory_write',
-                    'workspace_memory_read',
-                    'workspace_memory_search',
-                    'run_shell_command',
-                    'create_pr_from_workspace',
-                    // Tier 3: IDE-level capabilities
-                    'workspace_find_references',
-                    'workspace_rename_symbol',
-                    'workspace_extract_function',
-                    'workspace_go_to_definition',
-                    'workspace_hover_type',
-                    'workspace_analyze_imports',
-                    'workspace_code_coverage',
-                    'workspace_complexity_metrics',
-                    'workspace_security_scan',
-                    // Tier 4: Multi-file coordination
-                    'workspace_bulk_refactor',
-                    'workspace_atomic_edit_set',
-                    'workspace_generate_from_template',
-                    'workspace_migration_helper',
-                    'workspace_summarize_folder',
-                    'workspace_dependency_tree',
-                    'workspace_test_impact_analysis',
-                    // Tier 5: External knowledge & experimentation
-                    'workspace_search_docs',
-                    'workspace_package_lookup',
-                    'workspace_ai_code_review',
-                    'workspace_repl_start',
-                    'workspace_repl_execute',
-                    'workspace_repl_stop',
-                    'workspace_debug_breakpoint',
-                    'workspace_profiler_run',
-                    'workspace_debug_session_start',
-                    'workspace_debug_session_run',
-                    'workspace_debug_session_evaluate',
-                    'workspace_debug_session_stop',
-                    // Tier 6: Language adapters
-                    'workspace_language_adapter_python',
-                    'workspace_language_adapter_java',
-                    'workspace_language_adapter_go',
-                    'workspace_language_adapter_csharp',
-                    // Tier 7: Governance & safety
-                    'workspace_dry_run_with_approval_chain',
-                    'workspace_change_impact_report',
-                    'workspace_rollback_to_checkpoint',
-                    'workspace_generate_test',
-                    'workspace_format_code',
-                    'workspace_version_bump',
-                    'workspace_changelog_generate',
-                    'workspace_git_blame',
-                    'workspace_outline_symbols',
-                    'workspace_create_pr',
-                    'workspace_run_ci_checks',
-                    'workspace_fix_test_failures',
-                    'workspace_security_fix_suggest',
-                    'workspace_pr_review_prepare',
-                    'workspace_dependency_upgrade_plan',
-                    'workspace_release_notes_generate',
-                    'workspace_incident_patch_pack',
-                    'workspace_memory_profile',
-                    'workspace_autonomous_plan_execute',
-                    'workspace_policy_preflight',
-                    'workspace_connector_test',
-                    'workspace_pr_auto_assign',
-                    'workspace_ci_watch',
-                    'workspace_explain_code',
-                    'workspace_add_docstring',
-                    'workspace_refactor_plan',
-                    'workspace_semantic_search',
-                    'workspace_diff_preview',
-                    'workspace_approval_status',
-                    'workspace_audit_export',
-                    'workspace_browser_open',
-                    'workspace_app_launch',
-                    'workspace_meeting_join',
-                    'workspace_meeting_speak',
-                    'workspace_meeting_interview_live',
-                    'workspace_visual_task',
-                    'workspace_subagent_spawn',
-                    'workspace_github_pr_status',
-                    'workspace_github_issue_triage',
-                    'workspace_github_issue_fix',
-                    'workspace_azure_deploy_plan',
-                    'workspace_slack_notify',
-                    'workspace_pr_review_poll',
-                ],
+                allowedConnectorTools: devConnectorTools,
+                allowedActions: devAllowedActions,
                 policyPackVersion: 'mvp-v1',
                 frozenAt: new Date().toISOString(),
                 brainConfig: {

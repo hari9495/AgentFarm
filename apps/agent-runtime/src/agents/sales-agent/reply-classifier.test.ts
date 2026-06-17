@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { classifyReply } from './reply-classifier.js';
 
 const savedFetch = globalThis.fetch;
+const savedApiKey = process.env['ANTHROPIC_API_KEY'];
 
 const makeFetch = (ok: boolean, payload?: object) =>
     (async () => ({
@@ -22,6 +23,7 @@ test('classifyReply — returns ClassifyReplyResult shape on success', async () 
         suggestedAction: 'schedule_demo',
         reasoning: 'Prospect expressed clear interest.',
     };
+    process.env['ANTHROPIC_API_KEY'] = 'test-key';
     globalThis.fetch = makeFetch(true, expected);
 
     try {
@@ -36,10 +38,13 @@ test('classifyReply — returns ClassifyReplyResult shape on success', async () 
         assert.equal(typeof result.reasoning, 'string');
     } finally {
         globalThis.fetch = savedFetch;
+        if (savedApiKey === undefined) delete process.env['ANTHROPIC_API_KEY'];
+        else process.env['ANTHROPIC_API_KEY'] = savedApiKey;
     }
 });
 
 test('classifyReply — returns unknown intent (no throw) on LLM error', async () => {
+    process.env['ANTHROPIC_API_KEY'] = 'test-key';
     globalThis.fetch = makeFetch(false);
 
     try {
@@ -52,6 +57,8 @@ test('classifyReply — returns unknown intent (no throw) on LLM error', async (
         assert.equal(result.suggestedAction, 'manual_review');
     } finally {
         globalThis.fetch = savedFetch;
+        if (savedApiKey === undefined) delete process.env['ANTHROPIC_API_KEY'];
+        else process.env['ANTHROPIC_API_KEY'] = savedApiKey;
     }
 });
 
@@ -62,6 +69,7 @@ test('classifyReply — confidence is between 0 and 1', async () => {
         suggestedAction: 'follow_up_in_30_days',
         reasoning: 'Prospect is busy.',
     };
+    process.env['ANTHROPIC_API_KEY'] = 'test-key';
     globalThis.fetch = makeFetch(true, expected);
 
     try {
@@ -72,5 +80,7 @@ test('classifyReply — confidence is between 0 and 1', async () => {
         assert.ok(result.confidence >= 0 && result.confidence <= 1);
     } finally {
         globalThis.fetch = savedFetch;
+        if (savedApiKey === undefined) delete process.env['ANTHROPIC_API_KEY'];
+        else process.env['ANTHROPIC_API_KEY'] = savedApiKey;
     }
 });

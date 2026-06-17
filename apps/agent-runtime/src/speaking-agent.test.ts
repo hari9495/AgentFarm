@@ -52,6 +52,9 @@ function makeWavBytes(samples = 4): Buffer {
 // Tests
 // ---------------------------------------------------------------------------
 
+const _savedApiKey = process.env['ANTHROPIC_API_KEY'];
+process.env['ANTHROPIC_API_KEY'] = process.env['ANTHROPIC_API_KEY'] || 'test-key-for-mock';
+
 describe('speaking-agent', () => {
     // -----------------------------------------------------------------------
     // cloneAgentVoice

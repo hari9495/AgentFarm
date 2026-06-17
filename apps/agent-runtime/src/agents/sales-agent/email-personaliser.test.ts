@@ -100,7 +100,7 @@ test('personaliseEmail — throws on non-ok LLM response', async () => {
     try {
         await assert.rejects(
             () => personaliseEmail(baseParams),
-            /Anthropic API error 429/,
+            /anthropic_request_failed:429/,
         );
     } finally {
         globalThis.fetch = savedFetch;

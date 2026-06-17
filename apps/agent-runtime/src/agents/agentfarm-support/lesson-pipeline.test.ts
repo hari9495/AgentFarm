@@ -139,7 +139,7 @@ describe('ingestSupportFeedback', () => {
     it('skips feedback items shorter than 10 chars', async () => {
         const store = new InMemorySupportLessonStore();
         const lessons = await ingestSupportFeedback(CTX, [{ body: 'too short' }, { body: 'short' }], store);
-        assert.equal(lessons.length, 1);
+        assert.equal(lessons.length, 0);
     });
 
     it('correctly classifies each feedback item', async () => {

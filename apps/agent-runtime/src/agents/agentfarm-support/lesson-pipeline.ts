@@ -100,10 +100,10 @@ export class GatewaySupportLessonStore implements ISupportLessonStore {
 const CATEGORY_PATTERNS: Array<{ pattern: RegExp; category: SupportLessonCategory }> = [
     { pattern: /\b(misconfiguration|wrong config|env var|feature flag|rate limit|quota|missing key|wrong value|config mismatch|setting|parameter)\b/i, category: 'config_error' },
     { pattern: /\b(bug|defect|exception|stack trace|crash|null pointer|undefined|assertion|regression|broken logic|code error)\b/i, category: 'code_bug' },
+    { pattern: /\b(provisioning|provision|stuck job|failed job|agent creation|workspace setup|VM spin.up|resource creation)\b/i, category: 'provisioning_error' },
     { pattern: /\b(infra|infrastructure|VM|database|Redis|postgres|network|disk|CPU|memory|timeout|unreachable|cloud|Azure|AWS|GCP|server down)\b/i, category: 'infra_failure' },
     { pattern: /\b(billing|subscription|quota exceeded|payment|invoice|credit|hard.stop|throttl|budget|plan limit|trial expired)\b/i, category: 'billing_issue' },
     { pattern: /\b(connector|OAuth|token expired|auth failed|API key|webhook|third.party|integration|Slack|GitHub|Jira|Salesforce)\b/i, category: 'connector_failure' },
-    { pattern: /\b(provisioning|provision|stuck job|failed job|agent creation|workspace setup|VM spin.up|resource creation)\b/i, category: 'provisioning_error' },
     { pattern: /\b(user error|incorrect usage|wrong endpoint|unsupported|not supported|invalid input|misconfigured workflow|operator mistake)\b/i, category: 'user_error' },
 ];
 
