@@ -366,7 +366,7 @@ test('GET infra-logs forces tenant.id filter for customers (ignores client tenan
     try {
         const res = await app.inject({ method: 'GET', url: '/v1/observability/infra-logs?tenantId=tenant-evil&limit=10' });
         assert.equal(res.statusCode, 200);
-        assert.match(sentApl, /\['tenant\.id'\] == "tenant-acme"/);
+        assert.match(sentApl, /tenant_id == "tenant-acme"/);
         assert.doesNotMatch(sentApl, /tenant-evil/);
         const body = res.json() as { scope: string; dataset: string; rows: unknown[] };
         assert.equal(body.scope, 'tenant-acme');

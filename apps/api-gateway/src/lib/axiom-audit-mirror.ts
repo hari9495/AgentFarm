@@ -46,9 +46,10 @@ export async function mirrorAuditEventToAxiom(
     try {
         const body = [{
             _time: new Date().toISOString(),
-            // VM/customer attribution — also stamped on container telemetry by the
-            // collector's resource processor, so audit + infra share tenant.id.
-            'tenant.id': event.tenantId,
+            // VM/customer attribution — dot-free so it stays a flat, queryable
+            // APL field (a dotted "tenant.id" is treated as nested by Axiom).
+            // The collector stamps the same tenant_id on container telemetry.
+            tenant_id: event.tenantId,
             tenantId: event.tenantId,
             workspaceId: event.workspaceId ?? '',
             botId: event.botId ?? '',
