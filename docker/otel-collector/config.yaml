@@ -36,6 +36,9 @@ receivers:
   # Per-container CPU / memory / network metrics via the Docker socket.
   docker_stats:
     endpoint: unix:///var/run/docker.sock
+    # Pin the Docker Engine API version (daemons reject the receiver's older
+    # default negotiation). 1.40 is supported by all current engines.
+    api_version: "1.40"
     collection_interval: 30s
 
 processors:
