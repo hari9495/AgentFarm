@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { microcompact, isMicrocompactEnabled } from './microcompact.js';
 
-type Msg = { role: string; content: string; tool_call_id?: string; name?: string };
+type Msg = { role: string; content: string | Array<{ type: string; [key: string]: unknown }>; tool_call_id?: string; name?: string };
 
 test('isMicrocompactEnabled returns false when env var not set', () => {
     delete process.env['AF_MICROCOMPACT_ENABLED'];
@@ -28,7 +28,7 @@ test('microcompact compacts regeneratable tool results when enabled', () => {
     const messages: Msg[] = [
         {
             role: 'assistant',
-            content: JSON.stringify([{ type: 'tool_use', id: 'call_1', name: 'workspace_read_file', input: {} }]),
+            content: [{ type: 'tool_use', id: 'call_1', name: 'workspace_read_file', input: {} }],
         },
         { role: 'tool', content: bigContent, tool_call_id: 'call_1', name: 'workspace_read_file' },
     ];
@@ -54,7 +54,7 @@ test('microcompact does not compact state-bearing tool results', () => {
     const messages: Msg[] = [
         {
             role: 'assistant',
-            content: JSON.stringify([{ type: 'tool_use', id: 'call_2', name: 'workspace_read_file', input: {} }]),
+            content: [{ type: 'tool_use', id: 'call_2', name: 'workspace_read_file', input: {} }],
         },
         { role: 'tool', content: stateBearingContent, tool_call_id: 'call_2', name: 'workspace_read_file' },
     ];
@@ -75,7 +75,7 @@ test('microcompact does not compact non-compactable tool types', () => {
     const messages: Msg[] = [
         {
             role: 'assistant',
-            content: JSON.stringify([{ type: 'tool_use', id: 'call_3', name: 'connector_execute', input: {} }]),
+            content: [{ type: 'tool_use', id: 'call_3', name: 'connector_execute', input: {} }],
         },
         { role: 'tool', content: 'connector result: ' + 'x'.repeat(4000), tool_call_id: 'call_3', name: 'connector_execute' },
     ];
@@ -97,7 +97,7 @@ test('microcompact returns original messages when savings below MIN_SAVINGS', ()
     const messages: Msg[] = [
         {
             role: 'assistant',
-            content: JSON.stringify([{ type: 'tool_use', id: 'call_4', name: 'workspace_grep', input: {} }]),
+            content: [{ type: 'tool_use', id: 'call_4', name: 'workspace_grep', input: {} }],
         },
         { role: 'tool', content: 'tiny result', tool_call_id: 'call_4', name: 'workspace_grep' },
     ];
@@ -135,10 +135,10 @@ test('microcompact stats count all tool results even uncompacted ones', () => {
     const messages: Msg[] = [
         {
             role: 'assistant',
-            content: JSON.stringify([
+            content: [
                 { type: 'tool_use', id: 'c1', name: 'workspace_grep', input: {} },
                 { type: 'tool_use', id: 'c2', name: 'connector_execute', input: {} },
-            ]),
+            ],
         },
         { role: 'tool', content: 'grep result ' + 'x'.repeat(3000), tool_call_id: 'c1', name: 'workspace_grep' },
         { role: 'tool', content: 'connector result ' + 'x'.repeat(3000), tool_call_id: 'c2', name: 'connector_execute' },

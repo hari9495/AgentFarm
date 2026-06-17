@@ -15,11 +15,16 @@
  * See docs/QUALITY_GATES.md for the full design.
  */
 
-const ENABLED =
-    process.env['AF_COMPLETION_GATE_ENABLED'] === 'true' ||
-    process.env['AF_COMPLETION_GATE_ENABLED'] === '1';
+function isEnabled(): boolean {
+    return (
+        process.env['AF_COMPLETION_GATE_ENABLED'] === 'true' ||
+        process.env['AF_COMPLETION_GATE_ENABLED'] === '1'
+    );
+}
 
-const MAX_REENTRY = parseInt(process.env['AF_COMPLETION_GATE_MAX_REENTRY'] ?? '2', 10);
+function getMaxReentry(): number {
+    return parseInt(process.env['AF_COMPLETION_GATE_MAX_REENTRY'] ?? '2', 10);
+}
 
 // Task statuses considered "open" (incomplete)
 const OPEN_STATUSES = new Set(['todo', 'in_progress', 'blocked', 'pending']);
@@ -69,7 +74,9 @@ export async function checkCompletion(
     reentryCount = 0,
     queryFn: ChildTaskQueryFn = noopChildQueryFn,
 ): Promise<CompletionGateResult> {
-    if (!ENABLED) return { pass: true };
+    if (!isEnabled()) return { pass: true };
+
+    const maxReentry = getMaxReentry();
 
     try {
         const children = await queryFn(taskId, tenantId);
@@ -77,21 +84,21 @@ export async function checkCompletion(
 
         if (open.length === 0) return { pass: true };
 
-        if (reentryCount >= MAX_REENTRY) {
+        if (reentryCount >= maxReentry) {
             console.warn(
-                `[completion-gate] reentry cap reached (${reentryCount}/${MAX_REENTRY}) for task=${taskId}. ` +
+                `[completion-gate] reentry cap reached (${reentryCount}/${maxReentry}) for task=${taskId}. ` +
                 `Accepting with ${open.length} open children as partial.`,
             );
             return {
                 pass: true,
                 downgraded: true,
-                reason: `Accepted after ${MAX_REENTRY} reentry attempts with ${open.length} open sub-tasks.`,
+                reason: `Accepted after ${maxReentry} reentry attempts with ${open.length} open sub-tasks.`,
             };
         }
 
         console.info(
             `[completion-gate] task=${taskId} has ${open.length} open children. ` +
-            `reentryCount=${reentryCount + 1}/${MAX_REENTRY}`,
+            `reentryCount=${reentryCount + 1}/${maxReentry}`,
         );
 
         return {
@@ -107,5 +114,5 @@ export async function checkCompletion(
 }
 
 export function isCompletionGateEnabled(): boolean {
-    return ENABLED;
+    return isEnabled();
 }

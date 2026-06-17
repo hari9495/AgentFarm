@@ -16,11 +16,16 @@
  * See docs/QUALITY_GATES.md for the full design.
  */
 
-const ENABLED =
-    process.env['AF_MICROCOMPACT_ENABLED'] === 'true' ||
-    process.env['AF_MICROCOMPACT_ENABLED'] === '1';
+function isEnabled(): boolean {
+    return (
+        process.env['AF_MICROCOMPACT_ENABLED'] === 'true' ||
+        process.env['AF_MICROCOMPACT_ENABLED'] === '1'
+    );
+}
 
-const MIN_SAVINGS = parseInt(process.env['AF_MICROCOMPACT_MIN_SAVINGS'] ?? '500', 10);
+function getMinSavings(): number {
+    return parseInt(process.env['AF_MICROCOMPACT_MIN_SAVINGS'] ?? '500', 10);
+}
 
 // Tool names whose results are regeneratable on demand
 const COMPACTABLE_TOOLS = new Set([
@@ -140,7 +145,7 @@ export function microcompact(messages: OpenAiMessage[]): {
         estimatedTokensSaved: 0,
     };
 
-    if (!ENABLED) return { messages, stats };
+    if (!isEnabled()) return { messages, stats };
 
     const toolCallIndex = buildToolCallIndex(messages);
     let totalSaved = 0;
@@ -175,7 +180,7 @@ export function microcompact(messages: OpenAiMessage[]): {
         return { ...msg, content: placeholder };
     });
 
-    if (totalSaved < MIN_SAVINGS) {
+    if (totalSaved < getMinSavings()) {
         // Not worth applying — return original to avoid surprising callers
         return { messages, stats: { ...stats, toolResultsCompacted: 0, estimatedTokensSaved: 0 } };
     }
@@ -189,5 +194,5 @@ export function microcompact(messages: OpenAiMessage[]): {
 }
 
 export function isMicrocompactEnabled(): boolean {
-    return ENABLED;
+    return isEnabled();
 }
