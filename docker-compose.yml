@@ -145,6 +145,17 @@
       # Single-host deployments have no per-tenant Azure VMs: provisioning jobs
       # activate the bot directly. Set to 'false' when Azure provisioning is used.
       AF_SKIP_PROVISIONING: ${AF_SKIP_PROVISIONING:-true}
+      # Axiom — when set, provisioning bakes an OTel Collector into every
+      # customer VM's cloud-init (ships that VM's Docker logs/metrics to Axiom,
+      # tagged with its tenant_id). Unset → VMs provisioned without monitoring.
+      AXIOM_URL: ${AXIOM_URL:-https://api.axiom.co}
+      AXIOM_TOKEN: ${AXIOM_TOKEN:-}
+      AXIOM_DATASET_LOGS: ${AXIOM_DATASET_LOGS:-agentfarm-logs}
+      AXIOM_DATASET_TRACES: ${AXIOM_DATASET_TRACES:-agentfarm-traces}
+      AXIOM_DATASET_METRICS: ${AXIOM_DATASET_METRICS:-agentfarm-metrics}
+      # Query-scoped token for the dashboard Infra Monitoring read path.
+      AXIOM_QUERY_TOKEN: ${AXIOM_QUERY_TOKEN:-}
+      AXIOM_DATASET_AUDIT: ${AXIOM_DATASET_AUDIT:-axiom-audit}
     volumes:
       - gateway_secrets:/data
     depends_on:
