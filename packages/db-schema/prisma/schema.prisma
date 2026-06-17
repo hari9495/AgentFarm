@@ -75,14 +75,15 @@ model TenantUser {
 }
 
 model Workspace {
-  id        String          @id @default(cuid())
-  tenantId  String
-  name      String
-  status    WorkspaceStatus @default(pending)
-  createdAt DateTime        @default(now())
-  bots      Bot[]
-  sharedVm  WorkspaceVm?
-  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id             String          @id @default(cuid())
+  tenantId       String
+  name           String
+  status         WorkspaceStatus @default(pending)
+  maxModeEnabled Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  bots           Bot[]
+  sharedVm       WorkspaceVm?
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model Bot {

@@ -46,7 +46,7 @@ import { runWithLlmTraceContext, type LlmTraceContext } from '@agentfarm/llm-tra
 import { evaluateGoal, judgeScore, resolveSpec } from './goal-judge.js';
 import { checkCompletion } from './completion-gate.js';
 import { distillLesson } from './dream-distill.js';
-import { runMaxMode, isMaxModeEnabled, getMaxModeCandidates, shouldSkipMaxMode } from './max-mode.js';
+import { runMaxMode, isMaxModeEnabledForPayload, getMaxModeCandidates, shouldSkipMaxMode } from './max-mode.js';
 import { isCheckpointEnabled, loadCheckpoint, saveCheckpoint, clearCheckpoint, injectCheckpointIntoPayload } from './checkpoint.js';
 
 /**
@@ -142,6 +142,10 @@ export type ProcessedTaskResult = {
      * can capture files_changed, code_diff, and test_failure_summary.
      */
     actionOutput?: string;
+    /** Set by Max Mode: number of parallel candidates that were sampled. */
+    maxModeCandidates?: number;
+    /** Set by Max Mode: Goal Judge confidence score of the winning candidate (0–1). */
+    maxModeWinnerScore?: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -465,7 +469,7 @@ async function processApprovedTaskInner(
 
     const approvedExecFn = () => executeTaskWithRetries(taskForApprovedExec, approvedDecision, 'none', llmExecution, { ...options, llmCodeGenFn: resolvedWorkerFn, llmPlannerFn: resolvedPlannerFn });
     const approvedSpec = resolveSpec(taskWithAuditContext.payload);
-    let approvedResult = isMaxModeEnabled() && !shouldSkipMaxMode(taskWithAuditContext.payload)
+    let approvedResult = isMaxModeEnabledForPayload(taskWithAuditContext.payload) && !shouldSkipMaxMode(taskWithAuditContext.payload)
         ? await runMaxMode(approvedExecFn, (out) => judgeScore(approvedSpec, out), getMaxModeCandidates())
         : await approvedExecFn();
 
@@ -759,7 +763,7 @@ async function processDeveloperTaskInner(
         { ...options, llmCodeGenFn: workerFn, llmPlannerFn: plannerFn },
     );
     const devSpec = resolveSpec(taskWithAuditContext.payload);
-    const execResult = isMaxModeEnabled() && !shouldSkipMaxMode(taskWithAuditContext.payload)
+    const execResult = isMaxModeEnabledForPayload(taskWithAuditContext.payload) && !shouldSkipMaxMode(taskWithAuditContext.payload)
         ? await runMaxMode(devExecFn, (out) => judgeScore(devSpec, out), getMaxModeCandidates())
         : await devExecFn();
 

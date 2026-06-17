@@ -24,6 +24,8 @@ type RuntimeTranscriptEntry = {
     approvalSummary: string | null;
     payloadOverrideSource?: 'none' | 'llm_generated' | 'executor_inferred';
     payloadOverridesApplied?: boolean;
+    maxModeCandidates?: number;
+    maxModeWinnerScore?: number;
 };
 
 type RuntimeInterviewEventEntry = {
@@ -663,6 +665,12 @@ export function RuntimeObservabilityPanel({
                                         <span className={`badge ${entry.status === 'success' ? 'low' : entry.status === 'approval_required' ? 'warn' : 'high'}`} style={{ marginLeft: '0.5rem' }}>
                                             {entry.status}
                                         </span>
+                                        {entry.maxModeCandidates != null && (
+                                            <span className="badge neutral" style={{ marginLeft: '0.5rem' }} title="Max Mode: parallel candidates sampled">
+                                                ⚡ {entry.maxModeCandidates}× max
+                                                {entry.maxModeWinnerScore != null ? ` · ${(entry.maxModeWinnerScore * 100).toFixed(0)}%` : ''}
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="obs-muted-empty" style={{ marginTop: '0.25rem' }}>
                                         task {entry.taskId} · {entry.durationMs}ms · override {entry.payloadOverrideSource ?? 'none'}

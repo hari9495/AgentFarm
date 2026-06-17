@@ -7,6 +7,11 @@
  *
  * Cost: multiplies LLM cost by N. Enable only where output quality justifies it.
  *
+ * Gating:
+ *   - AF_MAX_MODE_ENABLED=true  → global operator override (all workspaces)
+ *   - payload._max_mode_enabled → per-workspace flag injected at task dispatch
+ *   - Pro/Enterprise workspaces have maxModeEnabled=true in the Workspace DB record
+ *
  * See docs/QUALITY_GATES.md §6 for the full design.
  */
 
@@ -47,7 +52,19 @@ export function shouldSkipMaxMode(payload: Record<string, unknown>): boolean {
 }
 
 /**
+ * Returns true if Max Mode should run for this task.
+ * Checks the global env var override first, then the per-workspace flag
+ * injected into the payload as _max_mode_enabled.
+ */
+export function isMaxModeEnabledForPayload(payload: Record<string, unknown>): boolean {
+    if (isEnabled()) return true;
+    return payload['_max_mode_enabled'] === true;
+}
+
+/**
  * Run N parallel candidates and return the highest-scoring successful one.
+ * The returned result carries maxModeCandidates and maxModeWinnerScore
+ * when N>1 candidates were scored.
  *
  * @param executeFn   Factory producing one candidate run. Called N times in parallel.
  * @param scoreFn     Scores a successful candidate output 0–1. Called on each success.
@@ -78,12 +95,10 @@ export async function runMaxMode(
         .map((r) => r.value);
 
     if (successes.length === 0) {
-        // No candidate succeeded — return the first fulfilled result (preserves error detail)
         const firstFulfilled = settled.find(
             (r): r is PromiseFulfilledResult<ProcessedTaskResult> => r.status === 'fulfilled',
         );
         if (firstFulfilled) return firstFulfilled.value;
-        // All rejected (should not happen with executeTaskWithRetries which never throws)
         const rejected = settled[0] as PromiseRejectedResult;
         throw rejected.reason;
     }
@@ -99,7 +114,8 @@ export async function runMaxMode(
     );
 
     scored.sort((a, b) => b.score - a.score);
-    return scored[0].result;
+    const winner = scored[0];
+    return { ...winner.result, maxModeCandidates: n, maxModeWinnerScore: winner.score };
 }
 
 export function isMaxModeEnabled(): boolean {

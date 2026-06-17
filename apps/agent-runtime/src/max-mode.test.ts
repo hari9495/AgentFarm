@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { runMaxMode, isMaxModeEnabled, getMaxModeCandidates, shouldSkipMaxMode } from './max-mode.js';
+import { runMaxMode, isMaxModeEnabled, isMaxModeEnabledForPayload, getMaxModeCandidates, shouldSkipMaxMode } from './max-mode.js';
 import type { ProcessedTaskResult } from './execution-engine.js';
 
 function makeResult(status: ProcessedTaskResult['status'], output?: string): ProcessedTaskResult {
@@ -32,6 +32,55 @@ test('isMaxModeEnabled returns true when env var is "1"', () => {
     process.env['AF_MAX_MODE_ENABLED'] = '1';
     assert.equal(isMaxModeEnabled(), true);
     delete process.env['AF_MAX_MODE_ENABLED'];
+});
+
+// --- isMaxModeEnabledForPayload ---
+
+test('isMaxModeEnabledForPayload returns false when env and payload both unset', () => {
+    delete process.env['AF_MAX_MODE_ENABLED'];
+    assert.equal(isMaxModeEnabledForPayload({}), false);
+});
+
+test('isMaxModeEnabledForPayload returns true when env var is set', () => {
+    process.env['AF_MAX_MODE_ENABLED'] = 'true';
+    assert.equal(isMaxModeEnabledForPayload({}), true);
+    delete process.env['AF_MAX_MODE_ENABLED'];
+});
+
+test('isMaxModeEnabledForPayload returns true when payload._max_mode_enabled is true', () => {
+    delete process.env['AF_MAX_MODE_ENABLED'];
+    assert.equal(isMaxModeEnabledForPayload({ _max_mode_enabled: true }), true);
+});
+
+test('isMaxModeEnabledForPayload returns false when _max_mode_enabled is false', () => {
+    delete process.env['AF_MAX_MODE_ENABLED'];
+    assert.equal(isMaxModeEnabledForPayload({ _max_mode_enabled: false }), false);
+});
+
+// --- runMaxMode: winner score propagated ---
+
+test('runMaxMode sets maxModeCandidates and maxModeWinnerScore on the winning result', async () => {
+    const a = makeResult('success', 'output A');
+    const b = makeResult('success', 'output B');
+    let i = 0;
+    const result = await runMaxMode(
+        () => Promise.resolve([a, b][i++]),
+        (out) => Promise.resolve(out === 'output B' ? 0.9 : 0.4),
+        2,
+    );
+    assert.equal(result.actionOutput, 'output B');
+    assert.equal(result.maxModeCandidates, 2);
+    assert.equal(result.maxModeWinnerScore, 0.9);
+});
+
+test('runMaxMode does not set maxModeCandidates when n=1', async () => {
+    const result = await runMaxMode(
+        () => Promise.resolve(makeResult('success', 'only')),
+        () => Promise.resolve(0.8),
+        1,
+    );
+    assert.equal(result.maxModeCandidates, undefined);
+    assert.equal(result.maxModeWinnerScore, undefined);
 });
 
 // --- getMaxModeCandidates ---

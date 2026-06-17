@@ -563,6 +563,8 @@ type TaskTranscript = {
     approvalSummary: string | null;
     payloadOverrideSource: PayloadOverrideSource;
     payloadOverridesApplied: boolean;
+    maxModeCandidates?: number;
+    maxModeWinnerScore?: number;
 };
 
 type RuntimeInterviewEvent = {
@@ -2024,6 +2026,39 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
     const taskStartTimes = new Map<string, number>();
     const taskApprovalSummaries = new Map<string, string>();
 
+    // Per-workspace Max Mode flag cache (TTL 60s) — avoids a DB query per task
+    const workspaceMaxModeCache = new Map<string, { value: boolean; expiresAt: number }>();
+    const WORKSPACE_FLAG_CACHE_TTL_MS = 60_000;
+
+    const queryWorkspaceMaxMode = async (workspaceId: string): Promise<boolean> => {
+        const cached = workspaceMaxModeCache.get(workspaceId);
+        if (cached && cached.expiresAt > Date.now()) return cached.value;
+        try {
+            const databaseUrl = process.env['DATABASE_URL'];
+            if (!databaseUrl) return false;
+            const prismaModule = await import('@prisma/client');
+            const PrismaClient = (prismaModule as { PrismaClient?: new () => unknown }).PrismaClient;
+            if (!PrismaClient) return false;
+            const prisma = new PrismaClient() as {
+                workspace: { findUnique: (args: unknown) => Promise<{ maxModeEnabled: boolean } | null> };
+                $disconnect: () => Promise<void>;
+            };
+            try {
+                const row = await prisma.workspace.findUnique({
+                    where: { id: workspaceId },
+                    select: { maxModeEnabled: true },
+                });
+                const value = row?.maxModeEnabled ?? false;
+                workspaceMaxModeCache.set(workspaceId, { value, expiresAt: Date.now() + WORKSPACE_FLAG_CACHE_TTL_MS });
+                return value;
+            } finally {
+                await prisma.$disconnect().catch(() => undefined);
+            }
+        } catch {
+            return false;
+        }
+    };
+
     const pushTranscript = (entry: TaskTranscript): void => {
         recentTranscripts.push(entry);
         if (recentTranscripts.length > MAX_TRANSCRIPTS) {
@@ -3308,6 +3343,18 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
 
         task = await enrichTaskWithVision(task);
 
+        // Per-workspace Max Mode gating — inject flag so execution-engine can read it
+        // without a direct DB dependency. Global env var overrides; DB flag is per-workspace.
+        if (!process.env['AF_MAX_MODE_ENABLED']) {
+            const wsId = typeof task.payload['workspaceId'] === 'string' ? task.payload['workspaceId'] : null;
+            if (wsId) {
+                const maxModeEnabled = await queryWorkspaceMaxMode(wsId).catch(() => false);
+                if (maxModeEnabled) {
+                    task = { ...task, payload: { ...task.payload, _max_mode_enabled: true } };
+                }
+            }
+        }
+
         // ---- Role enforcement: hard block + semantic soft-block ----
         // First gate in task processing. Declined tasks never reach the LLM,
         // persona load, or plan generation — keeping role boundaries hard.
@@ -4449,6 +4496,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 approvalSummary,
                 payloadOverrideSource: result.payloadOverrideSource,
                 payloadOverridesApplied: result.payloadOverrideSource !== 'none',
+                maxModeCandidates: result.maxModeCandidates,
+                maxModeWinnerScore: result.maxModeWinnerScore,
             });
         }
 
