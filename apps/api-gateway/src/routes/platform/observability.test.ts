@@ -347,3 +347,79 @@ test('GET llm-traces/:taskId redacts for portal sessions too', async () => {
         await app.close();
     }
 });
+
+// ─── Axiom infra-logs proxy (per-customer monitoring) ─────────────────────────
+
+const axiomQuery = { url: 'https://api.axiom.co', token: 'xaqt-query' };
+
+test('GET infra-logs forces tenant.id filter for customers (ignores client tenantId)', async () => {
+    let sentApl = '';
+    const app = Fastify({ logger: false });
+    await registerObservabilityRoutes(app, {
+        getSession: () => customerSession, // tenant-acme, customer scope
+        axiomQuery,
+        fetchImpl: (async (_u: string | URL | Request, init?: RequestInit) => {
+            sentApl = JSON.parse(String(init?.body ?? '{}')).apl;
+            return new Response(JSON.stringify({ matches: [{ data: { message: 'hi', 'tenant.id': 'tenant-acme' } }] }), { status: 200, headers: { 'content-type': 'application/json' } });
+        }) as typeof fetch,
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/observability/infra-logs?tenantId=tenant-evil&limit=10' });
+        assert.equal(res.statusCode, 200);
+        assert.match(sentApl, /\['tenant\.id'\] == "tenant-acme"/);
+        assert.doesNotMatch(sentApl, /tenant-evil/);
+        const body = res.json() as { scope: string; dataset: string; rows: unknown[] };
+        assert.equal(body.scope, 'tenant-acme');
+        assert.equal(body.dataset, 'agentfarm-logs');
+        assert.equal(body.rows.length, 1);
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET infra-logs lets internal operators scope to a chosen tenant + dataset (audit)', async () => {
+    let sentApl = '';
+    const app = Fastify({ logger: false });
+    await registerObservabilityRoutes(app, {
+        getSession: () => session, // internal
+        axiomQuery,
+        fetchImpl: (async (_u: string | URL | Request, init?: RequestInit) => {
+            sentApl = JSON.parse(String(init?.body ?? '{}')).apl;
+            return new Response(JSON.stringify({ matches: [] }), { status: 200, headers: { 'content-type': 'application/json' } });
+        }) as typeof fetch,
+    });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/observability/infra-logs?tenantId=tenant-xyz&dataset=audit' });
+        assert.equal(res.statusCode, 200);
+        assert.match(sentApl, /\['axiom-audit'\]/);
+        assert.match(sentApl, /"tenant-xyz"/);
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET infra-logs returns 503 when no Axiom query token configured', async () => {
+    const prevQ = process.env['AXIOM_QUERY_TOKEN']; const prevT = process.env['AXIOM_TOKEN'];
+    delete process.env['AXIOM_QUERY_TOKEN']; delete process.env['AXIOM_TOKEN'];
+    const app = Fastify({ logger: false });
+    await registerObservabilityRoutes(app, { getSession: () => session });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/observability/infra-logs' });
+        assert.equal(res.statusCode, 503);
+    } finally {
+        if (prevQ !== undefined) process.env['AXIOM_QUERY_TOKEN'] = prevQ;
+        if (prevT !== undefined) process.env['AXIOM_TOKEN'] = prevT;
+        await app.close();
+    }
+});
+
+test('GET infra-logs requires a session', async () => {
+    const app = Fastify({ logger: false });
+    await registerObservabilityRoutes(app, { getSession: () => null, axiomQuery });
+    try {
+        const res = await app.inject({ method: 'GET', url: '/v1/observability/infra-logs' });
+        assert.equal(res.statusCode, 401);
+    } finally {
+        await app.close();
+    }
+});

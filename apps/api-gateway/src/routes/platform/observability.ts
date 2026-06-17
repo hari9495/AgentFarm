@@ -26,7 +26,30 @@ type RegisterObservabilityRoutesOptions = {
     fetchImpl?: typeof fetch;
     /** Langfuse connection override (defaults to env). Injectable for tests. */
     langfuse?: { host: string; publicKey: string; secretKey: string };
+    /** Axiom QUERY connection (read). Defaults to env. Injectable for tests.
+     *  Note: this needs a QUERY-scoped token (AXIOM_QUERY_TOKEN), distinct from
+     *  the ingest token the collector/audit-mirror use. */
+    axiomQuery?: { url: string; token: string };
 };
+
+// ─── Axiom query proxy (infra logs/metrics per customer) ───────────────────────
+//
+// Reads Docker/app/audit telemetry from Axiom for the dashboards. The query
+// token lives server-side. Customers are tenant-locked (tenant.id forced to
+// session.tenantId); internal operators may scope to a tenant or see all.
+
+type AxiomQueryConn = { url: string; token: string };
+
+const resolveAxiomQuery = (options: RegisterObservabilityRoutesOptions): AxiomQueryConn | null => {
+    const url = (options.axiomQuery?.url ?? process.env['AXIOM_URL'] ?? 'https://api.axiom.co').replace(/\/+$/, '');
+    // Prefer a query-scoped token; fall back to the general token if that's all there is.
+    const token = options.axiomQuery?.token ?? process.env['AXIOM_QUERY_TOKEN'] ?? process.env['AXIOM_TOKEN'] ?? '';
+    if (!token.trim()) return null;
+    return { url, token };
+};
+
+/** Escape a string for safe embedding in an APL double-quoted literal. */
+const aplString = (value: string): string => `"${value.replace(/["\\]/g, '\\$&')}"`;
 
 /**
  * Resolve either an API session (internal/customer scope) or a customer-portal
@@ -430,6 +453,72 @@ export const registerObservabilityRoutes = async (
             return reply.code(502).send({
                 error: 'observability_request_failed',
                 message: error instanceof Error ? error.message : 'Unable to fetch trace.',
+            });
+        }
+    });
+
+    // ── GET /v1/observability/infra-logs — Docker/app/audit logs from Axiom ─────
+    // Tenant-scoped: customers see only their own VM's telemetry (tenant.id).
+    app.get<{
+        Querystring: { tenantId?: string; dataset?: string; q?: string; hours?: string; limit?: string };
+    }>('/v1/observability/infra-logs', async (request, reply) => {
+        const session = await resolveAnySession(request, options);
+        if (!session) {
+            return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
+        }
+
+        const conn = resolveAxiomQuery(options);
+        if (!conn) {
+            return reply.code(503).send({
+                error: 'observability_not_configured',
+                message: 'Axiom query token not configured (set AXIOM_QUERY_TOKEN — a query-scoped token, not the ingest token).',
+            });
+        }
+
+        // Dataset allowlist — never let a client query arbitrary datasets.
+        const allowed: Record<string, string> = {
+            logs: process.env['AXIOM_DATASET_LOGS'] ?? 'agentfarm-logs',
+            metrics: process.env['AXIOM_DATASET_METRICS'] ?? 'agentfarm-metrics',
+            audit: process.env['AXIOM_DATASET_AUDIT'] ?? 'axiom-audit',
+        };
+        const dataset = allowed[request.query.dataset ?? 'logs'] ?? allowed['logs']!;
+
+        // Tenant scope: customers locked to their own tenant; internal optional.
+        const tenant = session.scope === 'internal' ? request.query.tenantId?.trim() : session.tenantId;
+
+        const hours = Math.max(1, Math.min(Number(request.query.hours ?? 24) || 24, 168));
+        const limit = Math.max(1, Math.min(Number(request.query.limit ?? 100) || 100, 500));
+        const now = Date.now();
+
+        const clauses = [`['${dataset}']`];
+        if (tenant) clauses.push(`| where ['tenant.id'] == ${aplString(tenant)}`);
+        if (request.query.q?.trim()) clauses.push(`| search ${aplString(request.query.q.trim())}`);
+        clauses.push('| sort by _time desc');
+        clauses.push(`| limit ${limit}`);
+        const apl = clauses.join(' ');
+
+        try {
+            const response = await fetchImpl(`${conn.url}/v1/datasets/_apl?format=legacy`, {
+                method: 'POST',
+                headers: { authorization: `Bearer ${conn.token}`, 'content-type': 'application/json' },
+                body: JSON.stringify({
+                    apl,
+                    startTime: new Date(now - hours * 3_600_000).toISOString(),
+                    endTime: new Date(now).toISOString(),
+                }),
+                signal: AbortSignal.timeout(10_000),
+            });
+
+            if (!response.ok) {
+                return reply.code(502).send({ error: 'observability_upstream_error', status: response.status });
+            }
+            const body = await response.json() as { matches?: Array<{ data?: unknown }>; tables?: unknown };
+            const rows = Array.isArray(body.matches) ? body.matches.map((m) => m.data ?? m) : (body.tables ?? []);
+            return { scope: tenant ?? 'all', dataset, rows };
+        } catch (error) {
+            return reply.code(502).send({
+                error: 'observability_request_failed',
+                message: error instanceof Error ? error.message : 'Unable to query Axiom.',
             });
         }
     });
