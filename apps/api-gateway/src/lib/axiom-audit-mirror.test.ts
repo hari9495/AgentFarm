@@ -29,7 +29,7 @@ test('mirrorAuditEventToAxiom posts a tenant-tagged event to the ingest endpoint
     assert.equal(ok, true);
     assert.equal(url, 'https://api.axiom.co/v1/datasets/axiom-audit/ingest');
     assert.equal(authz, 'Bearer xaat-test');
-    assert.equal(body[0]['tenant.id'], 'tenant-acme');
+    assert.equal(body[0].tenant_id, 'tenant-acme');
     assert.equal(body[0].eventType, 'approval_event');
     assert.ok(body[0]._time);
 });

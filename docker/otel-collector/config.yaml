@@ -52,7 +52,9 @@ processors:
   # telemetry by customer, the same way audit events are tenant-tagged.
   resource/tenant:
     attributes:
-      - key: tenant.id
+      # Dot-free so it stays a flat, queryable APL field in Axiom (a dotted
+      # "tenant.id" is treated as a nested object). Matches the audit mirror.
+      - key: tenant_id
         value: ${env:AF_TENANT_ID}
         action: upsert
 

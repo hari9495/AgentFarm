@@ -491,7 +491,7 @@ export const registerObservabilityRoutes = async (
         const now = Date.now();
 
         const clauses = [`['${dataset}']`];
-        if (tenant) clauses.push(`| where ['tenant.id'] == ${aplString(tenant)}`);
+        if (tenant) clauses.push(`| where tenant_id == ${aplString(tenant)}`);
         if (request.query.q?.trim()) clauses.push(`| search ${aplString(request.query.q.trim())}`);
         clauses.push('| sort by _time desc');
         clauses.push(`| limit ${limit}`);
