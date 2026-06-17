@@ -216,4 +216,71 @@ Run with:
 pnpm --filter @agentfarm/agent-runtime test src/goal-judge.test.ts
 pnpm --filter @agentfarm/agent-runtime test src/completion-gate.test.ts
 pnpm --filter @agentfarm/agent-runtime test src/microcompact.test.ts
+pnpm --filter @agentfarm/agent-runtime test src/agents/shared/rag-context-limiter.test.ts
+```
+
+---
+
+## 4. Token-Budgeted RAG
+
+**File:** `apps/agent-runtime/src/agents/shared/rag-context-limiter.ts`
+
+### Purpose
+
+Every agent retriever assembles a `## Context` block from three parallel paths (prior work, templates, lessons). Without a budget, a workspace with thousands of prior cases can produce a context block exceeding 20,000 tokens — consuming most of the model's working window before the task prompt even begins.
+
+The RAG context limiter caps the assembled context block at a character limit and trims at clean section boundaries so the model always receives complete sections, never a heading without content.
+
+### How It Works
+
+```
+build*RagContext() assembles contextBlock from 3 paths
+        ↓
+applyRagContextBudget(contextBlock, maxChars?)
+        ↓
+  within budget → return unchanged
+  over budget   → trim at last \n---\n boundary
+                  append "(additional context trimmed for token budget)"
+        ↓
+contextBlock injected into system prompt
+```
+
+Trimming at section boundaries (`\n---\n`) means the model always receives semantically complete sections. A degenerate block with a single oversized section is hard-truncated at the character limit as a fallback.
+
+### Configuration
+
+| Env Var | Default | Description |
+|---|---|---|
+| `AF_RAG_CONTEXT_MAX_CHARS` | `8000` | Max chars for the assembled RAG context block (≈2000 tokens) |
+
+Set to a higher value for models with larger context windows; lower for cost-sensitive deployments.
+
+### Stats
+
+`applyRagContextBudgetWithStats(contextBlock, maxChars?)` returns:
+
+```ts
+{
+  contextBlock: string;      // trimmed (or unchanged) block
+  wasTrimmed: boolean;       // true if content was dropped
+  originalChars: number;     // chars before trimming
+  finalChars: number;        // chars after trimming
+}
+```
+
+Used by retrievers that want to log trimming events for observability.
+
+### Integration
+
+All 16 agent RAG retrievers call `applyRagContextBudget()` at the end of `build*RagContext()`. Adding a new retriever: import from `../shared/rag-context-limiter.js` and wrap the final context block assembly.
+
+```ts
+import { applyRagContextBudget } from '../shared/rag-context-limiter.js';
+
+// ...assemble sections...
+return {
+    contextBlock: sections.length > 0
+        ? applyRagContextBudget(`## MyAgent Context\n\n${sections.join('\n---\n\n')}`)
+        : '',
+};
 ```
