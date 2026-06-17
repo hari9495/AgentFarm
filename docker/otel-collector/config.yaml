@@ -47,6 +47,14 @@ processors:
   resourcedetection:
     detectors: [env, system]
     timeout: 5s
+  # Per-customer attribution: stamp every log/metric with the VM's tenant id
+  # (AF_TENANT_ID is set per customer VM). Lets the dashboards filter all infra
+  # telemetry by customer, the same way audit events are tenant-tagged.
+  resource/tenant:
+    attributes:
+      - key: tenant.id
+        value: ${env:AF_TENANT_ID}
+        action: upsert
 
 exporters:
   otlphttp/axiom_logs:
@@ -74,13 +82,13 @@ service:
   pipelines:
     logs:
       receivers: [filelog, otlp]
-      processors: [resourcedetection, batch]
+      processors: [resource/tenant, resourcedetection, batch]
       exporters: [otlphttp/axiom_logs]
     traces:
       receivers: [otlp]
-      processors: [resourcedetection, batch]
+      processors: [resource/tenant, resourcedetection, batch]
       exporters: [otlphttp/axiom_traces]
     metrics:
       receivers: [otlp, docker_stats]
-      processors: [resourcedetection, batch]
+      processors: [resource/tenant, resourcedetection, batch]
       exporters: [otlphttp/axiom_metrics]
