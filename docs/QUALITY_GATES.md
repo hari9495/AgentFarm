@@ -1,6 +1,6 @@
 # Quality Gates
 
-Seven complementary mechanisms that prevent false completions, validate output correctness, reduce LLM context costs, improve output quality through parallel sampling, enable continuous self-improvement, and recover long-running tasks from mid-run failures. Inspired by the MiMo-Code open-source framework, adapted for AgentFarm's multi-tenant architecture.
+Eight complementary mechanisms that prevent false completions, validate output correctness, reduce LLM context costs, improve output quality through parallel sampling, enable continuous self-improvement, recover long-running tasks from mid-run failures, and execute multi-step pipelines with atomic retry and rollback. Inspired by the MiMo-Code open-source framework, adapted for AgentFarm's multi-tenant architecture.
 
 ---
 
@@ -488,11 +488,115 @@ if (isCheckpointEnabled()) {
 
 ---
 
-## Combined Flow
+## 8. Workflow Runtime
 
-When all seven are enabled, the full quality pipeline for a completed task is:
+**File:** `apps/agent-runtime/src/workflow-runtime.ts`
+
+### Purpose
+
+Some agent tasks are inherently multi-step: create a branch, write code, run tests, open a PR. Executing all four as a single LLM call is fragile — a failure at step 3 leaves branches and code changes dangling with no cleanup.
+
+The Workflow Runtime executes a sequence of steps in order, retrying each individually on failure, and rolling back completed steps in reverse order when a step exhausts its retries. This gives multi-step operations atomic-style safety without requiring database transactions.
+
+### How It Works
 
 ```
+runWorkflow([step1, step2, step3, ...])
+        ↓
+For each step (in order):
+  attempt 1 → ok? → continue
+  attempt 2 → ok? → continue          (maxRetries=2 by default)
+  attempt 3 → ok? → continue
+  all retries exhausted → FAIL
+        ↓
+On step failure → rollback (reverse order, best-effort):
+  step2.rollback() → step1.rollback()
+        ↓
+Return WorkflowResult { ok, completedSteps, failedStep, rolledBackSteps, outputs }
+```
+
+Steps without a `rollback` function are skipped during the rollback pass. Rollback errors are swallowed — best-effort only.
+
+### Types
+
+```ts
+type WorkflowStep = {
+    id: string;                           // unique within this workflow
+    name: string;                         // human-readable, used in error messages
+    execute: () => Promise<StepResult>;   // the work to perform
+    rollback?: () => Promise<void>;       // compensating action (optional)
+    maxRetries?: number;                  // per-step override (default: AF_WORKFLOW_STEP_MAX_RETRIES)
+};
+
+type StepResult = {
+    ok: boolean;
+    output?: string;
+    error?: string;
+};
+
+type WorkflowResult = {
+    ok: boolean;
+    completedSteps: string[];            // ids of steps that succeeded
+    failedStep: string | null;           // id of step that exhausted retries
+    rolledBackSteps: string[];           // ids where rollback ran
+    outputs: Record<string, string>;     // stepId → output string
+    error?: string;                      // human-readable failure message
+};
+```
+
+### Configuration
+
+| Env Var | Default | Description |
+|---|---|---|
+| `AF_WORKFLOW_STEP_MAX_RETRIES` | `2` | Default per-step retry limit (0 = no retries, try once) |
+
+Individual steps can override `maxRetries` to require more or fewer attempts.
+
+### Example Usage
+
+```ts
+import { runWorkflow } from './workflow-runtime.js';
+
+const result = await runWorkflow([
+    {
+        id: 'create-branch',
+        name: 'Create git branch',
+        execute: () => createBranch(branchName),
+        rollback: () => deleteBranch(branchName),
+    },
+    {
+        id: 'write-code',
+        name: 'Write implementation',
+        execute: () => writeCodeChanges(spec),
+        rollback: () => revertChanges(),
+    },
+    {
+        id: 'run-tests',
+        name: 'Run test suite',
+        execute: () => runTests(),
+        // no rollback — test run leaves no side-effects
+    },
+]);
+
+if (!result.ok) {
+    console.error(`Workflow failed at step "${result.failedStep}": ${result.error}`);
+    // rolled back: result.rolledBackSteps
+}
+```
+
+### Integration Point
+
+Used directly by agent action handlers that need multi-step pipelines. Not wired into `execution-engine.ts` globally — imported and called by the specific agents or action types that define structured step sequences.
+
+---
+
+## Combined Flow
+
+When all eight are active, the full quality pipeline for a completed task is:
+
+```
+Workflow Runtime             ← multi-step pipelines with retry+rollback (agent-level, pre-execution)
+        ↓
 loadCheckpoint(taskId)       ← inject prior progress if requeued before (Structured Checkpoints)
         ↓
 Max Mode: run N parallel candidates, pick highest-scoring
@@ -527,6 +631,7 @@ Each module has its own test file:
 - `apps/agent-runtime/src/dream-distill.test.ts`
 - `apps/agent-runtime/src/max-mode.test.ts`
 - `apps/agent-runtime/src/checkpoint.test.ts`
+- `apps/agent-runtime/src/workflow-runtime.test.ts`
 - `apps/agent-runtime/src/agents/shared/rag-context-limiter.test.ts`
 
 Run with:
@@ -537,5 +642,6 @@ pnpm --filter @agentfarm/agent-runtime test src/microcompact.test.ts
 pnpm --filter @agentfarm/agent-runtime test src/dream-distill.test.ts
 pnpm --filter @agentfarm/agent-runtime test src/max-mode.test.ts
 pnpm --filter @agentfarm/agent-runtime test src/checkpoint.test.ts
+pnpm --filter @agentfarm/agent-runtime test src/workflow-runtime.test.ts
 pnpm --filter @agentfarm/agent-runtime test src/agents/shared/rag-context-limiter.test.ts
 ```
