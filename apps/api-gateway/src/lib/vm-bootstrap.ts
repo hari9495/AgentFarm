@@ -12,6 +12,10 @@
  *     (resolved at runtime by the VM's Managed Identity / cloud-init env block)
  *  4. Pulls the bot image and starts the container with runtime env vars
  *  5. Enables a systemd service for auto-restart
+ *  6. (Optional) When AXIOM_TOKEN is configured, also runs an OpenTelemetry
+ *     Collector that ships this customer VM's Docker logs + container metrics to
+ *     Axiom, tagged with tenant_id = this VM's tenant, so every per-customer VM
+ *     is monitored automatically.
  */
 
 import { getRequiredEnv, getAzureRegion } from './azure-client.js';
@@ -24,6 +28,150 @@ export interface VmBootstrapConfig {
     roleType: string;
     evidenceApiEndpoint: string;
     contractVersion: string;
+}
+
+// ── OpenTelemetry Collector config (ships Docker logs/metrics → Axiom) ──────────
+// Kept in sync with docker/otel-collector/config.yaml. tenant_id comes from the
+// AF_TENANT_ID env (set per VM below), so Axiom data is filterable per customer.
+const OTEL_COLLECTOR_CONFIG_YAML = `receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  filelog:
+    include: [/var/lib/docker/containers/*/*-json.log]
+    start_at: end
+    include_file_path: true
+    operators:
+      - type: json_parser
+        timestamp:
+          parse_from: attributes.time
+          layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+      - type: regex_parser
+        parse_from: attributes["log.file.path"]
+        regex: '^/var/lib/docker/containers/(?P<container_id>[a-f0-9]+)/'
+      - type: move
+        from: attributes.log
+        to: body
+  docker_stats:
+    endpoint: unix:///var/run/docker.sock
+    api_version: "1.40"
+    collection_interval: 30s
+processors:
+  batch:
+    timeout: 5s
+  resourcedetection:
+    detectors: [env, system]
+    timeout: 5s
+  resource/tenant:
+    attributes:
+      - key: tenant_id
+        value: \${env:AF_TENANT_ID}
+        action: upsert
+exporters:
+  otlphttp/axiom_logs:
+    compression: gzip
+    endpoint: \${env:AXIOM_URL}
+    headers:
+      authorization: Bearer \${env:AXIOM_TOKEN}
+      x-axiom-dataset: \${env:AXIOM_DATASET_LOGS}
+  otlphttp/axiom_traces:
+    compression: gzip
+    endpoint: \${env:AXIOM_URL}
+    headers:
+      authorization: Bearer \${env:AXIOM_TOKEN}
+      x-axiom-dataset: \${env:AXIOM_DATASET_TRACES}
+  otlphttp/axiom_metrics:
+    compression: gzip
+    endpoint: \${env:AXIOM_URL}
+    headers:
+      authorization: Bearer \${env:AXIOM_TOKEN}
+      x-axiom-dataset: \${env:AXIOM_DATASET_METRICS}
+service:
+  pipelines:
+    logs:
+      receivers: [filelog, otlp]
+      processors: [resource/tenant, resourcedetection, batch]
+      exporters: [otlphttp/axiom_logs]
+    traces:
+      receivers: [otlp]
+      processors: [resource/tenant, resourcedetection, batch]
+      exporters: [otlphttp/axiom_traces]
+    metrics:
+      receivers: [otlp, docker_stats]
+      processors: [resource/tenant, resourcedetection, batch]
+      exporters: [otlphttp/axiom_metrics]
+`;
+
+const OTEL_COLLECTOR_IMAGE = 'otel/opentelemetry-collector-contrib:0.119.0';
+
+/**
+ * Builds the optional cloud-init fragments (write_files entries + runcmd lines)
+ * that run the OTel Collector on the VM. Returns empty strings when Axiom is not
+ * configured (AXIOM_TOKEN unset), so VMs without monitoring are unaffected.
+ */
+function buildCollectorFragments(cfg: VmBootstrapConfig): { writeFiles: string; runcmd: string } {
+    const axiomToken = process.env['AXIOM_TOKEN'];
+    if (!axiomToken || !axiomToken.trim()) {
+        return { writeFiles: '', runcmd: '' };
+    }
+    const axiomUrl = process.env['AXIOM_URL'] ?? 'https://api.axiom.co';
+    const dsLogs = process.env['AXIOM_DATASET_LOGS'] ?? 'agentfarm-logs';
+    const dsTraces = process.env['AXIOM_DATASET_TRACES'] ?? 'agentfarm-traces';
+    const dsMetrics = process.env['AXIOM_DATASET_METRICS'] ?? 'agentfarm-metrics';
+    const configB64 = Buffer.from(OTEL_COLLECTOR_CONFIG_YAML).toString('base64');
+
+    // Env file consumed by the collector. AF_TENANT_ID = this VM's tenant → all
+    // its telemetry is tagged for per-customer filtering in the dashboard.
+    const writeFiles = `  - path: /etc/agentfarm/otel.env
+    permissions: '0600'
+    owner: root:root
+    content: |
+      AXIOM_URL=${axiomUrl}
+      AXIOM_TOKEN=${axiomToken}
+      AXIOM_DATASET_LOGS=${dsLogs}
+      AXIOM_DATASET_TRACES=${dsTraces}
+      AXIOM_DATASET_METRICS=${dsMetrics}
+      AF_TENANT_ID=${cfg.tenantId}
+  - path: /etc/systemd/system/agentfarm-otel-collector.service
+    permissions: '0644'
+    owner: root:root
+    content: |
+      [Unit]
+      Description=AgentFarm OTel Collector (Axiom)
+      After=docker.service network-online.target
+      Requires=docker.service
+      [Service]
+      Restart=always
+      RestartSec=10
+      ExecStartPre=-/usr/bin/docker stop agentfarm-otel-collector
+      ExecStartPre=-/usr/bin/docker rm agentfarm-otel-collector
+      ExecStart=/usr/bin/docker run --name agentfarm-otel-collector \\
+        --env-file /etc/agentfarm/otel.env \\
+        --user 0:0 \\
+        --volume /etc/agentfarm/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro \\
+        --volume /var/lib/docker/containers:/var/lib/docker/containers:ro \\
+        --volume /var/run/docker.sock:/var/run/docker.sock:ro \\
+        --restart unless-stopped \\
+        ${OTEL_COLLECTOR_IMAGE} \\
+        --config=/etc/otelcol-contrib/config.yaml
+      ExecStop=/usr/bin/docker stop -t 10 agentfarm-otel-collector
+      [Install]
+      WantedBy=multi-user.target
+`;
+
+    const runcmd = `  # Start the OTel Collector → Axiom (per-customer Docker log/metric shipping)
+  - mkdir -p /etc/agentfarm
+  - echo ${configB64} | base64 -d > /etc/agentfarm/otel-collector-config.yaml
+  - docker pull ${OTEL_COLLECTOR_IMAGE}
+  - systemctl daemon-reload
+  - systemctl enable agentfarm-otel-collector
+  - systemctl start agentfarm-otel-collector
+`;
+
+    return { writeFiles, runcmd };
 }
 
 /**
@@ -41,6 +189,8 @@ export function buildCloudInitScript(cfg: VmBootstrapConfig): string {
     const registryUsername = getRequiredEnv('AZURE_BOT_REGISTRY_USERNAME');
     const registryPassword = getRequiredEnv('AZURE_BOT_REGISTRY_PASSWORD');
     const region = getAzureRegion();
+
+    const collector = buildCollectorFragments(cfg);
 
     // Build the cloud-init YAML. Indentation is intentional (YAML multiline).
     const yaml = `#cloud-config
@@ -99,7 +249,7 @@ write_files:
       ExecStop=/usr/bin/docker stop -t 10 agentfarm-bot-${cfg.botId.slice(-8)}
       [Install]
       WantedBy=multi-user.target
-
+${collector.writeFiles}
 runcmd:
   # Install Docker CE
   - install -m 0755 -d /etc/apt/keyrings
@@ -118,7 +268,7 @@ runcmd:
   - systemctl daemon-reload
   - systemctl enable agentfarm-bot
   - systemctl start agentfarm-bot
-`;
+${collector.runcmd}`;
 
     return Buffer.from(yaml).toString('base64');
 }
