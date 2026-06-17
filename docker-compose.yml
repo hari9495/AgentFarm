@@ -923,6 +923,41 @@
       - agentfarm
     restart: unless-stopped
 
+  # ── OpenTelemetry Collector → Axiom (Docker logs + container/app metrics + traces) ──
+  #
+  # Enable:  docker compose --profile axiom up -d otel-collector
+  # Or add:  COMPOSE_PROFILES=axiom  to your .env file
+  #
+  # Ships every container's logs (filelog over the Docker json logs), per-
+  # container metrics (docker_stats over the Docker socket), and any app
+  # traces/metrics sent to its OTLP endpoint, on to Axiom. Requires AXIOM_TOKEN.
+  # VM host health (CPU/mem/disk/uptime) stays in Azure Monitor — not here.
+  #
+  # To also route app traces/metrics through here, set on the app services:
+  #   OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.119.0
+    container_name: agentfarm-otel-collector
+    profiles: [ axiom ]
+    command: [ '--config=/etc/otelcol-contrib/config.yaml' ]
+    environment:
+      AXIOM_URL: ${AXIOM_URL:-https://api.axiom.co}
+      AXIOM_TOKEN: ${AXIOM_TOKEN:?AXIOM_TOKEN must be set for the axiom profile}
+      AXIOM_DATASET_LOGS: ${AXIOM_DATASET_LOGS:-agentfarm-logs}
+      AXIOM_DATASET_TRACES: ${AXIOM_DATASET_TRACES:-agentfarm-traces}
+      AXIOM_DATASET_METRICS: ${AXIOM_DATASET_METRICS:-agentfarm-metrics}
+    ports:
+      - '4317:4317'   # OTLP gRPC (app traces/metrics)
+      - '4318:4318'   # OTLP HTTP
+    volumes:
+      - ./docker/otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+      # Read-only access to Docker container logs and the socket for metrics.
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
   # Cloudflare named tunnel — exposes api/dashboard/runtime.agentfarms.in publicly
   # without inbound ports. Routing (public hostnames) is managed in the Cloudflare
   # Zero Trust dashboard for tunnel "agentfarm". host networking so the dashboard's

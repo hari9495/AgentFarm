@@ -1,0 +1,83 @@
+# OpenTelemetry Collector — ships AgentFarm Docker container logs, container
+# metrics, and app traces/metrics to Axiom. VM *host* health (CPU/mem/disk/
+# uptime) is intentionally NOT here — that lives in Azure Monitor (the VM is on
+# Azure and the services already export to Application Insights).
+#
+# Enable with: docker compose --profile axiom up -d otel-collector
+# Requires AXIOM_TOKEN (xaat-... API token) in the environment.
+
+receivers:
+  # App traces/metrics — services point OTEL_EXPORTER_OTLP_ENDPOINT here.
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  # Docker container logs — read the json-file logs every container writes.
+  filelog:
+    include: [/var/lib/docker/containers/*/*-json.log]
+    start_at: end
+    include_file_path: true
+    operators:
+      - type: json_parser
+        timestamp:
+          parse_from: attributes.time
+          layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+      # Pull the container id out of the log file path for filtering in Axiom.
+      - type: regex_parser
+        parse_from: attributes["log.file.path"]
+        regex: '^/var/lib/docker/containers/(?P<container_id>[a-f0-9]+)/'
+      - type: move
+        from: attributes.log
+        to: body
+
+  # Per-container CPU / memory / network metrics via the Docker socket.
+  docker_stats:
+    endpoint: unix:///var/run/docker.sock
+    collection_interval: 30s
+
+processors:
+  batch:
+    timeout: 5s
+  resourcedetection:
+    detectors: [env, system]
+    timeout: 5s
+
+exporters:
+  otlphttp/axiom_logs:
+    compression: gzip
+    endpoint: ${env:AXIOM_URL}
+    headers:
+      authorization: Bearer ${env:AXIOM_TOKEN}
+      x-axiom-dataset: ${env:AXIOM_DATASET_LOGS}
+
+  otlphttp/axiom_traces:
+    compression: gzip
+    endpoint: ${env:AXIOM_URL}
+    headers:
+      authorization: Bearer ${env:AXIOM_TOKEN}
+      x-axiom-dataset: ${env:AXIOM_DATASET_TRACES}
+
+  otlphttp/axiom_metrics:
+    compression: gzip
+    endpoint: ${env:AXIOM_URL}
+    headers:
+      authorization: Bearer ${env:AXIOM_TOKEN}
+      x-axiom-dataset: ${env:AXIOM_DATASET_METRICS}
+
+service:
+  pipelines:
+    logs:
+      receivers: [filelog, otlp]
+      processors: [resourcedetection, batch]
+      exporters: [otlphttp/axiom_logs]
+    traces:
+      receivers: [otlp]
+      processors: [resourcedetection, batch]
+      exporters: [otlphttp/axiom_traces]
+    metrics:
+      receivers: [otlp, docker_stats]
+      processors: [resourcedetection, batch]
+      exporters: [otlphttp/axiom_metrics]
