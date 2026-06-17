@@ -184,7 +184,7 @@ Exported as `microcompact(messages, model)` — takes OpenAI-format messages, re
 
 ## Combined Flow
 
-When all three are enabled, the full quality pipeline for a completed task is:
+When all five are enabled, the full quality pipeline for a completed task is:
 
 ```
 executeTaskWithRetries → status: 'success'
@@ -194,6 +194,8 @@ CompletionGate.check()       ← DB truth validation
         ↓
 GoalJudge.evaluate()         ← independent LLM verification
   (re-queue if not satisfied)
+        ↓
+distillLesson()              ← fire-and-forget lesson extraction (Dream/Distill)
         ↓
 recordEpisode()              ← write to episodic memory
         ↓
@@ -210,12 +212,14 @@ Each module has its own test file:
 - `apps/agent-runtime/src/goal-judge.test.ts`
 - `apps/agent-runtime/src/completion-gate.test.ts`
 - `apps/agent-runtime/src/microcompact.test.ts`
+- `apps/agent-runtime/src/dream-distill.test.ts`
 
 Run with:
 ```bash
 pnpm --filter @agentfarm/agent-runtime test src/goal-judge.test.ts
 pnpm --filter @agentfarm/agent-runtime test src/completion-gate.test.ts
 pnpm --filter @agentfarm/agent-runtime test src/microcompact.test.ts
+pnpm --filter @agentfarm/agent-runtime test src/dream-distill.test.ts
 pnpm --filter @agentfarm/agent-runtime test src/agents/shared/rag-context-limiter.test.ts
 ```
 
@@ -283,4 +287,72 @@ return {
         ? applyRagContextBudget(`## MyAgent Context\n\n${sections.join('\n---\n\n')}`)
         : '',
 };
+```
+
+---
+
+## 5. Dream/Distill
+
+**File:** `apps/agent-runtime/src/dream-distill.ts`
+
+### Purpose
+
+After a task completes successfully and passes Goal Judge verification, Dream/Distill makes a fire-and-forget LLM call to extract a generalizable lesson from the interaction. The lesson is written to long-term memory (`/v1/memory/patterns`) where all 16 agent RAG retrievers can retrieve it on future runs.
+
+This is the "self-reflection" layer: agents learn not just from human feedback (the flywheel) but from their own successful completions. Over time, a workspace accumulates a library of distilled best-practices specific to its domain and working style.
+
+### How It Works
+
+```
+GoalJudge returns { action: 'accept' }
+        ↓
+distillLesson({ payload, agentOutput, workspaceId, tenantId, taskId })
+        ↓ (fire-and-forget — result never awaited)
+  Anthropic Haiku → extract generalizable lesson
+        ↓
+  POST /v1/memory/patterns
+    pattern: dream:{actionType}:{workspaceId}:{uuid}
+    confidence: 0.65
+        ↓
+  RAG retrievers surface lesson on future runs
+```
+
+The LLM is prompted to produce a two-sentence reusable lesson — not a summary of what happened, but a generalizable principle that would help the same agent handle similar tasks better in the future.
+
+### Configuration
+
+| Env Var | Default | Description |
+|---|---|---|
+| `AF_DREAM_DISTILL_ENABLED` | `false` | Enable/disable dream/distill |
+| `AF_DREAM_DISTILL_MODEL` | `claude-haiku-4-5-20251001` | Cheap model for lesson extraction |
+
+Read-only action types (`code_read`, `workspace_read_file`, etc.) are skipped — no lesson value in read operations.
+
+### Lesson Schema
+
+```ts
+{
+  pattern: string;       // dream:{actionType}:{workspaceId}:{uuid}
+  summary: string;       // two-sentence generalizable lesson from the LLM
+  confidence: number;    // always 0.65 (lower than human-validated lessons at 0.75)
+  observedCount: number; // always 1
+  lastSeen: string;      // ISO timestamp
+  metadata: {
+    sourceTaskId: string;
+    actionType: string;
+    workspaceId: string;
+    tenantId: string;
+    distilledAt: string;
+  }
+}
+```
+
+### Integration Point
+
+Called fire-and-forget from `execution-engine.ts` after `evaluateGoal` returns `{ action: 'accept' }`. Errors are swallowed — Dream/Distill never blocks task completion or return value.
+
+```ts
+// fire-and-forget — never awaited, never throws
+distillLesson({ payload: taskWithAuditContext.payload, agentOutput, workspaceId, tenantId, taskId: task.taskId })
+    .catch(() => {});
 ```

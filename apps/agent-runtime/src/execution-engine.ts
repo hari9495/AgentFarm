@@ -45,6 +45,7 @@ import { createCodeGenFn } from './infrastructure/llm-provider-factory.js';
 import { runWithLlmTraceContext, type LlmTraceContext } from '@agentfarm/llm-trace';
 import { evaluateGoal } from './goal-judge.js';
 import { checkCompletion } from './completion-gate.js';
+import { distillLesson } from './dream-distill.js';
 
 /**
  * Build the ambient LLM-trace context for a task so every LLM call made during
@@ -498,6 +499,16 @@ async function processApprovedTaskInner(
                     errorMessage: `[GOAL_JUDGE_IMPOSSIBLE] ${judgeResult.reason}`,
                     failureClass: 'runtime_exception',
                 };
+            } else if (judgeResult.action === 'accept') {
+                const tenantId = typeof taskWithAuditContext.payload['tenantId'] === 'string'
+                    ? taskWithAuditContext.payload['tenantId'] : '';
+                distillLesson({
+                    payload: taskWithAuditContext.payload,
+                    agentOutput,
+                    workspaceId,
+                    tenantId,
+                    taskId: task.taskId,
+                }).catch(() => {});
             }
         }
     }
@@ -744,6 +755,16 @@ async function processDeveloperTaskInner(
                     errorMessage: `[GOAL_JUDGE_IMPOSSIBLE] ${judgeResult.reason}`,
                     failureClass: 'runtime_exception',
                 };
+            } else if (judgeResult.action === 'accept') {
+                const tenantId = typeof taskWithAuditContext.payload['tenantId'] === 'string'
+                    ? taskWithAuditContext.payload['tenantId'] : '';
+                distillLesson({
+                    payload: taskWithAuditContext.payload,
+                    agentOutput,
+                    workspaceId: workspaceIdForMemory,
+                    tenantId,
+                    taskId: task.taskId,
+                }).catch(() => {});
             }
         }
     }
