@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-test('headroom-compress: disabled by default — messages pass through unchanged', async () => {
-    delete process.env['HEADROOM_ENABLED'];
+test('headroom-compress: passthrough when explicitly disabled', async () => {
+    process.env['HEADROOM_ENABLED'] = '0';
     const mod = await import('./headroom-compress.js');
 
     const messages = [
@@ -13,16 +13,18 @@ test('headroom-compress: disabled by default — messages pass through unchanged
     const result = await mod.compressOpenAiMessages(messages, 'gpt-4o');
     assert.deepStrictEqual(result.messages, messages);
     assert.strictEqual(result.stats, null);
+
+    delete process.env['HEADROOM_ENABLED'];
 });
 
-test('headroom-compress: isHeadroomEnabled returns false when unset', async () => {
+test('headroom-compress: isHeadroomEnabled returns true by default', async () => {
     delete process.env['HEADROOM_ENABLED'];
     const mod = await import('./headroom-compress.js');
-    assert.strictEqual(mod.isHeadroomEnabled(), false);
+    assert.strictEqual(mod.isHeadroomEnabled(), true);
 });
 
 test('headroom-compress: Anthropic passthrough when disabled', async () => {
-    delete process.env['HEADROOM_ENABLED'];
+    process.env['HEADROOM_ENABLED'] = '';
     const mod = await import('./headroom-compress.js');
 
     const systemBlocks = [{ type: 'text', text: 'System prompt', cache_control: { type: 'ephemeral' } }];
@@ -32,14 +34,18 @@ test('headroom-compress: Anthropic passthrough when disabled', async () => {
     assert.deepStrictEqual(result.systemBlocks, systemBlocks);
     assert.deepStrictEqual(result.messages, messages);
     assert.strictEqual(result.stats, null);
+
+    delete process.env['HEADROOM_ENABLED'];
 });
 
 test('headroom-compress: Gemini passthrough when disabled', async () => {
-    delete process.env['HEADROOM_ENABLED'];
+    process.env['HEADROOM_ENABLED'] = 'false';
     const mod = await import('./headroom-compress.js');
 
     const text = 'System prompt\n\nTask prompt with lots of context';
     const result = await mod.compressGeminiContent(text, 'gemini-2.0-flash');
     assert.strictEqual(result.text, text);
     assert.strictEqual(result.stats, null);
+
+    delete process.env['HEADROOM_ENABLED'];
 });

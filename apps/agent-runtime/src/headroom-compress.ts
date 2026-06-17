@@ -1,7 +1,10 @@
 import { compress } from 'headroom-ai';
 import { microcompact, type MicrocompactStats } from './microcompact.js';
 
-const ENABLED = process.env['HEADROOM_ENABLED'] === '1' || process.env['HEADROOM_ENABLED'] === 'true';
+function isDisabled(): boolean {
+    const v = process.env['HEADROOM_ENABLED'];
+    return v === '0' || v === 'false' || v === '';
+}
 
 // Re-export so callers can use the combined stats type
 export type { MicrocompactStats };
@@ -29,7 +32,7 @@ export async function compressOpenAiMessages(
     const { messages: precompacted } = microcompact(messages as Parameters<typeof microcompact>[0]);
     const narrowed = precompacted as OpenAiMessage[];
 
-    if (!ENABLED) return { messages: narrowed, stats: null };
+    if (isDisabled()) return { messages: narrowed, stats: null };
 
     try {
         const result = await compress(narrowed, {
@@ -63,7 +66,7 @@ export async function compressAnthropicPayload(
     messages: OpenAiMessage[];
     stats: HeadroomStats | null;
 }> {
-    if (!ENABLED) return { systemBlocks, messages, stats: null };
+    if (isDisabled()) return { systemBlocks, messages, stats: null };
 
     try {
         const combined: OpenAiMessage[] = [
@@ -106,7 +109,7 @@ export async function compressGeminiContent(
     text: string,
     model: string,
 ): Promise<{ text: string; stats: HeadroomStats | null }> {
-    if (!ENABLED) return { text, stats: null };
+    if (isDisabled()) return { text, stats: null };
 
     try {
         const messages: OpenAiMessage[] = [{ role: 'user', content: text }];
@@ -134,5 +137,5 @@ export async function compressGeminiContent(
 }
 
 export function isHeadroomEnabled(): boolean {
-    return ENABLED;
+    return !isDisabled();
 }
