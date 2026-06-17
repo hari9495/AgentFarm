@@ -88,7 +88,7 @@ scripts/            30+ dev/ops scripts
 `approval-service`, `connector-gateway` (OAuth + mTLS + plugin loader), `identity-service`, `evidence-service` (HNSW vector search), `meeting-agent` (STT/TTS), `memory-service`, `notification-service`, `policy-engine`, `provisioning-service` (Azure VM state machine), `browser-actions` (Playwright), `audit-storage`.
 
 **Key packages:**
-`db-schema` (Prisma schema + 44 migrations), `shared-types` (100+ TS contracts, only package with a compiled `dist/`), `connector-contracts` (23 connectors incl. telephony, 34 normalized action types, 13 role keys), `observability` (OTEL + Azure Monitor), `sdk` (AgentFarmClient), `config` (service URLs + constants).
+`db-schema` (Prisma schema + 44 migrations), `shared-types` (100+ TS contracts, only package with a compiled `dist/`), `connector-contracts` (23 connectors incl. telephony, 34 normalized action types, 13 role keys), `observability` (OTEL + Azure Monitor), `llm-trace` (fail-safe Langfuse wrapper: per-call generations, token/cost, prompt registry, eval scores, datasets, ambient task context), `sdk` (AgentFarmClient), `config` (service URLs + constants).
 
 ### Request flow
 
@@ -165,7 +165,21 @@ All variables documented in `.env.example`. Minimum required to run locally:
 
 ### Docker services
 
-`docker-compose.yml` defines 23 services: core (`postgres` 5432, `redis` 6379, `opa` 8181, `migrate` one-shot, `api-gateway`, `agent-runtime`, `trigger-service`, `dashboard`, `worker-runner`), automation (`browser-agent`, `desktop-agent`), voice/telephony (`voicebox` 17493, `whisper`, `kokoro`, `xtts`, `mms-tts`, `voxcpm`, `freeswitch`), meetings (`meeting-agent`, `zoom-video-sidecar`, `teams-media-bot`), plus `ngrok` and `agentfarm`. Runtime services have healthchecks at `GET /health` (migrate intentionally has none).
+`docker-compose.yml` defines core (`postgres` 5432, `redis` 6379, `opa` 8181, `migrate` one-shot, `api-gateway`, `agent-runtime`, `trigger-service`, `dashboard`, `worker-runner`), automation (`browser-agent`, `desktop-agent`), voice/telephony (`voicebox` 17493, `whisper`, `kokoro`, `xtts`, `mms-tts`, `voxcpm`, `freeswitch`), meetings (`meeting-agent`, `zoom-video-sidecar`, `teams-media-bot`), plus `ngrok` and `agentfarm`. Runtime services have healthchecks at `GET /health` (migrate intentionally has none).
+
+**Opt-in profiles** (off by default; start with `docker compose --profile <name> up`):
+- `voice` — the self-hosted STT/TTS/SIP stack (whisper, kokoro, xtts, mms-tts, freeswitch).
+- `langfuse` — self-hosted LLM observability: `langfuse-web` (UI :3030), `langfuse-worker`, `clickhouse`, `minio` (S3), plus one-shot DB/bucket init. Reuses the shared `postgres` (separate `langfuse` DB) + `redis` (logical DB 3).
+- `axiom` — `otel-collector` (contrib) shipping Docker container logs (`filelog`) + container metrics (`docker_stats`) + app OTLP to Axiom, tagged `tenant_id`. Requires `AXIOM_TOKEN`.
+
+### Observability & monitoring
+
+Three complementary layers (see `.env.example` for all `LANGFUSE_*` / `AXIOM_*` vars):
+- **Langfuse** (self-hosted, `langfuse` profile) — LLM-layer: per-task traces across all 9 providers (decision + chat + code-gen + shared Anthropic caller, nested via AsyncLocalStorage task context), native token/cost (register models with `scripts/register-langfuse-models.mjs`), versioned role prompts (`role-system-prompt:<roleKey>`, seed via `scripts/register-langfuse-prompts.mjs`), persistent eval scores (replaces the volatile in-memory `llm-quality-tracker`), and offline eval datasets (`scripts/seed-langfuse-eval-dataset.mjs` + `run-langfuse-eval.mjs`). All via `@agentfarm/llm-trace` — fail-safe, no-op when unconfigured.
+- **Axiom** (cloud, `axiom` profile) — infra/logs: Docker container logs + container metrics + app traces + a per-tenant mirror of `AuditEvent` (best-effort in `writeAuditEvent`). Surfaced per-customer in the internal dashboard via `GET /v1/observability/infra-logs` (tenant-locked; needs a query-scoped `AXIOM_QUERY_TOKEN`, distinct from the ingest token). The OTel Collector is **auto-baked into every provisioned customer VM's cloud-init** (`apps/api-gateway/src/lib/vm-bootstrap.ts`) with `AF_TENANT_ID = the VM's tenant`, so each customer VM self-monitors. Tenant field: flat `tenant_id` for audit (events API), `['resource.tenant_id']` for OTLP logs/metrics.
+- **Azure Monitor** — VM host health (CPU/mem/disk/uptime) via `APPLICATIONINSIGHTS_CONNECTION_STRING`; not Axiom's job.
+
+Dashboard pages: `/observability` (LLM traces, links to audit by correlationId) and `/infra-monitoring` (per-customer Docker logs/metrics/audit). Both proxy server-side so API keys never reach the browser; customer scope is tenant-locked.
 
 ### CI pipeline
 
