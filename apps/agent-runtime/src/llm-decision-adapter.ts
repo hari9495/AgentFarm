@@ -21,6 +21,11 @@ import { emitBudgetAlert } from './budget-alert-emitter.js';
 import { globalLearningStore } from './loop-learning-store.js';
 import { estimateCostUsd } from './cost-calculator.js';
 import { traceGeneration } from '@agentfarm/llm-trace';
+import {
+    compressOpenAiMessages,
+    compressAnthropicPayload,
+    compressGeminiContent,
+} from './headroom-compress.js';
 
 // ---------------------------------------------------------------------------
 // Persona-aware system prompt builder
@@ -1161,6 +1166,13 @@ const createAnthropicResolver = (input: {
         const modelProfile = pickModelProfile(task, heuristicDecision);
         const selectedModel = resolveProfileTarget(input.model, mergedProfiles, modelProfile);
         const systemPromptText = buildPromptForTask(task, resolvedLanguage);
+        const rawSystemBlocks = [
+            { type: 'text', text: systemPromptText, cache_control: { type: 'ephemeral' } },
+        ];
+        const rawUserMessages = [
+            { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
+        ];
+        const compressed = await compressAnthropicPayload(rawSystemBlocks, rawUserMessages, selectedModel);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/v1/messages`, {
             method: 'POST',
             headers: {
@@ -1174,19 +1186,8 @@ const createAnthropicResolver = (input: {
                 model: selectedModel,
                 max_tokens: 256,
                 temperature: 0,
-                system: [
-                    {
-                        type: 'text',
-                        text: systemPromptText,
-                        cache_control: { type: 'ephemeral' },
-                    },
-                ],
-                messages: [
-                    {
-                        role: 'user',
-                        content: createTaskPrompt(task, heuristicDecision),
-                    },
-                ],
+                system: compressed.systemBlocks,
+                messages: compressed.messages,
             }),
             signal: AbortSignal.timeout(input.timeoutMs),
         });
@@ -1256,6 +1257,8 @@ const createGoogleResolver = (input: {
         const base = input.baseUrl.replace(/\/+$/, '');
         const url = `${base}/models/${encodeURIComponent(selectedModel)}:generateContent?key=${encodeURIComponent(input.apiKey)}`;
 
+        const rawGeminiText = `${buildPromptForTask(task, resolvedLanguage)}\n\n${createTaskPrompt(task, heuristicDecision)}`;
+        const geminiCompressed = await compressGeminiContent(rawGeminiText, selectedModel);
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -1270,7 +1273,7 @@ const createGoogleResolver = (input: {
                 contents: [
                     {
                         role: 'user',
-                        parts: [{ text: `${buildPromptForTask(task, resolvedLanguage)}\n\n${createTaskPrompt(task, heuristicDecision)}` }],
+                        parts: [{ text: geminiCompressed.text }],
                     },
                 ],
             }),
@@ -1631,6 +1634,11 @@ const createOpenAiResolver = (input: {
         const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
         const selectedModel = resolveProfileTarget(input.model, mergedProfiles, modelProfile);
+        const rawMessages = [
+            { role: 'system', content: buildPromptForTask(task, resolvedLanguage) },
+            { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
+        ];
+        const { messages: compressedMessages } = await compressOpenAiMessages(rawMessages, selectedModel);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
             method: 'POST',
             headers: {
@@ -1642,16 +1650,7 @@ const createOpenAiResolver = (input: {
                 temperature: 0,
                 max_tokens: 256,
                 response_format: { type: 'json_object' },
-                messages: [
-                    {
-                        role: 'system',
-                        content: buildPromptForTask(task, resolvedLanguage),
-                    },
-                    {
-                        role: 'user',
-                        content: createTaskPrompt(task, heuristicDecision),
-                    },
-                ],
+                messages: compressedMessages,
             }),
             signal: AbortSignal.timeout(input.timeoutMs),
         });
@@ -1700,6 +1699,11 @@ const createGitHubModelsResolver = (input: {
         const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
         const selectedModel = resolveProfileTarget(input.model, mergedProfiles, modelProfile);
+        const rawMessages = [
+            { role: 'system', content: buildPromptForTask(task, resolvedLanguage) },
+            { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
+        ];
+        const { messages: compressedMessages } = await compressOpenAiMessages(rawMessages, selectedModel);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
             method: 'POST',
             headers: {
@@ -1711,16 +1715,7 @@ const createGitHubModelsResolver = (input: {
                 temperature: 0,
                 max_tokens: 256,
                 response_format: { type: 'json_object' },
-                messages: [
-                    {
-                        role: 'system',
-                        content: buildPromptForTask(task, resolvedLanguage),
-                    },
-                    {
-                        role: 'user',
-                        content: createTaskPrompt(task, heuristicDecision),
-                    },
-                ],
+                messages: compressedMessages,
             }),
             signal: AbortSignal.timeout(input.timeoutMs),
         });
@@ -1769,6 +1764,11 @@ const createXaiResolver = (input: {
         const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
         const selectedModel = resolveProfileTarget(input.model, mergedProfiles, modelProfile);
+        const rawMessages = [
+            { role: 'system', content: buildPromptForTask(task, resolvedLanguage) },
+            { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
+        ];
+        const { messages: compressedMessages } = await compressOpenAiMessages(rawMessages, selectedModel);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
             method: 'POST',
             headers: {
@@ -1780,10 +1780,7 @@ const createXaiResolver = (input: {
                 temperature: 0,
                 max_tokens: 256,
                 response_format: { type: 'json_object' },
-                messages: [
-                    { role: 'system', content: buildPromptForTask(task, resolvedLanguage) },
-                    { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
-                ],
+                messages: compressedMessages,
             }),
             signal: AbortSignal.timeout(input.timeoutMs),
         });
@@ -1832,6 +1829,11 @@ const createMistralResolver = (input: {
         const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
         const selectedModel = resolveProfileTarget(input.model, mergedProfiles, modelProfile);
+        const rawMessages = [
+            { role: 'system', content: buildPromptForTask(task, resolvedLanguage) },
+            { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
+        ];
+        const { messages: compressedMessages } = await compressOpenAiMessages(rawMessages, selectedModel);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
             method: 'POST',
             headers: {
@@ -1843,10 +1845,7 @@ const createMistralResolver = (input: {
                 temperature: 0,
                 max_tokens: 256,
                 response_format: { type: 'json_object' },
-                messages: [
-                    { role: 'system', content: buildPromptForTask(task, resolvedLanguage) },
-                    { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
-                ],
+                messages: compressedMessages,
             }),
             signal: AbortSignal.timeout(input.timeoutMs),
         });
@@ -1895,6 +1894,11 @@ const createTogetherResolver = (input: {
         const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
         const selectedModel = resolveProfileTarget(input.model, mergedProfiles, modelProfile);
+        const rawMessages = [
+            { role: 'system', content: buildPromptForTask(task, resolvedLanguage) },
+            { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
+        ];
+        const { messages: compressedMessages } = await compressOpenAiMessages(rawMessages, selectedModel);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
             method: 'POST',
             headers: {
@@ -1906,10 +1910,7 @@ const createTogetherResolver = (input: {
                 temperature: 0,
                 max_tokens: 256,
                 response_format: { type: 'json_object' },
-                messages: [
-                    { role: 'system', content: buildPromptForTask(task, resolvedLanguage) },
-                    { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
-                ],
+                messages: compressedMessages,
             }),
             signal: AbortSignal.timeout(input.timeoutMs),
         });
@@ -1958,6 +1959,11 @@ const createDeepSeekResolver = (input: {
         const resolvedLanguage = await resolveTaskOutputLanguage(task);
         const modelProfile = pickModelProfile(task, heuristicDecision);
         const selectedModel = resolveProfileTarget(input.model, mergedProfiles, modelProfile);
+        const rawMessages = [
+            { role: 'system', content: buildPromptForTask(task, resolvedLanguage) },
+            { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
+        ];
+        const { messages: compressedMessages } = await compressOpenAiMessages(rawMessages, selectedModel);
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
             method: 'POST',
             headers: {
@@ -1969,10 +1975,7 @@ const createDeepSeekResolver = (input: {
                 temperature: 0,
                 max_tokens: 256,
                 response_format: { type: 'json_object' },
-                messages: [
-                    { role: 'system', content: buildPromptForTask(task, resolvedLanguage) },
-                    { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
-                ],
+                messages: compressedMessages,
             }),
             signal: AbortSignal.timeout(input.timeoutMs),
         });
@@ -2371,6 +2374,11 @@ const createAzureOpenAiResolver = (input: {
             modelProfile,
         );
         const url = `${normalizedEndpoint}/openai/deployments/${selectedDeployment}/chat/completions?api-version=${encodeURIComponent(input.apiVersion)}`;
+        const rawMessages = [
+            { role: 'system', content: buildPromptForTask(task, resolvedLanguage) },
+            { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
+        ];
+        const { messages: compressedMessages } = await compressOpenAiMessages(rawMessages, selectedDeployment);
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -2380,16 +2388,7 @@ const createAzureOpenAiResolver = (input: {
             body: JSON.stringify({
                 temperature: 0,
                 response_format: { type: 'json_object' },
-                messages: [
-                    {
-                        role: 'system',
-                        content: buildPromptForTask(task, resolvedLanguage),
-                    },
-                    {
-                        role: 'user',
-                        content: createTaskPrompt(task, heuristicDecision),
-                    },
-                ],
+                messages: compressedMessages,
             }),
             signal: AbortSignal.timeout(input.timeoutMs),
         });
