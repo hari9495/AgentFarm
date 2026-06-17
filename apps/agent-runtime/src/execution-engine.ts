@@ -47,6 +47,7 @@ import { evaluateGoal, judgeScore, resolveSpec } from './goal-judge.js';
 import { checkCompletion } from './completion-gate.js';
 import { distillLesson } from './dream-distill.js';
 import { runMaxMode, isMaxModeEnabled, getMaxModeCandidates, shouldSkipMaxMode } from './max-mode.js';
+import { isCheckpointEnabled, loadCheckpoint, saveCheckpoint, clearCheckpoint, injectCheckpointIntoPayload } from './checkpoint.js';
 
 /**
  * Build the ambient LLM-trace context for a task so every LLM call made during
@@ -451,7 +452,18 @@ async function processApprovedTaskInner(
     await reportProgress(progressCtx, 'coding_started', 'Executing approved task.', sink);
     const resolvedWorkerFn = options?.llmCodeGenFn ?? createCodeGenFn(process.env, 'cost_balanced');
     const resolvedPlannerFn = options?.llmPlannerFn ?? createCodeGenFn(process.env, 'quality_first');
-    const approvedExecFn = () => executeTaskWithRetries(taskWithAuditContext, approvedDecision, 'none', llmExecution, { ...options, llmCodeGenFn: resolvedWorkerFn, llmPlannerFn: resolvedPlannerFn });
+
+    // Structured Checkpoints — inject prior progress if this task was requeued before
+    let approvedPayload = taskWithAuditContext.payload;
+    if (isCheckpointEnabled()) {
+        const ckpt = await loadCheckpoint(task.taskId).catch(() => null);
+        if (ckpt) approvedPayload = injectCheckpointIntoPayload(approvedPayload, ckpt);
+    }
+    const taskForApprovedExec = approvedPayload === taskWithAuditContext.payload
+        ? taskWithAuditContext
+        : { ...taskWithAuditContext, payload: approvedPayload };
+
+    const approvedExecFn = () => executeTaskWithRetries(taskForApprovedExec, approvedDecision, 'none', llmExecution, { ...options, llmCodeGenFn: resolvedWorkerFn, llmPlannerFn: resolvedPlannerFn });
     const approvedSpec = resolveSpec(taskWithAuditContext.payload);
     let approvedResult = isMaxModeEnabled() && !shouldSkipMaxMode(taskWithAuditContext.payload)
         ? await runMaxMode(approvedExecFn, (out) => judgeScore(approvedSpec, out), getMaxModeCandidates())
@@ -486,6 +498,18 @@ async function processApprovedTaskInner(
                 errorMessage: gateResult.reentryText,
                 failureClass: 'runtime_exception',
             };
+            // Save checkpoint so next run resumes from this partial output
+            if (isCheckpointEnabled()) {
+                const reentryCount = typeof taskWithAuditContext.payload['_completion_gate_reentry'] === 'number'
+                    ? taskWithAuditContext.payload['_completion_gate_reentry'] as number : 0;
+                saveCheckpoint({
+                    taskId: task.taskId,
+                    stepIndex: reentryCount + 1,
+                    partialOutput: approvedResult.actionOutput ?? '',
+                    actionType: typeof taskWithAuditContext.payload['actionType'] === 'string' ? taskWithAuditContext.payload['actionType'] as string : '',
+                    savedAt: new Date().toISOString(),
+                }).catch(() => {});
+            }
         }
 
         if (approvedResult.status === 'success') {
@@ -504,7 +528,19 @@ async function processApprovedTaskInner(
                     errorMessage: `[GOAL_JUDGE_IMPOSSIBLE] ${judgeResult.reason}`,
                     failureClass: 'runtime_exception',
                 };
+                if (isCheckpointEnabled()) clearCheckpoint(task.taskId).catch(() => {});
+            } else if (judgeResult.action === 'requeue') {
+                if (isCheckpointEnabled()) {
+                    saveCheckpoint({
+                        taskId: task.taskId,
+                        stepIndex: judgeResult.requeueCount,
+                        partialOutput: agentOutput,
+                        actionType: typeof taskWithAuditContext.payload['actionType'] === 'string' ? taskWithAuditContext.payload['actionType'] as string : '',
+                        savedAt: new Date().toISOString(),
+                    }).catch(() => {});
+                }
             } else if (judgeResult.action === 'accept') {
+                if (isCheckpointEnabled()) clearCheckpoint(task.taskId).catch(() => {});
                 const tenantId = typeof taskWithAuditContext.payload['tenantId'] === 'string'
                     ? taskWithAuditContext.payload['tenantId'] : '';
                 distillLesson({
@@ -709,8 +745,16 @@ async function processDeveloperTaskInner(
     // Planner (initial plan generation) uses quality_first; worker (fix attempts) uses cost_balanced.
     const plannerFn: LlmCodeGenFn | undefined = createCodeGenFn(process.env, 'quality_first');
     const workerFn: LlmCodeGenFn | undefined = createCodeGenFn(process.env, 'cost_balanced');
+
+    // Structured Checkpoints — inject prior progress if this task was requeued before
+    let devPayload = executionPayload;
+    if (isCheckpointEnabled()) {
+        const ckpt = await loadCheckpoint(task.taskId).catch(() => null);
+        if (ckpt) devPayload = injectCheckpointIntoPayload(devPayload, ckpt);
+    }
+
     const devExecFn = () => executeTaskWithRetries(
-        { ...taskWithAuditContext, payload: executionPayload },
+        { ...taskWithAuditContext, payload: devPayload },
         decision, payloadOverrideSource, llmExecution,
         { ...options, llmCodeGenFn: workerFn, llmPlannerFn: plannerFn },
     );
@@ -746,6 +790,17 @@ async function processDeveloperTaskInner(
                 errorMessage: gateResult.reentryText,
                 failureClass: 'runtime_exception',
             };
+            if (isCheckpointEnabled()) {
+                const reentryCount = typeof taskWithAuditContext.payload['_completion_gate_reentry'] === 'number'
+                    ? taskWithAuditContext.payload['_completion_gate_reentry'] as number : 0;
+                saveCheckpoint({
+                    taskId: task.taskId,
+                    stepIndex: reentryCount + 1,
+                    partialOutput: finalResult.actionOutput ?? '',
+                    actionType: typeof taskWithAuditContext.payload['actionType'] === 'string' ? taskWithAuditContext.payload['actionType'] as string : '',
+                    savedAt: new Date().toISOString(),
+                }).catch(() => {});
+            }
         }
 
         if (finalResult.status === 'success') {
@@ -764,7 +819,19 @@ async function processDeveloperTaskInner(
                     errorMessage: `[GOAL_JUDGE_IMPOSSIBLE] ${judgeResult.reason}`,
                     failureClass: 'runtime_exception',
                 };
+                if (isCheckpointEnabled()) clearCheckpoint(task.taskId).catch(() => {});
+            } else if (judgeResult.action === 'requeue') {
+                if (isCheckpointEnabled()) {
+                    saveCheckpoint({
+                        taskId: task.taskId,
+                        stepIndex: judgeResult.requeueCount,
+                        partialOutput: agentOutput,
+                        actionType: typeof taskWithAuditContext.payload['actionType'] === 'string' ? taskWithAuditContext.payload['actionType'] as string : '',
+                        savedAt: new Date().toISOString(),
+                    }).catch(() => {});
+                }
             } else if (judgeResult.action === 'accept') {
+                if (isCheckpointEnabled()) clearCheckpoint(task.taskId).catch(() => {});
                 const tenantId = typeof taskWithAuditContext.payload['tenantId'] === 'string'
                     ? taskWithAuditContext.payload['tenantId'] : '';
                 distillLesson({

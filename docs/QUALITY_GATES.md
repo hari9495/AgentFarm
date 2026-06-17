@@ -1,6 +1,6 @@
 # Quality Gates
 
-Six complementary mechanisms that prevent false completions, validate output correctness, reduce LLM context costs, improve output quality through parallel sampling, and enable continuous self-improvement. Inspired by the MiMo-Code open-source framework, adapted for AgentFarm's multi-tenant architecture.
+Seven complementary mechanisms that prevent false completions, validate output correctness, reduce LLM context costs, improve output quality through parallel sampling, enable continuous self-improvement, and recover long-running tasks from mid-run failures. Inspired by the MiMo-Code open-source framework, adapted for AgentFarm's multi-tenant architecture.
 
 ---
 
@@ -381,20 +381,129 @@ const result = isMaxModeEnabled() && !shouldSkipMaxMode(payload)
 
 ---
 
-## Combined Flow
+## 7. Structured Checkpoints
 
-When all six are enabled, the full quality pipeline for a completed task is:
+**File:** `apps/agent-runtime/src/checkpoint.ts`
+
+### Purpose
+
+Long-running agent tasks (e.g., a developer implementing a large feature across many files) can run for tens of minutes. If the agent is requeued by the Completion Gate or Goal Judge, the next run starts cold with no memory of what was already done.
+
+Structured Checkpoints save the agent's partial output after each requeue and inject it back as context at the start of the next run. The agent sees "here's what you produced before — continue from here" rather than starting from scratch.
+
+### How It Works
 
 ```
+Task runs → status: 'success'
+        ↓
+CompletionGate or GoalJudge → requeue
+        ↓
+saveCheckpoint({ taskId, stepIndex, partialOutput, actionType, savedAt })
+  stored in Redis with 24h TTL
+        ↓
+Next task run starts
+        ↓
+loadCheckpoint(taskId) → found
+        ↓
+injectCheckpointIntoPayload() — prepends prior-progress block to prompt field
+        ↓
+Agent receives: "[CHECKPOINT: step N] Prior progress: ... Continue from here."
+        ↓
+Task completes + GoalJudge accepts
+        ↓
+clearCheckpoint(taskId) — removed from Redis
+```
+
+### Checkpoint Schema
+
+```ts
+type TaskCheckpoint = {
+    taskId: string;
+    stepIndex: number;      // which requeue iteration (1 = first requeue)
+    partialOutput: string;  // trimmed to 2000 chars before injection
+    actionType: string;
+    savedAt: string;        // ISO timestamp
+};
+```
+
+### Injection Format
+
+When a checkpoint is found, the following block is prepended to the task's primary prompt field (`goal_spec` → `prompt` → `description` → `summary`, in priority order):
+
+```
+[CHECKPOINT: step 1, saved 2026-06-18T10:23:45.000Z]
+Prior progress:
+<partialOutput, truncated at 2000 chars>
+---
+Continue from where you left off. Do not repeat completed work.
+
+<original prompt follows>
+```
+
+### Configuration
+
+| Env Var | Default | Description |
+|---|---|---|
+| `AF_CHECKPOINT_ENABLED` | `false` | Enable/disable structured checkpoints |
+| `AF_CHECKPOINT_TTL_SECONDS` | `86400` | Redis TTL for stored checkpoints (24h default) |
+
+Checkpoints require Redis (`REDIS_URL`). When Redis is unavailable, save/load/clear fail silently — execution continues normally without checkpoint context.
+
+### When Checkpoints Are Saved / Cleared
+
+| Event | Action |
+|---|---|
+| CompletionGate fails (open sub-tasks) | `saveCheckpoint` with current `actionOutput` |
+| GoalJudge returns `requeue` | `saveCheckpoint` with current `agentOutput` |
+| GoalJudge returns `accept` | `clearCheckpoint` |
+| GoalJudge returns `abandon` | `clearCheckpoint` |
+
+Checkpoints are **not** saved on transient execution failures — only on structured requeues where the agent produced meaningful partial output.
+
+### Integration Point
+
+Called from `execution-engine.ts` in both `processApprovedTaskInner` and `processDeveloperTaskInner`:
+
+```ts
+import { isCheckpointEnabled, loadCheckpoint, saveCheckpoint, clearCheckpoint, injectCheckpointIntoPayload } from './checkpoint.js';
+
+// Before execution — inject prior progress if checkpoint exists
+if (isCheckpointEnabled()) {
+    const ckpt = await loadCheckpoint(task.taskId).catch(() => null);
+    if (ckpt) {
+        payload = injectCheckpointIntoPayload(payload, ckpt);
+    }
+}
+
+// After GoalJudge requeue — save checkpoint
+if (isCheckpointEnabled()) {
+    await saveCheckpoint({ taskId: task.taskId, stepIndex: judgeResult.requeueCount, partialOutput: agentOutput, ... }).catch(() => {});
+}
+
+// After GoalJudge accept — clear checkpoint
+if (isCheckpointEnabled()) {
+    clearCheckpoint(task.taskId).catch(() => {});
+}
+```
+
+---
+
+## Combined Flow
+
+When all seven are enabled, the full quality pipeline for a completed task is:
+
+```
+loadCheckpoint(taskId)       ← inject prior progress if requeued before (Structured Checkpoints)
+        ↓
 Max Mode: run N parallel candidates, pick highest-scoring
         ↓
 executeTaskWithRetries → status: 'success'  (winning candidate)
         ↓
 CompletionGate.check()       ← DB truth validation
-  (re-queue if open children)
+  (re-queue if open children → saveCheckpoint)
         ↓
 GoalJudge.evaluate()         ← independent LLM verification
-  (re-queue if not satisfied)
+  (requeue → saveCheckpoint | abandon → clearCheckpoint | accept → clearCheckpoint)
         ↓
 distillLesson()              ← fire-and-forget lesson extraction (Dream/Distill)
         ↓
@@ -417,6 +526,7 @@ Each module has its own test file:
 - `apps/agent-runtime/src/microcompact.test.ts`
 - `apps/agent-runtime/src/dream-distill.test.ts`
 - `apps/agent-runtime/src/max-mode.test.ts`
+- `apps/agent-runtime/src/checkpoint.test.ts`
 - `apps/agent-runtime/src/agents/shared/rag-context-limiter.test.ts`
 
 Run with:
@@ -426,5 +536,6 @@ pnpm --filter @agentfarm/agent-runtime test src/completion-gate.test.ts
 pnpm --filter @agentfarm/agent-runtime test src/microcompact.test.ts
 pnpm --filter @agentfarm/agent-runtime test src/dream-distill.test.ts
 pnpm --filter @agentfarm/agent-runtime test src/max-mode.test.ts
+pnpm --filter @agentfarm/agent-runtime test src/checkpoint.test.ts
 pnpm --filter @agentfarm/agent-runtime test src/agents/shared/rag-context-limiter.test.ts
 ```
