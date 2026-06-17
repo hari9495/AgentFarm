@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
+import { mirrorAuditEventToAxiom } from './axiom-audit-mirror.js';
 
 export type PrismaLike = Pick<PrismaClient, 'auditEvent'>;
 
@@ -33,6 +34,20 @@ export async function writeAuditEvent(params: {
                 sourceSystem: 'api-gateway',
                 correlationId,
             },
+        });
+
+        // Axiom mirror — best-effort, only fires when AXIOM_TOKEN is configured.
+        // Tenant-tagged so audit logs are filterable per customer in Axiom.
+        await mirrorAuditEventToAxiom({
+            tenantId: params.tenantId,
+            workspaceId: params.workspaceId,
+            botId: params.botId,
+            userId: params.userId,
+            eventType: params.eventType,
+            severity,
+            summary: params.summary,
+            sourceSystem: 'api-gateway',
+            correlationId,
         });
 
         // Azure Blob upload — only fires when connection string is configured
