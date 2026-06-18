@@ -132,6 +132,10 @@
       # the runtime's POST /v1/approvals/intake gets 401 and high-risk actions
       # never reach the approval inbox (human-approval feature silently breaks).
       AGENTFARM_APPROVAL_INTAKE_SHARED_TOKEN: ${APPROVAL_INTAKE_SHARED_TOKEN:-dev-approval-token}
+      # Decision webhook token — gateway sends this when notifying the runtime
+      # of an approval decision. Must match the runtime's token (which falls back
+      # to APPROVAL_INTAKE_SHARED_TOKEN when RUNTIME_DECISION_SHARED_TOKEN is unset).
+      RUNTIME_DECISION_SHARED_TOKEN: ${APPROVAL_INTAKE_SHARED_TOKEN:-dev-approval-token}
       # Persist env:// connector secrets across restarts (no Key Vault required in dev)
       CONNECTOR_SECRETS_PATH: /data/connector-secrets.json
       # Agent runtime — portal task submission proxies to this service.
@@ -255,6 +259,7 @@
       AF_OPENAI_API_KEY: ${AF_OPENAI_API_KEY:-}
       AF_OPENAI_BASE_URL: ${AF_OPENAI_BASE_URL:-https://api.openai.com/v1}
       AF_OPENAI_MODEL: ${AF_OPENAI_MODEL:-gpt-4o}
+      AF_LLM_TIMEOUT_MS: ${AF_LLM_TIMEOUT_MS:-30000}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       REDIS_URL: redis://redis:6379
       # Headroom context compression — enabled by default, telemetry off.
