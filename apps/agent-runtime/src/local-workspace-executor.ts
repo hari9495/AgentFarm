@@ -9598,10 +9598,22 @@ export async function executeLocalWorkspaceAction(input: {
                 }
             }
 
+            // Seed workspace with a minimal project scaffold when empty so the
+            // executor has files to read/edit even without a git clone or VM mount.
+            await mkdir(workspaceDir, { recursive: true });
+            try {
+                const wsEntries = await readdir(workspaceDir);
+                if (wsEntries.length === 0) {
+                    await mkdir(join(workspaceDir, 'src'), { recursive: true });
+                    await writeFile(join(workspaceDir, 'package.json'), JSON.stringify({ name: 'workspace', version: '1.0.0', type: 'module', scripts: { build: 'echo build ok', test: 'echo test ok', start: 'node src/main.js' } }, null, 2));
+                    await writeFile(join(workspaceDir, 'src', 'main.ts'), 'export function main() {\n  console.log("Hello from AgentFarm workspace");\n}\n\nmain();\n');
+                    await writeFile(join(workspaceDir, 'tsconfig.json'), JSON.stringify({ compilerOptions: { target: 'ES2022', module: 'NodeNext', moduleResolution: 'NodeNext', strict: true, outDir: 'dist' }, include: ['src'] }, null, 2));
+                }
+            } catch { /* best-effort scaffold */ }
+
             // Build a workspace scout to understand current state
             let scoutSummary = '';
             try {
-                await mkdir(workspaceDir, { recursive: true });
                 const entries: string[] = [];
                 const walk = async (dir: string, depth = 0): Promise<void> => {
                     if (depth > 3) return;
