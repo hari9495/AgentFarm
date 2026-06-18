@@ -723,6 +723,18 @@ async function processDeveloperTaskInner(
 
                         llmExecution = { classificationSource: 'llm', ...llmResult.metadata };
 
+                        // Post-LLM safety net: small models sometimes classify destructive
+                        // actions as low risk. If the action or prompt contains high-impact
+                        // keywords, bump low → medium so it routes to the approval queue.
+                        if (decision.riskLevel === 'low') {
+                            const probe = `${decision.actionType} ${decision.reason} ${taskWithAuditContext.payload['description'] ?? ''} ${taskWithAuditContext.payload['prompt'] ?? ''}`.toLowerCase();
+                            const highImpactPattern = /\b(deploy|provision|delete|destroy|drop|remove.*(prod|server|database|infra)|production|migrate|rollback|shutdown|terminate|kill)\b/;
+                            if (highImpactPattern.test(probe)) {
+                                decision = { ...decision, riskLevel: 'medium', route: 'approval', reason: `${decision.reason} [safety-net: high-impact keywords detected, bumped to medium]` };
+                                llmExecution = { ...llmExecution, fallbackReason: 'safety_net_risk_bump' };
+                            }
+                        }
+
                         // Cache low-risk results only — medium/high go to approval and must not be cached
                         if (redis && llmResult.decision.riskLevel === 'low') {
                             const entry: CachedClassificationEntry = {
