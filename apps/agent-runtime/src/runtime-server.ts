@@ -163,6 +163,7 @@ import { scoreActionConfidence } from './confidence-scorer.js';
 import {
     startDesktopAgentWatchdog,
 } from './desktop-agent-watchdog.js';
+import { getRoleProfile } from './role-profiles/index.js';
 
 type RuntimeMemoryStore = {
     readMemoryForTask: (workspaceId: string, maxResults?: number) => Promise<{
@@ -4240,7 +4241,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                             actionId,
                             actionSummary,
                             riskLevel: result.decision.riskLevel,
-                            requestedBy: `runtime:${config.botId}`,
+                            requestedBy: `${getRoleProfile(config.roleKey)?.displayName ?? config.roleKey} Agent`,
                             policyPackVersion: config.policyPackVersion,
                             llmProvider: result.llmExecution?.modelProvider,
                             llmModel: result.llmExecution?.model ?? undefined,
