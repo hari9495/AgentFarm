@@ -140,9 +140,12 @@ export function clamp01(value: number): number {
     return Number(value.toFixed(2));
 }
 
-/** Extracts a normalised action type string from an arbitrary task payload. */
+/** Extracts a normalised action type string from an arbitrary task payload.
+ *  Accepts both snake_case action_type (original tasks) and camelCase actionType
+ *  (LLM-enriched executionPayloads stored in the approval queue). */
 export function normalizeActionType(payload: Record<string, unknown>): string {
-    const fromActionType = payload['action_type'];
+    // Support both snake_case (original intake) and camelCase (LLM execution payload)
+    const fromActionType = payload['action_type'] ?? payload['actionType'];
     if (typeof fromActionType === 'string' && fromActionType.trim()) {
         return fromActionType.trim().toLowerCase();
     }

@@ -59,7 +59,9 @@ import {
     getWorkspaceDir,
     LOCAL_WORKSPACE_ACTION_TYPES,
     type LocalWorkspaceActionType,
+    type LlmCodeGenFn,
 } from './local-workspace-executor.js';
+import { createCodeGenFnFromConfig } from './infrastructure/llm-provider-factory.js';
 import { AdvancedRuntimeFeatures } from './advanced-runtime-features.js';
 import { recordTaskIntelligence } from './task-intelligence-memory.js';
 import { postTaskCloseOut } from './post-task-closeout.js';
@@ -1956,6 +1958,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
     const workspaceSessionFetcher = options.workspaceSessionFetcher ?? defaultWorkspaceSessionFetcher;
     let llmDecisionResolver = options.llmDecisionResolver ?? createLlmDecisionResolver(env);
     let activeModelProvider = env.AF_MODEL_PROVIDER ?? env.AGENTFARM_MODEL_PROVIDER ?? 'agentfarm';
+    let activeCodeGenFn: LlmCodeGenFn | undefined;
+    let activePlannerFn: LlmCodeGenFn | undefined;
     const sleep = options.sleep ?? defaultSleep;
     const exitProcess = options.exitProcess ?? ((code: number) => process.exit(code));
     const actionResultLogPath = resolveActionResultPath(env);
@@ -3332,9 +3336,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             modelProvider: activeModelProvider,
             modelProfile: resolveDefaultModelProfile(capabilitySnapshotCache),
             progressSink,
-            // llmCodeGenFn is intentionally omitted: processApprovedTask auto-builds one
-            // from AF_MODEL_PROVIDER env vars, ensuring workspace_subagent_spawn tasks
-            // approved by humans still use real LLM code generation.
+            llmCodeGenFn: activeCodeGenFn,
+            llmPlannerFn: activePlannerFn,
         });
     };
 
@@ -5661,6 +5664,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             });
             if (workspaceLlmConfig) {
                 activeModelProvider = workspaceLlmConfig.provider;
+                activeCodeGenFn = createCodeGenFnFromConfig(workspaceLlmConfig, 'cost_balanced');
+                activePlannerFn = createCodeGenFnFromConfig(workspaceLlmConfig, 'quality_first');
                 llmDecisionResolver =
                     options.llmDecisionResolver
                     ?? createLlmDecisionResolverFromConfig(workspaceLlmConfig)

@@ -14,6 +14,7 @@
  */
 
 import type { LlmCodeGenFn, AutonomousStep } from '../local-workspace-executor.js';
+import type { RuntimeLlmWorkspaceConfig } from '../llm-decision-adapter.js';
 import { traceGeneration } from '@agentfarm/llm-trace';
 
 // ---------------------------------------------------------------------------
@@ -405,4 +406,98 @@ export const createCodeGenFn = (
     }
 
     return buildOpenAICompatibleCodeGenFn(config.apiKey, config.baseUrl, config.model, config.isAzure);
+};
+
+// Built-in profile→model defaults, mirroring llm-decision-adapter.ts
+const WORKSPACE_ANTHROPIC_MODELS: Record<LlmCodeGenProfile, string> = {
+    quality_first: 'claude-opus-4-7',
+    cost_balanced: 'claude-sonnet-4-6',
+    speed_first:   'claude-haiku-4-5',
+};
+const WORKSPACE_OPENAI_MODELS: Record<LlmCodeGenProfile, string> = {
+    quality_first: 'gpt-4o',
+    cost_balanced: 'gpt-4o',
+    speed_first:   'gpt-4o-mini',
+};
+
+/**
+ * Creates a code-generation function from a workspace-level LLM config
+ * (stored in the database, loaded at task execution time).
+ *
+ * Use this when the per-workspace API key / model config should be used for
+ * code generation rather than the process-level env vars.  Falls back to
+ * `undefined` (keyword-based planning) for providers that cannot run code gen
+ * (agentfarm, mock, auto) or when required credentials are missing.
+ */
+export const createCodeGenFnFromConfig = (
+    wsConfig: RuntimeLlmWorkspaceConfig,
+    profile: LlmCodeGenProfile = 'cost_balanced',
+): LlmCodeGenFn | undefined => {
+    const provider = wsConfig.provider;
+
+    if (provider === 'anthropic') {
+        const apiKey = wsConfig.anthropic?.api_key ?? '';
+        if (!apiKey.trim()) return undefined;
+        const model =
+            wsConfig.anthropic?.model_profiles?.[profile] ??
+            wsConfig.anthropic?.model ??
+            WORKSPACE_ANTHROPIC_MODELS[profile];
+        return buildAnthropicCodeGenFn(apiKey, model);
+    }
+
+    if (provider === 'openai') {
+        const apiKey = wsConfig.openai?.api_key ?? '';
+        if (!apiKey.trim()) return undefined;
+        const baseUrl = (wsConfig.openai?.base_url ?? 'https://api.openai.com/v1').replace(/\/+$/, '');
+        const model =
+            wsConfig.openai?.model_profiles?.[profile] ??
+            wsConfig.openai?.model ??
+            WORKSPACE_OPENAI_MODELS[profile];
+        return buildOpenAICompatibleCodeGenFn(apiKey, baseUrl, model, false);
+    }
+
+    if (provider === 'azure_openai') {
+        const apiKey = wsConfig.azure_openai?.api_key ?? '';
+        const endpoint = (wsConfig.azure_openai?.endpoint ?? '').replace(/\/+$/, '');
+        const deployment =
+            wsConfig.azure_openai?.deployment_profiles?.[profile] ??
+            wsConfig.azure_openai?.deployment ??
+            '';
+        const apiVersion = wsConfig.azure_openai?.api_version ?? '2024-06-01';
+        if (!apiKey.trim() || !endpoint || !deployment) return undefined;
+        const baseUrl = `${endpoint}/openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`;
+        return buildOpenAICompatibleCodeGenFn(apiKey, baseUrl, deployment, true);
+    }
+
+    if (provider === 'github_models') {
+        const apiKey = wsConfig.github_models?.api_key ?? '';
+        if (!apiKey.trim()) return undefined;
+        const baseUrl = (wsConfig.github_models?.base_url ?? 'https://models.inference.ai.azure.com').replace(/\/+$/, '');
+        const model =
+            wsConfig.github_models?.model_profiles?.[profile] ??
+            wsConfig.github_models?.model ??
+            WORKSPACE_OPENAI_MODELS[profile];
+        return buildOpenAICompatibleCodeGenFn(apiKey, baseUrl, model, false);
+    }
+
+    // OpenAI-compatible providers: google, xai, mistral, together, deepseek
+    const OPENAI_COMPAT: Partial<Record<typeof provider, { configKey: keyof RuntimeLlmWorkspaceConfig; defaultBase: string; defaultModel: string }>> = {
+        google:   { configKey: 'google',   defaultBase: 'https://generativelanguage.googleapis.com/v1beta', defaultModel: 'gemini-1.5-flash' },
+        xai:      { configKey: 'xai',      defaultBase: 'https://api.x.ai/v1',                             defaultModel: 'grok-beta' },
+        mistral:  { configKey: 'mistral',  defaultBase: 'https://api.mistral.ai/v1',                       defaultModel: 'mistral-small-latest' },
+        together: { configKey: 'together', defaultBase: 'https://api.together.xyz/v1',                     defaultModel: 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo' },
+        deepseek: { configKey: 'deepseek', defaultBase: 'https://api.deepseek.com',                        defaultModel: 'deepseek-chat' },
+    };
+    const compat = OPENAI_COMPAT[provider];
+    if (compat) {
+        const provCfg = wsConfig[compat.configKey] as { api_key?: string; base_url?: string; model?: string; model_profiles?: Record<string, string> } | undefined;
+        const apiKey = provCfg?.api_key ?? '';
+        if (!apiKey.trim()) return undefined;
+        const baseUrl = (provCfg?.base_url ?? compat.defaultBase).replace(/\/+$/, '');
+        const model = provCfg?.model_profiles?.[profile] ?? provCfg?.model ?? compat.defaultModel;
+        return buildOpenAICompatibleCodeGenFn(apiKey, baseUrl, model, false);
+    }
+
+    // agentfarm, mock, auto — no direct code gen capability
+    return undefined;
 };
