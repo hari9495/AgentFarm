@@ -35,12 +35,16 @@ import {
 function buildPromptForTask(task: TaskEnvelope, language: string): string {
     const persona = task.payload['_persona'] as AgentPersonaRecord | undefined;
     const roleKey = typeof task.payload['roleKey'] === 'string' ? task.payload['roleKey'] : '';
-    return buildSystemPrompt({
+    const rolePrompt = buildSystemPrompt({
         basePrompt: getRoleSystemPrompt(roleKey, process.env['GITHUB_REPO'] ?? undefined),
         language,
         persona,
         isExternalFacing: false,
     });
+    // Third-party models (Llama, NVIDIA, etc.) ignore JSON instructions in the user message
+    // without an explicit system-level constraint. Prepend a hard JSON-only directive so all
+    // providers output parseable JSON regardless of whether response_format is supported.
+    return 'CRITICAL: Respond ONLY with a raw JSON object — no prose, no markdown, no explanation. The first character of your response must be { and the last must be }.\n\n' + rolePrompt;
 }
 
 type DecisionRoute = 'execute' | 'approval';
@@ -1639,6 +1643,7 @@ const createOpenAiResolver = (input: {
             { role: 'user', content: createTaskPrompt(task, heuristicDecision) },
         ];
         const { messages: compressedMessages } = await compressOpenAiMessages(rawMessages, selectedModel);
+        const isNativeOpenAi = input.baseUrl.includes('api.openai.com');
         const response = await fetch(`${input.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
             method: 'POST',
             headers: {
@@ -1648,8 +1653,8 @@ const createOpenAiResolver = (input: {
             body: JSON.stringify({
                 model: selectedModel,
                 temperature: 0,
-                max_tokens: 256,
-                response_format: { type: 'json_object' },
+                max_tokens: 512,
+                ...(isNativeOpenAi ? { response_format: { type: 'json_object' } } : {}),
                 messages: compressedMessages,
             }),
             signal: AbortSignal.timeout(input.timeoutMs),
