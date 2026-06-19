@@ -3281,7 +3281,21 @@ async function executePlanAction(
 
     if (action.action === 'code_edit_patch') {
         const safePath = safeChildPath(workspaceDir, action.file_path);
-        const current = await readFile(safePath, 'utf-8');
+        // Tolerate a patch that targets a file that does not exist yet: treat it
+        // as a new-file creation seeded with new_text. Without this, the LLM
+        // patching a not-yet-created file throws ENOENT → runtime_exception and
+        // the whole task fails instead of the step degrading gracefully.
+        let current: string;
+        try {
+            current = await readFile(safePath, 'utf-8');
+        } catch (readErr) {
+            if ((readErr as NodeJS.ErrnoException)?.code === 'ENOENT') {
+                await mkdir(dirname(safePath), { recursive: true });
+                await writeFile(safePath, action.new_text ?? '', 'utf-8');
+                return { ok: true, output: `created:${action.file_path}` };
+            }
+            throw readErr;
+        }
         if (!action.old_text) {
             return {
                 ok: false,
