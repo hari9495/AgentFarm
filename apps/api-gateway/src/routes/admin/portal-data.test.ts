@@ -27,6 +27,11 @@ type TaskRecord = {
     estimatedCostUsd: number | null;
     createdAt: Date;
     modelProfile: string;
+    modelProvider: string;
+    promptTokens: number | null;
+    completionTokens: number | null;
+    totalTokens: number | null;
+    modelTier: string | null;
 };
 
 type TaskRawRecord = {
