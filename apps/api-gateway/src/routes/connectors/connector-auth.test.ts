@@ -184,6 +184,10 @@ const createFakeActionRepo = (): ConnectorActionRepo & { seed: (input: ActionMet
         async findAuthMetadata(connectorId) {
             return (metadata.get(connectorId) ?? null) as never;
         },
+        async renameConnector({ connectorId, displayName }) {
+            const existing = metadata.get(connectorId);
+            if (existing) (existing as unknown as { displayName?: string }).displayName = displayName;
+        },
         async listAuthMetadata({ tenantId, workspaceId }) {
             const results: ActionMetadata[] = [];
             for (const m of metadata.values()) {

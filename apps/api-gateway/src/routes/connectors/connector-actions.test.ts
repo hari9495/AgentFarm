@@ -18,6 +18,7 @@ type Metadata = {
     tenantId: string;
     workspaceId: string;
     connectorType: string;
+    displayName?: string | null;
     status: string;
     secretRefId: string | null;
     scopeStatus: 'full' | 'partial' | 'insufficient' | null;
@@ -74,6 +75,7 @@ const createFakeRepo = (): ConnectorActionRepo & {
                     tenantId: input.tenantId,
                     workspaceId: input.workspaceId,
                     connectorType: input.connectorType,
+                    displayName: input.displayName ?? null,
                     status: input.status,
                     secretRefId: null,
                     scopeStatus: null,
@@ -83,6 +85,11 @@ const createFakeRepo = (): ConnectorActionRepo & {
                 return record;
             }
             return existing;
+        },
+
+        async renameConnector(input) {
+            const existing = metadata.get(input.connectorId);
+            if (existing) existing.displayName = input.displayName;
         },
 
         async listAuthMetadata(input) {
@@ -902,7 +909,34 @@ test('PUT credentials returns 400 when credentials body is missing', async () =>
     }
 });
 
-test('PUT credentials returns 404 when connector does not exist', async () => {
+test('PUT credentials with malformed connectorId returns 404', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    const store = createInMemorySecretStore({});
+
+    await registerConnectorActionRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+        secretStore: store,
+    });
+
+    try {
+        // Two-segment id can't be auto-registered (needs type:tenant:workspace).
+        const response = await app.inject({
+            method: 'PUT',
+            url: '/v1/connectors/jira:tenant_1/credentials',
+            payload: { credentials: { access_token: 'tok', base_url: 'https://acme.atlassian.net' } },
+        });
+
+        assert.equal(response.statusCode, 404);
+        const body = response.json() as { error: string };
+        assert.equal(body.error, 'connector_not_found');
+    } finally {
+        await app.close();
+    }
+});
+
+test('PUT credentials to a workspace outside session scope returns 403', async () => {
     const app = Fastify();
     const repo = createFakeRepo();
     const store = createInMemorySecretStore({});
@@ -920,9 +954,45 @@ test('PUT credentials returns 404 when connector does not exist', async () => {
             payload: { credentials: { access_token: 'tok', base_url: 'https://acme.atlassian.net' } },
         });
 
-        assert.equal(response.statusCode, 404);
+        assert.equal(response.statusCode, 403);
         const body = response.json() as { error: string };
-        assert.equal(body.error, 'connector_not_found');
+        assert.equal(body.error, 'workspace_scope_violation');
+    } finally {
+        await app.close();
+    }
+});
+
+test('PATCH connector renames its display name', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    const store = createInMemorySecretStore({});
+    repo.metadata.set('custom_api:tenant_1:ws_1:acme-123', {
+        connectorId: 'custom_api:tenant_1:ws_1:acme-123',
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        connectorType: 'custom_api',
+        displayName: 'Old Name',
+        status: 'connected',
+        secretRefId: 'ref',
+        scopeStatus: null,
+        lastErrorClass: null,
+    });
+
+    await registerConnectorActionRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+        secretStore: store,
+    });
+
+    try {
+        const response = await app.inject({
+            method: 'PATCH',
+            url: '/v1/connectors/custom_api:tenant_1:ws_1:acme-123',
+            payload: { display_name: 'New Name' },
+        });
+
+        assert.equal(response.statusCode, 200);
+        assert.equal(repo.metadata.get('custom_api:tenant_1:ws_1:acme-123')?.displayName, 'New Name');
     } finally {
         await app.close();
     }

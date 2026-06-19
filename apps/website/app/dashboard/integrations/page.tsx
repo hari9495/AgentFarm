@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Link2, Plus, RefreshCw, Trash2, Zap, Settings2, ChevronRight } from "lucide-react";
+import { Link2, Plus, RefreshCw, Trash2, Zap, Settings2, ChevronRight, Pencil, Check, X } from "lucide-react";
 import type { Metadata } from "next";
 import PremiumIcon from "@/components/shared/PremiumIcon";
 
@@ -516,13 +516,30 @@ function ConnectorRow({
     connector,
     onRemove,
     onHealthCheck,
+    onRename,
 }: {
     connector: ConfiguredConnector;
     onRemove: () => void;
     onHealthCheck: () => Promise<HealthCheckResult>;
+    onRename: (newName: string) => Promise<void>;
 }) {
     const [checking, setChecking] = useState(true);
     const [healthResult, setHealthResult] = useState<HealthCheckResult | null>(null);
+    const [editing, setEditing] = useState(false);
+    const [nameInput, setNameInput] = useState(connector.displayName);
+    const [savingName, setSavingName] = useState(false);
+
+    async function saveName() {
+        const trimmed = nameInput.trim();
+        if (!trimmed || trimmed === connector.displayName) { setEditing(false); setNameInput(connector.displayName); return; }
+        setSavingName(true);
+        try {
+            await onRename(trimmed);
+            setEditing(false);
+        } finally {
+            setSavingName(false);
+        }
+    }
 
     useEffect(() => {
         let cancelled = false;
@@ -562,7 +579,27 @@ function ConnectorRow({
             </div>
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate">{connector.displayName}</p>
+                    {editing ? (
+                        <span className="flex items-center gap-1">
+                            <input
+                                type="text"
+                                value={nameInput}
+                                onChange={(e) => setNameInput(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === "Enter") void saveName(); if (e.key === "Escape") { setEditing(false); setNameInput(connector.displayName); } }}
+                                autoFocus
+                                maxLength={100}
+                                disabled={savingName}
+                                className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md px-2 py-0.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-50"
+                            />
+                            <button onClick={() => void saveName()} disabled={savingName} aria-label="Save name" className="text-emerald-600 hover:text-emerald-700 disabled:opacity-50"><Check className="w-4 h-4" /></button>
+                            <button onClick={() => { setEditing(false); setNameInput(connector.displayName); }} disabled={savingName} aria-label="Cancel rename" className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
+                        </span>
+                    ) : (
+                        <>
+                            <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate">{connector.displayName}</p>
+                            <button onClick={() => { setNameInput(connector.displayName); setEditing(true); }} aria-label="Rename connector" className="text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400"><Pencil className="w-3 h-3" /></button>
+                        </>
+                    )}
                     {badge}
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 capitalize">
@@ -728,6 +765,16 @@ export default function DashboardIntegrationsPage() {
         else showToast("Failed to remove connector.", "error");
     }
 
+    async function handleRename(connectorId: string, displayName: string) {
+        const res = await fetch(`/api/connectors/${connectorId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ displayName }),
+        });
+        if (res.ok) { showToast(`Renamed to "${displayName}".`); await loadConnectors(); }
+        else { showToast("Failed to rename connector.", "error"); }
+    }
+
     async function handleHealthCheck(connectorId: string): Promise<HealthCheckResult> {
         const params = new URLSearchParams();
         if (selectedWorkspaceId) params.set("workspaceId", selectedWorkspaceId);
@@ -881,6 +928,7 @@ export default function DashboardIntegrationsPage() {
                                     connector={c}
                                     onRemove={() => void handleRemove(c.connectorId, c.displayName)}
                                     onHealthCheck={() => handleHealthCheck(c.connectorId)}
+                                    onRename={(newName) => handleRename(c.connectorId, newName)}
                                 />
                             ))}
                         </div>

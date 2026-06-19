@@ -42,6 +42,7 @@ type ConnectorAuthMetadata = {
     tenantId: string;
     workspaceId: string;
     connectorType: string;
+    displayName?: string | null;
     status: string;
     secretRefId: string | null;
     scopeStatus: 'full' | 'partial' | 'insufficient' | null;
@@ -87,7 +88,12 @@ type ConnectorActionRepo = {
         connectorType: ConnectorType;
         status: string;
         authMode: string;
+        displayName?: string | null;
     }): Promise<ConnectorAuthMetadata>;
+    renameConnector(input: {
+        connectorId: string;
+        displayName: string;
+    }): Promise<void>;
     listAuthMetadata(input: {
         tenantId: string;
         workspaceId: string;
@@ -103,6 +109,7 @@ type ConnectorActionRepo = {
         secretRefId?: string | null;
         scopeStatus?: 'full' | 'partial' | 'insufficient' | null;
         lastHealthcheckAt?: Date | null;
+        displayName?: string | null;
         lastErrorClass?:
         | 'oauth_state_mismatch'
         | 'oauth_code_exchange_failed'
@@ -308,6 +315,7 @@ const defaultRepo: ConnectorActionRepo = {
                 tenantId: true,
                 workspaceId: true,
                 connectorType: true,
+                displayName: true,
                 status: true,
                 secretRefId: true,
                 scopeStatus: true,
@@ -324,20 +332,29 @@ const defaultRepo: ConnectorActionRepo = {
                 tenantId: input.tenantId,
                 workspaceId: input.workspaceId,
                 connectorType: input.connectorType,
+                displayName: input.displayName ?? null,
                 status: input.status as never,
                 authMode: input.authMode,
             },
-            update: {},
+            update: input.displayName ? { displayName: input.displayName } : {},
             select: {
                 connectorId: true,
                 tenantId: true,
                 workspaceId: true,
                 connectorType: true,
+                displayName: true,
                 status: true,
                 secretRefId: true,
                 scopeStatus: true,
                 lastErrorClass: true,
             },
+        });
+    },
+    async renameConnector(input) {
+        const prisma = await getPrisma();
+        await prisma.connectorAuthMetadata.update({
+            where: { connectorId: input.connectorId },
+            data: { displayName: input.displayName },
         });
     },
     async listAuthMetadata(input) {
@@ -353,6 +370,7 @@ const defaultRepo: ConnectorActionRepo = {
                 tenantId: true,
                 workspaceId: true,
                 connectorType: true,
+                displayName: true,
                 status: true,
                 secretRefId: true,
                 scopeStatus: true,
@@ -370,6 +388,7 @@ const defaultRepo: ConnectorActionRepo = {
                 tenantId: input.tenantId,
                 workspaceId: input.workspaceId,
                 connectorType: input.connectorType,
+                displayName: input.displayName ?? null,
                 authMode: input.authMode,
                 status: input.status as never,
                 grantedScopes: [],
@@ -384,6 +403,7 @@ const defaultRepo: ConnectorActionRepo = {
                 scopeStatus: input.scopeStatus as never,
                 lastHealthcheckAt: input.lastHealthcheckAt,
                 lastErrorClass: input.lastErrorClass as never,
+                ...(input.displayName ? { displayName: input.displayName } : {}),
             },
         });
     },
@@ -1173,6 +1193,7 @@ export const registerConnectorActionRoutes = async (
             connectors: connectors.map((c) => ({
                 connector_id: c.connectorId,
                 connector_type: c.connectorType,
+                display_name: c.displayName ?? null,
                 is_connected: c.status === 'connected',
                 status: c.status,
                 remediation: remediationFor(c.status, c.lastErrorClass ?? null),
@@ -1200,6 +1221,8 @@ export const registerConnectorActionRoutes = async (
          * connector to a different Key Vault secret.
          */
         secret_ref_id?: string;
+        /** Optional human-friendly name shown in the dashboard. */
+        display_name?: string;
     };
 
     const CREDENTIAL_VALIDATORS: Record<
@@ -1293,13 +1316,16 @@ export const registerConnectorActionRoutes = async (
             }
 
             const connectorId = request.params.connectorId;
+            const displayName = request.body?.display_name?.trim() || undefined;
             let metadata = await repo.findAuthMetadata(connectorId);
 
             // Auto-register non-OAuth connectors on first credential write.
-            // connectorId format: {type}:{tenantId}:{workspaceId}
+            // connectorId format: {type}:{tenantId}:{workspaceId} for built-in
+            // providers, or {type}:{tenantId}:{workspaceId}:{slug} for custom
+            // connectors (the slug makes multiple custom_api connectors unique).
             if (!metadata) {
                 const parts = connectorId.split(':');
-                if (parts.length !== 3) {
+                if (parts.length < 3 || parts.length > 4) {
                     return reply.code(404).send({
                         error: 'connector_not_found',
                         message: `No connector found with id ${connectorId}.`,
@@ -1310,6 +1336,13 @@ export const registerConnectorActionRoutes = async (
                     return reply.code(403).send({
                         error: 'forbidden',
                         message: 'Connector tenant does not match your session.',
+                    });
+                }
+                // Never auto-create a connector in a workspace outside the caller's scope.
+                if (!session.workspaceIds.includes(rawWorkspaceId)) {
+                    return reply.code(403).send({
+                        error: 'workspace_scope_violation',
+                        message: 'Connector workspace is not in your session scope.',
                     });
                 }
                 const inferredType = normalizeConnectorType(rawType);
@@ -1324,9 +1357,13 @@ export const registerConnectorActionRoutes = async (
                     tenantId: session.tenantId,
                     workspaceId: rawWorkspaceId,
                     connectorType: inferredType,
+                    displayName,
                     status: 'not_configured',
                     authMode: 'api_key',
                 });
+            } else if (displayName && metadata.displayName !== displayName) {
+                // Connector already exists — keep its name in sync with the form.
+                await repo.renameConnector({ connectorId, displayName });
             }
 
             if (metadata.tenantId !== session.tenantId) {
@@ -1426,6 +1463,47 @@ export const registerConnectorActionRoutes = async (
 
     type ActionLogParams = { connectorId: string };
     type ActionLogQuery = { limit?: string; cursor?: string };
+
+    // -------------------------------------------------------------------------
+    // PATCH /v1/connectors/:connectorId
+    // Rename a connector (update its display name) without touching credentials.
+    // Tenant- and workspace-scoped.
+    // -------------------------------------------------------------------------
+    type RenameParams = { connectorId: string };
+    type RenameBody = { display_name?: string };
+
+    app.patch<{ Params: RenameParams; Body: RenameBody }>(
+        '/v1/connectors/:connectorId',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'unauthorized', message: 'Authentication required.' });
+            }
+
+            const displayName = request.body?.display_name?.trim();
+            if (!displayName) {
+                return reply.code(400).send({ error: 'invalid_display_name', message: 'display_name is required.' });
+            }
+            if (displayName.length > 100) {
+                return reply.code(400).send({ error: 'invalid_display_name', message: 'display_name must be 100 characters or fewer.' });
+            }
+
+            const { connectorId } = request.params;
+            const metadata = await repo.findAuthMetadata(connectorId);
+            if (!metadata) {
+                return reply.code(404).send({ error: 'connector_not_found', message: `No connector found with id ${connectorId}.` });
+            }
+            if (metadata.tenantId !== session.tenantId) {
+                return reply.code(403).send({ error: 'forbidden', message: 'Connector does not belong to your tenant.' });
+            }
+            if (!session.workspaceIds.includes(metadata.workspaceId)) {
+                return reply.code(403).send({ error: 'workspace_scope_violation', message: 'Connector workspace is not in your session scope.' });
+            }
+
+            await repo.renameConnector({ connectorId, displayName });
+            return reply.code(200).send({ connector_id: connectorId, display_name: displayName });
+        },
+    );
 
     // -------------------------------------------------------------------------
     // DELETE /v1/connectors/:connectorId

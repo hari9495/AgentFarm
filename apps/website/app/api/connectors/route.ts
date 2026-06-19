@@ -106,6 +106,34 @@ function getPortalSessionToken(request: Request): string | null {
     return match ? decodeURIComponent(match.slice("portal_session=".length)) : null;
 }
 
+// Custom connectors (all map to the custom_api gateway type) need a unique
+// connectorId so a workspace can hold several of them. Built-in providers keep
+// the stable {type}:{tenant}:{workspace} id (one per workspace). For custom
+// types we append a slug derived from the display name plus a short random
+// suffix to guarantee uniqueness.
+const CUSTOM_CONNECTOR_TYPES = new Set(["custom_api"]);
+
+function slugify(input: string): string {
+    return input
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 32);
+}
+
+function buildConnectorId(
+    connectorType: string,
+    tenantId: string,
+    workspaceId: string,
+    displayName: string | undefined,
+): string {
+    const base = `${connectorType}:${tenantId}:${workspaceId}`;
+    if (!CUSTOM_CONNECTOR_TYPES.has(connectorType)) return base;
+    const slug = slugify(displayName ?? "") || "custom";
+    const rand = Math.random().toString(16).slice(2, 8);
+    return `${base}:${slug}-${rand}`;
+}
+
 // ── GET /api/connectors ────────────────────────────────────────────────────
 export async function GET(request: Request) {
     const user = await getPortalUserFromRequest(request);
@@ -155,11 +183,13 @@ export async function GET(request: Request) {
             connectors?: Array<{
                 connector_id: string;
                 connector_type: string;
+                display_name?: string | null;
                 is_connected: boolean;
                 status: string;
                 last_healthcheck_at: string | null;
             }>;
         };
+        const typeLabel = (t: string) => t.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
         const configured = (gw.connectors ?? [])
             // A removed (revoked) connector is soft-deleted at the gateway — it
             // stays in the table for audit but must not appear in Connected Tools.
@@ -168,7 +198,9 @@ export async function GET(request: Request) {
                 connectorId: c.connector_id,
                 tool: CONNECTOR_TYPE_TO_TOOL[c.connector_type] ?? c.connector_type,
                 category: "task_tracker",
-                displayName: c.connector_type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+                // Prefer the customer-chosen name; fall back to a type label so
+                // older connectors without a stored name still read sensibly.
+                displayName: c.display_name?.trim() || typeLabel(c.connector_type),
                 status: c.is_connected ? "connected" : "disconnected",
                 authMethod: "api_key",
                 lastHealthcheckAt: c.last_healthcheck_at ?? null,
@@ -290,15 +322,16 @@ export async function POST(request: Request) {
         }
     }
 
-    // Non-OAuth: build a stable connectorId and PUT credentials.
-    // Gateway auto-creates the metadata record if it doesn't exist yet.
-    const connectorId = `${connectorType}:${user.tenantId}:${workspaceId}`;
+    // Non-OAuth: build a connectorId and PUT credentials. Custom connectors get
+    // a unique id so multiple can coexist; the gateway auto-creates the record.
+    const displayName = body.displayName?.trim() || undefined;
+    const connectorId = buildConnectorId(connectorType, user.tenantId, workspaceId, displayName);
     const credentials = mapToGatewayCredentials(connectorType, body.configValues ?? {});
 
     try {
         const res = await gatewayFetch(
             `/v1/connectors/${encodeURIComponent(connectorId)}/credentials`,
-            { method: "PUT", body: JSON.stringify({ credentials }) },
+            { method: "PUT", body: JSON.stringify({ credentials, display_name: displayName }) },
             portalToken,
         );
         const data: unknown = await res.json();

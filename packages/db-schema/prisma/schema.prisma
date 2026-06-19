@@ -325,6 +325,7 @@ model ConnectorAuthMetadata {
   tenantId          String
   workspaceId       String
   connectorType     String
+  displayName       String?
   authMode          String
   status            ConnectorAuthStatus   @default(not_configured)
   grantedScopes     String[]
