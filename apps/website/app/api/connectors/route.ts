@@ -160,16 +160,20 @@ export async function GET(request: Request) {
                 last_healthcheck_at: string | null;
             }>;
         };
-        const configured = (gw.connectors ?? []).map((c) => ({
-            connectorId: c.connector_id,
-            tool: CONNECTOR_TYPE_TO_TOOL[c.connector_type] ?? c.connector_type,
-            category: "task_tracker",
-            displayName: c.connector_type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-            status: c.is_connected ? "connected" : "disconnected",
-            authMethod: "api_key",
-            lastHealthcheckAt: c.last_healthcheck_at ?? null,
-            lastErrorClass: null,
-        }));
+        const configured = (gw.connectors ?? [])
+            // A removed (revoked) connector is soft-deleted at the gateway — it
+            // stays in the table for audit but must not appear in Connected Tools.
+            .filter((c) => c.status !== "revoked" && c.status !== "not_configured")
+            .map((c) => ({
+                connectorId: c.connector_id,
+                tool: CONNECTOR_TYPE_TO_TOOL[c.connector_type] ?? c.connector_type,
+                category: "task_tracker",
+                displayName: c.connector_type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+                status: c.is_connected ? "connected" : "disconnected",
+                authMethod: "api_key",
+                lastHealthcheckAt: c.last_healthcheck_at ?? null,
+                lastErrorClass: null,
+            }));
         return NextResponse.json({
             configured,
             available: [],
