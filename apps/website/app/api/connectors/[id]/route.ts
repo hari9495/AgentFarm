@@ -38,7 +38,6 @@ export async function DELETE(
             {
                 method: "DELETE",
                 headers: {
-                    "Content-Type": "application/json",
                     Cookie: `portal_session=${encodeURIComponent(portalToken)}`,
                 },
             },
