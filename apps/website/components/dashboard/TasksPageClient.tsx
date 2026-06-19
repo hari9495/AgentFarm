@@ -118,11 +118,13 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
         void fetchTasks(selectedBotId);
     }, [selectedBotId, fetchTasks]);
 
-    // Auto-refresh every 10s if there are pending tasks
+    // Auto-refresh every 5s while any task is in a non-terminal state
     useEffect(() => {
-        const hasPending = tasks.some((t) => t.outcome === "pending" || t.outcome === "running");
-        if (!hasPending) return;
-        const id = setInterval(() => void fetchTasks(selectedBotId), 10_000);
+        const hasLive = tasks.some((t) =>
+            t.outcome === "pending" || t.outcome === "running" || t.outcome === "approval_queued"
+        );
+        if (!hasLive) return;
+        const id = setInterval(() => void fetchTasks(selectedBotId), 5_000);
         return () => clearInterval(id);
     }, [tasks, selectedBotId, fetchTasks]);
 
