@@ -306,7 +306,7 @@ type CapabilitySnapshotPersistenceClient = {
     }) => Promise<BotCapabilitySnapshotRecord>;
 };
 
-type TaskExecutionOutcome = 'success' | 'failed' | 'approval_queued' | 'cancelled';
+type TaskExecutionOutcome = 'success' | 'failed' | 'approval_queued' | 'cancelled' | 'rejected';
 
 type TaskExecutionRecordWriter = {
     write: (input: {
@@ -5182,7 +5182,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         }
 
         // Also write the DB TaskExecutionRecord so the customer portal Task
-        // History reflects the cancellation. Without this, the portal only sees
+        // History reflects the rejection. Without this, the portal only sees
         // the original approval_queued row and the task appears stuck pending
         // even after the operator rejected it. Mirror the identity-attribution
         // logic used on the success/failed path.
@@ -5204,7 +5204,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             modelTier: null,
             platformFeeUsd: 0,
             latencyMs: 0,
-            outcome: 'cancelled',
+            outcome: 'rejected',
             payloadOverrideSource: 'none',
             payloadOverridesApplied: false,
             executedAt: new Date(),
