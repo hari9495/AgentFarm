@@ -24,6 +24,17 @@ type TaskRecord = {
     modelProfile: string;
 };
 
+type ActionDetailRecord = {
+    id: string;
+    actionType: string;
+    riskLevel: string;
+    inputSummary: string;
+    outputSummary: string | null;
+    status: string;
+    createdAt: Date;
+    completedAt: Date | null;
+};
+
 type TaskRawRecord = {
     botId: string;
     outcome: string;
@@ -103,6 +114,7 @@ export type PortalDataRepo = {
     listBots(tenantId: string, limit: number): Promise<BotRecord[]>;
     findBot(botId: string, tenantId: string): Promise<BotRecord | null>;
     listTasksForBot(botId: string, tenantId: string, limit: number): Promise<TaskRecord[]>;
+    listActionsForTask(taskId: string, tenantId: string): Promise<ActionDetailRecord[]>;
 
     countTasks(tenantId: string): Promise<number>;
     sumTaskCost(tenantId: string): Promise<number>;
@@ -177,6 +189,23 @@ const buildPrismaRepo = (prisma: PrismaClient): PortalDataRepo => ({
             orderBy: { createdAt: 'desc' },
             take: limit,
         }) as unknown as TaskRecord[];
+    },
+
+    async listActionsForTask(taskId, tenantId) {
+        return prisma.actionRecord.findMany({
+            where: { correlationId: taskId, tenantId },
+            select: {
+                id: true,
+                actionType: true,
+                riskLevel: true,
+                inputSummary: true,
+                outputSummary: true,
+                status: true,
+                createdAt: true,
+                completedAt: true,
+            },
+            orderBy: { createdAt: 'asc' },
+        }) as unknown as ActionDetailRecord[];
     },
 
     async countTasks(tenantId) {
@@ -366,6 +395,25 @@ export const registerPortalDataRoutes = async (
 
             const tasks = await repo.listTasksForBot(botId, session.tenantId, limit);
             return reply.send({ tasks, total: tasks.length });
+        },
+    );
+
+    // ── GET /portal/data/agents/:botId/tasks/:taskId/actions ─────────────
+    app.get<{ Params: { botId: string; taskId: string } }>(
+        '/portal/data/agents/:botId/tasks/:taskId/actions',
+        async (request, reply) => {
+            const session = await checkSession(request, reply);
+            if (!session) return;
+
+            const { botId, taskId } = request.params;
+            const repo = await resolveRepo();
+            const bot = await repo.findBot(botId, session.tenantId);
+            if (!bot) {
+                return reply.code(404).send({ error: 'not_found' });
+            }
+
+            const actions = await repo.listActionsForTask(taskId, session.tenantId);
+            return reply.send({ actions });
         },
     );
 

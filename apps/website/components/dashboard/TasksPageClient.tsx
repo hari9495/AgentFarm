@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Play, RefreshCw, CheckCircle2, XCircle, Clock, Loader2, ChevronDown } from "lucide-react";
+import { Play, RefreshCw, CheckCircle2, XCircle, Clock, Loader2, ChevronDown, ChevronRight } from "lucide-react";
 
 interface Agent {
     id: string;
@@ -18,6 +18,17 @@ interface TaskRecord {
     estimatedCostUsd: number | null;
     createdAt: string;
     modelProfile: string;
+}
+
+interface ActionDetail {
+    id: string;
+    actionType: string;
+    riskLevel: string;
+    inputSummary: string;
+    outputSummary: string | null;
+    status: string;
+    createdAt: string;
+    completedAt: string | null;
 }
 
 const CONNECTOR_OPTIONS = [
@@ -81,10 +92,35 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
     const [submitting, setSubmitting] = useState(false);
     const [lastSubmitted, setLastSubmitted] = useState<string | null>(null);
     const [submitError, setSubmitError] = useState<string | null>(null);
+    const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+    const [taskActions, setTaskActions] = useState<Record<string, ActionDetail[]>>({});
+    const [loadingActions, setLoadingActions] = useState<string | null>(null);
     // Bumped on every successful submit to drive a short polling window — the
     // POST returns 202 before the task is queryable, so a single delayed fetch
     // can miss it and (with no pending task loaded) the 10s auto-refresh never starts.
     const [submitNonce, setSubmitNonce] = useState(0);
+
+    const handleRowClick = async (task: TaskRecord) => {
+        const key = task.taskId ?? task.id;
+        if (expandedTaskId === key) {
+            setExpandedTaskId(null);
+            return;
+        }
+        setExpandedTaskId(key);
+        if (taskActions[key]) return; // already fetched
+        setLoadingActions(key);
+        try {
+            const res = await fetch(
+                `/api/portal/agents/${encodeURIComponent(selectedBotId)}/tasks/${encodeURIComponent(key)}/actions`,
+            );
+            if (res.ok) {
+                const data = (await res.json()) as { actions?: ActionDetail[] };
+                setTaskActions((prev) => ({ ...prev, [key]: data.actions ?? [] }));
+            }
+        } finally {
+            setLoadingActions(null);
+        }
+    };
 
     const availableActions = ACTION_OPTIONS[connectorType] ?? [];
 
@@ -369,42 +405,96 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                                 </div>
                             ) : (
                                 <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {tasks.map((task) => (
-                                        <div key={task.id} className="flex items-start gap-3 px-5 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                            <div className="mt-0.5">{outcomeIcon(task.outcome)}</div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                                                        {task.taskId ?? task.id.slice(0, 16)}
-                                                    </span>
-                                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                                                        task.outcome === "success"
-                                                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
-                                                            : task.outcome === "failed" || task.outcome === "error"
-                                                                ? "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400"
-                                                                : task.outcome === "cancelled" || task.outcome === "rejected"
-                                                                    ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-                                                                    : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
-                                                    }`}>
-                                                        {task.outcome}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-400">
-                                                    <span>{formatDate(task.createdAt)}</span>
-                                                    <span>·</span>
-                                                    <span>{formatLatency(task.latencyMs)}</span>
-                                                    <span>·</span>
-                                                    <span>{formatCost(task.estimatedCostUsd)}</span>
-                                                    {task.modelProfile && (
-                                                        <>
+                                    {tasks.map((task) => {
+                                        const key = task.taskId ?? task.id;
+                                        const isExpanded = expandedTaskId === key;
+                                        const actions = taskActions[key] ?? [];
+                                        const isLoadingThis = loadingActions === key;
+                                        return (
+                                            <div key={task.id}>
+                                                <div
+                                                    className="flex items-start gap-3 px-5 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer select-none"
+                                                    onClick={() => void handleRowClick(task)}
+                                                >
+                                                    <div className="mt-0.5">{outcomeIcon(task.outcome)}</div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                                                                {key.slice(0, 16)}
+                                                            </span>
+                                                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                                                task.outcome === "success"
+                                                                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
+                                                                    : task.outcome === "failed" || task.outcome === "error"
+                                                                        ? "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400"
+                                                                        : task.outcome === "cancelled" || task.outcome === "rejected"
+                                                                            ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                                                                            : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                                                            }`}>
+                                                                {task.outcome}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-400">
+                                                            <span>{formatDate(task.createdAt)}</span>
                                                             <span>·</span>
-                                                            <span className="truncate max-w-[100px]">{task.modelProfile}</span>
-                                                        </>
-                                                    )}
+                                                            <span>{formatLatency(task.latencyMs)}</span>
+                                                            <span>·</span>
+                                                            <span>{formatCost(task.estimatedCostUsd)}</span>
+                                                            {task.modelProfile && (
+                                                                <>
+                                                                    <span>·</span>
+                                                                    <span className="truncate max-w-[100px]">{task.modelProfile}</span>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <ChevronRight className={`h-3.5 w-3.5 shrink-0 mt-1 text-slate-300 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
                                                 </div>
+
+                                                {isExpanded && (
+                                                    <div className="px-5 pb-4 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800">
+                                                        {isLoadingThis ? (
+                                                            <div className="flex items-center gap-2 py-4 text-xs text-slate-400">
+                                                                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading actions…
+                                                            </div>
+                                                        ) : actions.length === 0 ? (
+                                                            <p className="py-4 text-xs text-slate-400">No action records found for this task.</p>
+                                                        ) : (
+                                                            <div className="mt-3 space-y-3">
+                                                                {actions.map((action) => (
+                                                                    <div key={action.id} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-xs space-y-2">
+                                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                                            <span className="font-semibold text-slate-700 dark:text-slate-300">{action.actionType}</span>
+                                                                            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                                                                                action.riskLevel === "LOW"
+                                                                                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
+                                                                                    : action.riskLevel === "MEDIUM"
+                                                                                        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                                                                                        : "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400"
+                                                                            }`}>{action.riskLevel}</span>
+                                                                            <span className="text-slate-400">{action.status}</span>
+                                                                        </div>
+                                                                        {action.inputSummary && (
+                                                                            <div>
+                                                                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-0.5">Input</p>
+                                                                                <p className="text-slate-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">{action.inputSummary}</p>
+                                                                            </div>
+                                                                        )}
+                                                                        {action.outputSummary && (
+                                                                            <div>
+                                                                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-0.5">Output</p>
+                                                                                <p className="text-slate-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">{action.outputSummary}</p>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

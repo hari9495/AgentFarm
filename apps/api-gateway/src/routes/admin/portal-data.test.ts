@@ -62,6 +62,17 @@ type TenantRecord = {
     status: string;
 };
 
+type ActionDetailRecord = {
+    id: string;
+    actionType: string;
+    riskLevel: string;
+    inputSummary: string;
+    outputSummary: string | null;
+    status: string;
+    createdAt: Date;
+    completedAt: Date | null;
+};
+
 // ---------------------------------------------------------------------------
 // Mock repo factory
 // ---------------------------------------------------------------------------
@@ -81,6 +92,7 @@ type MockState = {
     messages: unknown[];
     accountReturn: AccountRecord | null;
     tenantReturn: TenantRecord | null;
+    actionsReturn: ActionDetailRecord[];
     // Call capture
     listBotsCalled: { tenantId: string; limit: number } | null;
     displayNameUpdated: string | null;
@@ -102,6 +114,7 @@ const createMockRepo = (): { repo: PortalDataRepo; state: MockState } => {
         messages: [],
         accountReturn: null,
         tenantReturn: null,
+        actionsReturn: [],
         listBotsCalled: null,
         displayNameUpdated: null,
     };
@@ -116,6 +129,9 @@ const createMockRepo = (): { repo: PortalDataRepo; state: MockState } => {
         },
         async listTasksForBot(_botId, _tenantId, _limit) {
             return state.taskReturn;
+        },
+        async listActionsForTask(_taskId, _tenantId) {
+            return state.actionsReturn ?? [];
         },
         async countTasks(_tenantId) {
             return state.taskCount;
