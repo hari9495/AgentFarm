@@ -124,7 +124,7 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
             t.outcome === "pending" || t.outcome === "running" || t.outcome === "approval_queued"
         );
         if (!hasLive) return;
-        const id = setInterval(() => void fetchTasks(selectedBotId), 5_000);
+        const id = setInterval(() => void fetchTasks(selectedBotId), 2_000);
         return () => clearInterval(id);
     }, [tasks, selectedBotId, fetchTasks]);
 
