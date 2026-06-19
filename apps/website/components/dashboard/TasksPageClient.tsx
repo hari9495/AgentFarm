@@ -52,6 +52,7 @@ const ACTION_OPTIONS: Record<string, Array<{ value: string; label: string }>> = 
 const outcomeIcon = (outcome: string) => {
     if (outcome === "success") return <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />;
     if (outcome === "failed" || outcome === "error") return <XCircle className="h-4 w-4 text-rose-500 shrink-0" />;
+    if (outcome === "cancelled" || outcome === "rejected") return <XCircle className="h-4 w-4 text-slate-400 shrink-0" />;
     return <Clock className="h-4 w-4 text-amber-500 shrink-0" />;
 };
 
@@ -381,7 +382,9 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                                                             ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
                                                             : task.outcome === "failed" || task.outcome === "error"
                                                                 ? "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400"
-                                                                : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                                                                : task.outcome === "cancelled" || task.outcome === "rejected"
+                                                                    ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                                                                    : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
                                                     }`}>
                                                         {task.outcome}
                                                     </span>

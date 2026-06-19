@@ -306,7 +306,7 @@ type CapabilitySnapshotPersistenceClient = {
     }) => Promise<BotCapabilitySnapshotRecord>;
 };
 
-type TaskExecutionOutcome = 'success' | 'failed' | 'approval_queued';
+type TaskExecutionOutcome = 'success' | 'failed' | 'approval_queued' | 'cancelled';
 
 type TaskExecutionRecordWriter = {
     write: (input: {
@@ -5156,6 +5156,37 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 error_message: err instanceof Error ? err.message : String(err),
             });
         }
+
+        // Also write the DB TaskExecutionRecord so the customer portal Task
+        // History reflects the cancellation. Without this, the portal only sees
+        // the original approval_queued row and the task appears stuck pending
+        // even after the operator rejected it. Mirror the identity-attribution
+        // logic used on the success/failed path.
+        const payloadString = (key: string): string | null => {
+            const value = input.task.payload[key];
+            return typeof value === 'string' && value.trim() ? value.trim() : null;
+        };
+        taskExecutionRecordWriter.write({
+            botId: payloadString('botId') ?? payloadString('agentId') ?? config.botId,
+            tenantId: payloadString('tenantId') ?? config.tenantId,
+            workspaceId: payloadString('workspaceId') ?? config.workspaceId,
+            taskId: input.task.taskId,
+            modelProvider: 'agentfarm',
+            modelProfile: 'speed_first',
+            promptTokens: null,
+            completionTokens: null,
+            totalTokens: null,
+            estimatedCostUsd: null,
+            modelTier: null,
+            platformFeeUsd: 0,
+            latencyMs: 0,
+            outcome: 'cancelled',
+            payloadOverrideSource: 'none',
+            payloadOverridesApplied: false,
+            executedAt: new Date(),
+        }).catch(() => {
+            // Non-blocking: record write failure must not affect the rejection flow.
+        });
     };
 
     const processApprovalEscalations = (config: RuntimeConfig): void => {
