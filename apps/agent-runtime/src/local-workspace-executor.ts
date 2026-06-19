@@ -3386,12 +3386,12 @@ async function executeAutonomousLoop(
             for (const action of actions) {
                 const stepResult = await executePlanAction(workspaceDir, action);
                 if (!stepResult.ok) {
-                    return {
-                        ok: false,
-                        output: logs.join('\n'),
-                        errorOutput: stepResult.errorOutput ?? `Action ${action.action} failed.`,
-                        exitCode: stepResult.exitCode,
-                    };
+                    // Graceful degradation: a single bad plan step (e.g. a patch whose
+                    // old_text does not match, or a placeholder path from a weak model)
+                    // should not abort the whole task. Record it and continue — the
+                    // verification/test phase is the real pass/fail gate.
+                    logs.push(`${phase}:action:${action.action}:skipped:${stepResult.errorOutput ?? 'step failed'}`);
+                    continue;
                 }
                 logs.push(`${phase}:action:${action.action}:ok`);
             }
