@@ -58,6 +58,7 @@ export default function ApprovalsQueue({ scope, agentSlug, headerTitle, headerSu
     const [activeId, setActiveId] = useState<string | null>(null);
     const [flash, setFlash] = useState<string | null>(null);
     const [reasonById, setReasonById] = useState<Record<string, string>>({});
+    const [actionErrorById, setActionErrorById] = useState<Record<string, string>>({});
 
     const pendingCount = useMemo(() => items.length, [items.length]);
 
@@ -97,11 +98,18 @@ export default function ApprovalsQueue({ scope, agentSlug, headerTitle, headerSu
 
     const mutateApproval = async (id: string, action: "approve" | "reject") => {
         setActiveId(id);
-        setError(null);
+        setActionErrorById((current) => {
+            const next = { ...current };
+            delete next[id];
+            return next;
+        });
         const reason = reasonById[id]?.trim();
 
         if (action === "reject" && (!reason || reason.length < 8)) {
-            setError("Rejection reason must be at least 8 characters.");
+            setActionErrorById((current) => ({
+                ...current,
+                [id]: "Rejection reason must be at least 8 characters.",
+            }));
             setActiveId(null);
             return;
         }
@@ -137,7 +145,7 @@ export default function ApprovalsQueue({ scope, agentSlug, headerTitle, headerSu
             setTimeout(() => setFlash(null), 2200);
         } catch (mutationError) {
             const message = mutationError instanceof Error ? mutationError.message : "Could not update approval request.";
-            setError(message);
+            setActionErrorById((current) => ({ ...current, [id]: message }));
         } finally {
             setActiveId(null);
         }
@@ -248,15 +256,27 @@ export default function ApprovalsQueue({ scope, agentSlug, headerTitle, headerSu
                                 <div className="flex flex-wrap gap-2">
                                     <input
                                         value={reasonById[item.id] ?? ""}
-                                        onChange={(event) =>
+                                        onChange={(event) => {
+                                            const value = event.target.value;
                                             setReasonById((current) => ({
                                                 ...current,
-                                                [item.id]: event.target.value,
-                                            }))
-                                        }
+                                                [item.id]: value,
+                                            }));
+                                            if (actionErrorById[item.id]) {
+                                                setActionErrorById((current) => {
+                                                    const next = { ...current };
+                                                    delete next[item.id];
+                                                    return next;
+                                                });
+                                            }
+                                        }}
                                         placeholder="Decision reason (required for reject)"
-                                        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-700 dark:text-slate-200"
+                                        aria-invalid={Boolean(actionErrorById[item.id])}
+                                        className={`w-full rounded-lg border bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 ${actionErrorById[item.id] ? "border-rose-400 dark:border-rose-600" : "border-slate-300 dark:border-slate-700"}`}
                                     />
+                                    {actionErrorById[item.id] ? (
+                                        <p className="w-full text-xs font-medium text-rose-600 dark:text-rose-400">{actionErrorById[item.id]}</p>
+                                    ) : null}
                                     <button
                                         disabled={activeId === item.id}
                                         onClick={() => void mutateApproval(item.id, "approve")}
