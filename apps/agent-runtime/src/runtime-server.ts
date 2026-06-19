@@ -1745,10 +1745,13 @@ const readDecisionAuthToken = (headers: Record<string, unknown>): string | null 
 const createDefaultTaskExecutionRecordWriter = (env: NodeJS.ProcessEnv): TaskExecutionRecordWriter => {
     const prismaModuleName = '@prisma/client';
 
+    type TaskExecRecordDelegate = {
+        findFirst: (args: Record<string, unknown>) => Promise<{ id: string } | null>;
+        update: (args: Record<string, unknown>) => Promise<unknown>;
+        create: (args: Record<string, unknown>) => Promise<unknown>;
+    };
     const createPrismaClient = async (): Promise<{
-        taskExecutionRecord: {
-            create: (args: Record<string, unknown>) => Promise<unknown>;
-        };
+        taskExecutionRecord: TaskExecRecordDelegate;
         $disconnect: () => Promise<void>;
     } | null> => {
         const databaseUrl = env.DATABASE_URL;
@@ -1764,9 +1767,7 @@ const createDefaultTaskExecutionRecordWriter = (env: NodeJS.ProcessEnv): TaskExe
             }
 
             return new PrismaClient() as {
-                taskExecutionRecord: {
-                    create: (args: Record<string, unknown>) => Promise<unknown>;
-                };
+                taskExecutionRecord: TaskExecRecordDelegate;
                 $disconnect: () => Promise<void>;
             };
         } catch {
@@ -1782,25 +1783,48 @@ const createDefaultTaskExecutionRecordWriter = (env: NodeJS.ProcessEnv): TaskExe
             }
 
             try {
-                await prisma.taskExecutionRecord.create({
-                    data: {
-                        botId: input.botId,
-                        tenantId: input.tenantId,
-                        workspaceId: input.workspaceId,
-                        taskId: input.taskId,
-                        modelProvider: input.modelProvider,
-                        modelProfile: input.modelProfile,
-                        promptTokens: input.promptTokens ?? undefined,
-                        completionTokens: input.completionTokens ?? undefined,
-                        totalTokens: input.totalTokens ?? undefined,
-                        estimatedCostUsd: input.estimatedCostUsd ?? undefined,
-                        modelTier: input.modelTier ?? undefined,
-                        platformFeeUsd: input.platformFeeUsd,
-                        latencyMs: input.latencyMs,
-                        outcome: input.outcome,
-                        executedAt: input.executedAt,
-                    },
+                // Update-in-place: a task progresses approval_queued → terminal
+                // (success | failed | cancelled). Updating the existing row keeps
+                // one record per task in the portal history (no duplicate rows) and
+                // halves the DB writes. Optional fields use `?? undefined` so a
+                // terminal write that lacks cost/tokens (e.g. cancellations)
+                // preserves the values captured at classification time.
+                const existing = await prisma.taskExecutionRecord.findFirst({
+                    where: { taskId: input.taskId, tenantId: input.tenantId },
+                    orderBy: { createdAt: 'desc' },
+                    select: { id: true },
                 });
+
+                const data = {
+                    modelProvider: input.modelProvider,
+                    modelProfile: input.modelProfile,
+                    promptTokens: input.promptTokens ?? undefined,
+                    completionTokens: input.completionTokens ?? undefined,
+                    totalTokens: input.totalTokens ?? undefined,
+                    estimatedCostUsd: input.estimatedCostUsd ?? undefined,
+                    modelTier: input.modelTier ?? undefined,
+                    platformFeeUsd: input.platformFeeUsd,
+                    latencyMs: input.latencyMs,
+                    outcome: input.outcome,
+                    executedAt: input.executedAt,
+                };
+
+                if (existing) {
+                    await prisma.taskExecutionRecord.update({
+                        where: { id: existing.id },
+                        data,
+                    });
+                } else {
+                    await prisma.taskExecutionRecord.create({
+                        data: {
+                            botId: input.botId,
+                            tenantId: input.tenantId,
+                            workspaceId: input.workspaceId,
+                            taskId: input.taskId,
+                            ...data,
+                        },
+                    });
+                }
             } finally {
                 await prisma.$disconnect();
             }

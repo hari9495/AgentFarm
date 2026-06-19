@@ -2278,6 +2278,7 @@ enum TaskExecutionOutcome {
   success
   failed
   approval_queued
+  cancelled
 }
 
 enum BrowserActionType {
