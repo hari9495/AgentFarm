@@ -359,6 +359,27 @@ function ConnectorIcon({ tool, size = 32 }: { tool: string; size?: number }) {
     );
 }
 
+// Derive a human-friendly connector name from an API base URL.
+// e.g. https://api.notion.com/v1 → "Notion", https://pokeapi.co/api → "Pokeapi",
+//      https://uptime.betterstack.com → "Betterstack".
+function deriveConnectorName(rawUrl: string): string {
+    const trimmed = rawUrl.trim();
+    if (!trimmed) return "";
+    let host: string;
+    try {
+        host = new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`).hostname;
+    } catch {
+        return "";
+    }
+    const labels = host.replace(/^www\./, "").split(".").filter(Boolean);
+    if (labels.length === 0) return "";
+    // Use the registrable domain label (second-to-last), which skips common
+    // prefixes like api./app./rest. and the TLD: api.notion.com → "notion".
+    const core = labels.length >= 2 ? labels[labels.length - 2] : labels[0];
+    if (!core) return "";
+    return core.charAt(0).toUpperCase() + core.slice(1);
+}
+
 // ── Add Connector Modal ────────────────────────────────────────────────────
 function AddConnectorModal({
     connector,
@@ -374,11 +395,15 @@ function AddConnectorModal({
     onAdded: () => void;
 }) {
     const [displayName, setDisplayName] = useState(connector.displayName);
+    const [nameTouched, setNameTouched] = useState(false);
     const [configValues, setConfigValues] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const fields = connector.configSchema ?? [];
+    // Custom REST connectors (generic_rest*) carry a baseUrl field — derive the
+    // display name from it so the user doesn't have to name each one by hand.
+    const isCustom = connector.tool.startsWith("generic_rest");
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -427,11 +452,15 @@ function AddConnectorModal({
                         <input
                             type="text"
                             value={displayName}
-                            onChange={(e) => setDisplayName(e.target.value)}
+                            onChange={(e) => { setNameTouched(true); setDisplayName(e.target.value); }}
                             className="w-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                             placeholder="e.g. Our Jira, Engineering Slack"
                         />
-                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">The name your team will see in the dashboard.</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                            {isCustom
+                                ? "Auto-filled from the API URL below — edit if you'd like a different name."
+                                : "The name your team will see in the dashboard."}
+                        </p>
                     </div>
 
                     {connector.authMethod === "oauth2" && (
@@ -470,7 +499,16 @@ function AddConnectorModal({
                                 <input
                                     type={field.type === "password" ? "password" : field.type === "url" ? "url" : "text"}
                                     value={configValues[field.key] ?? ""}
-                                    onChange={(e) => setConfigValues((v) => ({ ...v, [field.key]: e.target.value }))}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        setConfigValues((v) => ({ ...v, [field.key]: value }));
+                                        // Auto-derive the display name from the API base URL until
+                                        // the user manually edits the name field themselves.
+                                        if (isCustom && field.key === "baseUrl" && !nameTouched) {
+                                            const derived = deriveConnectorName(value);
+                                            if (derived) setDisplayName(derived);
+                                        }
+                                    }}
                                     className="w-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                                     placeholder={field.placeholder}
                                     required={field.required}
