@@ -8,6 +8,7 @@ type InboundSource = {
     id: string;
     name: string;
     inboundUrl: string;
+    verificationMode?: 'hmac' | 'none';
     eventCount?: number;
     lastReceivedAt?: string | null;
 };
@@ -84,6 +85,7 @@ export default function InboundWebhooksPanel() {
     const [showAddForm, setShowAddForm] = useState(false);
     const [addName, setAddName] = useState('');
     const [addDescription, setAddDescription] = useState('');
+    const [addVerificationMode, setAddVerificationMode] = useState<'hmac' | 'none'>('hmac');
     const [adding, setAdding] = useState(false);
     const [addError, setAddError] = useState<string | null>(null);
     const [newSecret, setNewSecret] = useState<string | null>(null);
@@ -168,9 +170,9 @@ export default function InboundWebhooksPanel() {
             const res = await fetch('/api/webhooks/inbound/sources', {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ name: addName, description: addDescription }),
+                body: JSON.stringify({ name: addName, description: addDescription, verificationMode: addVerificationMode }),
             });
-            const data = (await res.json()) as { id?: string; secret?: string; name?: string; inboundUrl?: string; error?: string };
+            const data = (await res.json()) as { id?: string; secret?: string; name?: string; inboundUrl?: string; verificationMode?: string; error?: string };
             if (!res.ok) {
                 setAddError(data.error ?? 'Failed to create source.');
             } else {
@@ -179,6 +181,7 @@ export default function InboundWebhooksPanel() {
                 setNewWebhookUrl(data.inboundUrl ? fullIngestUrl(data.inboundUrl) : null);
                 setAddName('');
                 setAddDescription('');
+                setAddVerificationMode('hmac');
                 setShowAddForm(false);
                 await fetchSources();
             }
@@ -343,6 +346,20 @@ export default function InboundWebhooksPanel() {
                                         <input type="text" placeholder="What service sends events here?" value={addDescription} onChange={e => setAddDescription(e.target.value)} style={inputStyle} />
                                     </div>
                                 </div>
+                                <div>
+                                    <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 5 }}>
+                                        Verification
+                                    </label>
+                                    <select value={addVerificationMode} onChange={e => setAddVerificationMode(e.target.value as 'hmac' | 'none')} style={{ ...inputStyle, minWidth: 0, width: '100%' }}>
+                                        <option value="hmac">Signed (HMAC-SHA256) — recommended</option>
+                                        <option value="none">Unsigned — accept any request</option>
+                                    </select>
+                                    <p style={{ fontSize: 11, color: 'var(--ink-muted)', margin: '5px 0 0' }}>
+                                        {addVerificationMode === 'hmac'
+                                            ? 'Each request must be signed with the signing secret using HMAC-SHA256. Use this for GitHub and any service that supports webhook secrets.'
+                                            : '⚠ Anyone who knows this URL can post events. Only use for services that cannot sign their webhooks.'}
+                                    </p>
+                                </div>
                                 {addError && <div style={{ padding: '7px 12px', borderRadius: 9, background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', color: 'var(--danger)', fontSize: 12 }}>⚠ {addError}</div>}
                                 <div style={{ display: 'flex', gap: 8 }}>
                                     <button type="button" onClick={() => setShowAddForm(false)} style={{ padding: '7px 16px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
@@ -376,8 +393,13 @@ export default function InboundWebhooksPanel() {
                                     >
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
                                             <div style={{ flex: 1, minWidth: '200px' }}>
-                                                <p style={{ margin: '0 0 0.3rem', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)' }}>
+                                                <p style={{ margin: '0 0 0.3rem', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
                                                     {source.name}
+                                                    {source.verificationMode === 'none' ? (
+                                                        <span title="Unsigned — accepts any request" style={{ padding: '2px 8px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: 'var(--warn-bg, rgba(180,83,9,0.08))', color: 'var(--warn)', border: '1px solid rgba(180,83,9,0.25)' }}>Unsigned</span>
+                                                    ) : (
+                                                        <span title="Signed with HMAC-SHA256" style={{ padding: '2px 8px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: 'var(--ok-bg, rgba(26,122,74,0.08))', color: 'var(--ok)', border: '1px solid rgba(26,122,74,0.25)' }}>Signed</span>
+                                                    )}
                                                 </p>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
                                                     <code style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--accent)', background: 'var(--bg)', border: '1px solid var(--line)', padding: '4px 8px', borderRadius: 7, maxWidth: '340px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

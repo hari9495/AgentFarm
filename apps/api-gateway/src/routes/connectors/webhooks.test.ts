@@ -20,6 +20,7 @@ type MockWebhookSource = {
     name: string;
     description?: string;
     secret: string;
+    verificationMode: string;
     active: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -28,6 +29,7 @@ type MockWebhookSource = {
 const buildApp = async () => {
     const learnedPatterns: LearnedPatternRecord[] = [];
     const webhookSources: MockWebhookSource[] = [];
+    const createdEvents: Record<string, unknown>[] = [];
     let sourceSeq = 0;
 
     const prisma = {
@@ -76,6 +78,10 @@ const buildApp = async () => {
         },
         inboundWebhookEvent: {
             findMany: async () => [],
+            create: async ({ data }: { data: Record<string, unknown> }) => {
+                createdEvents.push(data);
+                return { id: `evt-${createdEvents.length}`, ...data };
+            },
         },
     };
 
@@ -90,7 +96,7 @@ const buildApp = async () => {
 
     const app = Fastify({ logger: false });
     registerWebhookRoutes(app, prisma as never, { getSession });
-    return { app, learnedPatterns, webhookSources, prisma };
+    return { app, learnedPatterns, webhookSources, createdEvents, prisma };
 };
 
 describe('POST /webhooks/ingest/inbound (per-source verification)', () => {
@@ -131,7 +137,7 @@ describe('POST /webhooks/ingest/inbound (per-source verification)', () => {
     });
 
     it('accepts a test ping without a signature and does not persist it', async () => {
-        const { app } = await buildApp();
+        const { app, createdEvents } = await buildApp();
         try {
             const createRes = await app.inject({
                 method: 'POST',
@@ -150,6 +156,31 @@ describe('POST /webhooks/ingest/inbound (per-source verification)', () => {
             const body = res.json() as { ok: boolean; test?: boolean };
             assert.equal(body.ok, true);
             assert.equal(body.test, true);
+            assert.equal(createdEvents.length, 0, 'test ping must not be persisted');
+        } finally {
+            await app.close();
+        }
+    });
+
+    it('accepts an unsigned request for a verificationMode=none source and persists it', async () => {
+        const { app, createdEvents } = await buildApp();
+        try {
+            const createRes = await app.inject({
+                method: 'POST',
+                url: '/v1/webhooks/inbound/sources',
+                payload: { name: 'Unsigned source', verificationMode: 'none' },
+            });
+            const created = createRes.json() as { id: string; verificationMode: string };
+            assert.equal(created.verificationMode, 'none');
+
+            const res = await app.inject({
+                method: 'POST',
+                url: `/webhooks/ingest/inbound?source=${created.id}`,
+                payload: { hello: 'world' },
+            });
+            // No signature header at all, yet accepted because the source is unsigned.
+            assert.equal(res.statusCode, 200);
+            assert.equal(createdEvents.length, 1, 'unsigned event must be persisted');
         } finally {
             await app.close();
         }

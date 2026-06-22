@@ -2058,6 +2058,10 @@ model WebhookSource {
   name        String
   description String?
   secret      String
+  // How inbound events are authenticated: "hmac" (default — require a valid
+  // HMAC-SHA256 signature over the body) or "none" (accept any POST to the
+  // source URL; for services that cannot sign their webhooks).
+  verificationMode String @default("hmac")
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

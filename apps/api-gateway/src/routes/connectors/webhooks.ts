@@ -249,9 +249,12 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
                     return reply.send({ ok: true, test: true });
                 }
 
-                // Fail-closed: a registered source MUST send a valid HMAC signature
-                // computed over the raw body using the per-source signing secret.
-                if (!verifyHmacSha256(rawBody, source.secret, sigHeader)) {
+                // Fail-closed for HMAC sources: a registered source MUST send a valid
+                // HMAC signature over the raw body using its per-source signing secret.
+                // Sources registered with verificationMode 'none' accept any POST
+                // (for external services that cannot sign their webhooks).
+                if (source.verificationMode !== 'none'
+                    && !verifyHmacSha256(rawBody, source.secret, sigHeader)) {
                     return reply.code(401).send({ error: 'invalid signature' });
                 }
 
@@ -446,9 +449,9 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
     /**
      * POST /v1/webhooks/inbound/sources
      * Registers a new inbound webhook source for the authenticated tenant.
-     * Body: { name: string, description?: string }
+     * Body: { name: string, description?: string, verificationMode?: 'hmac' | 'none' }
      */
-    app.post<{ Body: { name?: unknown; description?: unknown } }>(
+    app.post<{ Body: { name?: unknown; description?: unknown; verificationMode?: unknown } }>(
         '/v1/webhooks/inbound/sources',
         async (req, reply) => {
             const session = getSession(req);
@@ -459,12 +462,20 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
                 return reply.code(400).send({ error: 'name is required' });
             }
             const description = trimString(req.body?.description) || undefined;
+            // Only 'hmac' (default) and 'none' are valid; anything else falls back to 'hmac'.
+            const verificationMode = trimString(req.body?.verificationMode) === 'none' ? 'none' : 'hmac';
             const secret = randomUUID();
             const source = await prisma.webhookSource.create({
-                data: { tenantId: session.tenantId, name, description, secret },
+                data: { tenantId: session.tenantId, name, description, secret, verificationMode },
             });
             const inboundUrl = `/webhooks/ingest/inbound?source=${source.id}`;
-            return reply.code(201).send({ id: source.id, name: source.name, secret: source.secret, inboundUrl });
+            return reply.code(201).send({
+                id: source.id,
+                name: source.name,
+                secret: source.secret,
+                verificationMode: source.verificationMode,
+                inboundUrl,
+            });
         },
     );
 
