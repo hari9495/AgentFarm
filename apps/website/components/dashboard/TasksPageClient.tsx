@@ -78,6 +78,66 @@ const formatDate = (iso: string) => {
     });
 };
 
+function formatAgentOutput(raw: string): string {
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(raw);
+    } catch {
+        return raw;
+    }
+
+    if (typeof parsed !== "object" || parsed === null) return raw;
+    const obj = parsed as Record<string, unknown>;
+    const lines: string[] = [];
+
+    if (typeof obj["log"] === "string") {
+        for (const line of obj["log"].split("\n").filter(Boolean)) {
+            const parts = line.split(":");
+            const type = parts[1];
+            if (type === "step") {
+                lines.push(`Step ${parts[2]}: ${parts.slice(3).join(":")}`);
+            } else if (type === "action") {
+                const name = (parts[2] ?? "").replace(/_/g, " ");
+                const status = parts[3];
+                const detail = parts.slice(4).join(":").trim();
+                if (status === "skipped") {
+                    lines.push(`  Skipped ${name}${detail ? ` — ${detail}` : ""}`);
+                } else if (status === "success") {
+                    lines.push(`  Completed: ${name}`);
+                } else {
+                    lines.push(`  ${name}${detail ? `: ${detail}` : ""}`);
+                }
+            } else if (type === "attempt") {
+                const what = parts[3];
+                if (what === "success") lines.push(`Verification passed`);
+                else if (what === "tests") lines.push(`Running tests…`);
+                else if (what === "build") lines.push(`Building…`);
+                else lines.push(`${what}`);
+            } else {
+                lines.push(line);
+            }
+        }
+    }
+
+    if (Array.isArray(obj["attempts"])) {
+        const last = obj["attempts"][obj["attempts"].length - 1] as Record<string, unknown> | undefined;
+        if (last) {
+            lines.push("");
+            lines.push(last["passed"] ? "Result: All checks passed ✓" : "Result: Some checks failed ✗");
+            if (typeof last["test_output"] === "string" && last["test_output"].trim()) {
+                const excerpt = last["test_output"].trim().slice(0, 300);
+                lines.push(`Output: ${excerpt}${last["test_output"].trim().length > 300 ? "…" : ""}`);
+            }
+        }
+    }
+
+    if (typeof obj["summary"] === "string") return obj["summary"];
+    if (typeof obj["result"] === "string") return obj["result"];
+    if (typeof obj["message"] === "string") return obj["message"];
+
+    return lines.length > 0 ? lines.join("\n") : JSON.stringify(parsed, null, 2);
+}
+
 export default function TasksPageClient({ agents }: { agents: Agent[] }) {
     const [selectedBotId, setSelectedBotId] = useState<string>(agents[0]?.id ?? "");
     const [prompt, setPrompt] = useState("");
@@ -444,7 +504,7 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                                                         {task.outputSummary && (
                                                             <div>
                                                                 <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Agent Output</p>
-                                                                <p className="text-xs text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 whitespace-pre-wrap max-h-48 overflow-y-auto">{task.outputSummary}</p>
+                                                                <p className="text-xs text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 whitespace-pre-wrap max-h-48 overflow-y-auto">{formatAgentOutput(task.outputSummary)}</p>
                                                             </div>
                                                         )}
                                                         {(task.outcome === "cancelled" || task.outcome === "rejected") && (
