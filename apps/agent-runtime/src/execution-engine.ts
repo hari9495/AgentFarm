@@ -210,6 +210,43 @@ function buildClassificationCacheKey(task: TaskEnvelope): string {
 }
 
 // ---------------------------------------------------------------------------
+// High-impact safety net
+//
+// Small models occasionally classify destructive/production-touching actions
+// as low risk. When a decision is low-risk but the action/prompt contains
+// high-impact keywords, bump it to medium + approval so a human signs off.
+//
+// Exported and applied on BOTH the fresh-classification path AND the cache-hit
+// path — a cached low-risk entry must never bypass approval for a high-impact
+// prompt (defense in depth against cache poisoning).
+// ---------------------------------------------------------------------------
+export const HIGH_IMPACT_PATTERN =
+    /\b(deploy|provision|delete|destroy|drop|remove.*(prod|server|database|infra)|production|migrate|rollback|shutdown|terminate|kill)\b/;
+
+export function buildSafetyNetProbe(decision: ActionDecision, payload: Record<string, unknown>): string {
+    const description = typeof payload['description'] === 'string' ? payload['description'] : '';
+    const prompt = typeof payload['prompt'] === 'string' ? payload['prompt'] : '';
+    return `${decision.actionType} ${decision.reason} ${description} ${prompt}`.toLowerCase();
+}
+
+export function applyHighImpactSafetyNet(
+    decision: ActionDecision,
+    payload: Record<string, unknown>,
+): { decision: ActionDecision; bumped: boolean } {
+    if (decision.riskLevel !== 'low') return { decision, bumped: false };
+    if (!HIGH_IMPACT_PATTERN.test(buildSafetyNetProbe(decision, payload))) return { decision, bumped: false };
+    return {
+        decision: {
+            ...decision,
+            riskLevel: 'medium',
+            route: 'approval',
+            reason: `${decision.reason} [safety-net: high-impact keywords detected, bumped to medium]`,
+        },
+        bumped: true,
+    };
+}
+
+// ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
 
@@ -689,7 +726,10 @@ async function processDeveloperTaskInner(
             }
 
             if (cacheHit) {
-                decision = cacheHit.decision;
+                // Defense in depth: a cached low-risk entry must never bypass the
+                // high-impact safety net (guards against a poisoned cache entry).
+                const guarded = applyHighImpactSafetyNet(cacheHit.decision, taskWithAuditContext.payload);
+                decision = guarded.decision;
                 executionPayload = cacheHit.payloadOverrides
                     ? { ...taskWithAuditContext.payload, ...cacheHit.payloadOverrides }
                     : { ...taskWithAuditContext.payload };
@@ -726,19 +766,19 @@ async function processDeveloperTaskInner(
                         // Post-LLM safety net: small models sometimes classify destructive
                         // actions as low risk. If the action or prompt contains high-impact
                         // keywords, bump low → medium so it routes to the approval queue.
-                        if (decision.riskLevel === 'low') {
-                            const probe = `${decision.actionType} ${decision.reason} ${taskWithAuditContext.payload['description'] ?? ''} ${taskWithAuditContext.payload['prompt'] ?? ''}`.toLowerCase();
-                            const highImpactPattern = /\b(deploy|provision|delete|destroy|drop|remove.*(prod|server|database|infra)|production|migrate|rollback|shutdown|terminate|kill)\b/;
-                            if (highImpactPattern.test(probe)) {
-                                decision = { ...decision, riskLevel: 'medium', route: 'approval', reason: `${decision.reason} [safety-net: high-impact keywords detected, bumped to medium]` };
-                                llmExecution = { ...llmExecution, fallbackReason: 'safety_net_risk_bump' };
-                            }
+                        const guarded = applyHighImpactSafetyNet(decision, taskWithAuditContext.payload);
+                        decision = guarded.decision;
+                        if (guarded.bumped) {
+                            llmExecution = { ...llmExecution, fallbackReason: 'safety_net_risk_bump' };
                         }
 
-                        // Cache low-risk results only — medium/high go to approval and must not be cached
-                        if (redis && llmResult.decision.riskLevel === 'low') {
+                        // Cache low-risk results only — medium/high go to approval and must
+                        // not be cached. Gate on the FINAL decision (post-safety-net), not the
+                        // raw LLM output: a task bumped to approval must never poison the cache
+                        // with a low/execute entry that future identical prompts would reuse.
+                        if (redis && decision.riskLevel === 'low' && decision.route === 'execute') {
                             const entry: CachedClassificationEntry = {
-                                decision: llmResult.decision,
+                                decision,
                                 payloadOverrides: llmResult.payloadOverrides,
                                 metadata: llmResult.metadata,
                             };

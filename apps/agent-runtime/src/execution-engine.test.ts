@@ -1,14 +1,25 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+    applyHighImpactSafetyNet,
     buildDecision,
     classifyRisk,
     normalizeActionType,
     processApprovedTask,
     processDeveloperTask,
     scoreConfidence,
+    type ActionDecision,
     type TaskEnvelope,
 } from './execution-engine.js';
+
+const lowExecuteDecision = (overrides: Partial<ActionDecision> = {}): ActionDecision => ({
+    actionType: 'workspace_subagent_spawn',
+    confidence: 0.95,
+    riskLevel: 'low',
+    route: 'execute',
+    reason: 'High confidence in the task safety.',
+    ...overrides,
+});
 
 const taskEnvelope = (payload: Record<string, unknown>, taskId = 'task_1'): TaskEnvelope => ({
     taskId,
@@ -302,6 +313,57 @@ test('buildDecision routes risk_hint=high payload to approval even for normally-
 
     assert.equal(decision.riskLevel, 'high');
     assert.equal(decision.route, 'approval');
+});
+
+test('applyHighImpactSafetyNet bumps low-risk high-impact prompts to approval', () => {
+    const result = applyHighImpactSafetyNet(lowExecuteDecision(), {
+        prompt: 'Push new container image to production Kubernetes cluster and restart all pods',
+    });
+    assert.equal(result.bumped, true);
+    assert.equal(result.decision.riskLevel, 'medium');
+    assert.equal(result.decision.route, 'approval');
+    assert.match(result.decision.reason, /safety-net/);
+});
+
+test('applyHighImpactSafetyNet leaves benign low-risk tasks executable', () => {
+    const result = applyHighImpactSafetyNet(lowExecuteDecision(), {
+        prompt: 'List the files in this repository and summarise the structure',
+    });
+    assert.equal(result.bumped, false);
+    assert.equal(result.decision.route, 'execute');
+    assert.equal(result.decision.riskLevel, 'low');
+});
+
+test('applyHighImpactSafetyNet never downgrades an already medium/high decision', () => {
+    const medium = lowExecuteDecision({ riskLevel: 'medium', route: 'approval' });
+    const result = applyHighImpactSafetyNet(medium, { prompt: 'deploy to production' });
+    assert.equal(result.bumped, false);
+    assert.equal(result.decision.route, 'approval');
+    assert.equal(result.decision.riskLevel, 'medium');
+});
+
+test('processDeveloperTask routes LLM-low high-impact prompt to approval via safety net', async () => {
+    const result = await processDeveloperTask(taskEnvelope({
+        action_type: 'workspace_subagent_spawn',
+        prompt: 'Push new container image to production Kubernetes cluster and restart all pods',
+    }), {
+        modelProvider: 'openai',
+        // Mock an under-classifying model: returns low/execute for a destructive prompt.
+        llmDecisionResolver: async () => ({
+            decision: lowExecuteDecision(),
+            metadata: {
+                modelProvider: 'openai',
+                model: 'gpt-4o-mini',
+                modelProfile: 'speed_first',
+                promptTokens: 100, completionTokens: 30, totalTokens: 130,
+            },
+        }),
+    });
+
+    assert.equal(result.status, 'approval_required');
+    assert.equal(result.decision.route, 'approval');
+    assert.notEqual(result.decision.riskLevel, 'low');
+    assert.equal(result.llmExecution?.fallbackReason, 'safety_net_risk_bump');
 });
 
 test('processDeveloperTask uses llmDecisionResolver output when available', async () => {
