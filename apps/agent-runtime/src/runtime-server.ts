@@ -327,6 +327,8 @@ type TaskExecutionRecordWriter = {
         payloadOverrideSource: PayloadOverrideSource;
         payloadOverridesApplied: boolean;
         executedAt: Date;
+        taskPrompt?: string | null;
+        outputSummary?: string | null;
     }) => Promise<void>;
 };
 
@@ -1807,6 +1809,8 @@ const createDefaultTaskExecutionRecordWriter = (env: NodeJS.ProcessEnv): TaskExe
                     latencyMs: input.latencyMs,
                     outcome: input.outcome,
                     executedAt: input.executedAt,
+                    ...(input.taskPrompt != null ? { taskPrompt: input.taskPrompt.slice(0, 2000) } : {}),
+                    ...(input.outputSummary != null ? { outputSummary: input.outputSummary.slice(0, 4000) } : {}),
                 };
 
                 if (existing) {
@@ -4692,6 +4696,13 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             return typeof value === 'string' && value.trim() ? value.trim() : null;
         };
 
+        const taskPromptValue =
+            payloadString('prompt') ?? payloadString('description') ??
+            payloadString('summary') ?? payloadString('intent') ?? null;
+        const outputSummaryValue = typeof result.actionOutput === 'string' && result.actionOutput.trim()
+            ? result.actionOutput.trim()
+            : null;
+
         taskExecutionRecordWriter.write({
             botId: payloadString('botId') ?? payloadString('agentId') ?? config.botId,
             tenantId: payloadString('tenantId') ?? config.tenantId,
@@ -4710,6 +4721,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             payloadOverrideSource: result.payloadOverrideSource,
             payloadOverridesApplied: result.payloadOverrideSource !== 'none',
             executedAt: new Date(task.enqueuedAt),
+            taskPrompt: taskPromptValue,
+            outputSummary: outputSummaryValue,
         }).catch(() => {
             // Non-blocking: task execution record write failures do not affect task outcome
         });

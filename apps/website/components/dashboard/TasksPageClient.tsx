@@ -23,6 +23,8 @@ interface TaskRecord {
     completionTokens: number | null;
     totalTokens: number | null;
     modelTier: string | null;
+    taskPrompt: string | null;
+    outputSummary: string | null;
 }
 
 const CONNECTOR_OPTIONS = [
@@ -430,13 +432,27 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                                                 </div>
 
                                                 {isExpanded && (
-                                                    <div className="px-5 pb-4 pt-3 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800">
+                                                    <div className="px-5 pb-4 pt-3 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                                                        {/* Prompt */}
+                                                        {task.taskPrompt && (
+                                                            <div>
+                                                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Your Request</p>
+                                                                <p className="text-xs text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 whitespace-pre-wrap">{task.taskPrompt}</p>
+                                                            </div>
+                                                        )}
+                                                        {/* Output */}
+                                                        {task.outputSummary && (
+                                                            <div>
+                                                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Agent Output</p>
+                                                                <p className="text-xs text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 whitespace-pre-wrap max-h-48 overflow-y-auto">{task.outputSummary}</p>
+                                                            </div>
+                                                        )}
                                                         {(task.outcome === "cancelled" || task.outcome === "rejected") && (
-                                                            <p className="mb-3 text-xs text-slate-400 italic">
-                                                                Task was {task.outcome} before execution — LLM fields are not available.
+                                                            <p className="text-xs text-slate-400 italic">
+                                                                Task was {task.outcome} before execution — no output available.
                                                             </p>
                                                         )}
-                                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 text-xs">
+                                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 text-xs pt-1">
                                                             <div>
                                                                 <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-0.5">Task ID</p>
                                                                 <p className="font-mono text-slate-600 dark:text-slate-300 break-all">{task.taskId ?? task.id}</p>

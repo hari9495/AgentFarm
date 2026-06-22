@@ -27,6 +27,8 @@ type TaskRecord = {
     completionTokens: number | null;
     totalTokens: number | null;
     modelTier: string | null;
+    taskPrompt: string | null;
+    outputSummary: string | null;
 };
 
 type ActionDetailRecord = {
@@ -195,6 +197,8 @@ const buildPrismaRepo = (prisma: PrismaClient): PortalDataRepo => ({
                 completionTokens: true,
                 totalTokens: true,
                 modelTier: true,
+                taskPrompt: true,
+                outputSummary: true,
             },
             orderBy: { createdAt: 'desc' },
             take: limit,

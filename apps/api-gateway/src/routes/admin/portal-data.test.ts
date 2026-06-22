@@ -32,6 +32,8 @@ type TaskRecord = {
     completionTokens: number | null;
     totalTokens: number | null;
     modelTier: string | null;
+    taskPrompt: string | null;
+    outputSummary: string | null;
 };
 
 type TaskRawRecord = {

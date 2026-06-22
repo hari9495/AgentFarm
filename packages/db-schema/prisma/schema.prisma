@@ -418,6 +418,8 @@ model TaskExecutionRecord {
   estimatedCostUsd Float?
   modelTier        String?
   platformFeeUsd   Float?
+  taskPrompt       String?
+  outputSummary    String?
 
   @@index([botId])
   @@index([tenantId])
