@@ -2058,6 +2058,7 @@ model WebhookSource {
   name        String
   description String?
   secret      String
+  active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -2072,9 +2073,11 @@ model InboundWebhookEvent {
   sourceId   String
   headers    Json     @default("{}")
   body       Json     @default("{}")
+  method     String   @default("POST")
+  status     String   @default("processed")
   receivedAt DateTime @default(now())
 
-  source WebhookSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  source WebhookSource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
 
   @@index([tenantId])
   @@index([sourceId])

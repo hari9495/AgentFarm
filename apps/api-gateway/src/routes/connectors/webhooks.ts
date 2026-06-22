@@ -203,7 +203,14 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
     // Ingest endpoint
     app.post(
         '/webhooks/ingest/:provider',
-        async (req: FastifyRequest<{ Params: ProviderParams; Body: IngestBody }>, reply) => {
+        async (
+            req: FastifyRequest<{
+                Params: ProviderParams;
+                Body: IngestBody;
+                Querystring: { source?: string };
+            }>,
+            reply,
+        ) => {
             const ingestSecret = process.env['WEBHOOK_INGEST_SECRET'];
             if (ingestSecret) {
                 const sig = (req.headers['x-hub-signature-256'] as string)
@@ -215,6 +222,30 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
                 }
             }
             const body = req.body ?? {};
+            const sourceId = typeof req.query.source === 'string' ? req.query.source.trim() : undefined;
+
+            // Persist event to DB when a known source is provided
+            if (sourceId) {
+                const source = await prisma.webhookSource.findUnique({ where: { id: sourceId } });
+                if (source) {
+                    const rawBody = body.raw_body ?? JSON.stringify(req.body);
+                    const bodyJson: import('@prisma/client').Prisma.InputJsonValue = (() => {
+                        try { return JSON.parse(rawBody) as import('@prisma/client').Prisma.InputJsonValue; } catch { return { raw: rawBody }; }
+                    })();
+                    const headersJson = req.headers as unknown as import('@prisma/client').Prisma.InputJsonValue;
+                    await prisma.inboundWebhookEvent.create({
+                        data: {
+                            tenantId: source.tenantId,
+                            sourceId: source.id,
+                            method: req.method,
+                            headers: headersJson,
+                            body: bodyJson,
+                            status: 'processed',
+                        },
+                    });
+                }
+            }
+
             const { globalWebhookEngine } = await import(
                 '@agentfarm/agent-runtime/webhook-ingestion.js'
             ).catch(() => import('../../agent-runtime-stubs.js'));
@@ -223,7 +254,7 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
                 headers: body.headers ?? (req.headers as Record<string, string>),
                 rawBody: body.raw_body ?? JSON.stringify(req.body),
                 sourceIp: body.source_ip ?? req.ip,
-                registrationId: body.registration_id,
+                registrationId: body.registration_id ?? sourceId,
             });
             return reply.send(result);
         },
@@ -374,10 +405,11 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
         const session = getSession(req);
         if (!session) return reply.code(401).send({ error: 'Unauthorized' });
 
-        const sources = await prisma.webhookSource.findMany({
+        const rows = await prisma.webhookSource.findMany({
             where: { tenantId: session.tenantId },
             orderBy: { createdAt: 'desc' },
         });
+        const sources = rows.map(s => ({ ...s, inboundUrl: `/webhooks/ingest/inbound?source=${s.id}` }));
         return reply.send({ sources });
     });
 
@@ -447,12 +479,20 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
             const where: Record<string, unknown> = { tenantId: session.tenantId };
             if (sourceId) where['sourceId'] = sourceId;
 
-            const events = await prisma.inboundWebhookEvent.findMany({
+            const rows = await prisma.inboundWebhookEvent.findMany({
                 where,
                 orderBy: { receivedAt: 'desc' },
                 take: limit,
                 ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
             });
+            const events = rows.map(r => ({
+                id: r.id,
+                sourceId: r.sourceId,
+                receivedAt: r.receivedAt,
+                method: r.method,
+                status: r.status,
+                body: typeof r.body === 'string' ? r.body : JSON.stringify(r.body),
+            }));
             return reply.send({ events });
         },
     );
