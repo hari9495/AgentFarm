@@ -18,13 +18,13 @@
     },
     "dependencies": {
         "@agentfarm/shared-types": "workspace:*",
-        "nodemailer": "^8.0.10"
+        "nodemailer": "^8.0.11"
     },
     "devDependencies": {
-        "@types/nodemailer": "^6.4.17",
-        "@types/node": "^22.0.0",
+        "@types/nodemailer": "^8.0.1",
+        "@types/node": "^20.19.43",
         "typescript": "^5.7.2",
         "vite": "^6.0.0",
-        "vitest": "^4.1.8"
+        "vitest": "^4.1.9"
     }
 }

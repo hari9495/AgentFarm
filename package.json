@@ -20,11 +20,11 @@
         "quality:gate": "node scripts/quality-gate.mjs"
     },
     "devDependencies": {
-        "@types/node": "^22.10.2",
+        "@types/node": "^20.19.43",
         "c8": "^10.1.3",
         "eslint": "^9.17.0",
         "exceljs": "^4.4.0",
-        "prettier": "^3.4.2",
+        "prettier": "^3.8.4",
         "prisma": "6.19.3",
         "typescript": "^5.7.2"
     },

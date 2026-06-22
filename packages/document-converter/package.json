@@ -24,7 +24,7 @@
         "exceljs": "^4.4.0"
     },
     "devDependencies": {
-        "@types/node": "^22.0.0",
+        "@types/node": "^20.19.43",
         "@types/pdf-parse": "^1.1.4",
         "@types/turndown": "^5.0.5",
         "tsx": "^4.21.0",
