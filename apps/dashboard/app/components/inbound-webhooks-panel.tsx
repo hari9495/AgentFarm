@@ -191,12 +191,18 @@ export default function InboundWebhooksPanel() {
 
     const handleDelete = async (sourceId: string) => {
         setDeletingId(sourceId);
+        setSourcesError(null);
         try {
-            await fetch(`/api/webhooks/inbound/sources/${encodeURIComponent(sourceId)}`, { method: 'DELETE' });
+            const res = await fetch(`/api/webhooks/inbound/sources/${encodeURIComponent(sourceId)}`, { method: 'DELETE' });
+            if (!res.ok) {
+                const data = (await res.json().catch(() => ({}))) as { error?: string };
+                setSourcesError(data.error ?? `Failed to delete source (${res.status}).`);
+                return;
+            }
             setConfirmDeleteId(null);
             await fetchSources();
         } catch {
-            /* silently ignore */
+            setSourcesError('Network error deleting source.');
         } finally {
             setDeletingId(null);
         }

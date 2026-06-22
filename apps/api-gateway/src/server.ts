@@ -87,6 +87,28 @@ export const createServer = async (): Promise<FastifyInstance> => {
         bodyLimit: 1_048_576,
     });
 
+    // Custom JSON body parser that retains the raw request body on `request.rawBody`.
+    // Required for HMAC webhook signature verification (GitHub/Stripe/etc. sign the
+    // exact raw bytes — re-serializing the parsed object would not match the digest).
+    // Mirrors Fastify's default JSON handling (empty body → undefined, parse error → 400).
+    app.addContentTypeParser(
+        'application/json',
+        { parseAs: 'string' },
+        (req, body: string, done) => {
+            (req as unknown as { rawBody?: string }).rawBody = body;
+            if (body === '' || body == null) {
+                done(null, undefined);
+                return;
+            }
+            try {
+                done(null, JSON.parse(body));
+            } catch (err) {
+                (err as Error & { statusCode?: number }).statusCode = 400;
+                done(err as Error, undefined);
+            }
+        },
+    );
+
     await app.register(helmet, {
         // Prevent browsers from inferring content type (defense against MIME sniffing)
         contentSecurityPolicy: {

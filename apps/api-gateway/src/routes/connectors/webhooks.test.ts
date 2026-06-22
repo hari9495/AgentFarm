@@ -90,8 +90,71 @@ const buildApp = async () => {
 
     const app = Fastify({ logger: false });
     registerWebhookRoutes(app, prisma as never, { getSession });
-    return { app, learnedPatterns, webhookSources };
+    return { app, learnedPatterns, webhookSources, prisma };
 };
+
+describe('POST /webhooks/ingest/inbound (per-source verification)', () => {
+    it('returns 404 when the source query param is unknown', async () => {
+        const { app } = await buildApp();
+        try {
+            const res = await app.inject({
+                method: 'POST',
+                url: '/webhooks/ingest/inbound?source=does-not-exist',
+                payload: { hello: 'world' },
+            });
+            assert.equal(res.statusCode, 404);
+        } finally {
+            await app.close();
+        }
+    });
+
+    it('rejects a known source with a missing/invalid signature (fail-closed)', async () => {
+        const { app } = await buildApp();
+        try {
+            const createRes = await app.inject({
+                method: 'POST',
+                url: '/v1/webhooks/inbound/sources',
+                payload: { name: 'Signed source' },
+            });
+            const { id } = createRes.json() as { id: string };
+
+            const res = await app.inject({
+                method: 'POST',
+                url: `/webhooks/ingest/inbound?source=${id}`,
+                headers: { 'x-hub-signature-256': 'sha256=deadbeef' },
+                payload: { hello: 'world' },
+            });
+            assert.equal(res.statusCode, 401);
+        } finally {
+            await app.close();
+        }
+    });
+
+    it('accepts a test ping without a signature and does not persist it', async () => {
+        const { app } = await buildApp();
+        try {
+            const createRes = await app.inject({
+                method: 'POST',
+                url: '/v1/webhooks/inbound/sources',
+                payload: { name: 'Ping source' },
+            });
+            const { id } = createRes.json() as { id: string };
+
+            const res = await app.inject({
+                method: 'POST',
+                url: `/webhooks/ingest/inbound?source=${id}`,
+                headers: { 'x-test-ping': '1' },
+                payload: { test: true },
+            });
+            assert.equal(res.statusCode, 200);
+            const body = res.json() as { ok: boolean; test?: boolean };
+            assert.equal(body.ok, true);
+            assert.equal(body.test, true);
+        } finally {
+            await app.close();
+        }
+    });
+});
 
 describe('POST /api/v1/memory/patterns/code-review', () => {
     it('normalizes review comments into long-term memory patterns', async () => {
@@ -285,13 +348,35 @@ describe('POST /v1/webhooks/inbound/test', () => {
         }
     });
 
-    it('returns ok/statusCode/latencyMs when sourceId is provided (network may fail)', async () => {
+    it('returns 404 for a source that does not exist', async () => {
         const { app } = await buildApp();
         try {
             const res = await app.inject({
                 method: 'POST',
                 url: '/v1/webhooks/inbound/test',
                 payload: { sourceId: 'wsrc_test123' },
+            });
+            assert.equal(res.statusCode, 404);
+        } finally {
+            await app.close();
+        }
+    });
+
+    it('returns ok/statusCode/latencyMs for a source owned by the session tenant (network may fail)', async () => {
+        const { app } = await buildApp();
+        try {
+            // Create a source first so the ownership check passes
+            const createRes = await app.inject({
+                method: 'POST',
+                url: '/v1/webhooks/inbound/sources',
+                payload: { name: 'Reachability test' },
+            });
+            const { id } = createRes.json() as { id: string };
+
+            const res = await app.inject({
+                method: 'POST',
+                url: '/v1/webhooks/inbound/test',
+                payload: { sourceId: id },
             });
             assert.equal(res.statusCode, 200);
             const body = res.json() as { ok: boolean; statusCode: number; latencyMs: number };

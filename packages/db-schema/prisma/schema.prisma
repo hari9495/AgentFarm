@@ -2077,7 +2077,7 @@ model InboundWebhookEvent {
   status     String   @default("processed")
   receivedAt DateTime @default(now())
 
-  source WebhookSource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  source WebhookSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
   @@index([sourceId])

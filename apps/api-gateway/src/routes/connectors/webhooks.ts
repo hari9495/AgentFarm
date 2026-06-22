@@ -62,6 +62,20 @@ type CodeReviewPayload = {
 
 const trimString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
+// Headers we never persist — they carry caller credentials, not webhook payload data.
+const SENSITIVE_HEADERS = new Set(['authorization', 'cookie', 'x-api-key', 'proxy-authorization']);
+
+const sanitizeHeaders = (
+    headers: Record<string, unknown>,
+): import('@prisma/client').Prisma.InputJsonValue => {
+    const clean: Record<string, string> = {};
+    for (const [key, value] of Object.entries(headers)) {
+        if (SENSITIVE_HEADERS.has(key.toLowerCase())) continue;
+        clean[key] = Array.isArray(value) ? value.join(', ') : String(value);
+    }
+    return clean;
+};
+
 type SessionContext = {
     userId: string;
     tenantId: string;
@@ -211,38 +225,54 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
             }>,
             reply,
         ) => {
-            const ingestSecret = process.env['WEBHOOK_INGEST_SECRET'];
-            if (ingestSecret) {
-                const sig = (req.headers['x-hub-signature-256'] as string)
-                    ?? (req.headers['x-signature'] as string)
-                    ?? '';
-                const rawPayload = JSON.stringify(req.body);
-                if (!verifyHmacSha256(rawPayload, ingestSecret, sig.replace('sha256=', ''))) {
-                    return reply.code(401).send({ error: 'invalid signature' });
-                }
-            }
             const body = req.body ?? {};
             const sourceId = typeof req.query.source === 'string' ? req.query.source.trim() : undefined;
+            // Raw bytes as received (populated by the custom JSON parser in server.ts);
+            // fall back to the wrapper's raw_body or a re-serialization for non-JSON callers.
+            const rawBody = (req as unknown as { rawBody?: string }).rawBody
+                ?? body.raw_body
+                ?? JSON.stringify(req.body);
+            const isTestPing = req.headers['x-test-ping'] === '1';
+            const sigHeader = ((req.headers['x-hub-signature-256'] as string)
+                ?? (req.headers['x-signature'] as string)
+                ?? '').replace('sha256=', '');
 
-            // Persist event to DB when a known source is provided
+            // ── Per-source path: signature is verified against the SOURCE's own secret ──
             if (sourceId) {
                 const source = await prisma.webhookSource.findUnique({ where: { id: sourceId } });
-                if (source) {
-                    const rawBody = body.raw_body ?? JSON.stringify(req.body);
-                    const bodyJson: import('@prisma/client').Prisma.InputJsonValue = (() => {
-                        try { return JSON.parse(rawBody) as import('@prisma/client').Prisma.InputJsonValue; } catch { return { raw: rawBody }; }
-                    })();
-                    const headersJson = req.headers as unknown as import('@prisma/client').Prisma.InputJsonValue;
-                    await prisma.inboundWebhookEvent.create({
-                        data: {
-                            tenantId: source.tenantId,
-                            sourceId: source.id,
-                            method: req.method,
-                            headers: headersJson,
-                            body: bodyJson,
-                            status: 'processed',
-                        },
-                    });
+                if (!source) {
+                    return reply.code(404).send({ error: 'unknown webhook source' });
+                }
+
+                // Reachability ping from the dashboard "Test" button — no signature, not persisted.
+                if (isTestPing) {
+                    return reply.send({ ok: true, test: true });
+                }
+
+                // Fail-closed: a registered source MUST send a valid HMAC signature
+                // computed over the raw body using the per-source signing secret.
+                if (!verifyHmacSha256(rawBody, source.secret, sigHeader)) {
+                    return reply.code(401).send({ error: 'invalid signature' });
+                }
+
+                const bodyJson: import('@prisma/client').Prisma.InputJsonValue = (() => {
+                    try { return JSON.parse(rawBody) as import('@prisma/client').Prisma.InputJsonValue; } catch { return { raw: rawBody }; }
+                })();
+                await prisma.inboundWebhookEvent.create({
+                    data: {
+                        tenantId: source.tenantId,
+                        sourceId: source.id,
+                        method: req.method,
+                        headers: sanitizeHeaders(req.headers),
+                        body: bodyJson,
+                        status: 'processed',
+                    },
+                });
+            } else {
+                // ── Legacy provider path: optional global shared secret ──
+                const ingestSecret = process.env['WEBHOOK_INGEST_SECRET'];
+                if (ingestSecret && !verifyHmacSha256(rawBody, ingestSecret, sigHeader)) {
+                    return reply.code(401).send({ error: 'invalid signature' });
                 }
             }
 
@@ -252,7 +282,7 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
             const result = await globalWebhookEngine.ingest({
                 provider: req.params.provider as never,
                 headers: body.headers ?? (req.headers as Record<string, string>),
-                rawBody: body.raw_body ?? JSON.stringify(req.body),
+                rawBody: body.raw_body ?? rawBody,
                 sourceIp: body.source_ip ?? req.ip,
                 registrationId: body.registration_id ?? sourceId,
             });
@@ -505,10 +535,18 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
     app.post<{ Body: { sourceId?: unknown } }>(
         '/v1/webhooks/inbound/test',
         async (req, reply) => {
+            const session = getSession(req);
+            if (!session) return reply.code(401).send({ error: 'Unauthorized' });
+
             const sourceId = trimString(req.body?.sourceId);
             if (!sourceId) {
                 return reply.code(400).send({ error: 'sourceId is required' });
             }
+            // Only allow testing sources owned by the caller's tenant
+            const source = await prisma.webhookSource.findUnique({ where: { id: sourceId } });
+            if (!source) return reply.code(404).send({ error: 'source not found' });
+            if (source.tenantId !== session.tenantId) return reply.code(403).send({ error: 'Forbidden' });
+
             const baseUrl = process.env['INTERNAL_BASE_URL'] ?? 'http://localhost:3000';
             const testUrl = `${baseUrl}/webhooks/ingest/inbound?source=${sourceId}`;
             const t0 = Date.now();
