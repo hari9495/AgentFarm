@@ -2088,6 +2088,36 @@ model InboundWebhookEvent {
   @@index([receivedAt])
 }
 
+// Maps an inbound webhook event to an automatically-enqueued agent task.
+// When an event arrives, every enabled rule for the tenant whose source and
+// filter match the event enqueues a task (via the normal task queue, so risk
+// classification + approval still apply) for the chosen bot/agent.
+model WebhookTriggerRule {
+  id          String   @id @default(cuid())
+  tenantId    String
+  workspaceId String
+  // null = applies to events from any source in the tenant
+  sourceId    String?
+  name        String
+  enabled     Boolean  @default(true)
+  // Match conditions (all optional; an empty rule matches every event).
+  // matchEventType compares to the event-type header (x-github-event etc.);
+  // matchField is a dot-path into the JSON body that must equal matchValue.
+  matchEventType String?
+  matchField     String?
+  matchValue     String?
+  // Action: which agent runs, and the instruction it receives. The template
+  // supports {{dot.path}} placeholders filled from the event body.
+  botId          String
+  promptTemplate String
+  priority       String   @default("normal")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([sourceId])
+}
+
 // Sprint 9 — Semantic Memory / Company Knowledge RAG
 model TaskTemplate {
   id             String   @id @default(cuid())

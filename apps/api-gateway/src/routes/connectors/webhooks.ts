@@ -4,6 +4,7 @@ import type { PrismaClient } from '@prisma/client';
 import { answerQuestion, PrismaQuestionStore } from '@agentfarm/agent-question-service';
 import { writeEpisodicMemoryNoEmbed } from '@agentfarm/memory-service';
 import { verifyHmacSha256 } from '../../lib/webhook-verify.js';
+import { enqueueTask, type QueuePriority } from '../../lib/task-queue.js';
 
 type WebhookRegisterBody = {
     provider: string;
@@ -75,6 +76,128 @@ const sanitizeHeaders = (
     }
     return clean;
 };
+
+// ── Webhook trigger-rule helpers ────────────────────────────────────────────
+
+const VALID_PRIORITIES = new Set<QueuePriority>(['high', 'normal', 'low']);
+
+/** Resolve a dot-path (e.g. "issue.title") into a nested object; undefined if absent. */
+const getByPath = (obj: unknown, path: string): unknown => {
+    if (!path) return undefined;
+    let cur: unknown = obj;
+    for (const part of path.split('.')) {
+        if (cur == null || typeof cur !== 'object') return undefined;
+        cur = (cur as Record<string, unknown>)[part];
+    }
+    return cur;
+};
+
+/** Replace {{dot.path}} placeholders in a template with values from the event body. */
+const renderTemplate = (template: string, body: unknown): string =>
+    template.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_m, path: string) => {
+        const value = getByPath(body, path);
+        if (value == null) return '';
+        return typeof value === 'string' ? value : JSON.stringify(value);
+    });
+
+type TriggerRule = {
+    id: string;
+    tenantId: string;
+    workspaceId: string;
+    sourceId: string | null;
+    enabled: boolean;
+    matchEventType: string | null;
+    matchField: string | null;
+    matchValue: string | null;
+    botId: string;
+    promptTemplate: string;
+    priority: string;
+};
+
+/** A rule matches when every condition it specifies holds (empty rule = match all). */
+const ruleMatches = (rule: TriggerRule, eventType: string, body: unknown): boolean => {
+    if (rule.matchEventType && rule.matchEventType.toLowerCase() !== eventType.toLowerCase()) {
+        return false;
+    }
+    if (rule.matchField) {
+        const actual = getByPath(body, rule.matchField);
+        const actualStr = actual == null ? '' : String(actual);
+        if (actualStr !== (rule.matchValue ?? '')) return false;
+    }
+    return true;
+};
+
+/**
+ * Evaluate every enabled trigger rule for the event's source/tenant and enqueue
+ * an agent task for each match. Tasks go through the normal task queue, so risk
+ * classification and approval still apply. Best-effort: failures are logged and
+ * never block webhook ingestion.
+ */
+async function evaluateTriggerRules(args: {
+    prisma: PrismaClient;
+    source: { id: string; tenantId: string };
+    eventId: string;
+    eventType: string;
+    body: unknown;
+}): Promise<void> {
+    const { prisma, source, eventId, eventType, body } = args;
+    try {
+        const rules = (await prisma.webhookTriggerRule.findMany({
+            where: {
+                tenantId: source.tenantId,
+                enabled: true,
+                OR: [{ sourceId: source.id }, { sourceId: null }],
+            },
+        })) as unknown as TriggerRule[];
+
+        for (const rule of rules) {
+            if (!ruleMatches(rule, eventType, body)) continue;
+
+            const prompt = renderTemplate(rule.promptTemplate, body).trim()
+                || `Handle inbound webhook event from source ${source.id}.`;
+            const priority: QueuePriority = VALID_PRIORITIES.has(rule.priority as QueuePriority)
+                ? (rule.priority as QueuePriority)
+                : 'normal';
+            const taskId = randomUUID();
+            const payload = {
+                prompt,
+                tenantId: source.tenantId,
+                workspaceId: rule.workspaceId,
+                botId: rule.botId,
+                agentId: rule.botId,
+                triggeredBy: 'webhook',
+                source: 'webhook',
+                webhookEventId: eventId,
+                webhookRuleId: rule.id,
+            };
+
+            await prisma.taskQueueEntry.create({
+                data: {
+                    id: taskId,
+                    tenantId: source.tenantId,
+                    workspaceId: rule.workspaceId,
+                    botId: rule.botId,
+                    priority,
+                    status: 'pending',
+                    payload: payload as import('@prisma/client').Prisma.InputJsonValue,
+                    dependsOn: [],
+                    dependencyMet: true,
+                },
+            });
+            enqueueTask({
+                id: taskId,
+                tenantId: source.tenantId,
+                workspaceId: rule.workspaceId,
+                botId: rule.botId,
+                priority,
+                payload,
+                enqueuedAt: Date.now(),
+            });
+        }
+    } catch (err) {
+        console.error('[webhooks] trigger-rule evaluation failed', err);
+    }
+}
 
 type SessionContext = {
     userId: string;
@@ -258,18 +381,32 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
                     return reply.code(401).send({ error: 'invalid signature' });
                 }
 
-                const bodyJson: import('@prisma/client').Prisma.InputJsonValue = (() => {
-                    try { return JSON.parse(rawBody) as import('@prisma/client').Prisma.InputJsonValue; } catch { return { raw: rawBody }; }
+                const parsedBody: unknown = (() => {
+                    try { return JSON.parse(rawBody) as unknown; } catch { return { raw: rawBody }; }
                 })();
-                await prisma.inboundWebhookEvent.create({
+                const event = await prisma.inboundWebhookEvent.create({
                     data: {
                         tenantId: source.tenantId,
                         sourceId: source.id,
                         method: req.method,
                         headers: sanitizeHeaders(req.headers),
-                        body: bodyJson,
+                        body: parsedBody as import('@prisma/client').Prisma.InputJsonValue,
                         status: 'processed',
                     },
+                });
+
+                // Evaluate trigger rules → enqueue agent tasks for matching rules.
+                // The event type comes from the provider's event header when present.
+                const eventType = (req.headers['x-github-event'] as string)
+                    ?? (req.headers['x-gitlab-event'] as string)
+                    ?? (req.headers['x-event-type'] as string)
+                    ?? '';
+                await evaluateTriggerRules({
+                    prisma,
+                    source: { id: source.id, tenantId: source.tenantId },
+                    eventId: event.id,
+                    eventType,
+                    body: parsedBody,
                 });
             } else {
                 // ── Legacy provider path: optional global shared secret ──
@@ -574,6 +711,126 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
                 const latencyMs = Date.now() - t0;
                 return reply.send({ ok: false, statusCode: 0, latencyMs });
             }
+        },
+    );
+
+    // ── Webhook trigger rules ────────────────────────────────────────────────
+
+    /**
+     * GET /v1/webhooks/inbound/rules
+     * Lists trigger rules for the authenticated tenant.
+     */
+    app.get('/v1/webhooks/inbound/rules', async (req, reply) => {
+        const session = getSession(req);
+        if (!session) return reply.code(401).send({ error: 'Unauthorized' });
+
+        const rules = await prisma.webhookTriggerRule.findMany({
+            where: { tenantId: session.tenantId },
+            orderBy: { createdAt: 'desc' },
+        });
+        return reply.send({ rules });
+    });
+
+    /**
+     * POST /v1/webhooks/inbound/rules
+     * Creates a trigger rule. Body:
+     *   { name, botId, promptTemplate, workspaceId?, sourceId?,
+     *     matchEventType?, matchField?, matchValue?, priority? }
+     */
+    app.post<{
+        Body: {
+            name?: unknown; botId?: unknown; promptTemplate?: unknown;
+            workspaceId?: unknown; sourceId?: unknown;
+            matchEventType?: unknown; matchField?: unknown; matchValue?: unknown;
+            priority?: unknown;
+        };
+    }>('/v1/webhooks/inbound/rules', async (req, reply) => {
+        const session = getSession(req);
+        if (!session) return reply.code(401).send({ error: 'Unauthorized' });
+
+        const name = trimString(req.body?.name);
+        const botId = trimString(req.body?.botId);
+        const promptTemplate = trimString(req.body?.promptTemplate);
+        if (!name || !botId || !promptTemplate) {
+            return reply.code(400).send({ error: 'name, botId and promptTemplate are required' });
+        }
+
+        // workspaceId must be in the caller's session scope
+        const workspaceId = trimString(req.body?.workspaceId) || session.workspaceIds?.[0] || '';
+        if (!workspaceId) {
+            return reply.code(400).send({ error: 'workspaceId is required' });
+        }
+        if (session.workspaceIds && !session.workspaceIds.includes(workspaceId)) {
+            return reply.code(403).send({ error: 'workspaceId is not in your session scope' });
+        }
+
+        // If a sourceId is given, it must belong to the caller's tenant.
+        const sourceId = trimString(req.body?.sourceId) || null;
+        if (sourceId) {
+            const src = await prisma.webhookSource.findUnique({ where: { id: sourceId } });
+            if (!src) return reply.code(404).send({ error: 'source not found' });
+            if (src.tenantId !== session.tenantId) return reply.code(403).send({ error: 'Forbidden' });
+        }
+
+        const priorityRaw = trimString(req.body?.priority) || 'normal';
+        const priority = VALID_PRIORITIES.has(priorityRaw as QueuePriority) ? priorityRaw : 'normal';
+
+        const rule = await prisma.webhookTriggerRule.create({
+            data: {
+                tenantId: session.tenantId,
+                workspaceId,
+                sourceId,
+                name,
+                botId,
+                promptTemplate,
+                matchEventType: trimString(req.body?.matchEventType) || null,
+                matchField: trimString(req.body?.matchField) || null,
+                matchValue: trimString(req.body?.matchValue) || null,
+                priority,
+            },
+        });
+        return reply.code(201).send({ rule });
+    });
+
+    /**
+     * PATCH /v1/webhooks/inbound/rules/:ruleId
+     * Toggles a rule's enabled flag. Body: { enabled: boolean }
+     */
+    app.patch<{ Params: { ruleId: string }; Body: { enabled?: unknown } }>(
+        '/v1/webhooks/inbound/rules/:ruleId',
+        async (req, reply) => {
+            const session = getSession(req);
+            if (!session) return reply.code(401).send({ error: 'Unauthorized' });
+
+            const existing = await prisma.webhookTriggerRule.findUnique({ where: { id: req.params.ruleId } });
+            if (!existing) return reply.code(404).send({ error: 'rule not found' });
+            if (existing.tenantId !== session.tenantId) return reply.code(403).send({ error: 'Forbidden' });
+
+            const enabled = typeof req.body?.enabled === 'boolean' ? req.body.enabled : existing.enabled;
+            const rule = await prisma.webhookTriggerRule.update({
+                where: { id: req.params.ruleId },
+                data: { enabled },
+            });
+            return reply.send({ rule });
+        },
+    );
+
+    /**
+     * DELETE /v1/webhooks/inbound/rules/:ruleId
+     * Removes a trigger rule (must belong to the authenticated tenant).
+     */
+    app.delete<{ Params: { ruleId: string } }>(
+        '/v1/webhooks/inbound/rules/:ruleId',
+        async (req, reply) => {
+            const session = getSession(req);
+            if (!session) return reply.code(401).send({ error: 'Unauthorized' });
+
+            const existing = await prisma.webhookTriggerRule.findUnique({ where: { id: req.params.ruleId } });
+            if (!existing) return reply.code(404).send({ error: 'rule not found' });
+            if (existing.tenantId !== session.tenantId) return reply.code(403).send({ error: 'Forbidden' });
+
+            await prisma.webhookTriggerRule.delete({ where: { id: req.params.ruleId } });
+            return reply.send({ deleted: true });
         },
     );
 }

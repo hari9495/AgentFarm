@@ -30,6 +30,8 @@ const buildApp = async () => {
     const learnedPatterns: LearnedPatternRecord[] = [];
     const webhookSources: MockWebhookSource[] = [];
     const createdEvents: Record<string, unknown>[] = [];
+    const triggerRules: Array<Record<string, unknown> & { id: string; tenantId: string; enabled: boolean; sourceId: string | null }> = [];
+    const queuedTasks: Record<string, unknown>[] = [];
     let sourceSeq = 0;
 
     const prisma = {
@@ -83,6 +85,47 @@ const buildApp = async () => {
                 return { id: `evt-${createdEvents.length}`, ...data };
             },
         },
+        webhookTriggerRule: {
+            findMany: async ({ where }: { where?: Record<string, unknown> } = {}) => {
+                let rows = [...triggerRules];
+                if (where?.tenantId) rows = rows.filter((r) => r.tenantId === where.tenantId);
+                if (where?.enabled !== undefined) rows = rows.filter((r) => r.enabled === where.enabled);
+                if (Array.isArray((where as { OR?: unknown[] })?.OR)) {
+                    const or = (where as { OR: Array<{ sourceId: string | null }> }).OR;
+                    rows = rows.filter((r) => or.some((c) => c.sourceId === r.sourceId));
+                }
+                return rows;
+            },
+            findUnique: async ({ where }: { where: { id: string } }) =>
+                triggerRules.find((r) => r.id === where.id) ?? null,
+            create: async ({ data }: { data: Record<string, unknown> }) => {
+                const rule = {
+                    id: `rule-${triggerRules.length + 1}`,
+                    enabled: true,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    ...data,
+                } as unknown as Record<string, unknown> & { id: string; tenantId: string; enabled: boolean; sourceId: string | null };
+                triggerRules.push(rule);
+                return rule;
+            },
+            update: async ({ where, data }: { where: { id: string }; data: Record<string, unknown> }) => {
+                const rule = triggerRules.find((r) => r.id === where.id)!;
+                Object.assign(rule, data);
+                return rule;
+            },
+            delete: async ({ where }: { where: { id: string } }) => {
+                const idx = triggerRules.findIndex((r) => r.id === where.id);
+                if (idx >= 0) triggerRules.splice(idx, 1);
+                return {};
+            },
+        },
+        taskQueueEntry: {
+            create: async ({ data }: { data: Record<string, unknown> }) => {
+                queuedTasks.push(data);
+                return { ...data };
+            },
+        },
     };
 
     const mockSession = {
@@ -96,7 +139,7 @@ const buildApp = async () => {
 
     const app = Fastify({ logger: false });
     registerWebhookRoutes(app, prisma as never, { getSession });
-    return { app, learnedPatterns, webhookSources, createdEvents, prisma };
+    return { app, learnedPatterns, webhookSources, createdEvents, triggerRules, queuedTasks, prisma };
 };
 
 describe('POST /webhooks/ingest/inbound (per-source verification)', () => {
@@ -414,6 +457,153 @@ describe('POST /v1/webhooks/inbound/test', () => {
             assert.ok(typeof body.ok === 'boolean');
             assert.ok(typeof body.statusCode === 'number');
             assert.ok(typeof body.latencyMs === 'number');
+        } finally {
+            await app.close();
+        }
+    });
+});
+
+describe('Webhook trigger rules', () => {
+    const createNoneSource = async (app: import('fastify').FastifyInstance, name = 'Trigger source') => {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/webhooks/inbound/sources',
+            payload: { name, verificationMode: 'none' },
+        });
+        return (res.json() as { id: string }).id;
+    };
+
+    it('creates, lists, toggles and deletes a rule', async () => {
+        const { app } = await buildApp();
+        try {
+            const createRes = await app.inject({
+                method: 'POST',
+                url: '/v1/webhooks/inbound/rules',
+                payload: { name: 'Issues → dev', botId: 'bot_dev', promptTemplate: 'Fix {{issue.title}}' },
+            });
+            assert.equal(createRes.statusCode, 201);
+            const { rule } = createRes.json() as { rule: { id: string; enabled: boolean } };
+            assert.ok(rule.id);
+            assert.equal(rule.enabled, true);
+
+            const listRes = await app.inject({ method: 'GET', url: '/v1/webhooks/inbound/rules' });
+            assert.equal(listRes.statusCode, 200);
+            assert.equal((listRes.json() as { rules: unknown[] }).rules.length, 1);
+
+            const patchRes = await app.inject({
+                method: 'PATCH',
+                url: `/v1/webhooks/inbound/rules/${rule.id}`,
+                payload: { enabled: false },
+            });
+            assert.equal(patchRes.statusCode, 200);
+            assert.equal((patchRes.json() as { rule: { enabled: boolean } }).rule.enabled, false);
+
+            const delRes = await app.inject({ method: 'DELETE', url: `/v1/webhooks/inbound/rules/${rule.id}` });
+            assert.equal(delRes.statusCode, 200);
+        } finally {
+            await app.close();
+        }
+    });
+
+    it('rejects a rule without name/botId/promptTemplate', async () => {
+        const { app } = await buildApp();
+        try {
+            const res = await app.inject({
+                method: 'POST',
+                url: '/v1/webhooks/inbound/rules',
+                payload: { name: 'incomplete' },
+            });
+            assert.equal(res.statusCode, 400);
+        } finally {
+            await app.close();
+        }
+    });
+
+    it('enqueues a task when an event matches a rule, rendering the prompt template', async () => {
+        const { app, queuedTasks } = await buildApp();
+        try {
+            const sourceId = await createNoneSource(app);
+            await app.inject({
+                method: 'POST',
+                url: '/v1/webhooks/inbound/rules',
+                payload: {
+                    name: 'Issues opened → dev',
+                    botId: 'bot_dev',
+                    promptTemplate: 'Investigate and fix: {{issue.title}}',
+                    matchEventType: 'issues',
+                    matchField: 'action',
+                    matchValue: 'opened',
+                },
+            });
+
+            const res = await app.inject({
+                method: 'POST',
+                url: `/webhooks/ingest/inbound?source=${sourceId}`,
+                headers: { 'x-github-event': 'issues' },
+                payload: { action: 'opened', issue: { title: 'Login button broken' } },
+            });
+            assert.equal(res.statusCode, 200);
+            assert.equal(queuedTasks.length, 1, 'one task should be enqueued');
+            const payload = queuedTasks[0]!['payload'] as { prompt: string; botId: string; triggeredBy: string };
+            assert.equal(payload.prompt, 'Investigate and fix: Login button broken');
+            assert.equal(payload.botId, 'bot_dev');
+            assert.equal(payload.triggeredBy, 'webhook');
+        } finally {
+            await app.close();
+        }
+    });
+
+    it('does not enqueue when the event fails the rule filter', async () => {
+        const { app, queuedTasks } = await buildApp();
+        try {
+            const sourceId = await createNoneSource(app);
+            await app.inject({
+                method: 'POST',
+                url: '/v1/webhooks/inbound/rules',
+                payload: {
+                    name: 'Only opened',
+                    botId: 'bot_dev',
+                    promptTemplate: 'x',
+                    matchField: 'action',
+                    matchValue: 'opened',
+                },
+            });
+
+            const res = await app.inject({
+                method: 'POST',
+                url: `/webhooks/ingest/inbound?source=${sourceId}`,
+                payload: { action: 'closed' },
+            });
+            assert.equal(res.statusCode, 200);
+            assert.equal(queuedTasks.length, 0, 'no task should be enqueued for a non-matching event');
+        } finally {
+            await app.close();
+        }
+    });
+
+    it('does not enqueue for a disabled rule', async () => {
+        const { app, queuedTasks } = await buildApp();
+        try {
+            const sourceId = await createNoneSource(app);
+            const createRes = await app.inject({
+                method: 'POST',
+                url: '/v1/webhooks/inbound/rules',
+                payload: { name: 'disabled', botId: 'bot_dev', promptTemplate: 'x' },
+            });
+            const { rule } = createRes.json() as { rule: { id: string } };
+            await app.inject({
+                method: 'PATCH',
+                url: `/v1/webhooks/inbound/rules/${rule.id}`,
+                payload: { enabled: false },
+            });
+
+            const res = await app.inject({
+                method: 'POST',
+                url: `/webhooks/ingest/inbound?source=${sourceId}`,
+                payload: { anything: true },
+            });
+            assert.equal(res.statusCode, 200);
+            assert.equal(queuedTasks.length, 0, 'disabled rule must not enqueue');
         } finally {
             await app.close();
         }
