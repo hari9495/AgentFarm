@@ -65,6 +65,13 @@ function statusBadge(status: string) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+const INGEST_BASE_URL = process.env.NEXT_PUBLIC_WEBHOOK_INGEST_BASE_URL ?? 'http://localhost:3000';
+
+function fullIngestUrl(relativePath: string): string {
+    if (relativePath.startsWith('http')) return relativePath;
+    return `${INGEST_BASE_URL}${relativePath}`;
+}
+
 export default function InboundWebhooksPanel() {
     const [activeTab, setActiveTab] = useState<ActiveTab>('sources');
 
@@ -81,6 +88,7 @@ export default function InboundWebhooksPanel() {
     const [addError, setAddError] = useState<string | null>(null);
     const [newSecret, setNewSecret] = useState<string | null>(null);
     const [newSourceId, setNewSourceId] = useState<string | null>(null);
+    const [newWebhookUrl, setNewWebhookUrl] = useState<string | null>(null);
 
     // Delete state
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -155,6 +163,7 @@ export default function InboundWebhooksPanel() {
         setAddError(null);
         setNewSecret(null);
         setNewSourceId(null);
+        setNewWebhookUrl(null);
         try {
             const res = await fetch('/api/webhooks/inbound/sources', {
                 method: 'POST',
@@ -167,6 +176,7 @@ export default function InboundWebhooksPanel() {
             } else {
                 setNewSecret(data.secret ?? null);
                 setNewSourceId(data.id ?? null);
+                setNewWebhookUrl(data.inboundUrl ? fullIngestUrl(data.inboundUrl) : null);
                 setAddName('');
                 setAddDescription('');
                 setShowAddForm(false);
@@ -258,20 +268,36 @@ export default function InboundWebhooksPanel() {
                 <div>
                     {/* Secret reveal box */}
                     {newSecret && newSourceId && (
-                        <div style={{ background: 'var(--ok-bg)', border: '1px solid rgba(26,122,74,0.25)', borderRadius: 14, padding: '14px 16px', marginBottom: 14 }}>
-                            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ok)', margin: '0 0 8px' }}>
-                                ✓ Source created — save this secret now. It will not be shown again.
+                        <div style={{ background: 'var(--ok-bg)', border: '1px solid rgba(26,122,74,0.25)', borderRadius: 14, padding: '16px 18px', marginBottom: 14, position: 'relative' }}>
+                            <button
+                                onClick={() => { setNewSecret(null); setNewSourceId(null); setNewWebhookUrl(null); }}
+                                style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-muted)', fontSize: 16, lineHeight: 1 }}
+                            >✕</button>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ok)', margin: '0 0 4px' }}>
+                                Webhook source created — save these now
                             </p>
-                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                                <code style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12, color: 'var(--ink)', background: 'var(--bg)', border: '1px solid var(--line)', padding: '6px 10px', borderRadius: 8, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                    {newSecret}
-                                </code>
-                                <button onClick={() => handleCopy(newSecret, 'secret')} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 9999, cursor: 'pointer', background: 'var(--ok)', color: 'var(--card)', border: 'none', fontWeight: 600 }}>
-                                    {copiedId === 'secret' ? '✓ Copied' : 'Copy Secret'}
-                                </button>
-                                <button onClick={() => { setNewSecret(null); setNewSourceId(null); }} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 9999, cursor: 'pointer', background: 'var(--bg)', border: '1px solid var(--line)', color: 'var(--ink-muted)' }}>
-                                    Dismiss
-                                </button>
+                            <p style={{ fontSize: 12, color: 'var(--ink-muted)', margin: '0 0 14px' }}>
+                                The secret will not be shown again. Paste both into your service&apos;s webhook settings.
+                            </p>
+                            {newWebhookUrl && (
+                                <div style={{ marginBottom: 10 }}>
+                                    <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 5px' }}>Webhook URL</p>
+                                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                        <input readOnly value={newWebhookUrl} style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12, color: 'var(--ink)', background: 'var(--bg)', border: '1px solid var(--line)', padding: '6px 10px', borderRadius: 8, flex: 1 }} />
+                                        <button onClick={() => handleCopy(newWebhookUrl, 'new-url')} style={{ fontSize: 12, padding: '6px 14px', borderRadius: 9999, cursor: 'pointer', background: 'var(--card)', color: 'var(--accent)', border: '1px solid rgba(0,102,204,0.3)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                            {copiedId === 'new-url' ? '✓ Copied' : 'Copy'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                            <div>
+                                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 5px' }}>Signing Secret</p>
+                                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                    <input readOnly value={newSecret} style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12, color: 'var(--ink)', background: 'var(--bg)', border: '1px solid var(--line)', padding: '6px 10px', borderRadius: 8, flex: 1 }} />
+                                    <button onClick={() => handleCopy(newSecret, 'secret')} style={{ fontSize: 12, padding: '6px 14px', borderRadius: 9999, cursor: 'pointer', background: 'var(--card)', color: 'var(--accent)', border: '1px solid rgba(0,102,204,0.3)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                        {copiedId === 'secret' ? '✓ Copied' : 'Copy'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -349,10 +375,10 @@ export default function InboundWebhooksPanel() {
                                                 </p>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.35rem' }}>
                                                     <code style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--accent)', background: 'var(--bg)', border: '1px solid var(--line)', padding: '4px 8px', borderRadius: 7, maxWidth: '340px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        {source.inboundUrl}
+                                                        {fullIngestUrl(source.inboundUrl)}
                                                     </code>
                                                     <button
-                                                        onClick={() => handleCopy(source.inboundUrl, `url-${source.id}`)}
+                                                        onClick={() => handleCopy(fullIngestUrl(source.inboundUrl), `url-${source.id}`)}
                                                         style={{ fontSize: 11, padding: '3px 9px', borderRadius: 9999, cursor: 'pointer', background: 'var(--card)', color: 'var(--accent)', border: '1px solid rgba(0,102,204,0.3)', fontWeight: 600 }}
                                                     >
                                                         {copiedId === `url-${source.id}` ? '✓' : 'Copy URL'}
