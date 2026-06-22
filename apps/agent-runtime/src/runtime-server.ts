@@ -3155,6 +3155,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 transientRetries: 0,
                 executionPayload,
                 payloadOverrideSource,
+                actionOutput: localResult.output || undefined,
             };
         }
 
