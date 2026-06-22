@@ -4023,10 +4023,17 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
 
             if (result.decision.riskLevel === 'medium' || result.decision.riskLevel === 'high') {
                 const actionId = `${task.taskId}:${result.decision.actionType}`;
-                let actionSummary =
-                    typeof executionTask.payload['summary'] === 'string' && executionTask.payload['summary'].trim()
-                        ? executionTask.payload['summary']
-                        : `${result.decision.actionType} requested by runtime`;
+                // Use the customer's original prompt as the approval title so
+                // the approver knows what was asked, not just the internal action type.
+                const customerPrompt =
+                    (typeof executionTask.payload['prompt'] === 'string' && executionTask.payload['prompt'].trim())
+                        ? executionTask.payload['prompt'].trim().slice(0, 300)
+                        : (typeof executionTask.payload['description'] === 'string' && executionTask.payload['description'].trim())
+                            ? executionTask.payload['description'].trim().slice(0, 300)
+                            : (typeof executionTask.payload['summary'] === 'string' && executionTask.payload['summary'].trim())
+                                ? executionTask.payload['summary'].trim()
+                                : null;
+                let actionSummary = customerPrompt ?? `${result.decision.actionType} requested by runtime`;
 
                 const impactedScope =
                     typeof executionTask.payload['target'] === 'string' && executionTask.payload['target'].trim()

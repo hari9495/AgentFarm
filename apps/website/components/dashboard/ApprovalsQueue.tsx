@@ -235,8 +235,15 @@ export default function ApprovalsQueue({ scope, agentSlug, headerTitle, headerSu
                                             </span>
                                         ) : null}
                                     </div>
-                                    <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">{item.title}</h2>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400">{item.reason}</p>
+                                    <div className="rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 px-3 py-2">
+                                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 mb-0.5">Customer asked</p>
+                                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{item.title}</p>
+                                    </div>
+                                    {item.reason && (
+                                        <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-1.5">
+                                            <span className="font-semibold">Why approval needed: </span>{item.reason}
+                                        </p>
+                                    )}
                                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
                                         <span>
                                             <strong className="text-slate-700 dark:text-slate-300">Agent:</strong> {item.agent}
