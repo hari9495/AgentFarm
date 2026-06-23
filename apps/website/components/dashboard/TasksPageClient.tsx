@@ -487,6 +487,12 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                                                                 </>
                                                             )}
                                                         </div>
+                                                        {/* Inline failure reason so customers see WHY without expanding */}
+                                                        {(task.outcome === "failed" || task.outcome === "error") && task.outputSummary && !isExpanded && (
+                                                            <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 truncate">
+                                                                {task.outputSummary}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                     <ChevronRight className={`h-3.5 w-3.5 shrink-0 mt-1 text-slate-300 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
                                                 </div>
@@ -500,12 +506,22 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                                                                 <p className="text-xs text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 whitespace-pre-wrap">{task.taskPrompt}</p>
                                                             </div>
                                                         )}
-                                                        {/* Output */}
-                                                        {task.outputSummary && (
+                                                        {/* Failure reason — shown prominently so the customer knows WHY it failed */}
+                                                        {(task.outcome === "failed" || task.outcome === "error") && task.outputSummary && (
+                                                            <div>
+                                                                <p className="text-[10px] font-semibold uppercase tracking-wide text-rose-500 mb-1">Why it failed</p>
+                                                                <p className="text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/20 rounded-lg border border-rose-200 dark:border-rose-800 px-3 py-2 whitespace-pre-wrap max-h-48 overflow-y-auto">{formatAgentOutput(task.outputSummary)}</p>
+                                                            </div>
+                                                        )}
+                                                        {/* Output (success / other non-failure outcomes) */}
+                                                        {task.outcome !== "failed" && task.outcome !== "error" && task.outputSummary && (
                                                             <div>
                                                                 <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Agent Output</p>
                                                                 <p className="text-xs text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 whitespace-pre-wrap max-h-48 overflow-y-auto">{formatAgentOutput(task.outputSummary)}</p>
                                                             </div>
+                                                        )}
+                                                        {(task.outcome === "failed" || task.outcome === "error") && !task.outputSummary && (
+                                                            <p className="text-xs text-slate-400 italic">No failure detail was recorded for this task.</p>
                                                         )}
                                                         {(task.outcome === "cancelled" || task.outcome === "rejected") && (
                                                             <p className="text-xs text-slate-400 italic">

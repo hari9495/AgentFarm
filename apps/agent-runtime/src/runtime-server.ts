@@ -75,6 +75,12 @@ import { evaluateTesterEditGuard } from './agents/tester/tester-edit-guard.js';
 import { getTesterMcpClients } from './agents/tester/tester-mcp-provisioner.js';
 import { buildMcpToolCatalog } from './mcp-registry-client.js';
 import {
+    persistPendingApproval,
+    deletePersistedPendingApproval,
+    loadPersistedPendingApproval,
+    loadAllPersistedPendingApprovals,
+} from './pending-approval-store.js';
+import {
     getProviderQualityPenalty,
     getQualitySignalSummary,
     listQualitySignals,
@@ -991,7 +997,10 @@ const getAllowedActionsForRole = (roleKey: RoleKey): string[] => {
         return roleToolOverrides ?? CONNECTOR_ACTION_POLICY[tool] ?? [];
     });
     const localActions = LOCAL_WORKSPACE_ACTION_POLICY[roleKey] ?? [];
-    return Array.from(new Set([...connectorActions, ...localActions]));
+    // mcp_tool_call is available to every role: agents may invoke any MCP tool
+    // the tenant has registered (tenant isolation is the boundary, not role).
+    // It still routes through risk/approval (MEDIUM_RISK_ACTIONS).
+    return Array.from(new Set([...connectorActions, ...localActions, 'mcp_tool_call']));
 };
 
 const isTesterBlockedAction = (roleKey: RoleKey, actionType: string): boolean => {
@@ -4272,6 +4281,9 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 } else {
                     workerLoop.pendingApprovals.push(pendingRecord);
                 }
+                // Durably mirror to Redis so the task survives a runtime restart
+                // (in-memory pendingApprovals would otherwise orphan it forever).
+                void persistPendingApproval(config.tenantId, task.taskId, pendingRecord);
 
                 if (config.approvalIntakeToken) {
                     let lastIntake: Awaited<ReturnType<ApprovalIntakeClient>> | null = null;
@@ -4715,9 +4727,13 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         const taskPromptValue =
             payloadString('prompt') ?? payloadString('description') ??
             payloadString('summary') ?? payloadString('intent') ?? null;
+        // On success, surface the action output. On failure, surface the error
+        // message so the customer can see WHY the task failed (not a bare "failed").
         const outputSummaryValue = typeof result.actionOutput === 'string' && result.actionOutput.trim()
             ? result.actionOutput.trim()
-            : null;
+            : (taskOutcome !== 'success' && typeof result.errorMessage === 'string' && result.errorMessage.trim()
+                ? result.errorMessage.trim()
+                : null);
 
         taskExecutionRecordWriter.write({
             botId: payloadString('botId') ?? payloadString('agentId') ?? config.botId,
@@ -5237,6 +5253,9 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             payloadOverrideSource: 'none',
             payloadOverridesApplied: false,
             executedAt: new Date(),
+            outputSummary: input.reason?.trim()
+                ? `Rejected by operator: ${input.reason.trim()}`
+                : 'Rejected by operator.',
         }).catch(() => {
             // Non-blocking: record write failure must not affect the rejection flow.
         });
@@ -5877,6 +5896,29 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
 
             setRuntimeState('active', runtimeConfig);
 
+            // Rehydrate any pending approvals that were awaiting a decision when the
+            // runtime last stopped, so a restart never orphans an in-flight approval.
+            void (async () => {
+                try {
+                    const persisted = await loadAllPersistedPendingApprovals<PendingApprovalTask>(runtimeConfig.tenantId);
+                    let restored = 0;
+                    for (const record of persisted) {
+                        if (!workerLoop.pendingApprovals.some((p) => p.taskId === record.taskId)) {
+                            workerLoop.pendingApprovals.push(record);
+                            restored += 1;
+                        }
+                    }
+                    if (restored > 0) {
+                        emitRuntimeEvent('runtime.pending_approvals_rehydrated', runtimeConfig, {
+                            restored_count: restored,
+                            source: 'startup',
+                        });
+                    }
+                } catch (err) {
+                    console.warn('[runtime] pending-approval startup rehydration failed:', String(err));
+                }
+            })();
+
             if (!capabilitySnapshotCache) {
                 throw new Error('Capability snapshot is not initialized after startup flow.');
             }
@@ -6345,7 +6387,26 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
     };
 
     const resolvePendingApproval = async (input: ResolvePendingApprovalInput): Promise<ResolvePendingApprovalResult> => {
-        const pendingIndex = workerLoop.pendingApprovals.findIndex((pending) => pending.taskId === input.taskId);
+        let pendingIndex = workerLoop.pendingApprovals.findIndex((pending) => pending.taskId === input.taskId);
+
+        // Not in memory — the runtime may have restarted since the approval was
+        // raised. Rehydrate the durable copy from Redis so the decision can still
+        // resume the task instead of orphaning it.
+        if (pendingIndex < 0 && configCache?.tenantId) {
+            const persisted = await loadPersistedPendingApproval<PendingApprovalTask>(
+                configCache.tenantId,
+                input.taskId,
+            );
+            if (persisted) {
+                workerLoop.pendingApprovals.push(persisted);
+                pendingIndex = workerLoop.pendingApprovals.length - 1;
+                emitRuntimeEvent('runtime.pending_approval_rehydrated', configCache, {
+                    task_id: input.taskId,
+                    source: 'decision_resolve',
+                });
+            }
+        }
+
         if (pendingIndex < 0) {
             return {
                 ok: false,
@@ -6376,6 +6437,10 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 error: 'approval_not_found',
                 message: `No pending approval found for task_id ${input.taskId}`,
             };
+        }
+        // Approval is being resolved — drop the durable copy.
+        if (configCache?.tenantId) {
+            void deletePersistedPendingApproval(configCache.tenantId, input.taskId);
         }
 
         const latencyMs = Math.max(0, now() - resolved.enqueuedAt);
