@@ -65,6 +65,81 @@ const buildApp = (tenantId = 'tenant_1') => {
 };
 
 // ---------------------------------------------------------------------------
+// Inter-service auth — runtime calls with shared token + x-tenant-id
+// ---------------------------------------------------------------------------
+
+describe('inter-service auth (runtime → gateway)', () => {
+    const SERVICE_TOKEN = 'svc-token-abc123';
+
+    const buildServiceApp = () => {
+        const repo = makeRepo();
+        const app = Fastify();
+        process.env.AGENTFARM_MCP_REGISTRY_SHARED_TOKEN = SERVICE_TOKEN;
+        registerMcpRegistryRoutes(app, {
+            getSession: () => null, // no browser session — service path only
+            repo,
+            fetcher: async () => new Response(null, { status: 200 }),
+        });
+        return { app, repo };
+    };
+
+    it('GET /v1/mcp succeeds with valid service token + x-tenant-id', async () => {
+        const { app, repo } = buildServiceApp();
+        await repo.upsert({ tenantId: 'tenant_svc', name: 'github', url: 'http://mcp-github:3100' });
+        const res = await app.inject({
+            method: 'GET', url: '/v1/mcp',
+            headers: { authorization: `Bearer ${SERVICE_TOKEN}`, 'x-tenant-id': 'tenant_svc' },
+        });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as Array<{ name: string }>;
+        assert.equal(body.length, 1);
+        assert.equal(body[0]!.name, 'github');
+    });
+
+    it('POST /v1/mcp auto-registers with valid service token + x-tenant-id', async () => {
+        const { app } = buildServiceApp();
+        const res = await app.inject({
+            method: 'POST', url: '/v1/mcp',
+            headers: { authorization: `Bearer ${SERVICE_TOKEN}`, 'x-tenant-id': 'tenant_svc' },
+            payload: { name: 'github', url: 'http://mcp-github:3100' },
+        });
+        assert.equal(res.statusCode, 201);
+        assert.equal(res.json().name, 'github');
+    });
+
+    it('rejects an invalid service token (401)', async () => {
+        const { app } = buildServiceApp();
+        const res = await app.inject({
+            method: 'GET', url: '/v1/mcp',
+            headers: { authorization: 'Bearer wrong-token', 'x-tenant-id': 'tenant_svc' },
+        });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('rejects a valid token without x-tenant-id (401)', async () => {
+        const { app } = buildServiceApp();
+        const res = await app.inject({
+            method: 'GET', url: '/v1/mcp',
+            headers: { authorization: `Bearer ${SERVICE_TOKEN}` },
+        });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('scopes the auto-registered server to the x-tenant-id tenant', async () => {
+        const { app, repo } = buildServiceApp();
+        await app.inject({
+            method: 'POST', url: '/v1/mcp',
+            headers: { authorization: `Bearer ${SERVICE_TOKEN}`, 'x-tenant-id': 'tenant_xyz' },
+            payload: { name: 'slack', url: 'http://mcp-slack:3100' },
+        });
+        const forXyz = await repo.findActive('tenant_xyz');
+        const forOther = await repo.findActive('tenant_other');
+        assert.equal(forXyz.length, 1);
+        assert.equal(forOther.length, 0);
+    });
+});
+
+// ---------------------------------------------------------------------------
 // POST /v1/mcp — register
 // ---------------------------------------------------------------------------
 

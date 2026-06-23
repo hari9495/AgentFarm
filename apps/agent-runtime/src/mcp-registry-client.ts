@@ -23,6 +23,29 @@ export interface TenantMcpServer {
 const gatewayUrl = (): string => (process.env['API_GATEWAY_URL'] ?? '').replace(/\/+$/, '');
 
 /**
+ * Shared service token used to authenticate runtime → gateway MCP registry calls.
+ * The gateway's /v1/mcp routes accept this token (Bearer) together with an
+ * x-tenant-id header in lieu of a browser session. Falls back across the same
+ * env vars the gateway checks so a single configured token works for both sides.
+ */
+const mcpServiceToken = (): string =>
+    process.env['AGENTFARM_MCP_REGISTRY_SHARED_TOKEN']
+    ?? process.env['AGENTFARM_RUNTIME_TASK_SHARED_TOKEN']
+    ?? process.env['RUNTIME_TASK_SHARED_TOKEN']
+    ?? process.env['AGENTFARM_CONNECTOR_EXEC_SHARED_TOKEN']
+    ?? '';
+
+const mcpRegistryHeaders = (tenantId: string): Record<string, string> => {
+    const headers: Record<string, string> = {
+        'x-tenant-id': tenantId,
+        'content-type': 'application/json',
+    };
+    const token = mcpServiceToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+};
+
+/**
  * Fetch all active MCP servers for a tenant.
  * Returns [] on any error.
  */
@@ -36,10 +59,7 @@ export async function getTenantMcpServers(tenantId: string): Promise<TenantMcpSe
     try {
         const response = await fetch(`${base}/v1/mcp`, {
             method: 'GET',
-            headers: {
-                'x-tenant-id': tenantId,
-                'content-type': 'application/json',
-            },
+            headers: mcpRegistryHeaders(tenantId),
             signal: AbortSignal.timeout(10_000),
         });
 
@@ -80,10 +100,7 @@ export async function registerMcpServer(
     try {
         const response = await fetch(`${base}/v1/mcp`, {
             method: 'POST',
-            headers: {
-                'x-tenant-id': tenantId,
-                'content-type': 'application/json',
-            },
+            headers: mcpRegistryHeaders(tenantId),
             body: JSON.stringify(server),
             signal: AbortSignal.timeout(10_000),
         });
