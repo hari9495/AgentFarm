@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import {
     MANAGED_MCP_CATALOG,
@@ -109,9 +110,54 @@ export async function registerMcpRegistryRoutes(
     const repo = options.repo ?? defaultRepo;
     const fetcher = options.fetcher ?? globalThis.fetch;
 
+    // Inter-service auth: the agent-runtime calls these routes (to discover and
+    // auto-register MCP servers for a tenant) without a browser session. It
+    // authenticates with a shared service token + an x-tenant-id header.
+    const serviceToken =
+        process.env.AGENTFARM_MCP_REGISTRY_SHARED_TOKEN
+        ?? process.env.AGENTFARM_RUNTIME_TASK_SHARED_TOKEN
+        ?? process.env.RUNTIME_TASK_SHARED_TOKEN
+        ?? process.env.AGENTFARM_CONNECTOR_EXEC_SHARED_TOKEN
+        ?? null;
+
+    const readServiceToken = (request: FastifyRequest): string | null => {
+        const direct = request.headers['x-mcp-registry-token'];
+        if (typeof direct === 'string' && direct.trim()) return direct.trim();
+        const authHeader = request.headers.authorization;
+        if (typeof authHeader === 'string' && authHeader.toLowerCase().startsWith('bearer ')) {
+            return authHeader.slice(7).trim();
+        }
+        return null;
+    };
+
+    const tokensMatch = (a: string, b: string): boolean => {
+        const bufA = Buffer.from(a);
+        const bufB = Buffer.from(b);
+        return bufA.length === bufB.length && timingSafeEqual(bufA, bufB);
+    };
+
+    // Resolve a session from a browser session OR an internal service token.
+    const resolveSession = (request: FastifyRequest): SessionContext | null => {
+        const session = options.getSession(request);
+        if (session) return session;
+
+        if (!serviceToken) return null;
+        const provided = readServiceToken(request);
+        const tenantId = request.headers['x-tenant-id'];
+        if (provided && typeof tenantId === 'string' && tenantId.trim() && tokensMatch(provided, serviceToken)) {
+            return {
+                userId: 'runtime-service',
+                tenantId: tenantId.trim(),
+                workspaceIds: [],
+                expiresAt: Date.now() + 60_000,
+            };
+        }
+        return null;
+    };
+
     // POST /v1/mcp — register or reactivate a server
     app.post<{ Body: CreateBody }>('/v1/mcp', async (request, reply) => {
-        const session = options.getSession(request);
+        const session = resolveSession(request);
         if (!session) {
             return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
         }
@@ -161,7 +207,7 @@ export async function registerMcpRegistryRoutes(
 
     // GET /v1/mcp — list active servers for tenant
     app.get('/v1/mcp', async (request, reply) => {
-        const session = options.getSession(request);
+        const session = resolveSession(request);
         if (!session) {
             return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
         }
@@ -172,7 +218,7 @@ export async function registerMcpRegistryRoutes(
 
     // DELETE /v1/mcp/:id — soft delete (deactivate)
     app.delete<{ Params: IdParams }>('/v1/mcp/:id', async (request, reply) => {
-        const session = options.getSession(request);
+        const session = resolveSession(request);
         if (!session) {
             return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
         }
@@ -196,7 +242,7 @@ export async function registerMcpRegistryRoutes(
 
     // GET /v1/mcp/:id/ping — latency probe
     app.get<{ Params: IdParams }>('/v1/mcp/:id/ping', async (request, reply) => {
-        const session = options.getSession(request);
+        const session = resolveSession(request);
         if (!session) {
             return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
         }
@@ -234,7 +280,7 @@ export async function registerMcpRegistryRoutes(
 
     // ── GET /v1/mcp/catalog — list all managed connectors ──────────────────
     app.get('/v1/mcp/catalog', async (request, reply) => {
-        const session = options.getSession(request);
+        const session = resolveSession(request);
         if (!session) {
             return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
         }
@@ -261,7 +307,7 @@ export async function registerMcpRegistryRoutes(
     app.post<{ Params: { connectorId: string }; Body: Record<string, string> }>(
         '/v1/mcp/catalog/:connectorId/enable',
         async (request, reply) => {
-            const session = options.getSession(request);
+            const session = resolveSession(request);
             if (!session) {
                 return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
             }
