@@ -37,6 +37,8 @@ import {
     normalizeActionType as _normalizeActionType,
     scoreConfidence as _scoreConfidence,
     classifyRisk as _classifyRisk,
+    MEDIUM_RISK_ACTIONS,
+    HIGH_RISK_ACTIONS,
 } from './domain/risk-policy.js';
 import { createHash } from 'node:crypto';
 import { getRedisClient } from '@agentfarm/redis-client';
@@ -233,6 +235,22 @@ export function applyHighImpactSafetyNet(
     decision: ActionDecision,
     payload: Record<string, unknown>,
 ): { decision: ActionDecision; bumped: boolean } {
+    // Policy floor: an action that is risky BY POLICY (e.g. mcp_tool_call) can never
+    // be downgraded to low/execute by the LLM's self-reported risk. Enforce the
+    // policy minimum regardless of what the model claimed.
+    if (decision.riskLevel === 'low' && HIGH_RISK_ACTIONS.has(decision.actionType)) {
+        return {
+            decision: { ...decision, riskLevel: 'high', route: 'approval', reason: `${decision.reason} [policy-floor: '${decision.actionType}' is high-risk by policy]` },
+            bumped: true,
+        };
+    }
+    if (decision.riskLevel === 'low' && MEDIUM_RISK_ACTIONS.has(decision.actionType)) {
+        return {
+            decision: { ...decision, riskLevel: 'medium', route: 'approval', reason: `${decision.reason} [policy-floor: '${decision.actionType}' is medium-risk by policy]` },
+            bumped: true,
+        };
+    }
+
     if (decision.riskLevel !== 'low') return { decision, bumped: false };
     if (!HIGH_IMPACT_PATTERN.test(buildSafetyNetProbe(decision, payload))) return { decision, bumped: false };
     return {
