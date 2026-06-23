@@ -126,6 +126,11 @@ const buildApp = async () => {
                 return { ...data };
             },
         },
+        bot: {
+            // Seeded so rule-creation tests pass tenant/workspace validation.
+            findUnique: async ({ where }: { where: { id: string } }) =>
+                where.id === 'bot_dev' ? { id: 'bot_dev', workspaceId: 'ws_test' } : null,
+        },
     };
 
     const mockSession = {

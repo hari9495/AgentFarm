@@ -24,7 +24,22 @@ type InboundEvent = {
 
 type TestResult = { ok: boolean; statusCode: number; latencyMs: number };
 
-type ActiveTab = 'sources' | 'events';
+type TriggerRule = {
+    id: string;
+    name: string;
+    sourceId: string | null;
+    enabled: boolean;
+    matchEventType: string | null;
+    matchField: string | null;
+    matchValue: string | null;
+    botId: string;
+    promptTemplate: string;
+    priority: string;
+};
+
+type BotOption = { id: string; workspaceId: string; role: string };
+
+type ActiveTab = 'sources' | 'events' | 'rules';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 
@@ -47,6 +62,16 @@ const inputStyle: React.CSSProperties = {
     fontSize: '0.84rem',
     minWidth: '180px',
     outline: 'none',
+};
+
+const labelStyle: React.CSSProperties = {
+    fontSize: 11,
+    fontWeight: 700,
+    color: 'var(--ink-muted)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    display: 'block',
+    marginBottom: 5,
 };
 
 const EVENT_STATUS_BADGE: Record<string, { bg: string; color: string; border: string }> = {
@@ -111,6 +136,20 @@ export default function InboundWebhooksPanel() {
     const [filterLimit, setFilterLimit] = useState('20');
     const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
 
+    // Trigger-rules state
+    const [rules, setRules] = useState<TriggerRule[]>([]);
+    const [rulesLoading, setRulesLoading] = useState(false);
+    const [rulesError, setRulesError] = useState<string | null>(null);
+    const [bots, setBots] = useState<BotOption[]>([]);
+    const [showRuleForm, setShowRuleForm] = useState(false);
+    const [savingRule, setSavingRule] = useState(false);
+    const [ruleForm, setRuleForm] = useState({
+        name: '', botId: '', sourceId: '', matchEventType: '', matchField: '', matchValue: '',
+        promptTemplate: '', priority: 'normal',
+    });
+    const [togglingRuleId, setTogglingRuleId] = useState<string | null>(null);
+    const [deletingRuleId, setDeletingRuleId] = useState<string | null>(null);
+
     // ── Data fetching ─────────────────────────────────────────────────────────
 
     const fetchSources = useCallback(async () => {
@@ -151,13 +190,103 @@ export default function InboundWebhooksPanel() {
         }
     }, [filterSource, filterLimit]);
 
+    const fetchRules = useCallback(async () => {
+        setRulesLoading(true);
+        setRulesError(null);
+        try {
+            const [rulesRes, botsRes] = await Promise.all([
+                fetch('/api/webhooks/inbound/rules', { cache: 'no-store' }),
+                fetch('/api/agents', { cache: 'no-store' }),
+            ]);
+            const rulesData = (await rulesRes.json()) as { rules?: TriggerRule[]; error?: string };
+            if (!rulesRes.ok) {
+                setRulesError(rulesData.error ?? 'Failed to load rules.');
+            } else {
+                setRules(rulesData.rules ?? []);
+            }
+            const botsData = (await botsRes.json().catch(() => ({}))) as { bots?: BotOption[] };
+            setBots(botsData.bots ?? []);
+        } catch {
+            setRulesError('Network error loading rules.');
+        } finally {
+            setRulesLoading(false);
+        }
+    }, []);
+
     useEffect(() => { void fetchSources(); }, [fetchSources]);
 
     useEffect(() => {
         if (activeTab === 'events') void fetchEvents();
-    }, [activeTab, fetchEvents]);
+        if (activeTab === 'rules') void fetchRules();
+    }, [activeTab, fetchEvents, fetchRules]);
 
     // ── Handlers ──────────────────────────────────────────────────────────────
+
+    const handleAddRule = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSavingRule(true);
+        setRulesError(null);
+        try {
+            const bot = bots.find(b => b.id === ruleForm.botId);
+            const res = await fetch('/api/webhooks/inbound/rules', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                    name: ruleForm.name,
+                    botId: ruleForm.botId,
+                    workspaceId: bot?.workspaceId,
+                    sourceId: ruleForm.sourceId || undefined,
+                    matchEventType: ruleForm.matchEventType || undefined,
+                    matchField: ruleForm.matchField || undefined,
+                    matchValue: ruleForm.matchValue || undefined,
+                    promptTemplate: ruleForm.promptTemplate,
+                    priority: ruleForm.priority,
+                }),
+            });
+            const data = (await res.json()) as { error?: string };
+            if (!res.ok) {
+                setRulesError(data.error ?? 'Failed to create rule.');
+            } else {
+                setRuleForm({ name: '', botId: '', sourceId: '', matchEventType: '', matchField: '', matchValue: '', promptTemplate: '', priority: 'normal' });
+                setShowRuleForm(false);
+                await fetchRules();
+            }
+        } catch {
+            setRulesError('Network error creating rule.');
+        } finally {
+            setSavingRule(false);
+        }
+    };
+
+    const handleToggleRule = async (rule: TriggerRule) => {
+        setTogglingRuleId(rule.id);
+        try {
+            const res = await fetch(`/api/webhooks/inbound/rules/${encodeURIComponent(rule.id)}`, {
+                method: 'PATCH',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ enabled: !rule.enabled }),
+            });
+            if (res.ok) await fetchRules();
+            else setRulesError('Failed to update rule.');
+        } catch {
+            setRulesError('Network error updating rule.');
+        } finally {
+            setTogglingRuleId(null);
+        }
+    };
+
+    const handleDeleteRule = async (ruleId: string) => {
+        setDeletingRuleId(ruleId);
+        try {
+            const res = await fetch(`/api/webhooks/inbound/rules/${encodeURIComponent(ruleId)}`, { method: 'DELETE' });
+            if (res.ok) await fetchRules();
+            else setRulesError('Failed to delete rule.');
+        } catch {
+            setRulesError('Network error deleting rule.');
+        } finally {
+            setDeletingRuleId(null);
+        }
+    };
 
     const handleAddSource = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -250,7 +379,7 @@ export default function InboundWebhooksPanel() {
 
             {/* Tab switcher */}
             <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--line)', marginBottom: '1rem' }}>
-                {(['sources', 'events'] as const).map((tab) => (
+                {(['sources', 'events', 'rules'] as const).map((tab) => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
@@ -267,7 +396,7 @@ export default function InboundWebhooksPanel() {
                             textTransform: 'capitalize',
                         }}
                     >
-                        {tab === 'sources' ? 'Sources' : 'Recent Events'}
+                        {tab === 'sources' ? 'Sources' : tab === 'events' ? 'Recent Events' : 'Triggers'}
                     </button>
                 ))}
             </div>
@@ -569,6 +698,157 @@ export default function InboundWebhooksPanel() {
                                     })}
                                 </tbody>
                             </table>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ── Triggers tab ──────────────────────────────────────────────── */}
+            {activeTab === 'rules' && (
+                <div>
+                    <p style={{ margin: '0 0 0.75rem', fontSize: '0.84rem', color: 'var(--ink-muted)' }}>
+                        Automatically start an agent task when a matching event arrives. Triggered tasks go through
+                        the normal risk &amp; approval flow.
+                    </p>
+
+                    {rulesError && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: 10, color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>
+                            ⚠ {rulesError}
+                        </div>
+                    )}
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.75rem' }}>
+                        <button
+                            onClick={() => { setShowRuleForm(v => !v); setRulesError(null); }}
+                            style={{ fontSize: '0.85rem', padding: '0.3rem 0.75rem', borderRadius: '4px', cursor: 'pointer', background: 'var(--accent)', color: 'var(--card)', border: 'none' }}
+                        >
+                            {showRuleForm ? 'Cancel' : '+ Add trigger'}
+                        </button>
+                    </div>
+
+                    {showRuleForm && (
+                        <div style={{ border: '1px solid rgba(0,102,204,0.25)', borderRadius: 16, background: 'var(--card)', padding: '18px 20px', marginBottom: 14 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>New Trigger Rule</div>
+                            <form onSubmit={e => void handleAddRule(e)} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                    <div>
+                                        <label style={labelStyle}>Rule name <span style={{ color: 'var(--danger)' }}>*</span></label>
+                                        <input type="text" placeholder="e.g. New issue → developer" value={ruleForm.name} onChange={e => setRuleForm(f => ({ ...f, name: e.target.value }))} required style={inputStyle} />
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Run agent <span style={{ color: 'var(--danger)' }}>*</span></label>
+                                        <select value={ruleForm.botId} onChange={e => setRuleForm(f => ({ ...f, botId: e.target.value }))} required style={{ ...inputStyle, width: '100%' }}>
+                                            <option value="">Select an agent…</option>
+                                            {bots.map(b => <option key={b.id} value={b.id}>{b.role} ({b.id.slice(0, 8)})</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                    <div>
+                                        <label style={labelStyle}>Source</label>
+                                        <select value={ruleForm.sourceId} onChange={e => setRuleForm(f => ({ ...f, sourceId: e.target.value }))} style={{ ...inputStyle, width: '100%' }}>
+                                            <option value="">Any source</option>
+                                            {sources.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Priority</label>
+                                        <select value={ruleForm.priority} onChange={e => setRuleForm(f => ({ ...f, priority: e.target.value }))} style={{ ...inputStyle, width: '100%' }}>
+                                            {['high', 'normal', 'low'].map(p => <option key={p} value={p}>{p}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                                    <div>
+                                        <label style={labelStyle}>Event type</label>
+                                        <input type="text" placeholder="e.g. issues (optional)" value={ruleForm.matchEventType} onChange={e => setRuleForm(f => ({ ...f, matchEventType: e.target.value }))} style={inputStyle} />
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Body field</label>
+                                        <input type="text" placeholder="e.g. action (optional)" value={ruleForm.matchField} onChange={e => setRuleForm(f => ({ ...f, matchField: e.target.value }))} style={inputStyle} />
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Field equals</label>
+                                        <input type="text" placeholder="e.g. opened (optional)" value={ruleForm.matchValue} onChange={e => setRuleForm(f => ({ ...f, matchValue: e.target.value }))} style={inputStyle} />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>Instruction template <span style={{ color: 'var(--danger)' }}>*</span></label>
+                                    <textarea
+                                        placeholder="e.g. Investigate and fix this issue: {{issue.title}}"
+                                        value={ruleForm.promptTemplate}
+                                        onChange={e => setRuleForm(f => ({ ...f, promptTemplate: e.target.value }))}
+                                        required
+                                        rows={2}
+                                        style={{ ...inputStyle, width: '100%', resize: 'vertical', fontFamily: 'inherit' }}
+                                    />
+                                    <p style={{ fontSize: 11, color: 'var(--ink-muted)', margin: '5px 0 0' }}>
+                                        Use <code>{'{{field.path}}'}</code> to insert values from the event payload (e.g. <code>{'{{issue.title}}'}</code>).
+                                    </p>
+                                </div>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    <button type="button" onClick={() => setShowRuleForm(false)} style={{ padding: '7px 16px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                                    <button type="submit" disabled={savingRule} style={{ padding: '7px 20px', borderRadius: 9999, border: 'none', background: savingRule ? 'var(--ink-muted)' : 'var(--accent)', color: 'var(--card)', fontSize: 13, fontWeight: 700, cursor: savingRule ? 'not-allowed' : 'pointer' }}>
+                                        {savingRule ? 'Saving…' : 'Create Trigger'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    )}
+
+                    {rulesLoading ? (
+                        <p style={{ color: 'var(--ink-muted)', fontSize: '0.86rem', textAlign: 'center', padding: '2rem 0' }}>Loading…</p>
+                    ) : rules.length === 0 ? (
+                        <p style={{ color: 'var(--ink-muted)', fontSize: '0.86rem', textAlign: 'center', padding: '2rem 0' }}>
+                            No triggers yet. Add one to auto-start an agent when an event arrives.
+                        </p>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            {rules.map(rule => {
+                                const sourceName = rule.sourceId ? (sources.find(s => s.id === rule.sourceId)?.name ?? rule.sourceId) : 'Any source';
+                                const botLabel = bots.find(b => b.id === rule.botId)?.role ?? rule.botId;
+                                const filterParts = [
+                                    rule.matchEventType ? `event = ${rule.matchEventType}` : null,
+                                    rule.matchField ? `${rule.matchField} = ${rule.matchValue ?? ''}` : null,
+                                ].filter(Boolean);
+                                return (
+                                    <div key={rule.id} style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 14, padding: '14px 16px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                            <div style={{ flex: 1, minWidth: 220 }}>
+                                                <p style={{ margin: '0 0 0.3rem', fontWeight: 700, fontSize: '0.9rem', color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                    {rule.name}
+                                                    <span style={{ padding: '2px 8px', borderRadius: 9999, fontSize: 10, fontWeight: 700, background: rule.enabled ? 'var(--ok-bg, rgba(26,122,74,0.08))' : 'var(--bg)', color: rule.enabled ? 'var(--ok)' : 'var(--ink-muted)', border: `1px solid ${rule.enabled ? 'rgba(26,122,74,0.25)' : 'var(--line)'}` }}>
+                                                        {rule.enabled ? 'Enabled' : 'Disabled'}
+                                                    </span>
+                                                </p>
+                                                <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--ink-muted)' }}>
+                                                    {sourceName} → <strong style={{ color: 'var(--ink-soft)' }}>{botLabel}</strong>
+                                                    {filterParts.length > 0 ? ` · when ${filterParts.join(', ')}` : ' · all events'}
+                                                </p>
+                                                <p style={{ margin: '0.35rem 0 0', fontSize: '0.78rem', color: 'var(--ink-muted)', fontFamily: 'monospace' }}>
+                                                    {rule.promptTemplate}
+                                                </p>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                                                <button
+                                                    onClick={() => void handleToggleRule(rule)}
+                                                    disabled={togglingRuleId === rule.id}
+                                                    style={{ fontSize: 11, padding: '5px 11px', borderRadius: 9999, cursor: 'pointer', background: 'var(--card)', color: 'var(--ink-soft)', border: '1px solid var(--line)', fontWeight: 600 }}
+                                                >
+                                                    {togglingRuleId === rule.id ? '…' : rule.enabled ? 'Disable' : 'Enable'}
+                                                </button>
+                                                <button
+                                                    onClick={() => void handleDeleteRule(rule.id)}
+                                                    disabled={deletingRuleId === rule.id}
+                                                    style={{ fontSize: 11, padding: '5px 11px', borderRadius: 9999, cursor: 'pointer', color: 'var(--danger)', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', fontWeight: 600 }}
+                                                >
+                                                    {deletingRuleId === rule.id ? '…' : 'Delete'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
                 </div>

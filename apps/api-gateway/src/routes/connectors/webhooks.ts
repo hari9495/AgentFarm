@@ -764,6 +764,15 @@ export function registerWebhookRoutes(app: FastifyInstance, prisma: PrismaClient
             return reply.code(403).send({ error: 'workspaceId is not in your session scope' });
         }
 
+        // The target bot must exist and belong to the rule's workspace (which is
+        // already scoped to the caller's tenant) — prevents pointing a rule at
+        // another tenant's agent.
+        const bot = await prisma.bot.findUnique({ where: { id: botId } });
+        if (!bot) return reply.code(404).send({ error: 'bot not found' });
+        if (bot.workspaceId !== workspaceId) {
+            return reply.code(403).send({ error: 'bot does not belong to the selected workspace' });
+        }
+
         // If a sourceId is given, it must belong to the caller's tenant.
         const sourceId = trimString(req.body?.sourceId) || null;
         if (sourceId) {
