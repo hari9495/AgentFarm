@@ -3,7 +3,7 @@
  * the live gateway + a registered MCP server. Run INSIDE the agent-runtime
  * container so it uses the same env (API_GATEWAY_URL, shared token).
  */
-import { getTenantMcpServers, discoverMcpTools, invokeMcpTool } from '/app/apps/agent-runtime/dist/mcp-registry-client.js';
+import { getTenantMcpServers, discoverMcpTools, invokeMcpTool, buildMcpToolCatalog } from '/app/apps/agent-runtime/dist/mcp-registry-client.js';
 
 const TENANT = process.argv[2] ?? 'yukthix-consulting-a2362a';
 
@@ -36,7 +36,15 @@ const main = async () => {
     const r2 = await invokeMcpTool(echo.url, echo.headers ?? {}, 'add', { a: 2, b: 40 });
     console.log('add result:', JSON.stringify(r2.content));
 
-    console.log('\nPASS: runtime discovered, connected to, and invoked the registered MCP server end-to-end.');
+    console.log('\n--- 5. buildMcpToolCatalog (the block injected into the decision-LLM prompt) ---');
+    const catalog = await buildMcpToolCatalog(TENANT);
+    console.log(catalog || '(empty)');
+    if (!catalog.includes('mcp_tool_call') || !catalog.includes('echo')) {
+        console.error('FAIL: catalog missing expected content.');
+        process.exit(1);
+    }
+
+    console.log('\nPASS: runtime discovered, connected to, invoked, AND produced a planner catalog end-to-end.');
 };
 
 main().catch((err) => {
