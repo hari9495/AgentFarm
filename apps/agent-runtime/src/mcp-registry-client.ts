@@ -235,3 +235,80 @@ export async function invokeMcpTool(
     await client.initialize();
     return client.callTool(toolName, args);
 }
+
+// ---------------------------------------------------------------------------
+// Planner-facing tool catalog
+// ---------------------------------------------------------------------------
+
+/** Hard cap on the catalog text so it never blows the decision-LLM prompt budget. */
+const MCP_CATALOG_MAX_CHARS = 1500;
+
+/**
+ * Build a compact, human-readable catalog of every MCP tool available to a
+ * tenant's agents, for injection into the decision-LLM prompt. This is what lets
+ * an agent autonomously choose actionType=mcp_tool_call.
+ *
+ * Design notes:
+ *  - Discovers servers WITHOUT a role filter — any server the tenant registered
+ *    is offered to every one of that tenant's agents (tenant isolation is the
+ *    only boundary; role-based blocking is intentionally not applied).
+ *  - Fully fail-safe: returns '' on any error or when nothing is registered, so
+ *    a down/misconfigured MCP server can never break task planning.
+ *  - Output is bounded to MCP_CATALOG_MAX_CHARS; tools beyond the budget are
+ *    dropped with a truncation note rather than overflowing the prompt.
+ *
+ * @returns A formatted catalog block, or '' when no healthy tools are available.
+ */
+export async function buildMcpToolCatalog(tenantId: string, workspaceId?: string): Promise<string> {
+    let servers: McpServerInfo[];
+    try {
+        servers = await discoverMcpTools(tenantId, '', '');
+    } catch (err) {
+        console.warn('[mcp-registry-client] buildMcpToolCatalog: discovery failed:', String(err));
+        return '';
+    }
+    void workspaceId; // reserved: workspace-scoped servers are not yet distinguished
+    return formatMcpToolCatalog(servers);
+}
+
+/**
+ * Pure formatter: turns discovered server info into the planner catalog block.
+ * Separated from buildMcpToolCatalog so it can be unit-tested without network.
+ */
+export function formatMcpToolCatalog(servers: McpServerInfo[]): string {
+    const lines: string[] = [];
+    let truncated = false;
+
+    for (const server of servers) {
+        if (!server.healthy || server.tools.length === 0) continue;
+        for (const tool of server.tools) {
+            const required = tool.inputSchema?.required ?? [];
+            const params = Object.keys(tool.inputSchema?.properties ?? {})
+                .map((p) => (required.includes(p) ? `${p}*` : p))
+                .join(', ');
+            const entry =
+                `- server="${server.name}" url="${server.url}" tool="${tool.name}"` +
+                `${tool.description ? ` — ${tool.description}` : ''}` +
+                `${params ? ` (args: ${params})` : ''}`;
+
+            // Stop before exceeding the budget (account for header + footer).
+            const projected = lines.join('\n').length + entry.length + 200;
+            if (projected > MCP_CATALOG_MAX_CHARS) {
+                truncated = true;
+                break;
+            }
+            lines.push(entry);
+        }
+        if (truncated) break;
+    }
+
+    if (lines.length === 0) return '';
+
+    const header =
+        'The following MCP tools are registered for this workspace. To use one, set ' +
+        'actionType=mcp_tool_call and payloadOverrides={ mcpServerUrl: <url>, toolName: <tool>, ' +
+        'toolArgs: { ... } }. Args marked with * are required.';
+    const footer = truncated ? '\n- …(additional tools omitted to fit prompt budget)' : '';
+
+    return `${header}\n${lines.join('\n')}${footer}`;
+}

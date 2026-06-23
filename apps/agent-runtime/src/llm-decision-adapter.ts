@@ -957,8 +957,13 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
     // from ~9K tokens of codebase history, and skipping saves meaningful LLM cost.
     // ---------------------------------------------------------------------------
     const CONTEXT_FIELD_CAP = 12_000; // per-field hard cap for top-level context blocks
-    const CONTEXT_FIELD_NAMES = ['_scout_context', '_episodic_context', '_episodic_person_context'];
+    const CONTEXT_FIELD_NAMES = ['_scout_context', '_episodic_context', '_episodic_person_context', '_mcp_tool_catalog'];
     const isSimpleTask = complexity.complexity === 'simple';
+    // MCP tool catalog is offered regardless of task complexity — even a simple
+    // task may be best served by a registered tool.
+    const mcpToolCatalog = typeof task.payload['_mcp_tool_catalog'] === 'string' && task.payload['_mcp_tool_catalog'].trim()
+        ? task.payload['_mcp_tool_catalog']
+        : null;
     const scoutContext = !isSimpleTask && typeof task.payload['_scout_context'] === 'string'
         ? task.payload['_scout_context'].slice(0, CONTEXT_FIELD_CAP)
         : null;
@@ -982,6 +987,7 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
             ...(scoutContext ? { codebaseContext: scoutContext } : {}),
             ...(episodicContext ? { recentTaskHistory: episodicContext } : {}),
             ...(episodicPersonContext ? { personTaskHistory: episodicPersonContext } : {}),
+            ...(mcpToolCatalog ? { availableMcpTools: mcpToolCatalog } : {}),
             // ────────────────────────────────────────────────────────────────────────
             requiredResponseSchema: {
                 actionType: 'string (snake_case) — must match a routable workspace_* action type (e.g. workspace_subagent_spawn) or a connector action',
@@ -1031,6 +1037,11 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
                 'Omitting initial_plan is safe — the executor will call the LLM to generate code edits from prompt + file contents at runtime.',
                 'Only use action steps from this set: code_edit, code_edit_patch, run_tests, run_build.',
                 'For code_edit_patch: old_text must be exact — copy it verbatim from the file content in the task payload.',
+                ...(mcpToolCatalog
+                    ? [
+                        'When a registered tool in availableMcpTools fits the task, set actionType=mcp_tool_call and payloadOverrides={ actionType: "mcp_tool_call", mcpServerUrl: <the tool\'s url>, toolName: <the tool name>, toolArgs: { <required args> } }. Risk/approval still applies.',
+                    ]
+                    : []),
             ],
             taskComplexity: complexity,
             workspaceConventions: intelligence.conventionHints,
@@ -1070,6 +1081,7 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
                 ...(scoutContext ? { codebaseContext: scoutContext } : {}),
                 ...(episodicContext ? { recentTaskHistory: episodicContext } : {}),
                 ...(episodicPersonContext ? { personTaskHistory: episodicPersonContext } : {}),
+                ...(mcpToolCatalog ? { availableMcpTools: mcpToolCatalog } : {}),
                 requiredResponseSchema: {
                     actionType: 'string (snake_case)',
                     confidence: 'number between 0 and 1',

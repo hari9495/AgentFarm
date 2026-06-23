@@ -73,6 +73,7 @@ import {
 } from './agents/tester/tester-agent-profile.js';
 import { evaluateTesterEditGuard } from './agents/tester/tester-edit-guard.js';
 import { getTesterMcpClients } from './agents/tester/tester-mcp-provisioner.js';
+import { buildMcpToolCatalog } from './mcp-registry-client.js';
 import {
     getProviderQualityPenalty,
     getQualitySignalSummary,
@@ -3462,6 +3463,13 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         // Attach persona to task payload so LLM resolvers can inject it into the system prompt
         if (persona) {
             task = { ...task, payload: { ...task.payload, _persona: persona } };
+        }
+
+        // Attach the registered MCP tool catalog so the decision LLM can autonomously
+        // choose actionType=mcp_tool_call. Tenant-scoped, no role filter; fully fail-safe.
+        const mcpToolCatalog = await buildMcpToolCatalog(config.tenantId, config.workspaceId).catch(() => '');
+        if (mcpToolCatalog) {
+            task = { ...task, payload: { ...task.payload, _mcp_tool_catalog: mcpToolCatalog } };
         }
 
         // ---- Gap 1: Intent clarity check — ask for clarification instead of guessing ----
