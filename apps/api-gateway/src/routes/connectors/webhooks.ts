@@ -159,7 +159,9 @@ async function evaluateTriggerRules(args: {
                 ? (rule.priority as QueuePriority)
                 : 'normal';
             const taskId = randomUUID();
-            const payload = {
+            // The task-queue drain sweep POSTs this payload verbatim to agent-runtime
+            // /tasks/intake, which requires a top-level { task_id, payload } envelope.
+            const innerPayload = {
                 prompt,
                 tenantId: source.tenantId,
                 workspaceId: rule.workspaceId,
@@ -170,6 +172,7 @@ async function evaluateTriggerRules(args: {
                 webhookEventId: eventId,
                 webhookRuleId: rule.id,
             };
+            const queuePayload = { task_id: taskId, payload: innerPayload };
 
             await prisma.taskQueueEntry.create({
                 data: {
@@ -179,7 +182,7 @@ async function evaluateTriggerRules(args: {
                     botId: rule.botId,
                     priority,
                     status: 'pending',
-                    payload: payload as import('@prisma/client').Prisma.InputJsonValue,
+                    payload: queuePayload as import('@prisma/client').Prisma.InputJsonValue,
                     dependsOn: [],
                     dependencyMet: true,
                 },
@@ -190,7 +193,7 @@ async function evaluateTriggerRules(args: {
                 workspaceId: rule.workspaceId,
                 botId: rule.botId,
                 priority,
-                payload,
+                payload: queuePayload,
                 enqueuedAt: Date.now(),
             });
         }

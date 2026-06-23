@@ -549,10 +549,12 @@ describe('Webhook trigger rules', () => {
             });
             assert.equal(res.statusCode, 200);
             assert.equal(queuedTasks.length, 1, 'one task should be enqueued');
-            const payload = queuedTasks[0]!['payload'] as { prompt: string; botId: string; triggeredBy: string };
-            assert.equal(payload.prompt, 'Investigate and fix: Login button broken');
-            assert.equal(payload.botId, 'bot_dev');
-            assert.equal(payload.triggeredBy, 'webhook');
+            // Enqueued payload is the intake envelope { task_id, payload: {...} }
+            const envelope = queuedTasks[0]!['payload'] as { task_id: string; payload: { prompt: string; botId: string; triggeredBy: string } };
+            assert.ok(envelope.task_id, 'envelope must carry task_id for /tasks/intake');
+            assert.equal(envelope.payload.prompt, 'Investigate and fix: Login button broken');
+            assert.equal(envelope.payload.botId, 'bot_dev');
+            assert.equal(envelope.payload.triggeredBy, 'webhook');
         } finally {
             await app.close();
         }
