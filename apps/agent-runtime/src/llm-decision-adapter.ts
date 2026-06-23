@@ -782,10 +782,26 @@ const sanitizePayloadOverrides = (value: unknown): Record<string, unknown> | und
         'service_name',
         'summary',
         'prompt',
+        // MCP tool invocation fields (actionType=mcp_tool_call)
+        'mcpServerUrl',
+        'toolName',
     ];
     for (const key of stringKeys) {
         if (typeof raw[key] === 'string' && raw[key].trim()) {
             sanitized[key] = raw[key].trim().slice(0, key === 'issue_body' ? 4000 : 300);
+        }
+    }
+
+    // toolArgs: a free-form object of arguments for the chosen MCP tool. Pass it
+    // through when it is a plain object, bounded to a safe serialized size.
+    if (raw['toolArgs'] && typeof raw['toolArgs'] === 'object' && !Array.isArray(raw['toolArgs'])) {
+        try {
+            const serialized = JSON.stringify(raw['toolArgs']);
+            if (serialized.length <= 4000) {
+                sanitized['toolArgs'] = JSON.parse(serialized) as Record<string, unknown>;
+            }
+        } catch {
+            // non-serializable — drop it
         }
     }
 
