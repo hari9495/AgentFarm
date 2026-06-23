@@ -989,8 +989,13 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
             ...(episodicPersonContext ? { personTaskHistory: episodicPersonContext } : {}),
             ...(mcpToolCatalog ? { availableMcpTools: mcpToolCatalog } : {}),
             // ────────────────────────────────────────────────────────────────────────
+            ...(mcpToolCatalog
+                ? { TOOL_PRIORITY_DIRECTIVE: 'A registered MCP tool catalog is available above (availableMcpTools). If ANY listed tool directly satisfies the task, you MUST choose actionType="mcp_tool_call" and use it — do NOT spawn a coding sub-agent or write code for something a registered tool already does. Only choose workspace_subagent_spawn when no listed tool fits.' }
+                : {}),
             requiredResponseSchema: {
-                actionType: 'string (snake_case) — must match a routable workspace_* action type (e.g. workspace_subagent_spawn) or a connector action',
+                actionType: mcpToolCatalog
+                    ? 'string (snake_case). If a registered tool in availableMcpTools fits, use "mcp_tool_call". Otherwise a routable workspace_* action (e.g. workspace_subagent_spawn) or a connector action.'
+                    : 'string (snake_case) — must match a routable workspace_* action type (e.g. workspace_subagent_spawn) or a connector action',
                 confidence: 'number between 0 and 1',
                 riskLevel: 'low | medium | high',
                 route: 'execute | approval',
@@ -998,6 +1003,13 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
                 payloadOverrides: {
                     actionType: 'required string — MUST match your top-level actionType so the executor can route correctly (e.g. workspace_subagent_spawn)',
                     prompt: 'required string — natural language description of the task; used by workspace_subagent_spawn as the sub-agent prompt',
+                    ...(mcpToolCatalog
+                        ? {
+                            mcpServerUrl: 'REQUIRED when actionType=mcp_tool_call — copy the exact url shown for the chosen tool in availableMcpTools.',
+                            toolName: 'REQUIRED when actionType=mcp_tool_call — the exact tool name from availableMcpTools.',
+                            toolArgs: 'REQUIRED when actionType=mcp_tool_call — an object of the tool\'s arguments (include every arg marked * in the catalog), e.g. { "a": 7, "b": 35 }.',
+                        }
+                        : {}),
                     specialist_profile: 'optional string',
                     workflow: 'optional string',
                     target_files: 'optional string[] — file paths the task should touch (relative to workspace root)',
@@ -1031,7 +1043,10 @@ const createTaskPrompt = (task: TaskEnvelope, heuristicDecision: ActionDecision)
                 'Use the task payload and heuristic baseline below.',
                 'ALWAYS set payloadOverrides.actionType equal to your top-level actionType. This is required for routing.',
                 'ALWAYS set payloadOverrides.prompt to the natural language task description. Required for workspace_subagent_spawn.',
-                'For coding, bug-fix, feature, refactor, or test tasks, use actionType=workspace_subagent_spawn.',
+                ...(mcpToolCatalog
+                    ? ['TOOL PRIORITY: If a registered tool in availableMcpTools directly satisfies the task, you MUST set actionType=mcp_tool_call and use that tool INSTEAD of writing code or spawning a sub-agent. Only fall back to workspace_subagent_spawn when no registered tool fits.']
+                    : []),
+                'For coding, bug-fix, feature, refactor, or test tasks for which NO registered MCP tool applies, use actionType=workspace_subagent_spawn.',
                 'For tasks about responding to PR review comments, addressing reviewer feedback, or polling an open PR for new comments and applying suggested fixes, use actionType=workspace_pr_review_poll with payloadOverrides.pr_number set.',
                 'When choosing workspace_subagent_spawn: set target_files to the files that need changing; set initial_plan with concrete code_edit_patch actions when you know the exact change; set fix_attempts for anticipated repair paths.',
                 'Omitting initial_plan is safe — the executor will call the LLM to generate code edits from prompt + file contents at runtime.',
