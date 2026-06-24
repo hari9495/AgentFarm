@@ -136,8 +136,8 @@ Implements the Phase-1 spec (`docs/superpowers/specs/2026-06-24-multi-step-mcp-t
 **Note:** live browser integration also requires the stdio bridge to run `supergateway --stateful` (spec §3.2) — code is complete; that's an operator/runner config flag. Phase 2 (adaptive per-step looping) remains deferred per the spec.
 **Files:** `apps/agent-runtime/src/mcp-protocol-client.ts`, `mcp-registry-client.ts`, `local-workspace-executor.ts`, `domain/risk-policy.ts`, `runtime-server.ts`, `llm-decision-adapter.ts` + `mcp-sequence.test.ts`, `mcp-protocol-session.test.ts`.
 
-### H5 — Finance agent role ⬜
-Create finance role (profile, handler, RAG, lessons) over `erp-service`. Acceptance: registered + invoice/reconciliation actions.
+### H5 — Finance agent role ❌ REMOVED (out of scope)
+Not part of the product plan. It appeared only as an *example role* in the audit-request template and was mistakenly carried into this tracker. The actual roster has no Finance agent and never did; `erp-service` is an integration library (SAP/Oracle/Dynamics/NetSuite/Odoo adapters), not an agent. Dropped 2026-06-25 at user's direction. If a finance agent is ever wanted, follow CLAUDE.md "Adding RAG to a New Agent" + the erp-service adapters — a fresh product decision, not a gap.
 
 ### H6 — Reconcile execution-path vs managed connectors ⬜
 Single connector abstraction; delete the duplicate. Acceptance: one code path, no dead classes.
