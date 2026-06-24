@@ -240,8 +240,41 @@ export async function invokeMcpTool(
 // Planner-facing tool catalog
 // ---------------------------------------------------------------------------
 
-/** Hard cap on the catalog text so it never blows the decision-LLM prompt budget. */
-const MCP_CATALOG_MAX_CHARS = 1500;
+/**
+ * Hard cap on the catalog text so it never blows the decision-LLM prompt budget.
+ * Sized to fit a large server (e.g. chrome-devtools ~29 tools) with full arg
+ * schemas, since dropping the tool the agent needs is worse than a bigger prompt.
+ */
+const MCP_CATALOG_MAX_CHARS = 14000;
+
+/** Per-field caps so one verbose tool can't crowd out the rest. */
+const TOOL_DESC_MAX = 120;
+const ARG_DESC_MAX = 90;
+
+const truncate = (s: string, n: number): string => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+
+/**
+ * Render a tool's input schema as a readable arg list with name, type, required
+ * flag and description — e.g. `url* (string): The URL to navigate to`. This is
+ * what lets the LLM fill toolArgs correctly instead of guessing arg names.
+ */
+function formatToolArgs(inputSchema: McpTool['inputSchema'] | undefined): string {
+    const props = (inputSchema?.properties ?? {}) as Record<string, { type?: string; description?: string }>;
+    const required = new Set(inputSchema?.required ?? []);
+    const names = Object.keys(props);
+    if (names.length === 0) return '(no arguments)';
+    return names
+        .map((name) => {
+            const spec = props[name] ?? {};
+            const type = typeof spec.type === 'string' ? spec.type : 'any';
+            const req = required.has(name) ? '*' : '';
+            const desc = typeof spec.description === 'string' && spec.description.trim()
+                ? `: ${truncate(spec.description.trim(), ARG_DESC_MAX)}`
+                : '';
+            return `${name}${req} (${type})${desc}`;
+        })
+        .join('; ');
+}
 
 /**
  * Build a compact, human-readable catalog of every MCP tool available to a
@@ -282,14 +315,10 @@ export function formatMcpToolCatalog(servers: McpServerInfo[]): string {
     for (const server of servers) {
         if (!server.healthy || server.tools.length === 0) continue;
         for (const tool of server.tools) {
-            const required = tool.inputSchema?.required ?? [];
-            const params = Object.keys(tool.inputSchema?.properties ?? {})
-                .map((p) => (required.includes(p) ? `${p}*` : p))
-                .join(', ');
+            const desc = tool.description ? ` — ${truncate(tool.description.trim(), TOOL_DESC_MAX)}` : '';
             const entry =
-                `- server="${server.name}" url="${server.url}" tool="${tool.name}"` +
-                `${tool.description ? ` — ${tool.description}` : ''}` +
-                `${params ? ` (args: ${params})` : ''}`;
+                `- server="${server.name}" url="${server.url}" tool="${tool.name}"${desc}\n` +
+                `    args: ${formatToolArgs(tool.inputSchema)}`;
 
             // Stop before exceeding the budget (account for header + footer).
             const projected = lines.join('\n').length + entry.length + 200;
@@ -307,7 +336,8 @@ export function formatMcpToolCatalog(servers: McpServerInfo[]): string {
     const header =
         'The following MCP tools are registered for this workspace. To use one, set ' +
         'actionType=mcp_tool_call and payloadOverrides={ mcpServerUrl: <url>, toolName: <tool>, ' +
-        'toolArgs: { ... } }. Args marked with * are required.';
+        'toolArgs: { ... } }. Each tool lists its arguments as `name (type): description`; ' +
+        'args marked with * are required. Use these EXACT argument names and types — do not invent argument names.';
     const footer = truncated ? '\n- …(additional tools omitted to fit prompt budget)' : '';
 
     return `${header}\n${lines.join('\n')}${footer}`;

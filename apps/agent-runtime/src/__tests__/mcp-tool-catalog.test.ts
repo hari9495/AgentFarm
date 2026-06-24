@@ -42,19 +42,35 @@ describe('formatMcpToolCatalog', () => {
         assert.match(out, /Echoes a message/);
     });
 
-    it('marks required args with an asterisk', () => {
+    it('lists args with required flag, type, and description (so the LLM does not guess)', () => {
         const out = formatMcpToolCatalog([
             server({
                 tools: [
                     {
-                        name: 'add',
-                        description: 'adds',
-                        inputSchema: { type: 'object', properties: { a: {}, b: {} }, required: ['a', 'b'] },
+                        name: 'navigate_page',
+                        description: 'Navigate the page',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                url: { type: 'string', description: 'The URL to navigate to' },
+                                timeout: { type: 'number', description: 'Timeout in ms' },
+                            },
+                            required: ['url'],
+                        },
                     },
                 ],
             }),
         ]);
-        assert.match(out, /args: a\*, b\*/);
+        // required marked, type shown, description shown, exact arg name present
+        assert.match(out, /url\* \(string\): The URL to navigate to/);
+        assert.match(out, /timeout \(number\): Timeout in ms/);
+    });
+
+    it('shows "(no arguments)" for a tool with no params', () => {
+        const out = formatMcpToolCatalog([
+            server({ tools: [{ name: 'list_pages', description: 'list', inputSchema: { type: 'object', properties: {} } }] }),
+        ]);
+        assert.match(out, /\(no arguments\)/);
     });
 
     it('lists tools from multiple servers', () => {
@@ -76,7 +92,7 @@ describe('formatMcpToolCatalog', () => {
             inputSchema: { type: 'object' as const, properties: { x: {}, y: {} }, required: ['x'] },
         }));
         const out = formatMcpToolCatalog([server({ tools: manyTools })]);
-        assert.ok(out.length <= 1600, `catalog should stay near the budget, got ${out.length}`);
+        assert.ok(out.length <= 14200, `catalog should stay near the budget, got ${out.length}`);
         assert.match(out, /additional tools omitted/);
     });
 });
