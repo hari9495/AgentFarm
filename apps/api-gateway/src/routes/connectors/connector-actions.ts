@@ -14,7 +14,7 @@ type SessionContext = {
     expiresAt: number;
 };
 
-type ConnectorType = 'jira' | 'teams' | 'github' | 'email' | 'custom_api';
+type ConnectorType = 'jira' | 'teams' | 'github' | 'email' | 'custom_api' | 'slack' | 'gitlab' | 'linear';
 type ConnectorActionType =
     | 'read_task'
     | 'create_comment'
@@ -236,7 +236,7 @@ type HealthCheckBody = {
 };
 
 
-const SUPPORTED_CONNECTORS: ConnectorType[] = ['jira', 'teams', 'github', 'email', 'custom_api'];
+const SUPPORTED_CONNECTORS: ConnectorType[] = ['jira', 'teams', 'github', 'email', 'custom_api', 'slack', 'gitlab', 'linear'];
 const SUPPORTED_ACTIONS: ConnectorActionType[] = [
     'read_task',
     'create_comment',
@@ -286,6 +286,9 @@ const CONNECTOR_TOOL_ALIAS: Record<ConnectorType, ConnectorTool | null> = {
     github: 'github',
     email: null,
     custom_api: null,
+    slack: 'slack',
+    gitlab: 'gitlab',
+    linear: 'linear',
 };
 
 const ACTION_ALIAS: Record<ConnectorActionType, NormalizedActionType> = {
@@ -1326,6 +1329,27 @@ export const registerConnectorActionRoutes = async (
                 if (typeof c['basic_pass'] !== 'string' || !c['basic_pass']) {
                     return 'custom_api basic_auth credentials must include basic_pass (string)';
                 }
+            }
+            return null;
+        },
+        slack: (c) => {
+            if (typeof c['botToken'] !== 'string' || !c['botToken']) {
+                return 'slack credentials must include botToken (string, xoxb-...)';
+            }
+            return null;
+        },
+        gitlab: (c) => {
+            if (typeof c['access_token'] !== 'string' || !c['access_token']) {
+                return 'gitlab credentials must include access_token (string)';
+            }
+            if (c['base_url'] !== undefined && typeof c['base_url'] !== 'string') {
+                return 'gitlab base_url, if provided, must be a string (e.g. https://gitlab.acme.com)';
+            }
+            return null;
+        },
+        linear: (c) => {
+            if (typeof c['api_key'] !== 'string' || !c['api_key']) {
+                return 'linear credentials must include api_key (string)';
             }
             return null;
         },

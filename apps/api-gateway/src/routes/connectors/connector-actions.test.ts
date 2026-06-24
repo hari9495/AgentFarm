@@ -2371,3 +2371,147 @@ test('failClosedProviderExecutor never fakes success — returns honest not-conf
     assert.equal(result.errorCode, 'provider_unavailable');
     assert.match(result.errorMessage ?? '', /not executed/i);
 });
+
+// ---------------------------------------------------------------------------
+// C2 — GitLab + Linear real provider executors
+// ---------------------------------------------------------------------------
+
+test('gitlab create_pr opens a merge request via the REST v4 API', async () => {
+    const store = createInMemorySecretStore({});
+    const ref = 'kv://test/gitlab';
+    await store.setSecret(ref, JSON.stringify({ access_token: 'glpat-xyz' }));
+
+    const calls: Array<{ url: string; method: string; auth?: string }> = [];
+    const fetcher = async (url: string | URL, init?: RequestInit): Promise<Response> => {
+        calls.push({
+            url: String(url),
+            method: (init?.method ?? 'GET').toUpperCase(),
+            auth: (init?.headers as Record<string, string>)?.['Authorization'],
+        });
+        return new Response(JSON.stringify({ iid: 7, web_url: 'https://gitlab.com/x/-/merge_requests/7' }), { status: 201 }) as Response;
+    };
+
+    const exec = createRealProviderExecutor(store, fetcher as typeof fetch);
+    const result = await exec({
+        connectorType: 'gitlab',
+        actionType: 'create_pr',
+        payload: { project_id: 'group/proj', head: 'feature', base: 'main', title: 'Add X' },
+        attempt: 1,
+        secretRefId: ref,
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0]?.method, 'POST');
+    assert.ok(calls[0]?.url.includes('/api/v4/projects/group%2Fproj/merge_requests'), calls[0]?.url);
+    assert.equal(calls[0]?.auth, 'Bearer glpat-xyz');
+    assert.match(result.resultSummary, /MR !7/);
+});
+
+test('gitlab self-hosted base_url is honoured', async () => {
+    const store = createInMemorySecretStore({});
+    const ref = 'kv://test/gitlab-self';
+    await store.setSecret(ref, JSON.stringify({ access_token: 't', base_url: 'https://gitlab.acme.com' }));
+    let calledUrl = '';
+    const fetcher = async (url: string | URL): Promise<Response> => {
+        calledUrl = String(url);
+        return new Response(JSON.stringify([{ iid: 1 }]), { status: 200 }) as Response;
+    };
+    const exec = createRealProviderExecutor(store, fetcher as typeof fetch);
+    const result = await exec({
+        connectorType: 'gitlab',
+        actionType: 'list_prs',
+        payload: { project_id: '42' },
+        attempt: 1,
+        secretRefId: ref,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(calledUrl.startsWith('https://gitlab.acme.com/api/v4/projects/42/merge_requests'), calledUrl);
+});
+
+test('gitlab missing project_id fails with invalid_format (not executed)', async () => {
+    const store = createInMemorySecretStore({});
+    const ref = 'kv://test/gitlab2';
+    await store.setSecret(ref, JSON.stringify({ access_token: 't' }));
+    let called = false;
+    const fetcher = async (): Promise<Response> => { called = true; return new Response('{}', { status: 200 }) as Response; };
+    const exec = createRealProviderExecutor(store, fetcher as typeof fetch);
+    const result = await exec({
+        connectorType: 'gitlab',
+        actionType: 'create_pr',
+        payload: { head: 'f', base: 'main', title: 'T' },
+        attempt: 1,
+        secretRefId: ref,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'invalid_format');
+    assert.equal(called, false, 'no HTTP call should be made when project_id is missing');
+});
+
+test('linear create_comment posts a GraphQL mutation with the raw api_key auth header', async () => {
+    const store = createInMemorySecretStore({});
+    const ref = 'kv://test/linear';
+    await store.setSecret(ref, JSON.stringify({ api_key: 'lin_api_123' }));
+
+    const calls: Array<{ url: string; method: string; auth?: string; body: string }> = [];
+    const fetcher = async (url: string | URL, init?: RequestInit): Promise<Response> => {
+        calls.push({
+            url: String(url),
+            method: (init?.method ?? 'GET').toUpperCase(),
+            auth: (init?.headers as Record<string, string>)?.['Authorization'],
+            body: String(init?.body ?? ''),
+        });
+        return new Response(JSON.stringify({ data: { commentCreate: { success: true, comment: { id: 'c1' } } } }), { status: 200 }) as Response;
+    };
+
+    const exec = createRealProviderExecutor(store, fetcher as typeof fetch);
+    const result = await exec({
+        connectorType: 'linear',
+        actionType: 'create_comment',
+        payload: { issue_id: 'ISS-1', body: 'Looks good' },
+        attempt: 1,
+        secretRefId: ref,
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0]?.url, 'https://api.linear.app/graphql');
+    assert.equal(calls[0]?.method, 'POST');
+    assert.equal(calls[0]?.auth, 'lin_api_123', 'Linear uses the raw api_key as Authorization (no Bearer prefix)');
+    assert.ok(calls[0]?.body.includes('commentCreate'), calls[0]?.body);
+});
+
+test('linear surfaces GraphQL errors as invalid_format', async () => {
+    const store = createInMemorySecretStore({});
+    const ref = 'kv://test/linear2';
+    await store.setSecret(ref, JSON.stringify({ api_key: 'k' }));
+    const fetcher = async (): Promise<Response> =>
+        new Response(JSON.stringify({ errors: [{ message: 'Entity not found: Issue' }] }), { status: 200 }) as Response;
+    const exec = createRealProviderExecutor(store, fetcher as typeof fetch);
+    const result = await exec({
+        connectorType: 'linear',
+        actionType: 'read_task',
+        payload: { issue_id: 'NOPE' },
+        attempt: 1,
+        secretRefId: ref,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'invalid_format');
+    assert.match(result.errorMessage ?? '', /Entity not found/);
+});
+
+test('linear rejects PR actions as unsupported_action', async () => {
+    const store = createInMemorySecretStore({});
+    const ref = 'kv://test/linear3';
+    await store.setSecret(ref, JSON.stringify({ api_key: 'k' }));
+    const exec = createRealProviderExecutor(store, (async () => new Response('{}', { status: 200 })) as typeof fetch);
+    const result = await exec({
+        connectorType: 'linear',
+        actionType: 'merge_pr',
+        payload: {},
+        attempt: 1,
+        secretRefId: ref,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'unsupported_action');
+});
