@@ -578,7 +578,30 @@ const buildConnectorId = (connectorType: ConnectorType, tenantId: string, worksp
     return `${connectorType}:${tenantId}:${workspaceId}`;
 };
 
-const defaultProviderExecutor: ProviderExecutor = async ({ actionType, payload, attempt }) => {
+/**
+ * Fail-closed executor: used when no real provider executor and no secretStore are
+ * configured. It NEVER fakes success — it returns an honest "not configured" error so a
+ * misconfigured deployment cannot silently no-op while reporting success to agents.
+ */
+export const failClosedProviderExecutor: ProviderExecutor = async ({ connectorType, actionType }) => ({
+    ok: false,
+    providerResponseCode: '503',
+    resultSummary: 'Connector execution is not configured.',
+    errorCode: 'provider_unavailable',
+    errorMessage:
+        `No secret store / provider executor is configured for connector "${connectorType}" ` +
+        `(action "${actionType}"). The action was NOT executed.`,
+    remediationHint:
+        'Configure a secret store (Azure Key Vault) so real provider clients are used, ' +
+        'or inject an explicit providerExecutor (tests use the simulator).',
+});
+
+/**
+ * Simulator. OPT-IN ONLY — must be explicitly injected via `providerExecutor`.
+ * Never used as an automatic fallback in production. Honours `simulate_*` payload knobs
+ * so the retry/error-class handling can be exercised in tests.
+ */
+export const simulateProviderExecutor: ProviderExecutor = async ({ actionType, payload, attempt }) => {
     const configuredTransientFailures = Number(payload['simulate_transient_failures'] ?? 0);
     if (Number.isFinite(configuredTransientFailures) && configuredTransientFailures > 0 && attempt <= configuredTransientFailures) {
         return {
@@ -710,7 +733,11 @@ export const registerConnectorActionRoutes = async (
             connectorHealthProbe = createRealConnectorHealthProbe(options.secretStore);
         }
     }
-    providerExecutor ??= defaultProviderExecutor;
+    // No real executor and no secret store: fail closed by default so a misconfigured
+    // deployment can never silently simulate success. The simulator is opt-in only via
+    // AF_CONNECTOR_SIMULATE=1 (used by tests and local dev).
+    providerExecutor ??=
+        process.env.AF_CONNECTOR_SIMULATE === '1' ? simulateProviderExecutor : failClosedProviderExecutor;
     connectorHealthProbe ??= defaultConnectorHealthProbe;
     const serviceAuthToken =
         options.serviceAuthToken

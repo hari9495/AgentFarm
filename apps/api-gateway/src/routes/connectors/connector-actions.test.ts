@@ -1,8 +1,13 @@
+// Enable the opt-in connector simulator for tests that don't inject their own executor
+// or a secret store. Production fails closed by default (see connector-actions.ts).
+process.env['AF_CONNECTOR_SIMULATE'] = '1';
+
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
 import {
     registerConnectorActionRoutes,
+    failClosedProviderExecutor,
     type ConnectorActionRepo,
     type ConnectorApprovalChecker,
     type ConnectorAuditWriter,
@@ -2352,4 +2357,17 @@ test('GET connector actions — respects cursor pagination (returns only records
     } finally {
         await app.close();
     }
+});
+
+test('failClosedProviderExecutor never fakes success — returns honest not-configured error', async () => {
+    const result = await failClosedProviderExecutor({
+        connectorType: 'github',
+        actionType: 'create_pr',
+        payload: {},
+        attempt: 1,
+        secretRefId: null,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'provider_unavailable');
+    assert.match(result.errorMessage ?? '', /not executed/i);
 });
