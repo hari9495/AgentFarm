@@ -6438,10 +6438,10 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 message: `No pending approval found for task_id ${input.taskId}`,
             };
         }
-        // Approval is being resolved — drop the durable copy.
-        if (configCache?.tenantId) {
-            void deletePersistedPendingApproval(configCache.tenantId, input.taskId);
-        }
+        // NOTE: the durable Redis copy is intentionally NOT deleted here. It is
+        // deleted only AFTER the task reaches a terminal outcome below, so that a
+        // crash/restart DURING post-approval execution (e.g. a slow MCP tool call)
+        // leaves the record recoverable rather than orphaning the task.
 
         const latencyMs = Math.max(0, now() - resolved.enqueuedAt);
         weeklyRoiAccumulator.approvalLatencyTotalMs += latencyMs;
@@ -6506,6 +6506,11 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
 
             await persistActionResultRecord(resolved.task, configCache as RuntimeConfig, approvedResult);
 
+            // Terminal outcome reached — now safe to drop the durable copy.
+            if (configCache?.tenantId) {
+                void deletePersistedPendingApproval(configCache.tenantId, input.taskId);
+            }
+
             emitRuntimeEvent('runtime.bot_notification_sent', configCache, {
                 task_id: input.taskId,
                 decision: input.decision,
@@ -6530,6 +6535,11 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             riskLevel: resolved.riskLevel,
             reason: input.reason,
         }, configCache as RuntimeConfig);
+
+        // Terminal (rejected) — drop the durable copy.
+        if (configCache?.tenantId) {
+            void deletePersistedPendingApproval(configCache.tenantId, input.taskId);
+        }
 
         emitRuntimeEvent('runtime.task_cancelled', configCache, {
             task_id: input.taskId,

@@ -25,6 +25,8 @@ interface TaskRecord {
     modelTier: string | null;
     taskPrompt: string | null;
     outputSummary: string | null;
+    /** Client-only: a placeholder row shown instantly on submit until the server returns the real record. */
+    __optimistic?: boolean;
 }
 
 const CONNECTOR_OPTIONS = [
@@ -169,7 +171,14 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
             const res = await fetch(`/api/portal/agents/${encodeURIComponent(botId)}/tasks?limit=20`);
             if (res.ok) {
                 const data = (await res.json()) as { tasks?: TaskRecord[] };
-                setTasks(data.tasks ?? []);
+                const serverTasks = data.tasks ?? [];
+                // Merge: keep any optimistic placeholder rows the server hasn't returned yet,
+                // so a just-submitted task never flickers out before it's queryable.
+                setTasks((prev) => {
+                    const serverIds = new Set(serverTasks.map((t) => t.taskId ?? t.id));
+                    const stillPending = prev.filter((t) => t.__optimistic && !serverIds.has(t.taskId ?? t.id));
+                    return [...stillPending, ...serverTasks];
+                });
             }
         } finally {
             setLoadingTasks(false);
@@ -186,7 +195,7 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
             t.outcome === "pending" || t.outcome === "running" || t.outcome === "approval_queued"
         );
         if (!hasLive) return;
-        const id = setInterval(() => void fetchTasks(selectedBotId), 2_000);
+        const id = setInterval(() => void fetchTasks(selectedBotId), 1_500);
         return () => clearInterval(id);
     }, [tasks, selectedBotId, fetchTasks]);
 
@@ -195,12 +204,13 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
     // of the pending-task guard above so it works from an empty list.
     useEffect(() => {
         if (submitNonce === 0) return;
+        void fetchTasks(selectedBotId); // fetch immediately, don't wait for the first interval tick
         let count = 0;
         const id = setInterval(() => {
             count += 1;
             void fetchTasks(selectedBotId);
-            if (count >= 8) clearInterval(id);
-        }, 2_000);
+            if (count >= 15) clearInterval(id);
+        }, 1_000);
         return () => clearInterval(id);
     }, [submitNonce, selectedBotId, fetchTasks]);
 
@@ -245,6 +255,31 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                 setSubmitError(data.error ?? data.detail ?? `Error ${res.status}`);
             } else {
                 setLastSubmitted(data.task_id ?? null);
+                // Optimistically show the new task instantly (POST returns 202 before
+                // it's queryable). The merge in fetchTasks reconciles it with the real row.
+                if (data.task_id) {
+                    const submittedPrompt = prompt;
+                    setTasks((prev) => [
+                        {
+                            id: data.task_id!,
+                            taskId: data.task_id!,
+                            outcome: "pending",
+                            latencyMs: 0,
+                            estimatedCostUsd: null,
+                            createdAt: new Date().toISOString(),
+                            modelProfile: "",
+                            modelProvider: "",
+                            promptTokens: null,
+                            completionTokens: null,
+                            totalTokens: null,
+                            modelTier: null,
+                            taskPrompt: submittedPrompt,
+                            outputSummary: null,
+                            __optimistic: true,
+                        },
+                        ...prev.filter((t) => (t.taskId ?? t.id) !== data.task_id),
+                    ]);
+                }
                 setPrompt("");
                 // Kick off the post-submit polling window (see effect above).
                 setSubmitNonce((n) => n + 1);
