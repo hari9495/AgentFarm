@@ -63,6 +63,7 @@ import { registerKnowledgeGraphRoutes } from './routes/memory/knowledge-graph.js
 // Agents
 import { registerAgentsRoutes } from './routes/agents/agents.js';
 import { registerPersonaRoutes } from './routes/agents/personas.js';
+import { registerTrackerPollSourceRoutes } from './routes/connectors/tracker-poll-sources.js';
 import { registerAgentLifecycleRoutes } from './routes/agents/agent-lifecycle.js';
 import { registerAgentControlRoutes } from './routes/agents/agent-control.js';
 import { registerAgentDispatchRoutes } from './routes/agents/agent-dispatch.js';
@@ -235,6 +236,7 @@ export const registerAllRoutes = async (
     // Agents
     await registerAgentsRoutes(app, { getSession });
     await registerPersonaRoutes(app, { getSession });
+    await registerTrackerPollSourceRoutes(app, { getSession });
     await registerAgentLifecycleRoutes(app, { getSession });
     await registerAgentControlRoutes(app, { getSession });
     await registerAgentDispatchRoutes(app, { getSession });

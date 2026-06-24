@@ -84,6 +84,7 @@ const dashboardGroups: NavGroup[] = [
         items: [
             { href: "/dashboard/integrations", label: "Integrations",  icon: Link2 },
             { href: "/dashboard/webhooks",     label: "Webhooks",      icon: ArrowDownToLine },
+            { href: "/dashboard/task-sources", label: "Task Sources",  icon: ListTodo },
             { href: "/dashboard/mcp",          label: "MCP Servers",   icon: Cpu },
             { href: "/dashboard/adapters",     label: "Custom APIs",   icon: Layers },
             { href: "/dashboard/governance",   label: "Governance",    icon: ShieldCheck },

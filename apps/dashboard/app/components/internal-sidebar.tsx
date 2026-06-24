@@ -366,6 +366,7 @@ export function InternalSidebar({
                     <SectionLabel>Platform</SectionLabel>
                     <div className="space-y-0.5">
                         <SidebarLink href="/connectors"    label="Connectors"    Icon={Link2}      color="blue"   />
+                        <SidebarLink href="/task-sources"  label="Task Sources"  Icon={ListChecks} color="amber"  />
                         <SidebarLink href="/platform-mcp"  label="Platform MCP"  Icon={Cpu}        color="cyan"   />
                         <SidebarLink href="/skills"         label="Skills"        Icon={ShoppingBag} color="purple" />
                         <SidebarLink href="/memory"         label="Memory"        Icon={Brain}      color="violet" />
