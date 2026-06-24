@@ -17,7 +17,7 @@ import OutboundWebhooksPanel from '../components/outbound-webhooks-panel';
 
 type ConnectorSummary = {
     connector_id: string;
-    connector_type: 'jira' | 'teams' | 'github' | 'email' | 'custom_api';
+    connector_type: 'jira' | 'teams' | 'github' | 'email' | 'custom_api' | 'slack' | 'gitlab' | 'linear';
     status: string;
     scope_status: string | null;
     last_error_class: string | null;

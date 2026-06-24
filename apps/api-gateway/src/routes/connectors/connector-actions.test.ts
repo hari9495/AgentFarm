@@ -2515,3 +2515,102 @@ test('linear rejects PR actions as unsupported_action', async () => {
     assert.equal(result.ok, false);
     assert.equal(result.errorCode, 'unsupported_action');
 });
+
+// ---------------------------------------------------------------------------
+// C6 — Custom API self-describing operation invocation (OpenAPI-driven)
+// ---------------------------------------------------------------------------
+
+test('custom_api executes an OpenAPI operation by name + args (path param + body resolved)', async () => {
+    const store = createInMemorySecretStore({});
+    const ref = 'kv://test/customopenapi';
+    await store.setSecret(ref, JSON.stringify({ base_url: 'https://api.acme.com', auth_type: 'bearer_token', bearer_token: 'tok' }));
+
+    const calls: Array<{ url: string; method: string; body: string }> = [];
+    const fetcher = async (url: string | URL, init?: RequestInit): Promise<Response> => {
+        calls.push({ url: String(url), method: (init?.method ?? 'GET').toUpperCase(), body: String(init?.body ?? '') });
+        return new Response(JSON.stringify({ ok: true }), { status: 200 }) as Response;
+    };
+
+    const exec = createRealProviderExecutor(store, fetcher as typeof fetch);
+    const result = await exec({
+        connectorType: 'custom_api',
+        actionType: 'create_comment',
+        payload: {
+            openapi_operation: {
+                name: 'addComment',
+                description: 'Add a comment',
+                method: 'POST',
+                path: '/tickets/{id}/comments',
+                pathParams: ['id'],
+                queryParams: [],
+                requiredParams: ['id'],
+                hasBody: true,
+            },
+            args: { id: 'T-9', text: 'hello' },
+        },
+        attempt: 1,
+        secretRefId: ref,
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0]?.method, 'POST');
+    assert.equal(calls[0]?.url, 'https://api.acme.com/tickets/T-9/comments');
+    assert.ok(calls[0]?.body.includes('"text":"hello"'), calls[0]?.body);
+    assert.ok(!calls[0]?.body.includes('"id"'), 'path param must not leak into body');
+});
+
+test('custom_api operation mode fails closed when a required param is missing (no HTTP call)', async () => {
+    const store = createInMemorySecretStore({});
+    const ref = 'kv://test/customopenapi2';
+    await store.setSecret(ref, JSON.stringify({ base_url: 'https://api.acme.com', auth_type: 'none' }));
+    let called = false;
+    const fetcher = async (): Promise<Response> => { called = true; return new Response('{}', { status: 200 }) as Response; };
+    const exec = createRealProviderExecutor(store, fetcher as typeof fetch);
+    const result = await exec({
+        connectorType: 'custom_api',
+        actionType: 'read_task',
+        payload: {
+            openapi_operation: { name: 'getTicket', description: '', method: 'GET', path: '/tickets/{id}', pathParams: ['id'], queryParams: [], requiredParams: ['id'], hasBody: false },
+            args: {},
+        },
+        attempt: 1,
+        secretRefId: ref,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'invalid_format');
+    assert.equal(called, false);
+});
+
+test('POST /v1/connectors/openapi/parse returns a tool catalog from a spec', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    await registerConnectorActionRoutes(app, { getSession: () => sessionContext(), repo });
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/connectors/openapi/parse',
+            payload: { spec: { paths: { '/tickets/{id}': { get: { operationId: 'getTicket', summary: 'Get' } } } } },
+        });
+        assert.equal(res.statusCode, 200);
+        const body = res.json() as { tool_count: number; tools: Array<{ name: string; method: string; pathParams: string[] }> };
+        assert.equal(body.tool_count, 1);
+        assert.equal(body.tools[0]?.name, 'getTicket');
+        assert.equal(body.tools[0]?.method, 'GET');
+        assert.deepEqual(body.tools[0]?.pathParams, ['id']);
+    } finally {
+        await app.close();
+    }
+});
+
+test('POST /v1/connectors/openapi/parse rejects an unauthenticated request', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    await registerConnectorActionRoutes(app, { getSession: () => null, repo });
+    try {
+        const res = await app.inject({ method: 'POST', url: '/v1/connectors/openapi/parse', payload: { spec: {} } });
+        assert.equal(res.statusCode, 401);
+    } finally {
+        await app.close();
+    }
+});
