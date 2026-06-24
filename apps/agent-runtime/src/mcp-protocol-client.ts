@@ -40,6 +40,42 @@ interface JsonRpcResponse<T = unknown> {
     error?: { code: number; message: string; data?: unknown };
 }
 
+/**
+ * Parse a server-sent-events (SSE) body from a streamable-HTTP MCP server and
+ * return the JSON-RPC response object. SSE events look like:
+ *   event: message
+ *   data: {"jsonrpc":"2.0","id":1,"result":{...}}
+ * `data:` payloads may span multiple lines per event (joined with newlines).
+ * Returns the last event that parses to a JSON-RPC response carrying a
+ * `result` or `error` (ignoring notifications/progress events).
+ * @throws when no JSON-RPC response object is found.
+ */
+export function parseSseJsonRpc(body: string): JsonRpcResponse {
+    const events = body.split(/\r?\n\r?\n/); // events separated by blank line
+    let last: JsonRpcResponse | null = null;
+    for (const event of events) {
+        const dataLines = event
+            .split(/\r?\n/)
+            .filter((line) => line.startsWith('data:'))
+            .map((line) => line.slice(5).replace(/^ /, ''));
+        if (dataLines.length === 0) continue;
+        const payload = dataLines.join('\n').trim();
+        if (!payload) continue;
+        try {
+            const obj = JSON.parse(payload) as JsonRpcResponse;
+            if (obj && obj.jsonrpc === '2.0' && (obj.result !== undefined || obj.error !== undefined)) {
+                last = obj;
+            }
+        } catch {
+            // skip non-JSON data lines (e.g. keep-alive comments)
+        }
+    }
+    if (!last) {
+        throw new McpProtocolError('SSE response contained no JSON-RPC result/error event');
+    }
+    return last;
+}
+
 interface InitializeResult {
     protocolVersion: string;
     serverInfo: { name: string; version: string };
@@ -220,12 +256,21 @@ export class McpProtocolClient {
             throw new McpProtocolError(`Failed to read MCP response body: ${String(err)}`);
         }
 
+        // MCP streamable-HTTP transport (spec §4.2.1) allows a POST response to be
+        // returned either as application/json (single object) OR as text/event-stream
+        // (SSE: one or more `data: <json>` events). Handle both so the client works
+        // with stdio-bridged servers (e.g. supergateway) and native streamable-HTTP servers.
+        const contentType = (response.headers.get('content-type') ?? '').toLowerCase();
+        const looksLikeSse = contentType.includes('text/event-stream') || /^\s*(event|data):/m.test(text);
+
         let parsed: JsonRpcResponse<T>;
         try {
-            parsed = JSON.parse(text) as JsonRpcResponse<T>;
+            parsed = looksLikeSse
+                ? (parseSseJsonRpc(text) as JsonRpcResponse<T>)
+                : (JSON.parse(text) as JsonRpcResponse<T>);
         } catch {
             throw new McpProtocolError(
-                `MCP server returned non-JSON response (status ${response.status}): ${text.slice(0, 200)}`,
+                `MCP server returned unparseable response (status ${response.status}): ${text.slice(0, 200)}`,
             );
         }
 
