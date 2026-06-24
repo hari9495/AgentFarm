@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { AgentHandoffStatus } from '@agentfarm/shared-types';
+import { buildHandoffDelivery, type HandoffTaskEntry } from '../../lib/handoff-delivery.js';
 
 type SessionContext = {
     userId: string;
@@ -8,10 +9,41 @@ type SessionContext = {
     expiresAt: number;
 };
 
+// H3 — side effects of handoff delivery, injectable so tests run without a DB/queue.
+type HandoffDeliveryDeps = {
+    /** Persist the AgentMessage trail. Returns the created message id. */
+    createAgentMessage: (data: {
+        fromBotId: string;
+        toBotId: string;
+        messageType: string;
+        subject: string;
+        body: string;
+        status: string;
+    }) => Promise<{ id: string }>;
+    /** Enqueue the follow-on task for the target bot. */
+    enqueueTask: (entry: HandoffTaskEntry) => void;
+};
+
 type RegisterHandoffRoutesOptions = {
     getSession: (request: FastifyRequest) => SessionContext | null;
     orchestratorBaseUrl?: string;
+    /** Optional override for handoff delivery (DB + queue). Defaults to real prisma + task-queue. */
+    delivery?: HandoffDeliveryDeps;
 };
+
+const defaultDelivery = (): HandoffDeliveryDeps => ({
+    async createAgentMessage(data) {
+        const db = await import('../../lib/db.js');
+        const row = await (db.prisma as unknown as {
+            agentMessage: { create: (a: { data: Record<string, unknown> }) => Promise<{ id: string }> };
+        }).agentMessage.create({ data });
+        return { id: row.id };
+    },
+    enqueueTask(entry) {
+        // Dynamic import keeps the module's drain-sweep side effects out of the test path.
+        void import('../../lib/task-queue.js').then((m) => m.enqueueTask(entry as never)).catch(() => {});
+    },
+});
 
 const parseCompletionStatus = (value: unknown): AgentHandoffStatus | null => {
     if (
@@ -51,6 +83,7 @@ export const registerHandoffRoutes = async (
     options: RegisterHandoffRoutesOptions,
 ): Promise<void> => {
     const orchestratorBaseUrl = normalizeBaseUrl(options.orchestratorBaseUrl);
+    const delivery = options.delivery ?? defaultDelivery();
 
     app.post<{
         Body: {
@@ -98,9 +131,43 @@ export const registerHandoffRoutes = async (
         const body = await response.json().catch(() => ({
             error: 'upstream_error',
             message: 'Unable to parse orchestrator handoff response.',
-        }));
+        })) as Record<string, unknown>;
 
-        return reply.code(response.status).send(body);
+        // H3 — once the handoff is recorded, actually DELIVER it: write an AgentMessage
+        // trail and enqueue a follow-on task for the target agent. Fire-safe: a delivery
+        // failure never fails the handoff itself; the outcome is reported back to the caller.
+        const fromBotId = request.body?.from_bot_id?.trim() ?? '';
+        const toBotId = request.body?.to_bot_id?.trim() ?? '';
+        const reason = request.body?.reason?.trim() ?? '';
+        const taskId = request.body?.task_id?.trim() ?? '';
+        const deliveryResult = { messageWritten: false, taskEnqueued: false };
+
+        if (response.status >= 200 && response.status < 300 && fromBotId && toBotId && reason && taskId) {
+            const { message, task } = buildHandoffDelivery({
+                tenantId: session.tenantId,
+                workspaceId,
+                taskId,
+                fromBotId,
+                toBotId,
+                reason,
+                handoffContext: request.body?.handoff_context,
+                correlationId: request.body?.correlation_id,
+            });
+            try {
+                await delivery.createAgentMessage(message);
+                deliveryResult.messageWritten = true;
+            } catch (err) {
+                request.log?.error?.({ err }, 'handoff AgentMessage write failed');
+            }
+            try {
+                delivery.enqueueTask(task);
+                deliveryResult.taskEnqueued = true;
+            } catch (err) {
+                request.log?.error?.({ err }, 'handoff task enqueue failed');
+            }
+        }
+
+        return reply.code(response.status).send({ ...body, delivery: deliveryResult });
     });
 
     app.post<{

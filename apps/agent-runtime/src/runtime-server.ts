@@ -1000,7 +1000,7 @@ const getAllowedActionsForRole = (roleKey: RoleKey): string[] => {
     // mcp_tool_call is available to every role: agents may invoke any MCP tool
     // the tenant has registered (tenant isolation is the boundary, not role).
     // It still routes through risk/approval (MEDIUM_RISK_ACTIONS).
-    return Array.from(new Set([...connectorActions, ...localActions, 'mcp_tool_call']));
+    return Array.from(new Set([...connectorActions, ...localActions, 'mcp_tool_call', 'mcp_tool_sequence']));
 };
 
 const isTesterBlockedAction = (roleKey: RoleKey, actionType: string): boolean => {

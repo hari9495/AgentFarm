@@ -255,6 +255,8 @@ export type LocalWorkspaceActionType =
     | 'workspace_mobile_test'
     // MCP tool invocation
     | 'mcp_tool_call'
+    // MCP multi-step sequence (H4) — ordered tool calls over one persistent session
+    | 'mcp_tool_sequence'
     // Original actions (preserved)
     | 'git_clone'
     | 'git_branch'
@@ -1117,6 +1119,7 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'workspace_visual_regression',
     // MCP
     'mcp_tool_call',
+    'mcp_tool_sequence',
     // Original
     'git_clone',
     'git_branch',
@@ -11627,6 +11630,58 @@ export async function executeLocalWorkspaceAction(input: {
                     ok: true,
                     output: textContent || JSON.stringify(mcpResult.content),
                 };
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
+            }
+        }
+
+        // mcp_tool_sequence (H4): run an ordered list of tool calls against one MCP
+        // server over a single persistent session so state (e.g. a browser) persists
+        // between steps. payload: { mcpServerUrl, mcpHeaders?, steps: [{toolName, toolArgs?}] }
+        case 'mcp_tool_sequence': {
+            const mcpServerUrl = typeof payload['mcpServerUrl'] === 'string' ? payload['mcpServerUrl'].trim() : '';
+            if (!mcpServerUrl) {
+                return { ok: false, output: '', errorOutput: 'payload.mcpServerUrl is required for mcp_tool_sequence.' };
+            }
+            const rawSteps = payload['steps'];
+            if (!Array.isArray(rawSteps) || rawSteps.length === 0) {
+                return { ok: false, output: '', errorOutput: 'payload.steps must be a non-empty array for mcp_tool_sequence.' };
+            }
+            const MAX_STEPS = 8;
+            if (rawSteps.length > MAX_STEPS) {
+                return { ok: false, output: '', errorOutput: `mcp_tool_sequence supports at most ${MAX_STEPS} steps (got ${rawSteps.length}).` };
+            }
+            const steps: Array<{ toolName: string; toolArgs?: Record<string, unknown> }> = [];
+            for (const [i, raw] of rawSteps.entries()) {
+                if (!raw || typeof raw !== 'object') {
+                    return { ok: false, output: '', errorOutput: `steps[${i}] must be an object with a toolName.` };
+                }
+                const s = raw as Record<string, unknown>;
+                const toolName = typeof s['toolName'] === 'string' ? s['toolName'].trim() : '';
+                if (!toolName) {
+                    return { ok: false, output: '', errorOutput: `steps[${i}].toolName is required.` };
+                }
+                const toolArgs = s['toolArgs'] !== null && typeof s['toolArgs'] === 'object' && !Array.isArray(s['toolArgs'])
+                    ? (s['toolArgs'] as Record<string, unknown>)
+                    : {};
+                steps.push({ toolName, toolArgs });
+            }
+            const rawHeaders = payload['mcpHeaders'];
+            const mcpHeaders: Record<string, string> =
+                rawHeaders !== null && typeof rawHeaders === 'object' && !Array.isArray(rawHeaders)
+                    ? (rawHeaders as Record<string, string>)
+                    : {};
+
+            try {
+                const { invokeMcpSequence } = await import('./mcp-registry-client.js');
+                const result = await invokeMcpSequence(mcpServerUrl, mcpHeaders, steps);
+                const transcript = result.steps
+                    .map((s) => `Step ${s.step} (${s.toolName}): ${s.ok ? 'OK' : 'FAILED'}${s.ok ? `\n${s.output}` : `\n${s.error ?? 'error'}`}`)
+                    .join('\n\n');
+                if (!result.ok) {
+                    return { ok: false, output: transcript, errorOutput: `Sequence failed at step ${result.failedStep}.` };
+                }
+                return { ok: true, output: transcript };
             } catch (err) {
                 return { ok: false, output: '', errorOutput: String(err) };
             }

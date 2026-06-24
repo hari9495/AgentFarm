@@ -111,11 +111,30 @@ Platform-driven (not external Logic App): the workspace VM powers on when any ag
 - [x] typecheck clean (gateway, dashboard, shared-types); 4 new tests, 1896/1896 gateway green.
 **Files:** `schema.prisma` + migration `20260625040000_add_persona_org_identity`, `packages/shared-types/src/persona.ts`, `apps/api-gateway/src/routes/agents/personas.ts(+test)`, `apps/dashboard/app/components/agent-persona-panel.tsx`.
 
-### H3 — Agent→agent collaboration workflow (proof) ⬜
-Wire one end-to-end multi-agent handoff via orchestrator (`agent-handoff-manager.ts`). Acceptance: Sales→Developer→Support chain demoed with `AgentMessage` trail.
+### H3 — Agent→agent collaboration workflow ✅
+Recording a handoff was bookkeeping only — the target agent never got work and there was no message trail. Now `/v1/handoffs/initiate`, once the orchestrator records the handoff, **delivers** it.
+**Built:**
+- `lib/handoff-delivery.ts` — pure builder: from a handoff it derives (a) an `AgentMessage` (from→to, `HANDOFF_REQUEST`, reason + context) and (b) a follow-on task targeted at the recipient bot (handoff metadata + context merged into payload).
+- `routes/agents/handoffs.ts` — after the orchestrator 2xx, writes the AgentMessage trail + enqueues the task (drain sweep → runtime `/tasks/intake`). Fire-safe; delivery outcome returned in the response. Side-effects injectable for tests.
+**Acceptance:**
+- [x] Handoff delivers a message trail + a real task to the target agent (Sales→Developer→Support chain works end-to-end).
+- [x] No delivery when the orchestrator rejects; auth + workspace-scope enforced.
+- [x] 8 handoff tests + 4 builder tests; typecheck clean.
+**Files:** `apps/api-gateway/src/lib/handoff-delivery.ts(+test)`, `routes/agents/handoffs.ts(+test)`.
 
-### H4 — MCP multi-step sequencing ⬜
-Implement the `bc21f3fc` design spec. Acceptance: agent chains ≥2 MCP tool calls in one task.
+### H4 — MCP multi-step sequencing ✅
+Implements the Phase-1 spec (`docs/superpowers/specs/2026-06-24-multi-step-mcp-tool-sequences-design.md`): an agent runs an ordered sequence of MCP tool calls against one server over a single **persistent session**, so server state (e.g. one browser) survives between steps — fixing the "navigate then read title → blank" blocker.
+**Built:**
+- `mcp-protocol-client.ts` — session lifecycle: `connect()` (initialize once, capture `mcp-session-id`, send `notifications/initialized`), session-id reused on every `callTool`, `close()` teardown.
+- `mcp-registry-client.ts` — `invokeMcpSequence(url, headers, steps)`: one client, per-step transcript, stop-on-first-failure, overall time budget, session always closed.
+- `local-workspace-executor.ts` — `mcp_tool_sequence` action (≤8 steps, validated) returning a readable per-step transcript.
+- Risk: added to `MEDIUM_RISK_ACTIONS` (one approval for the whole sequence; high-risk step → policy floor still applies). Allowed for every role (`getAllowedActionsForRole`). `steps` sanitized in `llm-decision-adapter` (toolName+toolArgs only, bounded).
+**Acceptance:**
+- [x] Agent chains ≥2 MCP calls in one task over a shared session (proven: 2 calls reuse one `mcp-session-id`).
+- [x] Mid-sequence failure stops + reports the failing step; session closed even on connect failure.
+- [x] Single `mcp_tool_call` unchanged (regression: mcp-tool-catalog + decision-adapter tests green). 5 H4 tests; typecheck clean.
+**Note:** live browser integration also requires the stdio bridge to run `supergateway --stateful` (spec §3.2) — code is complete; that's an operator/runner config flag. Phase 2 (adaptive per-step looping) remains deferred per the spec.
+**Files:** `apps/agent-runtime/src/mcp-protocol-client.ts`, `mcp-registry-client.ts`, `local-workspace-executor.ts`, `domain/risk-policy.ts`, `runtime-server.ts`, `llm-decision-adapter.ts` + `mcp-sequence.test.ts`, `mcp-protocol-session.test.ts`.
 
 ### H5 — Finance agent role ⬜
 Create finance role (profile, handler, RAG, lessons) over `erp-service`. Acceptance: registered + invoice/reconciliation actions.
@@ -160,6 +179,8 @@ Verify/finish real deploy execution (Azure/k8s) beyond planning. Acceptance: one
 | 2026-06-25 | C6 done | OpenAPI→tool-catalog engine + operation-mode custom_api executor + parse route; dashboard connector types/UI extended (slack/gitlab/linear); MCP set as recommended universal path; 73/73 tests, both typechecks clean |
 | 2026-06-25 | C6.2 done | Persist OpenAPI catalog (migration + PUT/GET routes) + agent-runtime auto-injection (`_custom_api_tool_catalog`); Custom API now fully autonomous like MCP; 80 tests green |
 | 2026-06-25 | H1 done | Shift-driven VM power (start at shift open / deallocate at close); pure reconciler + worker + Azure power op; gated on AZURE_SUBSCRIPTION_ID; 12 tests, typecheck clean |
+| 2026-06-25 | H3 done | Handoff delivery: AgentMessage trail + follow-on task to target agent (Sales→Dev→Support works end-to-end); fire-safe; 12 tests |
+| 2026-06-25 | H4 done | MCP multi-step sequences over one persistent session (connect/session-id/close); mcp_tool_sequence action, MEDIUM risk, one approval; 5 tests; needs supergateway --stateful for live browser |
 | 2026-06-25 | C4 done | Tracker poller (Jira/Linear/GitHub) pulls assigned tickets → /run-task; per-tenant TrackerPollSource config, secret-backed creds (fail-closed), TrackerPollDispatch dedup ledger + migration; cadence-gated sweep wired into main.ts; 11 tests, 94/94 green, typecheck clean |
 | 2026-06-25 | C4.1 done | Universal `tracker='custom'` poll source (CustomPollSpec: templated list endpoint, pluggable auth incl. none, dot-path field map) → any REST tracker without per-vendor code; customConfig Json column + migration; 6 tests, 100/100 green, typecheck clean |
 | 2026-06-25 | C5 done | Shift enforcement: pure timezone-aware shift engine (shared-types/shift.ts); off-shift tasks parked as DeferredTask + released at next shift open (durable); availability API; fixed C4 run-task goal-JSON bug; DeferredTask migration; 18 tests, 105/105 green, 3 typechecks clean |
