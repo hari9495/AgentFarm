@@ -5,6 +5,7 @@ import { startSubscriptionSweep } from './subscription-sweep.js';
 import { startScheduleSweep } from './schedule-sweep.js';
 import { startReportSweep } from './report-sweep.js';
 import { startTrackerPollSweep } from './sources/tracker-poller.js';
+import { startDeferredTaskSweep } from './deferred-task-sweep.js';
 import { loadConfig } from './config-loader.js';
 import { TriggerEngine } from './trigger-engine.js';
 import { WebhookTriggerSource } from './sources/webhook-trigger.js';
@@ -115,6 +116,9 @@ async function main(): Promise<void> {
     const trackerPollHandle = startTrackerPollSweep(prisma, {
         agentRuntimeUrl: process.env['AGENT_RUNTIME_URL'] ?? 'http://localhost:4000',
     });
+    const deferredTaskHandle = startDeferredTaskSweep(prisma, {
+        agentRuntimeUrl: process.env['AGENT_RUNTIME_URL'] ?? 'http://localhost:4000',
+    });
 
     // -----------------------------------------------------------------------
     // Shutdown
@@ -126,6 +130,7 @@ async function main(): Promise<void> {
         clearInterval(scheduleHandle);
         clearInterval(reportSweepHandle);
         clearInterval(trackerPollHandle);
+        clearInterval(deferredTaskHandle);
         await prisma.$disconnect();
         await engine.stop();
         await fastify.close();

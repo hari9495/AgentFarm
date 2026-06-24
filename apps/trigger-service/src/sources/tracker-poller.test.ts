@@ -267,9 +267,11 @@ test('defaultCredentialResolver — resolves env://, literals, fails on kv://', 
 const makeSweepPrisma = (
     sources: any[],
     seen: Array<{ externalId: string }> = [],
+    persona: { timezone: string; workingHours: unknown } | null = null,
 ) => {
     const dispatchCreates: any[] = [];
     const sourceUpdates: any[] = [];
+    const deferredCreates: any[] = [];
     const prisma = {
         trackerPollSource: {
             findMany: async () => sources.filter((s) => s.enabled),
@@ -285,8 +287,17 @@ const makeSweepPrisma = (
                 return {};
             },
         },
+        agentPersona: {
+            findUnique: async () => persona,
+        },
+        deferredTask: {
+            create: async (args: any) => {
+                deferredCreates.push(args);
+                return { id: `def_${deferredCreates.length}` };
+            },
+        },
     } as any;
-    return { prisma, dispatchCreates, sourceUpdates };
+    return { prisma, dispatchCreates, sourceUpdates, deferredCreates };
 };
 
 // 8. sweep — dispatches new tickets, records dedup rows, advances cursor
@@ -328,7 +339,11 @@ test('runTrackerPollSweep — dispatches new tickets and records dedup', async (
     const payload = JSON.parse(runTaskCall!.init!.body!);
     assert.equal(payload.tenantId, 't1');
     assert.equal(payload.agentId, 'agent_1');
-    assert.equal(payload.externalRef, 'PROJ-9');
+    assert.equal(payload.triggeredBy, 'tracker_poll');
+    // runtime parses `goal` as JSON; metadata is packed there
+    const goal = JSON.parse(payload.goal);
+    assert.equal(goal.externalRef, 'PROJ-9');
+    assert.equal(goal.source, 'tracker:jira');
     // dedup row + cursor advanced
     assert.equal(dispatchCreates.length, 1);
     assert.equal(dispatchCreates[0].data.externalId, 'PROJ-9');
@@ -468,4 +483,47 @@ test('runTrackerPollSweep — custom auth=none source polls without credentials'
     const listCall = calls.find((c) => c.url.includes('/items'));
     assert.equal(listCall!.init?.headers?.['Authorization'], undefined);
     assert.equal(dispatchCreates[0].data.externalId, 'PUB-1');
+});
+
+// 13. sweep — off-shift agent defers the ticket instead of dispatching (C5)
+test('runTrackerPollSweep — off-shift ticket is deferred, not dispatched', async () => {
+    const source = {
+        id: 's_jira',
+        tenantId: 't1',
+        agentId: 'agent_off',
+        tracker: 'jira',
+        baseUrl: 'https://acme.atlassian.net',
+        assignee: 'dev@acme.io',
+        projectFilter: null,
+        secretRef: 'tok',
+        enabled: true,
+        intervalSec: 300,
+        lastPolledAt: null,
+    };
+    // Persona working Mon–Fri 09:00–18:00 UTC; poll at Sat → closed.
+    const persona = { timezone: 'UTC', workingHours: { start: '09:00', end: '18:00', days: [1, 2, 3, 4, 5] } };
+    const { prisma, dispatchCreates, deferredCreates } = makeSweepPrisma([source], [], persona);
+
+    let runTaskCalled = false;
+    const fetcher: FetchFn = async (url) => {
+        if (url.includes('/search')) {
+            return { ok: true, status: 200, json: async () => ({ issues: [{ key: 'PROJ-5', fields: { summary: 'Later' } }] }) } as any;
+        }
+        runTaskCalled = true;
+        return { ok: true, status: 200, text: async () => 'ok' } as any;
+    };
+
+    const now = new Date('2026-06-27T12:00:00Z'); // Saturday
+    const result = await runTrackerPollSweep(prisma, { fetcher, agentRuntimeUrl: 'http://rt', now: () => now });
+
+    assert.equal(result.deferred, 1);
+    assert.equal(result.dispatched, 0);
+    assert.equal(runTaskCalled, false, 'off-shift task must NOT be dispatched to runtime');
+    // parked with runAfter = Monday 09:00 UTC
+    assert.equal(deferredCreates.length, 1);
+    assert.equal(deferredCreates[0].data.runAfter.toISOString(), '2026-06-29T09:00:00.000Z');
+    assert.equal(deferredCreates[0].data.reason, 'shift_closed');
+    // still recorded as handled (dedup) so it isn't re-polled
+    assert.equal(dispatchCreates.length, 1);
+    assert.equal(dispatchCreates[0].data.externalId, 'PROJ-5');
 });

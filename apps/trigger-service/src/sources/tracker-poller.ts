@@ -18,6 +18,7 @@
 // ============================================================================
 
 import type { PrismaClient } from '@prisma/client';
+import { evaluateAgentShift, deferTask } from '../shift-enforcer.js';
 
 export type TrackerKind = 'jira' | 'linear' | 'github' | 'custom';
 
@@ -339,6 +340,7 @@ export type TrackerPollDeps = {
 export type TrackerPollSweepResult = {
     polled: number;
     dispatched: number;
+    deferred: number;
     skipped: number;
     errors: number;
 };
@@ -356,7 +358,7 @@ export async function runTrackerPollSweep(
     );
     const runTaskUrl = `${runtimeUrl}/run-task`;
 
-    const result: TrackerPollSweepResult = { polled: 0, dispatched: 0, skipped: 0, errors: 0 };
+    const result: TrackerPollSweepResult = { polled: 0, dispatched: 0, deferred: 0, skipped: 0, errors: 0 };
 
     let sources: Array<PollSourceConfig & { secretRef: string | null; intervalSec: number; lastPolledAt: Date | null }>;
     try {
@@ -414,34 +416,41 @@ export async function runTrackerPollSweep(
                       })) as Array<{ externalId: string }>);
             const seenSet = new Set(seen.map((s) => s.externalId));
 
+            // Shift gate (C5): evaluate the source's agent once. Off-shift tickets
+            // are parked as DeferredTask and released at the next shift open.
+            const shift = await evaluateAgentShift(prisma, config.agentId, now);
+
             for (const ticket of tickets) {
                 if (seenSet.has(ticket.externalId)) continue;
-                const dispatched = await dispatchTicket(
-                    fetcher,
-                    runTaskUrl,
-                    config,
-                    ticket,
-                );
+
+                const body = buildRunTaskBody(config, ticket);
+
+                if (!shift.available && shift.runAfter) {
+                    const deferredId = await deferTask(prisma, {
+                        tenantId: config.tenantId,
+                        agentId: config.agentId,
+                        payload: body,
+                        runAfter: shift.runAfter,
+                        reason: 'shift_closed',
+                    });
+                    if (deferredId) {
+                        // Record as handled so we don't poll it again; the deferred
+                        // task carries it forward.
+                        await recordDispatch(prisma, source, ticket).catch(() => undefined);
+                        result.deferred += 1;
+                        continue;
+                    }
+                    // Persisting failed → fall through and try to dispatch now.
+                }
+
+                const dispatched = await postRunTask(fetcher, runTaskUrl, body);
                 if (!dispatched.ok) {
                     lastError = dispatched.error ?? 'dispatch failed';
                     result.errors += 1;
                     continue; // do NOT record dispatch → retried next sweep
                 }
-                // Record dispatch for dedup. Unique constraint guards races.
-                try {
-                    await (prisma as any).trackerPollDispatch.create({
-                        data: {
-                            sourceId: source.id,
-                            tenantId: source.tenantId,
-                            tracker: source.tracker,
-                            externalId: ticket.externalId,
-                            title: ticket.title,
-                        },
-                    });
-                    result.dispatched += 1;
-                } catch {
-                    // Likely a unique-constraint race with a concurrent sweep — fine.
-                }
+                await recordDispatch(prisma, source, ticket).catch(() => undefined);
+                result.dispatched += 1;
             }
         } catch (err) {
             lastError = err instanceof Error ? err.message : String(err);
@@ -463,40 +472,69 @@ export async function runTrackerPollSweep(
     return result;
 }
 
-async function dispatchTicket(
-    fetcher: FetchFn,
-    runTaskUrl: string,
+/**
+ * Build the runtime /run-task body. The runtime parses `goal` as a JSON string
+ * and merges its fields into the task payload, so the human-readable prompt and
+ * metadata are packed there.
+ */
+export function buildRunTaskBody(
     config: PollSourceConfig,
     ticket: NormalizedTicket,
-): Promise<{ ok: boolean; error?: string }> {
+): Record<string, unknown> {
     const taskLines = [
         `You have been assigned ${config.tracker} ticket ${ticket.externalId}: ${ticket.title}`,
     ];
     if (ticket.url) taskLines.push(`Link: ${ticket.url}`);
     if (ticket.body) taskLines.push('', ticket.body);
 
+    return {
+        tenantId: config.tenantId,
+        agentId: config.agentId ?? undefined,
+        triggeredBy: 'tracker_poll',
+        goal: JSON.stringify({
+            task: taskLines.join('\n'),
+            source: `tracker:${config.tracker}`,
+            externalRef: ticket.externalId,
+        }),
+    };
+}
+
+async function postRunTask(
+    fetcher: FetchFn,
+    runTaskUrl: string,
+    body: Record<string, unknown>,
+): Promise<{ ok: boolean; error?: string }> {
     try {
         const res = await fetcher(runTaskUrl, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({
-                tenantId: config.tenantId,
-                agentId: config.agentId ?? undefined,
-                task: taskLines.join('\n'),
-                goal: taskLines.join('\n'),
-                source: `tracker:${config.tracker}`,
-                triggeredBy: 'tracker_poll',
-                externalRef: ticket.externalId,
-            }),
+            body: JSON.stringify(body),
         });
         if (!res.ok) {
-            const body = await res.text().catch(() => '');
-            return { ok: false, error: `run-task ${res.status}: ${body.slice(0, 200)}` };
+            const text = await res.text().catch(() => '');
+            return { ok: false, error: `run-task ${res.status}: ${text.slice(0, 200)}` };
         }
         return { ok: true };
     } catch (err) {
         return { ok: false, error: err instanceof Error ? err.message : String(err) };
     }
+}
+
+async function recordDispatch(
+    prisma: PrismaClient,
+    source: { id: string; tenantId: string; tracker: string },
+    ticket: NormalizedTicket,
+): Promise<void> {
+    // Unique [sourceId, externalId] guards races with concurrent sweeps.
+    await (prisma as any).trackerPollDispatch.create({
+        data: {
+            sourceId: source.id,
+            tenantId: source.tenantId,
+            tracker: source.tracker,
+            externalId: ticket.externalId,
+            title: ticket.title,
+        },
+    });
 }
 
 // ---------------------------------------------------------------------------

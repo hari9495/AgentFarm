@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { ROLE_RANK } from '../../lib/require-role.js';
 import type { AgentPersonaRecord, CreatePersonaInput, UpdatePersonaInput } from '@agentfarm/shared-types';
+import { evaluateShift } from '@agentfarm/shared-types';
 
 const getPrisma = async () => {
     const db = await import('../../lib/db.js');
@@ -235,4 +236,41 @@ export const registerPersonaRoutes = async (
             return reply.send({ persona: record });
         },
     );
+
+    // -----------------------------------------------------------------------
+    // GET /v1/personas/:botId/availability — is the agent on shift right now?
+    // Surfaces the C5 shift gate: available flag + next shift open instant.
+    // -----------------------------------------------------------------------
+    app.get<{ Params: BotIdParams }>('/v1/personas/:botId/availability', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) {
+            return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
+        }
+        if ((ROLE_RANK[session.role ?? ''] ?? 0) < (ROLE_RANK['viewer'] ?? 99)) {
+            return reply.code(403).send({ error: 'insufficient_role', required: 'viewer', actual: session.role });
+        }
+
+        const { botId } = request.params;
+        const db = await resolvePrisma();
+
+        const botExists = await resolveBotForTenant(db, botId, session.tenantId);
+        if (!botExists) {
+            return reply.code(404).send({ error: 'bot_not_found' });
+        }
+
+        const persona = await db.agentPersona.findUnique({
+            where: { botId },
+            select: { timezone: true, workingHours: true },
+        });
+        if (!persona) {
+            return reply.code(404).send({ error: 'persona_not_found' });
+        }
+
+        const status = evaluateShift({
+            workingHours: persona.workingHours,
+            timezone: persona.timezone,
+        });
+
+        return reply.send({ botId, ...status });
+    });
 };

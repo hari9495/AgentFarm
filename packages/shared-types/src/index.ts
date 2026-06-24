@@ -302,6 +302,7 @@ export interface BotRecord {
 export * from './desktop-agent-contracts.js';
 export * from './vm-lifecycle-contracts.js';
 export * from './persona.js';
+export * from './shift.js';
 export * from './role-enforcement.js';
 export * from './setup-wizard.js';
 export * from './episodic-memory.js';

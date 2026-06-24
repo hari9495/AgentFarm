@@ -70,12 +70,20 @@
 **Files:** `apps/trigger-service/src/sources/tracker-poller.ts(+test)`, `...main.ts`, `packages/db-schema/prisma/schema.prisma`, migration `20260625010000_add_tracker_poll_source`.
 **Follow-up (C4.1 ✅) — universal poll source:** The 3 first-class adapters can't cover every customer's tracker (Asana/ClickUp/Azure DevOps/Shortcut/ServiceNow…). Added `tracker='custom'` driven by a `CustomPollSpec` (`customConfig` Json column + migration `20260625020000`): list endpoint (templated `{{assignee}}`/`{{projectFilter}}`/`{{baseUrl}}`, URL-encoded), pluggable auth (`bearer`/`token`/`raw`/`header`/`none`), optional POST body (GraphQL), and a dot-path field map (`itemsPath`/`idField`/`titleField`/`urlField`/`bodyField`/`idPrefix`) → `NormalizedTicket[]`. `pollCustom` + `getByPath` are pure/unit-tested; `auth='none'` sources poll without credentials, all others still fail-closed. **Any REST tracker now works without per-vendor code** — mirrors the C6 Custom API philosophy. 6 new tests (100/100 green), typecheck clean.
 
-### C5 — Shift enforcement ⬜
+### C5 — Shift enforcement ✅
 **Problem:** `AgentPersona.workingHours` is cosmetic — never read at runtime.
-**Build:** A shift gate consulted before task execution (timezone + workingHours) → defer/queue tasks outside shift; surface `availability` status.
+**Built:**
+- `@agentfarm/shared-types/shift.ts` — pure, timezone-aware (IANA via `Intl`) shift engine: `isWithinShift`, `nextShiftStart`, `evaluateShift`, `normalizeWorkingHours`. Handles weekday filtering, overnight windows, DST; empty/invalid workingHours → always-on (back-compat). 13 unit tests.
+- `trigger-service/src/shift-enforcer.ts` — `evaluateAgentShift(prisma, agentId)` loads persona timezone+workingHours (fail-open on lookup error), `deferTask()` persists a `DeferredTask`.
+- Tracker poller now gates each source's agent once per sweep: off-shift tickets are parked as `DeferredTask(runAfter=nextShiftStart)` and still recorded for dedup (not re-polled, not dropped). Fixed a real C4 bug: `/run-task` parses `goal` as JSON, so the poller now packs the prompt into a JSON `goal` string.
+- `trigger-service/src/deferred-task-sweep.ts` — releases due `DeferredTask`s to the runtime, durable across restarts (Postgres-backed), gives up after 5 attempts. Wired into `main.ts`.
+- DB: `DeferredTask` model + migration `20260625030000`.
+- API: `GET /v1/personas/:botId/availability` (api-gateway, session+tenant-scoped) → `{ available, nextWindowStart, timezone, workingHours }`.
 **Acceptance:**
-- [ ] Task outside shift is deferred to next shift window, not dropped.
-- [ ] Availability status readable via API.
+- [x] Task outside shift is deferred to next shift window (durable), not dropped — released automatically when the shift opens.
+- [x] Availability status readable via API (`/v1/personas/:botId/availability`).
+- [x] typecheck clean (shared-types, trigger-service, api-gateway); 18 new tests (13 shift + 5 sweep/poller), 105/105 trigger-service green.
+**Files:** `packages/shared-types/src/shift.ts(+test)`, `apps/trigger-service/src/{shift-enforcer,deferred-task-sweep,sources/tracker-poller,main}.ts(+tests)`, `apps/api-gateway/src/routes/agents/personas.ts`, `schema.prisma`, migration `20260625030000_add_deferred_task`.
 
 ---
 
@@ -137,3 +145,4 @@ Verify/finish real deploy execution (Azure/k8s) beyond planning. Acceptance: one
 | 2026-06-25 | C6.2 done | Persist OpenAPI catalog (migration + PUT/GET routes) + agent-runtime auto-injection (`_custom_api_tool_catalog`); Custom API now fully autonomous like MCP; 80 tests green |
 | 2026-06-25 | C4 done | Tracker poller (Jira/Linear/GitHub) pulls assigned tickets → /run-task; per-tenant TrackerPollSource config, secret-backed creds (fail-closed), TrackerPollDispatch dedup ledger + migration; cadence-gated sweep wired into main.ts; 11 tests, 94/94 green, typecheck clean |
 | 2026-06-25 | C4.1 done | Universal `tracker='custom'` poll source (CustomPollSpec: templated list endpoint, pluggable auth incl. none, dot-path field map) → any REST tracker without per-vendor code; customConfig Json column + migration; 6 tests, 100/100 green, typecheck clean |
+| 2026-06-25 | C5 done | Shift enforcement: pure timezone-aware shift engine (shared-types/shift.ts); off-shift tasks parked as DeferredTask + released at next shift open (durable); availability API; fixed C4 run-task goal-JSON bug; DeferredTask migration; 18 tests, 105/105 green, 3 typechecks clean |

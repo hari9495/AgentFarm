@@ -1366,6 +1366,30 @@ model TrackerPollDispatch {
   @@index([tenantId])
 }
 
+// ---------------------------------------------------------------------------
+// Shift enforcement (C5): tasks that arrive outside an agent's working hours
+// are parked here (durable) and released to the runtime at the next shift open,
+// instead of being run 24/7 or dropped on restart.
+// ---------------------------------------------------------------------------
+model DeferredTask {
+  id         String    @id @default(cuid())
+  tenantId   String
+  agentId    String?
+  /// The /run-task body fields to re-post when the shift opens.
+  payload    Json
+  reason     String    @default("shift_closed")
+  runAfter   DateTime
+  /// pending | released | failed
+  status     String    @default("pending")
+  attempts   Int       @default(0)
+  lastError  String?
+  createdAt  DateTime  @default(now())
+  releasedAt DateTime?
+
+  @@index([status, runAfter])
+  @@index([tenantId])
+}
+
 model ChatSession {
   id        String        @id @default(cuid())
   tenantId  String
