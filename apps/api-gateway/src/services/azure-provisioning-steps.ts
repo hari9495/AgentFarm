@@ -461,6 +461,31 @@ export async function resizeWorkspaceVm(
 }
 
 // ---------------------------------------------------------------------------
+// H1 — Shift-driven power control: start / deallocate a workspace VM.
+// Deallocate (not just stop) releases compute billing while preserving disk +
+// private IP, so the agent resumes exactly where it left off next shift.
+// ---------------------------------------------------------------------------
+
+export async function setWorkspaceVmPower(
+    resourceGroup: string,
+    vmResourceName: string,
+    desired: 'running' | 'deallocated',
+): Promise<StepResult> {
+    const computeClient = getComputeClient();
+    try {
+        if (desired === 'running') {
+            await computeClient.virtualMachines.beginStartAndWait(resourceGroup, vmResourceName);
+            return { success: true, context: { powerState: 'running' } };
+        }
+        await computeClient.virtualMachines.beginDeallocateAndWait(resourceGroup, vmResourceName);
+        return { success: true, context: { powerState: 'deallocated' } };
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { success: false, errorCode: 'VM_POWER_FAILED', errorMessage: msg };
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Cleanup: delete resource group (cascades all child resources)
 // ---------------------------------------------------------------------------
 

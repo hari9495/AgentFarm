@@ -90,8 +90,18 @@
 
 ## HIGH
 
-### H1 — VM lifecycle tied to shift ⬜
-Start workspace VM at shift start, deallocate at shift end (platform-driven, not external Logic App). Acceptance: VM power state follows persona shift; state persists across stop/start.
+### H1 — VM lifecycle tied to shift ✅
+Platform-driven (not external Logic App): the workspace VM powers on when any agent comes on-shift and **deallocates** (releases compute billing, keeps disk + private IP) when all agents are off-shift — the partner to C5.
+**Built:**
+- `azure-provisioning-steps.ts: setWorkspaceVmPower(rg, vm, 'running'|'deallocated')` via Azure SDK `beginStartAndWait`/`beginDeallocateAndWait`.
+- `lib/shift-vm-reconciler.ts` — pure decision logic: desired ON if any persona within shift (reuses C5 `isWithinShift`; null workingHours = always-on; union across personas); diff vs current status → start/deallocate/none.
+- `services/shift-vm-worker.ts` — 5-min sweep: DB join (WorkspaceVm + bots' personas) → reconciler → Azure power → persist status. Status only updated on a successful power call (fail-closed).
+- Wired into `worker-manager.ts`, gated on `AZURE_SUBSCRIPTION_ID`.
+**Acceptance:**
+- [x] VM power follows persona shift (start at open, deallocate at close); timezone-aware.
+- [x] Disk/IP preserved (deallocate, not delete) → state persists across stop/start.
+- [x] 12 tests (reconciler + worker), api-gateway typecheck clean.
+**Files:** `apps/api-gateway/src/lib/shift-vm-reconciler.ts(+test)`, `services/shift-vm-worker.ts(+test)`, `services/azure-provisioning-steps.ts`, `worker-manager.ts`.
 
 ### H2 — Org identity fields ✅
 **Built:** `employeeId`, `department`, `managerId` on `AgentPersona` (migration `20260625040000`, applied). Threaded through `@agentfarm/shared-types` `AgentPersonaRecord` + the persona API (GET/POST/PATCH via a shared `toPersonaRecord` helper). New `GET /v1/personas/org-chart` returns every persona's org identity + a manager→reports tree (tenant-scoped, viewer-gated) — **org chart queryable**. Surfaced in the operator persona editor (`agent-persona-panel.tsx`): Employee ID / Department / Manager fields, loaded + saved.
@@ -149,6 +159,7 @@ Verify/finish real deploy execution (Azure/k8s) beyond planning. Acceptance: one
 | 2026-06-24 | C3 done | Connector coverage guard test; 12 unrunnable connectors explicitly catalogued; CI fails on uncategorized connector |
 | 2026-06-25 | C6 done | OpenAPI→tool-catalog engine + operation-mode custom_api executor + parse route; dashboard connector types/UI extended (slack/gitlab/linear); MCP set as recommended universal path; 73/73 tests, both typechecks clean |
 | 2026-06-25 | C6.2 done | Persist OpenAPI catalog (migration + PUT/GET routes) + agent-runtime auto-injection (`_custom_api_tool_catalog`); Custom API now fully autonomous like MCP; 80 tests green |
+| 2026-06-25 | H1 done | Shift-driven VM power (start at shift open / deallocate at close); pure reconciler + worker + Azure power op; gated on AZURE_SUBSCRIPTION_ID; 12 tests, typecheck clean |
 | 2026-06-25 | C4 done | Tracker poller (Jira/Linear/GitHub) pulls assigned tickets → /run-task; per-tenant TrackerPollSource config, secret-backed creds (fail-closed), TrackerPollDispatch dedup ledger + migration; cadence-gated sweep wired into main.ts; 11 tests, 94/94 green, typecheck clean |
 | 2026-06-25 | C4.1 done | Universal `tracker='custom'` poll source (CustomPollSpec: templated list endpoint, pluggable auth incl. none, dot-path field map) → any REST tracker without per-vendor code; customConfig Json column + migration; 6 tests, 100/100 green, typecheck clean |
 | 2026-06-25 | C5 done | Shift enforcement: pure timezone-aware shift engine (shared-types/shift.ts); off-shift tasks parked as DeferredTask + released at next shift open (durable); availability API; fixed C4 run-task goal-JSON bug; DeferredTask migration; 18 tests, 105/105 green, 3 typechecks clean |
