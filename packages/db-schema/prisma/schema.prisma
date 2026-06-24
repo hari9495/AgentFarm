@@ -335,6 +335,10 @@ model ConnectorAuthMetadata {
   lastRefreshAt     DateTime?
   lastErrorClass    ConnectorErrorClass?
   lastHealthcheckAt DateTime?
+  // C6.2 — OpenAPI tool catalog for self-describing Custom API connectors.
+  // Stores CustomApiTool[] (parsed from the customer's OpenAPI spec) so the agent
+  // runtime can inject it into the planner tool list, mirroring MCP tools/list.
+  openapiCatalog    Json?
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
 
@@ -1306,6 +1310,55 @@ model ScheduledJob {
 
   @@index([tenantId])
   @@index([tenantId, enabled])
+}
+
+// ---------------------------------------------------------------------------
+// Task-pull intake (C4): tracker poller.
+// Lets an agent persona *pull* assigned tickets from Jira/Linear/GitHub Issues,
+// complementing the push-only intake (email/slack/webhook). Each source is
+// polled on its own cadence; dispatched tickets are recorded for dedup.
+// ---------------------------------------------------------------------------
+model TrackerPollSource {
+  id            String                @id @default(cuid())
+  tenantId      String
+  /// Persona/bot the pulled tasks are dispatched to (optional → LLM routing).
+  agentId       String?
+  /// Tracker kind: 'jira' | 'linear' | 'github'.
+  tracker       String
+  /// API base URL (Jira site / GitHub API host); null → provider default.
+  baseUrl       String?
+  /// Identity the agent picks tickets for (Jira accountId/email, GitHub login,
+  /// Linear user id/email). Matched against ticket assignee.
+  assignee      String
+  /// Optional scope filter: Jira project key, GitHub "owner/repo".
+  projectFilter String?
+  /// Secret-store ref (env://, kv://, https vault URL) → tracker API token.
+  secretRef     String?
+  enabled       Boolean               @default(true)
+  intervalSec   Int                   @default(300)
+  lastPolledAt  DateTime?
+  lastError     String?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  dispatched    TrackerPollDispatch[]
+
+  @@index([tenantId])
+  @@index([enabled])
+}
+
+model TrackerPollDispatch {
+  id           String            @id @default(cuid())
+  sourceId     String
+  source       TrackerPollSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  tenantId     String
+  tracker      String
+  /// Stable per-tracker ticket identity used for dedup.
+  externalId   String
+  title        String?
+  dispatchedAt DateTime          @default(now())
+
+  @@unique([sourceId, externalId])
+  @@index([tenantId])
 }
 
 model ChatSession {

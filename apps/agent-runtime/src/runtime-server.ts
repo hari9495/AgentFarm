@@ -3481,6 +3481,14 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             task = { ...task, payload: { ...task.payload, _mcp_tool_catalog: mcpToolCatalog } };
         }
 
+        // C6.2 — Attach the tenant's self-describing Custom API (OpenAPI) catalog so the
+        // planner can autonomously call any REST API the customer described. Fail-safe.
+        const { buildCustomApiToolCatalog } = await import('./custom-api-catalog-client.js');
+        const customApiCatalog = await buildCustomApiToolCatalog(config.tenantId, config.workspaceId).catch(() => '');
+        if (customApiCatalog) {
+            task = { ...task, payload: { ...task.payload, _custom_api_tool_catalog: customApiCatalog } };
+        }
+
         // ---- Gap 1: Intent clarity check — ask for clarification instead of guessing ----
         const clarityResult = await assessTaskClarity(task).catch(() => ({ clear: true, clarityScore: 1, questions: [], reason: 'clarity check failed — defaulting to clear' }));
         if (!clarityResult.clear) {
