@@ -99,3 +99,66 @@ test('POST /v1/handoffs/:handoffId/complete forwards status and completion paylo
         await app.close();
     }
 });
+
+// ---------------------------------------------------------------------------
+// H3 — handoff delivery (AgentMessage trail + follow-on task to target agent)
+// ---------------------------------------------------------------------------
+
+const h3Session = () => ({ userId: 'u1', tenantId: 't1', workspaceIds: ['ws1'], expiresAt: Date.now() + 3_600_000 });
+
+const makeDeliveryApp = async (orchestratorStatus: number, getSession = () => h3Session() as ReturnType<typeof h3Session> | null) => {
+    const captured = { messages: [] as Array<{ toBotId: string; messageType: string }>, tasks: [] as Array<{ botId: string }> };
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async () =>
+        new Response(JSON.stringify({ handoff: { id: 'h1', status: 'pending' } }), { status: orchestratorStatus })) as typeof fetch;
+    const app = Fastify();
+    await registerHandoffRoutes(app, {
+        getSession,
+        orchestratorBaseUrl: 'http://orchestrator.test',
+        delivery: {
+            async createAgentMessage(data) { captured.messages.push({ toBotId: data.toBotId, messageType: data.messageType }); return { id: 'm1' }; },
+            enqueueTask(entry) { captured.tasks.push({ botId: entry.botId }); },
+        },
+    });
+    return { app, captured, restore: () => { globalThis.fetch = realFetch; } };
+};
+
+test('H3: initiate delivers an AgentMessage + a task to the target agent', async () => {
+    const { app, captured, restore } = await makeDeliveryApp(201);
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/handoffs/initiate',
+            payload: { workspace_id: 'ws1', task_id: 'task-42', from_bot_id: 'bot-sales', to_bot_id: 'bot-dev', reason: 'build it' },
+        });
+        assert.equal(res.statusCode, 201);
+        const body = res.json() as { delivery: { messageWritten: boolean; taskEnqueued: boolean } };
+        assert.equal(body.delivery.messageWritten, true);
+        assert.equal(body.delivery.taskEnqueued, true);
+        assert.equal(captured.messages.length, 1);
+        assert.equal(captured.messages[0]?.toBotId, 'bot-dev');
+        assert.equal(captured.messages[0]?.messageType, 'HANDOFF_REQUEST');
+        assert.equal(captured.tasks.length, 1);
+        assert.equal(captured.tasks[0]?.botId, 'bot-dev');
+    } finally {
+        restore();
+        await app.close();
+    }
+});
+
+test('H3: no delivery when the orchestrator rejects the handoff', async () => {
+    const { app, captured, restore } = await makeDeliveryApp(400);
+    try {
+        const res = await app.inject({
+            method: 'POST',
+            url: '/v1/handoffs/initiate',
+            payload: { workspace_id: 'ws1', task_id: 't', from_bot_id: 'a', to_bot_id: 'b', reason: 'x' },
+        });
+        assert.equal(res.statusCode, 400);
+        assert.equal(captured.messages.length, 0);
+        assert.equal(captured.tasks.length, 0);
+    } finally {
+        restore();
+        await app.close();
+    }
+});

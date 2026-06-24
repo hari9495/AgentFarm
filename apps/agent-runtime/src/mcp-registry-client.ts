@@ -236,6 +236,85 @@ export async function invokeMcpTool(
     return client.callTool(toolName, args);
 }
 
+export interface McpSequenceStep {
+    toolName: string;
+    toolArgs?: Record<string, unknown>;
+}
+
+export interface McpSequenceStepResult {
+    step: number;
+    toolName: string;
+    ok: boolean;
+    output: string;
+    error?: string;
+}
+
+export interface McpSequenceResult {
+    ok: boolean;
+    steps: McpSequenceStepResult[];
+    failedStep?: number;
+}
+
+/** Overall budget for an entire sequence, independent of the per-call timeout. */
+const MCP_SEQUENCE_BUDGET_MS = (() => {
+    const raw = process.env['AGENTFARM_MCP_SEQUENCE_BUDGET_MS'];
+    if (raw) {
+        const n = parseInt(raw, 10);
+        if (!isNaN(n) && n > 0) return n;
+    }
+    return 120_000;
+})();
+
+const extractSequenceText = (result: McpToolCallResult): string => {
+    const content = Array.isArray(result.content) ? result.content : [];
+    const text = content
+        .filter((c) => c.type === 'text' && typeof c.text === 'string')
+        .map((c) => c.text as string)
+        .join('\n');
+    return text || JSON.stringify(content);
+};
+
+/**
+ * Execute an ordered sequence of MCP tool calls against ONE server over a single
+ * persistent session (H4), so server-side state (e.g. a browser) survives between steps.
+ * Stops at the first failing step. The session is always closed in a finally.
+ * `clientFactory` is injectable for tests.
+ */
+export async function invokeMcpSequence(
+    serverUrl: string,
+    headers: Record<string, string>,
+    steps: McpSequenceStep[],
+    clientFactory: (url: string, h: Record<string, string>) => McpProtocolClient =
+        (url, h) => new McpProtocolClient(url, h),
+): Promise<McpSequenceResult> {
+    const client = clientFactory(serverUrl, headers);
+    const results: McpSequenceStepResult[] = [];
+    const deadline = Date.now() + MCP_SEQUENCE_BUDGET_MS;
+    try {
+        await client.connect();
+        for (let i = 0; i < steps.length; i += 1) {
+            const step = steps[i]!;
+            if (Date.now() > deadline) {
+                results.push({ step: i + 1, toolName: step.toolName, ok: false, output: '', error: 'sequence time budget exceeded' });
+                return { ok: false, steps: results, failedStep: i + 1 };
+            }
+            try {
+                const res = await client.callTool(step.toolName, step.toolArgs ?? {});
+                results.push({ step: i + 1, toolName: step.toolName, ok: true, output: extractSequenceText(res) });
+            } catch (err) {
+                results.push({ step: i + 1, toolName: step.toolName, ok: false, output: '', error: String(err) });
+                return { ok: false, steps: results, failedStep: i + 1 };
+            }
+        }
+        return { ok: true, steps: results };
+    } catch (err) {
+        results.push({ step: results.length + 1, toolName: '(connect)', ok: false, output: '', error: String(err) });
+        return { ok: false, steps: results, failedStep: results.length };
+    } finally {
+        await client.close();
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Planner-facing tool catalog
 // ---------------------------------------------------------------------------

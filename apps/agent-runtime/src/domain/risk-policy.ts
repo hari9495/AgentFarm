@@ -127,6 +127,8 @@ export const MEDIUM_RISK_ACTIONS = new Set([
     'workspace_slack_notify',
     // MCP tool invocation — external side-effects possible, content unknown
     'mcp_tool_call',
+    // MCP multi-step sequence (H4) — approved once for the whole sequence
+    'mcp_tool_sequence',
 ]);
 
 // ---------------------------------------------------------------------------

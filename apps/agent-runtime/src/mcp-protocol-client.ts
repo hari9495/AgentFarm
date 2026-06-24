@@ -95,6 +95,13 @@ export class McpProtocolClient {
     private readonly headers: Record<string, string>;
     private readonly timeoutMs: number;
     private _reqId = 0;
+    /** Captured from the `mcp-session-id` response header on connect; reused for the session. */
+    private _sessionId: string | null = null;
+
+    /** The active MCP session id, if a persistent session was established via connect(). */
+    get sessionId(): string | null {
+        return this._sessionId;
+    }
 
     constructor(serverUrl: string, headers: Record<string, string> = {}) {
         this.serverUrl = serverUrl;
@@ -141,6 +148,60 @@ export class McpProtocolClient {
             protocolVersion: raw.protocolVersion,
             serverInfo: { name: raw.serverInfo.name, version: raw.serverInfo.version },
         };
+    }
+
+    /**
+     * Establish a PERSISTENT MCP session for a multi-step tool sequence (H4).
+     * Runs initialize() once (capturing the `mcp-session-id` header so subsequent
+     * callTool() calls reuse the same server-side session/state), then sends the
+     * `notifications/initialized` notification per the MCP spec. Use close() when done.
+     */
+    async connect(): Promise<{ protocolVersion: string; serverInfo: { name: string; version: string } }> {
+        const init = await this.initialize();
+        await this.sendNotification('notifications/initialized');
+        return init;
+    }
+
+    /**
+     * Best-effort session teardown. Sends an HTTP DELETE with the session id per the
+     * MCP streamable-HTTP spec. Never throws.
+     */
+    async close(): Promise<void> {
+        if (!this._sessionId) return;
+        try {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+            await fetch(this.serverUrl, {
+                method: 'DELETE',
+                headers: { ...this.headers, 'mcp-session-id': this._sessionId },
+                signal: controller.signal,
+            }).finally(() => clearTimeout(timer));
+        } catch {
+            // teardown is best-effort
+        } finally {
+            this._sessionId = null;
+        }
+    }
+
+    /** Fire-and-forget JSON-RPC notification (no id, no response expected). */
+    private async sendNotification(method: string): Promise<void> {
+        try {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+            await fetch(this.serverUrl, {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json',
+                    'accept': 'application/json, text/event-stream',
+                    ...this.headers,
+                    ...(this._sessionId ? { 'mcp-session-id': this._sessionId } : {}),
+                },
+                body: JSON.stringify({ jsonrpc: '2.0', method, params: {} }),
+                signal: controller.signal,
+            }).finally(() => clearTimeout(timer));
+        } catch {
+            // notifications are best-effort
+        }
     }
 
     /**
@@ -231,6 +292,9 @@ export class McpProtocolClient {
                     // MCP streamable-HTTP transport requires both accept types (spec §4.2.1)
                     'accept': 'application/json, text/event-stream',
                     ...this.headers,
+                    // Reuse the persistent session id (set by connect()) so server-side
+                    // state (e.g. one browser) survives across the steps of a sequence.
+                    ...(this._sessionId ? { 'mcp-session-id': this._sessionId } : {}),
                 },
                 body: JSON.stringify(body),
                 signal: controller.signal,
@@ -247,6 +311,13 @@ export class McpProtocolClient {
             throw new McpProtocolError(`MCP request to ${this.serverUrl} failed: ${String(err)}`);
         } finally {
             clearTimeout(timer);
+        }
+
+        // Capture the session id the server assigns on initialize so the rest of the
+        // sequence reuses the same server-side session (persistent state).
+        const assignedSessionId = response.headers.get('mcp-session-id');
+        if (assignedSessionId) {
+            this._sessionId = assignedSessionId;
         }
 
         let text: string;

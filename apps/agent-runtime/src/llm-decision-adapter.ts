@@ -805,6 +805,30 @@ const sanitizePayloadOverrides = (value: unknown): Record<string, unknown> | und
         }
     }
 
+    // steps: ordered MCP tool calls for actionType=mcp_tool_sequence (H4).
+    // Each step is { toolName: string, toolArgs?: object }. Bounded to 8 steps; only
+    // these two fields pass through (no arbitrary keys), each toolArgs size-capped.
+    if (Array.isArray(raw['steps'])) {
+        const cleanSteps: Array<{ toolName: string; toolArgs?: Record<string, unknown> }> = [];
+        for (const item of (raw['steps'] as unknown[]).slice(0, 8)) {
+            if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+            const s = item as Record<string, unknown>;
+            const toolName = typeof s['toolName'] === 'string' ? s['toolName'].trim().slice(0, 200) : '';
+            if (!toolName) continue;
+            const step: { toolName: string; toolArgs?: Record<string, unknown> } = { toolName };
+            if (s['toolArgs'] && typeof s['toolArgs'] === 'object' && !Array.isArray(s['toolArgs'])) {
+                try {
+                    const serialized = JSON.stringify(s['toolArgs']);
+                    if (serialized.length <= 4000) step.toolArgs = JSON.parse(serialized) as Record<string, unknown>;
+                } catch {
+                    // drop non-serializable args
+                }
+            }
+            cleanSteps.push(step);
+        }
+        if (cleanSteps.length > 0) sanitized['steps'] = cleanSteps;
+    }
+
     if (typeof raw['max_attempts'] === 'number') {
         sanitized['max_attempts'] = Math.max(1, Math.min(10, Math.floor(raw['max_attempts'])));
     }
