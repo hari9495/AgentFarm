@@ -27,7 +27,7 @@ import type { SecretStore } from './secret-store.js';
 // Re-exported types that connector-actions.ts uses
 // ---------------------------------------------------------------------------
 
-export type ConnectorType = 'jira' | 'teams' | 'github' | 'email' | 'custom_api' | 'slack';
+export type ConnectorType = 'jira' | 'teams' | 'github' | 'email' | 'custom_api' | 'slack' | 'gitlab' | 'linear';
 export type ConnectorActionType =
     | 'read_task'
     | 'create_comment'
@@ -118,6 +118,11 @@ type CustomApiCredentials = {
     basic_user?: string;
     basic_pass?: string;
 };
+
+// GitLab: PAT or OAuth token. base_url optional for self-hosted (defaults to gitlab.com).
+type GitLabCredentials = { access_token: string; base_url?: string };
+// Linear: personal API key (sent as the raw Authorization header value).
+type LinearCredentials = { api_key: string };
 
 type FetchFn = (url: string | URL, init?: RequestInit) => Promise<Response>;
 
@@ -731,6 +736,362 @@ const executeGitHub = async (
 };
 
 // ---------------------------------------------------------------------------
+// GitLab connector (merge requests + issues; REST v4)
+// Action mapping (reuses the shared ConnectorActionType vocabulary):
+//   create_pr        → create merge request
+//   merge_pr         → merge merge request
+//   list_prs         → list merge requests
+//   create_pr_comment/create_comment → add a note to a merge request
+//   read_task        → read an issue
+// payload.project_id accepts a numeric id or a URL-encodable "namespace/project" path.
+// ---------------------------------------------------------------------------
+
+const gitlabApiBase = (credentials: GitLabCredentials): string =>
+    (credentials.base_url?.replace(/\/$/, '') ?? 'https://gitlab.com') + '/api/v4';
+
+const executeGitLab = async (
+    actionType: ConnectorActionType,
+    payload: Record<string, unknown>,
+    credentials: GitLabCredentials,
+    fetcher: FetchFn,
+): Promise<ProviderExecutionResult> => {
+    const apiBase = gitlabApiBase(credentials);
+    const headers: Record<string, string> = {
+        Authorization: `Bearer ${credentials.access_token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+    };
+    const projectId = String(payload['project_id'] ?? '').trim();
+    const requireProject = (): ProviderExecutionResult | null =>
+        projectId
+            ? null
+            : {
+                  ok: false,
+                  providerResponseCode: '400',
+                  resultSummary: 'Missing required field: project_id',
+                  errorCode: 'invalid_format',
+                  errorMessage: 'project_id is required (numeric id or "namespace/project").',
+                  remediationHint: 'Provide project_id in the payload.',
+              };
+    const networkError = (err: unknown): ProviderExecutionResult => ({
+        ok: false,
+        providerResponseCode: '0',
+        resultSummary: 'Network error reaching GitLab',
+        transient: true,
+        errorCode: 'provider_unavailable',
+        errorMessage: String(err),
+        remediationHint: 'Check network connectivity to the GitLab instance.',
+    });
+    const proj = encodeURIComponent(projectId);
+
+    if (actionType === 'create_pr') {
+        const missing = requireProject();
+        if (missing) return missing;
+        const sourceBranch = String(payload['head'] ?? payload['source_branch'] ?? '').trim();
+        const targetBranch = String(payload['base'] ?? payload['target_branch'] ?? '').trim();
+        const title = String(payload['title'] ?? '').trim();
+        if (!sourceBranch || !targetBranch || !title) {
+            return {
+                ok: false,
+                providerResponseCode: '400',
+                resultSummary: 'Missing required fields: head/source_branch, base/target_branch, title',
+                errorCode: 'invalid_format',
+                errorMessage: 'source_branch, target_branch, and title are required for create_pr.',
+                remediationHint: 'Provide head, base, and title in the payload.',
+            };
+        }
+        const body: Record<string, unknown> = {
+            source_branch: sourceBranch,
+            target_branch: targetBranch,
+            title,
+        };
+        if (payload['body'] !== undefined) body['description'] = String(payload['body']);
+        let res: Response;
+        try {
+            res = await fetcher(`${apiBase}/projects/${proj}/merge_requests`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(body),
+            });
+        } catch (err) {
+            return networkError(err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `GitLab create MR failed with ${res.status}`);
+        const created = (await res.json()) as { iid?: number; web_url?: string };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `MR !${created.iid ?? 'created'} opened for project ${projectId}`,
+        };
+    }
+
+    if (actionType === 'merge_pr') {
+        const missing = requireProject();
+        if (missing) return missing;
+        const mrIid = Number(payload['pull_number'] ?? payload['merge_request_iid']);
+        if (!Number.isInteger(mrIid) || mrIid <= 0) {
+            return {
+                ok: false,
+                providerResponseCode: '400',
+                resultSummary: 'Missing required field: pull_number (merge request iid)',
+                errorCode: 'invalid_format',
+                errorMessage: 'pull_number (the MR iid) is required for merge_pr.',
+                remediationHint: 'Provide pull_number in the payload.',
+            };
+        }
+        let res: Response;
+        try {
+            res = await fetcher(`${apiBase}/projects/${proj}/merge_requests/${mrIid}/merge`, {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify({}),
+            });
+        } catch (err) {
+            return networkError(err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `GitLab merge MR failed with ${res.status}`);
+        const merged = (await res.json()) as { sha?: string; state?: string };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `MR !${mrIid} merged for project ${projectId} (${merged.sha ?? merged.state ?? 'ok'})`,
+        };
+    }
+
+    if (actionType === 'list_prs') {
+        const missing = requireProject();
+        if (missing) return missing;
+        const state = payload['state'] !== undefined ? String(payload['state']).trim() : 'opened';
+        const url = new URL(`${apiBase}/projects/${proj}/merge_requests`);
+        url.searchParams.set('state', state || 'opened');
+        let res: Response;
+        try {
+            res = await fetcher(url.toString(), { method: 'GET', headers });
+        } catch (err) {
+            return networkError(err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `GitLab list MRs failed with ${res.status}`);
+        const mrs = (await res.json()) as Array<{ iid?: number }>;
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Fetched ${mrs.length} merge request(s) for project ${projectId}`,
+        };
+    }
+
+    if (actionType === 'create_pr_comment' || actionType === 'create_comment') {
+        const missing = requireProject();
+        if (missing) return missing;
+        const mrIid = Number(payload['pull_number'] ?? payload['merge_request_iid']);
+        const note = String(payload['body'] ?? '').trim();
+        if (!Number.isInteger(mrIid) || mrIid <= 0 || !note) {
+            return {
+                ok: false,
+                providerResponseCode: '400',
+                resultSummary: 'Missing required fields: pull_number, body',
+                errorCode: 'invalid_format',
+                errorMessage: 'pull_number (MR iid) and body are required to add a note.',
+                remediationHint: 'Provide pull_number and body in the payload.',
+            };
+        }
+        let res: Response;
+        try {
+            res = await fetcher(`${apiBase}/projects/${proj}/merge_requests/${mrIid}/notes`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ body: note }),
+            });
+        } catch (err) {
+            return networkError(err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `GitLab MR note failed with ${res.status}`);
+        const comment = (await res.json()) as { id?: number };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Note ${comment.id ?? 'created'} added to MR !${mrIid} (project ${projectId})`,
+        };
+    }
+
+    if (actionType === 'read_task') {
+        const missing = requireProject();
+        if (missing) return missing;
+        const issueIid = Number(payload['issue_iid'] ?? payload['issue_key']);
+        if (!Number.isInteger(issueIid) || issueIid <= 0) {
+            return {
+                ok: false,
+                providerResponseCode: '400',
+                resultSummary: 'Missing required field: issue_iid',
+                errorCode: 'invalid_format',
+                errorMessage: 'issue_iid is required for read_task.',
+                remediationHint: 'Provide issue_iid in the payload.',
+            };
+        }
+        let res: Response;
+        try {
+            res = await fetcher(`${apiBase}/projects/${proj}/issues/${issueIid}`, { method: 'GET', headers });
+        } catch (err) {
+            return networkError(err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `GitLab read issue failed with ${res.status}`);
+        const issue = (await res.json()) as { iid?: number; title?: string; state?: string };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Issue #${issue.iid ?? issueIid}: ${issue.title ?? '(no title)'} [${issue.state ?? 'unknown'}]`,
+        };
+    }
+
+    return {
+        ok: false,
+        providerResponseCode: '400',
+        resultSummary: `Action ${actionType} is not supported by the GitLab connector`,
+        errorCode: 'unsupported_action',
+        errorMessage: 'GitLab supports: create_pr, merge_pr, list_prs, create_pr_comment, create_comment, read_task',
+    };
+};
+
+// ---------------------------------------------------------------------------
+// Linear connector (GraphQL). Issue tracker — no PR concept.
+//   read_task      → issue(id) query
+//   create_comment → commentCreate mutation
+//   update_status  → issueUpdate(stateId) mutation
+// ---------------------------------------------------------------------------
+
+const LINEAR_GRAPHQL_URL = 'https://api.linear.app/graphql';
+
+const executeLinear = async (
+    actionType: ConnectorActionType,
+    payload: Record<string, unknown>,
+    credentials: LinearCredentials,
+    fetcher: FetchFn,
+): Promise<ProviderExecutionResult> => {
+    const headers: Record<string, string> = {
+        Authorization: credentials.api_key,
+        'Content-Type': 'application/json',
+    };
+    const post = async (query: string, variables: Record<string, unknown>): Promise<ProviderExecutionResult | { data: unknown }> => {
+        let res: Response;
+        try {
+            res = await fetcher(LINEAR_GRAPHQL_URL, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ query, variables }),
+            });
+        } catch (err) {
+            return {
+                ok: false,
+                providerResponseCode: '0',
+                resultSummary: 'Network error reaching Linear',
+                transient: true,
+                errorCode: 'provider_unavailable',
+                errorMessage: String(err),
+                remediationHint: 'Check network connectivity to api.linear.app.',
+            };
+        }
+        if (!res.ok) return failFromStatus(res.status, `Linear GraphQL returned ${res.status}`);
+        const json = (await res.json()) as { data?: unknown; errors?: Array<{ message?: string }> };
+        if (json.errors?.length) {
+            return {
+                ok: false,
+                providerResponseCode: '400',
+                resultSummary: 'Linear GraphQL error',
+                errorCode: 'invalid_format',
+                errorMessage: json.errors.map((e) => e.message).join('; '),
+                remediationHint: 'Check the issue id / field values in the payload.',
+            };
+        }
+        return { data: json.data };
+    };
+    const isResult = (v: unknown): v is ProviderExecutionResult =>
+        typeof v === 'object' && v !== null && 'ok' in v;
+
+    if (actionType === 'read_task') {
+        const issueId = String(payload['issue_id'] ?? payload['issue_key'] ?? '').trim();
+        if (!issueId) {
+            return {
+                ok: false,
+                providerResponseCode: '400',
+                resultSummary: 'Missing required field: issue_id',
+                errorCode: 'invalid_format',
+                errorMessage: 'issue_id is required for read_task.',
+                remediationHint: 'Provide issue_id in the payload.',
+            };
+        }
+        const out = await post(
+            'query($id:String!){ issue(id:$id){ identifier title state{ name } } }',
+            { id: issueId },
+        );
+        if (isResult(out)) return out;
+        const issue = (out.data as { issue?: { identifier?: string; title?: string; state?: { name?: string } } }).issue;
+        return {
+            ok: true,
+            providerResponseCode: '200',
+            resultSummary: `Issue ${issue?.identifier ?? issueId}: ${issue?.title ?? '(no title)'} [${issue?.state?.name ?? 'unknown'}]`,
+        };
+    }
+
+    if (actionType === 'create_comment') {
+        const issueId = String(payload['issue_id'] ?? payload['issue_key'] ?? '').trim();
+        const body = String(payload['body'] ?? '').trim();
+        if (!issueId || !body) {
+            return {
+                ok: false,
+                providerResponseCode: '400',
+                resultSummary: 'Missing required fields: issue_id, body',
+                errorCode: 'invalid_format',
+                errorMessage: 'issue_id and body are required for create_comment.',
+                remediationHint: 'Provide issue_id and body in the payload.',
+            };
+        }
+        const out = await post(
+            'mutation($input:CommentCreateInput!){ commentCreate(input:$input){ success comment{ id } } }',
+            { input: { issueId, body } },
+        );
+        if (isResult(out)) return out;
+        const created = (out.data as { commentCreate?: { success?: boolean; comment?: { id?: string } } }).commentCreate;
+        return {
+            ok: true,
+            providerResponseCode: '200',
+            resultSummary: `Comment ${created?.comment?.id ?? 'created'} added to Linear issue ${issueId}`,
+        };
+    }
+
+    if (actionType === 'update_status') {
+        const issueId = String(payload['issue_id'] ?? payload['issue_key'] ?? '').trim();
+        const stateId = String(payload['state_id'] ?? payload['status'] ?? '').trim();
+        if (!issueId || !stateId) {
+            return {
+                ok: false,
+                providerResponseCode: '400',
+                resultSummary: 'Missing required fields: issue_id, state_id',
+                errorCode: 'invalid_format',
+                errorMessage: 'issue_id and state_id (Linear workflow state id) are required for update_status.',
+                remediationHint: 'Provide issue_id and state_id in the payload.',
+            };
+        }
+        const out = await post(
+            'mutation($id:String!,$input:IssueUpdateInput!){ issueUpdate(id:$id,input:$input){ success } }',
+            { id: issueId, input: { stateId } },
+        );
+        if (isResult(out)) return out;
+        return {
+            ok: true,
+            providerResponseCode: '200',
+            resultSummary: `Linear issue ${issueId} status updated`,
+        };
+    }
+
+    return {
+        ok: false,
+        providerResponseCode: '400',
+        resultSummary: `Action ${actionType} is not supported by the Linear connector`,
+        errorCode: 'unsupported_action',
+        errorMessage: 'Linear supports: read_task, create_comment, update_status',
+    };
+};
+
+// ---------------------------------------------------------------------------
 // Email connector (SendGrid + SMTP fallback via nodemailer-style validation)
 // ---------------------------------------------------------------------------
 
@@ -1055,6 +1416,46 @@ const probeGitHub = async (
     }
 };
 
+const probeGitLab = async (
+    credentials: GitLabCredentials,
+    fetcher: FetchFn,
+): Promise<HealthProbeResult> => {
+    try {
+        const res = await fetcher(`${gitlabApiBase(credentials)}/user`, {
+            headers: { Authorization: `Bearer ${credentials.access_token}`, Accept: 'application/json' },
+        });
+        if (res.ok) return { outcome: 'ok', message: 'GitLab /user probe returned 200' };
+        if (res.status === 401 || res.status === 403) {
+            return { outcome: 'auth_failure', message: `GitLab auth check returned ${res.status}` };
+        }
+        if (res.status === 429) return { outcome: 'rate_limited', message: 'GitLab rate limit reached' };
+        return { outcome: 'network_timeout', message: `GitLab health check returned ${res.status}` };
+    } catch {
+        return { outcome: 'network_timeout', message: 'GitLab unreachable' };
+    }
+};
+
+const probeLinear = async (
+    credentials: LinearCredentials,
+    fetcher: FetchFn,
+): Promise<HealthProbeResult> => {
+    try {
+        const res = await fetcher(LINEAR_GRAPHQL_URL, {
+            method: 'POST',
+            headers: { Authorization: credentials.api_key, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: '{ viewer { id } }' }),
+        });
+        if (res.ok) return { outcome: 'ok', message: 'Linear viewer probe returned 200' };
+        if (res.status === 401 || res.status === 403) {
+            return { outcome: 'auth_failure', message: `Linear auth check returned ${res.status}` };
+        }
+        if (res.status === 429) return { outcome: 'rate_limited', message: 'Linear rate limit reached' };
+        return { outcome: 'network_timeout', message: `Linear health check returned ${res.status}` };
+    } catch {
+        return { outcome: 'network_timeout', message: 'Linear unreachable' };
+    }
+};
+
 const probeEmail = async (
     credentials: EmailCredentials,
     fetcher: FetchFn,
@@ -1366,6 +1767,36 @@ export const createRealProviderExecutor = (
         return executeSlack(actionType, payload, creds, fetcher);
     }
 
+    if (connectorType === 'gitlab') {
+        const creds = parseCredentials<GitLabCredentials>(rawSecret);
+        if (!creds?.access_token) {
+            return {
+                ok: false,
+                providerResponseCode: '401',
+                resultSummary: 'Invalid GitLab credentials format',
+                errorCode: 'upgrade_required',
+                errorMessage: 'GitLab credentials must include access_token.',
+                remediationHint: 'Re-authenticate the GitLab connector.',
+            };
+        }
+        return executeGitLab(actionType, payload, creds, fetcher);
+    }
+
+    if (connectorType === 'linear') {
+        const creds = parseCredentials<LinearCredentials>(rawSecret);
+        if (!creds?.api_key) {
+            return {
+                ok: false,
+                providerResponseCode: '401',
+                resultSummary: 'Invalid Linear credentials format',
+                errorCode: 'upgrade_required',
+                errorMessage: 'Linear credentials must include api_key.',
+                remediationHint: 'Re-configure the Linear connector with a valid API key.',
+            };
+        }
+        return executeLinear(actionType, payload, creds, fetcher);
+    }
+
     return {
         ok: false,
         providerResponseCode: '400',
@@ -1439,6 +1870,22 @@ export const createRealConnectorHealthProbe = (
             return { outcome: 'auth_failure', message: 'Slack credentials missing botToken' };
         }
         return probeSlack(creds, fetcher);
+    }
+
+    if (connectorType === 'gitlab') {
+        const creds = parseCredentials<GitLabCredentials>(rawSecret);
+        if (!creds?.access_token) {
+            return { outcome: 'auth_failure', message: 'GitLab credentials missing access_token' };
+        }
+        return probeGitLab(creds, fetcher);
+    }
+
+    if (connectorType === 'linear') {
+        const creds = parseCredentials<LinearCredentials>(rawSecret);
+        if (!creds?.api_key) {
+            return { outcome: 'auth_failure', message: 'Linear credentials missing api_key' };
+        }
+        return probeLinear(creds, fetcher);
     }
 
     return { outcome: 'ok', message: `No live probe implemented for ${connectorType}` };

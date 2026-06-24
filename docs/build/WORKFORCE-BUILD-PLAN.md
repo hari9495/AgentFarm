@@ -23,17 +23,24 @@
 - [x] `connector-actions.test.ts` green (53/53) incl. new `failClosedProviderExecutor` safety test.
 **Files:** `apps/api-gateway/src/routes/connectors/connector-actions.ts`, `...connector-actions.test.ts`, `.env.example`
 
-### C2 — First-class executors for high-demand named connectors ⬜
-**Problem:** asana, gitlab, linear, clickup, trello, monday, gmail, outlook have no first-class executor; the rich `connector-gateway` classes (azure-devops, confluence, gitlab, linear, notion, pagerduty, sentry) are unwired.
-**Build:** Wire `connector-gateway` connector classes into `provider-clients.ts` dispatch (or map to `generic_rest` with per-connector request templates). Start with: **gitlab, linear** (classes already exist).
+### C2 — First-class executors for high-demand named connectors ✅
+**Problem:** gitlab/linear (and others) had no first-class executor; agent path only ran jira/teams/github/email/custom_api. Also discovered `slack` had an executor but was blocked by the route allowlist.
+**Built:**
+- `executeGitLab` (REST v4): create_pr→MR, merge_pr, list_prs, create_pr_comment/create_comment→MR note, read_task→issue; self-hosted `base_url` supported; Bearer auth.
+- `executeLinear` (GraphQL): read_task, create_comment, update_status; raw `api_key` Authorization; PR actions correctly rejected as unsupported.
+- Dispatch + health-probe branches (`probeGitLab`, `probeLinear`) added.
+- Route unblocked: added slack/gitlab/linear to `ConnectorType`, `SUPPORTED_CONNECTORS`, `CONNECTOR_TOOL_ALIAS`, and `CREDENTIAL_VALIDATORS`. **Now 8 connector types execute through the agent path** (was effectively 5).
 **Acceptance:**
-- [ ] gitlab + linear execute real API calls through the agent path.
-- [ ] Integration test per connector (mocked fetch).
+- [x] gitlab + linear execute real API calls (URL/method/auth asserted via capturing fetcher).
+- [x] 6 new executor tests; missing-field and error-path coverage.
+- [x] `pnpm --filter @agentfarm/api-gateway typecheck` clean.
+**Files:** `apps/api-gateway/src/lib/provider-clients.ts`, `...connector-actions.ts`, `...connector-actions.test.ts`
 
-### C3 — Connector coverage guard test ⬜
-**Build:** A test that iterates `CONNECTOR_REGISTRY` and asserts every entry either (a) has a real executor branch, or (b) is explicitly flagged `executor: 'generic_rest'`. Fails CI if a connector is advertised but unrunnable.
+### C3 — Connector coverage guard test ✅
+**Built:** `connector-coverage.test.ts` — iterates `CONNECTOR_REGISTRY` and asserts every advertised connector is categorized into exactly one of: `FIRST_CLASS` (real executor: jira, github, slack, teams, gitlab, linear), `GENERIC_REST_BACKED` (generic_rest*/generic_smtp), or `KNOWN_UNIMPLEMENTED` (12 connectors the UI must hide/disable). Adding/advertising a connector without categorizing it now fails CI.
 **Acceptance:**
-- [ ] Test exists and passes; advertising a dead connector breaks the build.
+- [x] Guard test passes (3 tests); uncategorized connector breaks the build.
+- [x] Documents exactly which 12 connectors are advertised-but-unrunnable (the C2/H-tier backlog).
 
 ### C4 — Task-pull source: tracker poller ⬜
 **Problem:** Intake is push-only (email/slack/webhook). No "agent picks assigned tickets."
@@ -104,3 +111,5 @@ Verify/finish real deploy execution (Azure/k8s) beyond planning. Acceptance: one
 |---|---|---|
 | 2026-06-24 | Plan created | Tracker initialized from 2026-06-24 audit |
 | 2026-06-24 | C1 done | Connector execution now fails closed; simulator opt-in via AF_CONNECTOR_SIMULATE; 53/53 tests green |
+| 2026-06-24 | C2 done | Real GitLab + Linear executors; slack route unblocked; 8 connector types now execute; typecheck clean |
+| 2026-06-24 | C3 done | Connector coverage guard test; 12 unrunnable connectors explicitly catalogued; CI fails on uncategorized connector |
