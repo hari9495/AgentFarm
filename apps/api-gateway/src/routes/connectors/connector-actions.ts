@@ -128,6 +128,16 @@ type ConnectorActionRepo = {
         limit: number;
         cursor?: Date;
     }): Promise<ActionLogRow[]>;
+    // C6.2 — persist + read the OpenAPI tool catalog for self-describing Custom API connectors.
+    setOpenapiCatalog?(input: {
+        connectorId: string;
+        tenantId: string;
+        catalog: unknown;
+    }): Promise<void>;
+    listOpenapiCatalogs?(input: {
+        tenantId: string;
+        workspaceId?: string;
+    }): Promise<Array<{ connectorId: string; displayName: string | null; catalog: unknown }>>;
 };
 
 type ActionLogRow = {
@@ -459,6 +469,30 @@ const defaultRepo: ConnectorActionRepo = {
                 createdAt: true,
             },
         });
+    },
+    async setOpenapiCatalog(input) {
+        const prisma = await getPrisma();
+        await prisma.connectorAuthMetadata.update({
+            where: { connectorId: input.connectorId },
+            data: { openapiCatalog: input.catalog as never },
+        });
+    },
+    async listOpenapiCatalogs(input) {
+        const prisma = await getPrisma();
+        const rows = await prisma.connectorAuthMetadata.findMany({
+            where: {
+                tenantId: input.tenantId,
+                ...(input.workspaceId ? { workspaceId: input.workspaceId } : {}),
+                connectorType: 'custom_api',
+                NOT: { openapiCatalog: { equals: null as never } },
+            },
+            select: { connectorId: true, displayName: true, openapiCatalog: true },
+        });
+        return rows.map((r) => ({
+            connectorId: r.connectorId,
+            displayName: r.displayName,
+            catalog: r.openapiCatalog,
+        }));
     },
 };
 
@@ -1679,6 +1713,67 @@ export const registerConnectorActionRoutes = async (
                 });
             }
             return reply.code(200).send({ tool_count: tools.length, tools });
+        },
+    );
+
+    // C6.2 — Persist a parsed OpenAPI catalog onto a Custom API connector. The agent runtime
+    // then auto-discovers it (GET below) and injects it into the planner tool list, so the
+    // agent can drive the customer's REST API without being handed the operation each time.
+    app.put<{ Params: { connectorId: string }; Body: { spec?: unknown } }>(
+        '/v1/connectors/:connectorId/openapi',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
+            }
+            if (!repo.setOpenapiCatalog) {
+                return reply.code(501).send({ error: 'not_supported', message: 'Catalog persistence is not available.' });
+            }
+            const connectorId = request.params.connectorId;
+            const metadata = await repo.findAuthMetadata(connectorId);
+            if (!metadata || metadata.tenantId !== session.tenantId) {
+                return reply.code(404).send({ error: 'not_found', message: 'Connector not found for this tenant.' });
+            }
+            const spec = request.body?.spec;
+            if (!spec || typeof spec !== 'object') {
+                return reply.code(400).send({ error: 'invalid_spec', message: 'Body must include a parsed OpenAPI 3.x document under "spec".' });
+            }
+            const { parseOpenApiToToolCatalog } = await import('../../lib/openapi-catalog.js');
+            const tools = parseOpenApiToToolCatalog(spec);
+            if (tools.length === 0) {
+                return reply.code(422).send({ error: 'no_operations', message: 'No operations found in the spec.' });
+            }
+            await repo.setOpenapiCatalog({ connectorId, tenantId: session.tenantId, catalog: tools });
+            return reply.code(200).send({ stored: true, tool_count: tools.length });
+        },
+    );
+
+    // C6.2 — Agent-runtime fetches all stored Custom API catalogs for the tenant.
+    // Accepts either a browser session OR the connector-exec service token + x-tenant-id
+    // header (runtime → gateway, same pattern as the MCP registry).
+    app.get<{ Querystring: { workspace_id?: string } }>(
+        '/v1/connectors/custom-api-catalog',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            const providedServiceToken = readServiceToken(request);
+            const headerTenant = typeof request.headers['x-tenant-id'] === 'string'
+                ? (request.headers['x-tenant-id'] as string)
+                : null;
+            const serviceAuthorized = Boolean(
+                !session && serviceAuthToken && providedServiceToken && providedServiceToken === serviceAuthToken && headerTenant,
+            );
+            if (!session && !serviceAuthorized) {
+                return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
+            }
+            const tenantId = session ? session.tenantId : headerTenant!;
+            if (!repo.listOpenapiCatalogs) {
+                return reply.code(200).send({ connectors: [] });
+            }
+            const connectors = await repo.listOpenapiCatalogs({
+                tenantId,
+                workspaceId: request.query?.workspace_id,
+            });
+            return reply.code(200).send({ connectors });
         },
     );
 };

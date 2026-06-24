@@ -335,6 +335,10 @@ model ConnectorAuthMetadata {
   lastRefreshAt     DateTime?
   lastErrorClass    ConnectorErrorClass?
   lastHealthcheckAt DateTime?
+  // C6.2 — OpenAPI tool catalog for self-describing Custom API connectors.
+  // Stores CustomApiTool[] (parsed from the customer's OpenAPI spec) so the agent
+  // runtime can inject it into the planner tool list, mirroring MCP tools/list.
+  openapiCatalog    Json?
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
 

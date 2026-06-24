@@ -52,7 +52,7 @@
 - [x] Any OpenAPI 3.x REST API → agent-usable tool catalog.
 - [x] Operation invocation resolves path/query/body correctly; fails closed on missing params.
 - [x] typecheck clean; 73/73 connector+engine tests pass.
-**Follow-up (C6.2, ⬜):** persist a connector's spec/catalog + inject it into the agent's tool list at runtime (mirror `discoverMcpTools`), so the agent auto-discovers Custom API ops without being handed the operation.
+**Follow-up (C6.2 ✅):** Done. `ConnectorAuthMetadata.openapiCatalog` column + migration; `PUT /v1/connectors/:id/openapi` persists the parsed catalog; `GET /v1/connectors/custom-api-catalog` (session OR service-token+`x-tenant-id`) serves it; agent-runtime `custom-api-catalog-client.ts` fetches + formats + injects `_custom_api_tool_catalog` into the planner payload (alongside `_mcp_tool_catalog`). The agent now auto-discovers Custom API ops without being handed the operation. Tests: 80 (76 gateway + 4 runtime), both typechecks clean.
 **Recommended guidance:** For new integrations prefer **MCP** (fully autonomous today); use **Custom API + OpenAPI** when the customer has no MCP server. First-class connectors (jira/github/slack/teams/gitlab/linear) stay for the common, high-polish cases.
 **Files:** `apps/api-gateway/src/lib/openapi-catalog.ts(+test)`, `...provider-clients.ts`, `...connector-actions.ts(+test)`, dashboard connector type/UI (`connector-config-panel.tsx`, `connectors-hub-client.tsx`, `connectors/page.tsx`).
 
@@ -128,3 +128,4 @@ Verify/finish real deploy execution (Azure/k8s) beyond planning. Acceptance: one
 | 2026-06-24 | C2 done | Real GitLab + Linear executors; slack route unblocked; 8 connector types now execute; typecheck clean |
 | 2026-06-24 | C3 done | Connector coverage guard test; 12 unrunnable connectors explicitly catalogued; CI fails on uncategorized connector |
 | 2026-06-25 | C6 done | OpenAPI→tool-catalog engine + operation-mode custom_api executor + parse route; dashboard connector types/UI extended (slack/gitlab/linear); MCP set as recommended universal path; 73/73 tests, both typechecks clean |
+| 2026-06-25 | C6.2 done | Persist OpenAPI catalog (migration + PUT/GET routes) + agent-runtime auto-injection (`_custom_api_tool_catalog`); Custom API now fully autonomous like MCP; 80 tests green |

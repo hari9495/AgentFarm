@@ -63,6 +63,7 @@ const createFakeRepo = (): ConnectorActionRepo & {
 } => {
     const metadata = new Map<string, Metadata>();
     const logs: ActionLog[] = [];
+    const openapiCatalogs = new Map<string, unknown>();
 
     return {
         metadata,
@@ -163,6 +164,19 @@ const createFakeRepo = (): ConnectorActionRepo & {
                     completedAt: entry.completedAt,
                     createdAt: entry.createdAt,
                 }));
+        },
+        async setOpenapiCatalog(input) {
+            openapiCatalogs.set(input.connectorId, input.catalog);
+        },
+        async listOpenapiCatalogs(input) {
+            const out: Array<{ connectorId: string; displayName: string | null; catalog: unknown }> = [];
+            for (const [connectorId, catalog] of openapiCatalogs.entries()) {
+                const meta = metadata.get(connectorId);
+                if (meta && meta.tenantId === input.tenantId && meta.connectorType === 'custom_api') {
+                    out.push({ connectorId, displayName: meta.displayName ?? null, catalog });
+                }
+            }
+            return out;
         },
     };
 };
@@ -2610,6 +2624,96 @@ test('POST /v1/connectors/openapi/parse rejects an unauthenticated request', asy
     try {
         const res = await app.inject({ method: 'POST', url: '/v1/connectors/openapi/parse', payload: { spec: {} } });
         assert.equal(res.statusCode, 401);
+    } finally {
+        await app.close();
+    }
+});
+
+// ---------------------------------------------------------------------------
+// C6.2 — Persist + fetch Custom API OpenAPI catalogs
+// ---------------------------------------------------------------------------
+
+test('PUT /v1/connectors/:id/openapi stores the catalog; GET custom-api-catalog returns it', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    const connectorId = 'custom_api:tenant_1:ws_1';
+    repo.metadata.set(connectorId, {
+        connectorId,
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        connectorType: 'custom_api',
+        status: 'connected',
+        secretRefId: null,
+        scopeStatus: null,
+        lastErrorClass: null,
+    });
+    await registerConnectorActionRoutes(app, { getSession: () => sessionContext(), repo });
+    try {
+        const putRes = await app.inject({
+            method: 'PUT',
+            url: `/v1/connectors/${connectorId}/openapi`,
+            payload: { spec: { paths: { '/tickets/{id}': { get: { operationId: 'getTicket', summary: 'Get' } } } } },
+        });
+        assert.equal(putRes.statusCode, 200);
+        assert.equal((putRes.json() as { tool_count: number }).tool_count, 1);
+
+        const getRes = await app.inject({ method: 'GET', url: '/v1/connectors/custom-api-catalog' });
+        assert.equal(getRes.statusCode, 200);
+        const body = getRes.json() as { connectors: Array<{ connectorId: string; catalog: Array<{ name: string }> }> };
+        assert.equal(body.connectors.length, 1);
+        assert.equal(body.connectors[0]?.connectorId, connectorId);
+        assert.equal(body.connectors[0]?.catalog[0]?.name, 'getTicket');
+    } finally {
+        await app.close();
+    }
+});
+
+test('PUT openapi 404s for a connector owned by another tenant', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    const connectorId = 'custom_api:other:ws';
+    repo.metadata.set(connectorId, {
+        connectorId, tenantId: 'other_tenant', workspaceId: 'ws', connectorType: 'custom_api',
+        status: 'connected', secretRefId: null, scopeStatus: null, lastErrorClass: null,
+    });
+    await registerConnectorActionRoutes(app, { getSession: () => sessionContext(), repo });
+    try {
+        const res = await app.inject({
+            method: 'PUT',
+            url: `/v1/connectors/${connectorId}/openapi`,
+            payload: { spec: { paths: { '/x': { get: {} } } } },
+        });
+        assert.equal(res.statusCode, 404);
+    } finally {
+        await app.close();
+    }
+});
+
+test('GET custom-api-catalog accepts the service token + x-tenant-id (runtime path)', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    const connectorId = 'custom_api:tenant_1:ws_1';
+    repo.metadata.set(connectorId, {
+        connectorId, tenantId: 'tenant_1', workspaceId: 'ws_1', connectorType: 'custom_api',
+        status: 'connected', secretRefId: null, scopeStatus: null, lastErrorClass: null,
+    });
+    await repo.setOpenapiCatalog!({ connectorId, tenantId: 'tenant_1', catalog: [{ name: 'op1' }] });
+    await registerConnectorActionRoutes(app, {
+        getSession: () => null,
+        repo,
+        serviceAuthToken: 'svc-secret',
+    });
+    try {
+        const ok = await app.inject({
+            method: 'GET',
+            url: '/v1/connectors/custom-api-catalog',
+            headers: { 'x-connector-exec-token': 'svc-secret', 'x-tenant-id': 'tenant_1' },
+        });
+        assert.equal(ok.statusCode, 200);
+        assert.equal((ok.json() as { connectors: unknown[] }).connectors.length, 1);
+
+        const unauth = await app.inject({ method: 'GET', url: '/v1/connectors/custom-api-catalog' });
+        assert.equal(unauth.statusCode, 401);
     } finally {
         await app.close();
     }
