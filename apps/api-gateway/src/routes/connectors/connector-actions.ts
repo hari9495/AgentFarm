@@ -1649,6 +1649,38 @@ export const registerConnectorActionRoutes = async (
             });
         },
     );
+
+    // C6 — Parse an OpenAPI 3.x spec into an agent tool catalog. Lets a Custom API connector
+    // become self-describing (like MCP's tools/list): the dashboard previews the operations,
+    // and the agent gets a tool list it can drive autonomously. Stateless: spec in, catalog out.
+    app.post<{ Body: { spec?: unknown } }>(
+        '/v1/connectors/openapi/parse',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({
+                    error: 'unauthorized',
+                    message: 'A valid authenticated session is required.',
+                });
+            }
+            const spec = request.body?.spec;
+            if (!spec || typeof spec !== 'object') {
+                return reply.code(400).send({
+                    error: 'invalid_spec',
+                    message: 'Body must include a parsed OpenAPI 3.x document under "spec".',
+                });
+            }
+            const { parseOpenApiToToolCatalog } = await import('../../lib/openapi-catalog.js');
+            const tools = parseOpenApiToToolCatalog(spec);
+            if (tools.length === 0) {
+                return reply.code(422).send({
+                    error: 'no_operations',
+                    message: 'No operations found. Check the spec has a "paths" object with HTTP methods.',
+                });
+            }
+            return reply.code(200).send({ tool_count: tools.length, tools });
+        },
+    );
 };
 
 export type {

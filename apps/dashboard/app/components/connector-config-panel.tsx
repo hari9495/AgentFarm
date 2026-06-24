@@ -6,7 +6,7 @@ import { useState } from 'react';
 // Types
 // ---------------------------------------------------------------------------
 
-type ConnectorType = 'jira' | 'teams' | 'github' | 'email' | 'custom_api';
+type ConnectorType = 'jira' | 'teams' | 'github' | 'email' | 'custom_api' | 'slack' | 'gitlab' | 'linear';
 
 type ConnectorSummary = {
     connector_id: string;
@@ -104,12 +104,29 @@ const CUSTOM_API_FIELDS: FieldDef[] = [
     { key: 'basic_pass', label: 'Password', type: 'password', placeholder: 'API password', required: true, dependsOn: { field: 'auth_type', value: 'basic_auth' } },
 ];
 
+const SLACK_FIELDS: FieldDef[] = [
+    { key: 'botToken', label: 'Bot Token', type: 'password', placeholder: 'xoxb-...', required: true },
+    { key: 'defaultChannel', label: 'Default Channel', type: 'text', placeholder: '#general', required: false },
+];
+
+const GITLAB_FIELDS: FieldDef[] = [
+    { key: 'access_token', label: 'Access Token', type: 'password', placeholder: 'OAuth token or Personal Access Token', required: true },
+    { key: 'base_url', label: 'GitLab Base URL (self-hosted)', type: 'url', placeholder: 'https://gitlab.com', required: false },
+];
+
+const LINEAR_FIELDS: FieldDef[] = [
+    { key: 'api_key', label: 'API Key', type: 'password', placeholder: 'lin_api_...', required: true },
+];
+
 const FIELDS_BY_TYPE: Record<ConnectorType, FieldDef[]> = {
     jira: JIRA_FIELDS,
     teams: TEAMS_FIELDS,
     github: GITHUB_FIELDS,
     email: EMAIL_FIELDS,
     custom_api: CUSTOM_API_FIELDS,
+    slack: SLACK_FIELDS,
+    gitlab: GITLAB_FIELDS,
+    linear: LINEAR_FIELDS,
 };
 
 const DISPLAY_NAMES: Record<ConnectorType, string> = {
@@ -118,6 +135,9 @@ const DISPLAY_NAMES: Record<ConnectorType, string> = {
     github: 'GitHub',
     email: 'Email',
     custom_api: 'Custom API',
+    slack: 'Slack',
+    gitlab: 'GitLab',
+    linear: 'Linear',
 };
 
 // ---------------------------------------------------------------------------

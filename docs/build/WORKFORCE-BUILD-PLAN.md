@@ -42,6 +42,20 @@
 - [x] Guard test passes (3 tests); uncategorized connector breaks the build.
 - [x] Documents exactly which 12 connectors are advertised-but-unrunnable (the C2/H-tier backlog).
 
+### C6 — Self-describing Custom API connectors (OpenAPI → agent tool catalog) ✅
+**Why:** The platform can't predict each customer's stack. Two universal paths exist: **MCP** (any MCP server, self-describing, agent auto-discovers) and **Custom API / generic REST** (any REST API). The custom_api executor could already call any `method`+`path`, but the agent had no way to *know* a customer's endpoints — so it wasn't autonomous. C6 makes Custom API self-describing like MCP.
+**Built:**
+- `openapi-catalog.ts` engine: `parseOpenApiToToolCatalog(spec)` → flat tool list (name, description, method, path template, path/query/required params, hasBody); `resolveOperation(tool, args)` → concrete `{ method, path, body }` (path-param substitution, query string, body split, fail-closed on missing required params). Pure + fully unit-tested (7 tests).
+- Custom API executor now supports **operation mode**: agent passes `openapi_operation` + `args`, executor resolves via the engine (falls back to raw method/path for back-compat).
+- Route `POST /v1/connectors/openapi/parse` — dashboard previews a spec → catalog; agent tool list source. Auth-gated.
+**Acceptance:**
+- [x] Any OpenAPI 3.x REST API → agent-usable tool catalog.
+- [x] Operation invocation resolves path/query/body correctly; fails closed on missing params.
+- [x] typecheck clean; 73/73 connector+engine tests pass.
+**Follow-up (C6.2, ⬜):** persist a connector's spec/catalog + inject it into the agent's tool list at runtime (mirror `discoverMcpTools`), so the agent auto-discovers Custom API ops without being handed the operation.
+**Recommended guidance:** For new integrations prefer **MCP** (fully autonomous today); use **Custom API + OpenAPI** when the customer has no MCP server. First-class connectors (jira/github/slack/teams/gitlab/linear) stay for the common, high-polish cases.
+**Files:** `apps/api-gateway/src/lib/openapi-catalog.ts(+test)`, `...provider-clients.ts`, `...connector-actions.ts(+test)`, dashboard connector type/UI (`connector-config-panel.tsx`, `connectors-hub-client.tsx`, `connectors/page.tsx`).
+
 ### C4 — Task-pull source: tracker poller ⬜
 **Problem:** Intake is push-only (email/slack/webhook). No "agent picks assigned tickets."
 **Build:** New `trigger-service/src/sources/tracker-poller.ts` — polls Jira/Linear/GitHub Issues for tickets assigned to the agent's persona, dispatches each as a task. Cron-driven via existing scheduler.
@@ -113,3 +127,4 @@ Verify/finish real deploy execution (Azure/k8s) beyond planning. Acceptance: one
 | 2026-06-24 | C1 done | Connector execution now fails closed; simulator opt-in via AF_CONNECTOR_SIMULATE; 53/53 tests green |
 | 2026-06-24 | C2 done | Real GitLab + Linear executors; slack route unblocked; 8 connector types now execute; typecheck clean |
 | 2026-06-24 | C3 done | Connector coverage guard test; 12 unrunnable connectors explicitly catalogued; CI fails on uncategorized connector |
+| 2026-06-25 | C6 done | OpenAPI→tool-catalog engine + operation-mode custom_api executor + parse route; dashboard connector types/UI extended (slack/gitlab/linear); MCP set as recommended universal path; 73/73 tests, both typechecks clean |

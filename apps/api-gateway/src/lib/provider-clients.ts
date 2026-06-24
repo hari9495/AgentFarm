@@ -22,6 +22,7 @@
  */
 
 import type { SecretStore } from './secret-store.js';
+import { resolveOperation, type CustomApiTool } from './openapi-catalog.js';
 
 // ---------------------------------------------------------------------------
 // Re-exported types that connector-actions.ts uses
@@ -1531,10 +1532,39 @@ const executeCustomApi = async (
     const baseUrl = credentials.base_url.replace(/\/$/, '');
     const headers = buildCustomApiHeaders(credentials);
 
-    // Determine HTTP method and path from payload or action type defaults
-    const method = String(payload['method'] ?? 'POST').toUpperCase();
-    const path = String(payload['path'] ?? `/${actionType}`);
-    const body = payload['body'] !== undefined ? payload['body'] : payload;
+    // Determine HTTP method, path and body. Two modes:
+    //  (1) Self-describing (C6): the agent picked an OpenAPI operation. payload.openapi_operation
+    //      is a CustomApiTool from the connector's catalog; payload.args are its arguments.
+    //      We resolve them (path params, query string, body) via the shared resolver.
+    //  (2) Raw: caller supplies method/path/body directly (back-compat default).
+    let method: string;
+    let path: string;
+    let body: unknown;
+    const opCandidate = payload['openapi_operation'];
+    if (opCandidate && typeof opCandidate === 'object' && !Array.isArray(opCandidate)) {
+        const args =
+            payload['args'] && typeof payload['args'] === 'object' && !Array.isArray(payload['args'])
+                ? (payload['args'] as Record<string, unknown>)
+                : {};
+        const resolved = resolveOperation(opCandidate as CustomApiTool, args);
+        if (!resolved.ok) {
+            return {
+                ok: false,
+                providerResponseCode: '400',
+                resultSummary: 'Custom API operation could not be resolved',
+                errorCode: 'invalid_format',
+                errorMessage: resolved.error,
+                remediationHint: 'Provide all required parameters for the selected operation.',
+            };
+        }
+        method = resolved.request.method.toUpperCase();
+        path = resolved.request.path;
+        body = resolved.request.body;
+    } else {
+        method = String(payload['method'] ?? 'POST').toUpperCase();
+        path = String(payload['path'] ?? `/${actionType}`);
+        body = payload['body'] !== undefined ? payload['body'] : payload;
+    }
     const url = `${baseUrl}${path}`;
 
     let response: Response;
