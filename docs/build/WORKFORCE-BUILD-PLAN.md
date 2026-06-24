@@ -56,13 +56,18 @@
 **Recommended guidance:** For new integrations prefer **MCP** (fully autonomous today); use **Custom API + OpenAPI** when the customer has no MCP server. First-class connectors (jira/github/slack/teams/gitlab/linear) stay for the common, high-polish cases.
 **Files:** `apps/api-gateway/src/lib/openapi-catalog.ts(+test)`, `...provider-clients.ts`, `...connector-actions.ts(+test)`, dashboard connector type/UI (`connector-config-panel.tsx`, `connectors-hub-client.tsx`, `connectors/page.tsx`).
 
-### C4 — Task-pull source: tracker poller ⬜
+### C4 — Task-pull source: tracker poller ✅
 **Problem:** Intake is push-only (email/slack/webhook). No "agent picks assigned tickets."
-**Build:** New `trigger-service/src/sources/tracker-poller.ts` — polls Jira/Linear/GitHub Issues for tickets assigned to the agent's persona, dispatches each as a task. Cron-driven via existing scheduler.
+**Built:**
+- `trigger-service/src/sources/tracker-poller.ts` — pure per-tracker query fns `pollJira` (JQL `assignee=… AND statusCategory != Done`, Bearer), `pollLinear` (GraphQL assignee+open-state filter, raw Authorization), `pollGithub` (`/repos/owner/repo/issues?assignee=…`, Bearer, excludes PRs) → `NormalizedTicket[]`.
+- `runTrackerPollSweep()` — loads enabled `TrackerPollSource`, respects per-source `intervalSec` cadence, resolves secret-backed token (`defaultCredentialResolver`: `env://` + literal; fail-closed on unresolvable `kv://`/vault refs), dedups against `TrackerPollDispatch`, dispatches new tickets to agent-runtime `/run-task`, advances cursor + records `lastError`. `startTrackerPollSweep()` wired into `main.ts` (60s interval, clean shutdown).
+- DB: `TrackerPollSource` (per-tenant config + secretRef + cadence) + `TrackerPollDispatch` (unique `[sourceId, externalId]` dedup ledger, cascade-delete) + migration `20260625010000_add_tracker_poll_source`.
 **Acceptance:**
-- [ ] Poller pulls assigned issues from ≥1 tracker and dispatches tasks.
-- [ ] Dedup (no double-dispatch of same ticket).
-- [ ] Per-tenant config + secret-backed credentials.
+- [x] Poller pulls assigned issues from 3 trackers (Jira/Linear/GitHub) and dispatches tasks.
+- [x] Dedup — seen `externalId` never re-dispatched; unique constraint guards races; failed dispatch is NOT recorded (retried next sweep).
+- [x] Per-tenant `TrackerPollSource` config + secret-backed credentials (fail-closed when token missing).
+- [x] typecheck clean; 11 new tests (94/94 trigger-service tests green).
+**Files:** `apps/trigger-service/src/sources/tracker-poller.ts(+test)`, `...main.ts`, `packages/db-schema/prisma/schema.prisma`, migration `20260625010000_add_tracker_poll_source`.
 
 ### C5 — Shift enforcement ⬜
 **Problem:** `AgentPersona.workingHours` is cosmetic — never read at runtime.
@@ -129,3 +134,4 @@ Verify/finish real deploy execution (Azure/k8s) beyond planning. Acceptance: one
 | 2026-06-24 | C3 done | Connector coverage guard test; 12 unrunnable connectors explicitly catalogued; CI fails on uncategorized connector |
 | 2026-06-25 | C6 done | OpenAPI→tool-catalog engine + operation-mode custom_api executor + parse route; dashboard connector types/UI extended (slack/gitlab/linear); MCP set as recommended universal path; 73/73 tests, both typechecks clean |
 | 2026-06-25 | C6.2 done | Persist OpenAPI catalog (migration + PUT/GET routes) + agent-runtime auto-injection (`_custom_api_tool_catalog`); Custom API now fully autonomous like MCP; 80 tests green |
+| 2026-06-25 | C4 done | Tracker poller (Jira/Linear/GitHub) pulls assigned tickets → /run-task; per-tenant TrackerPollSource config, secret-backed creds (fail-closed), TrackerPollDispatch dedup ledger + migration; cadence-gated sweep wired into main.ts; 11 tests, 94/94 green, typecheck clean |
