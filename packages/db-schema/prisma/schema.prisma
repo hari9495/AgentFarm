@@ -1323,10 +1323,15 @@ model TrackerPollSource {
   tenantId      String
   /// Persona/bot the pulled tasks are dispatched to (optional → LLM routing).
   agentId       String?
-  /// Tracker kind: 'jira' | 'linear' | 'github'.
+  /// Tracker kind: 'jira' | 'linear' | 'github' | 'custom'.
+  /// 'custom' = any REST tracker, driven by `customConfig` (no per-vendor code).
   tracker       String
   /// API base URL (Jira site / GitHub API host); null → provider default.
   baseUrl       String?
+  /// For tracker='custom': a CustomPollSpec (list endpoint, auth, field map)
+  /// describing how to fetch + normalize assigned items from an arbitrary REST
+  /// tracker. Mirrors the self-describing Custom API approach (C6).
+  customConfig  Json?
   /// Identity the agent picks tickets for (Jira accountId/email, GitHub login,
   /// Linear user id/email). Matched against ticket assignee.
   assignee      String

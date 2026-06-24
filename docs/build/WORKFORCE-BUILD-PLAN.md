@@ -68,6 +68,7 @@
 - [x] Per-tenant `TrackerPollSource` config + secret-backed credentials (fail-closed when token missing).
 - [x] typecheck clean; 11 new tests (94/94 trigger-service tests green).
 **Files:** `apps/trigger-service/src/sources/tracker-poller.ts(+test)`, `...main.ts`, `packages/db-schema/prisma/schema.prisma`, migration `20260625010000_add_tracker_poll_source`.
+**Follow-up (C4.1 ✅) — universal poll source:** The 3 first-class adapters can't cover every customer's tracker (Asana/ClickUp/Azure DevOps/Shortcut/ServiceNow…). Added `tracker='custom'` driven by a `CustomPollSpec` (`customConfig` Json column + migration `20260625020000`): list endpoint (templated `{{assignee}}`/`{{projectFilter}}`/`{{baseUrl}}`, URL-encoded), pluggable auth (`bearer`/`token`/`raw`/`header`/`none`), optional POST body (GraphQL), and a dot-path field map (`itemsPath`/`idField`/`titleField`/`urlField`/`bodyField`/`idPrefix`) → `NormalizedTicket[]`. `pollCustom` + `getByPath` are pure/unit-tested; `auth='none'` sources poll without credentials, all others still fail-closed. **Any REST tracker now works without per-vendor code** — mirrors the C6 Custom API philosophy. 6 new tests (100/100 green), typecheck clean.
 
 ### C5 — Shift enforcement ⬜
 **Problem:** `AgentPersona.workingHours` is cosmetic — never read at runtime.
@@ -135,3 +136,4 @@ Verify/finish real deploy execution (Azure/k8s) beyond planning. Acceptance: one
 | 2026-06-25 | C6 done | OpenAPI→tool-catalog engine + operation-mode custom_api executor + parse route; dashboard connector types/UI extended (slack/gitlab/linear); MCP set as recommended universal path; 73/73 tests, both typechecks clean |
 | 2026-06-25 | C6.2 done | Persist OpenAPI catalog (migration + PUT/GET routes) + agent-runtime auto-injection (`_custom_api_tool_catalog`); Custom API now fully autonomous like MCP; 80 tests green |
 | 2026-06-25 | C4 done | Tracker poller (Jira/Linear/GitHub) pulls assigned tickets → /run-task; per-tenant TrackerPollSource config, secret-backed creds (fail-closed), TrackerPollDispatch dedup ledger + migration; cadence-gated sweep wired into main.ts; 11 tests, 94/94 green, typecheck clean |
+| 2026-06-25 | C4.1 done | Universal `tracker='custom'` poll source (CustomPollSpec: templated list endpoint, pluggable auth incl. none, dot-path field map) → any REST tracker without per-vendor code; customConfig Json column + migration; 6 tests, 100/100 green, typecheck clean |

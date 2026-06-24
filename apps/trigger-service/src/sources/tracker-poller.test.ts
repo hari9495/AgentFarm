@@ -4,6 +4,8 @@ import {
     pollJira,
     pollLinear,
     pollGithub,
+    pollCustom,
+    getByPath,
     defaultCredentialResolver,
     runTrackerPollSweep,
     type PollSourceConfig,
@@ -135,6 +137,115 @@ test('pollGithub — throws when projectFilter is not owner/repo', async () => {
             ),
         /owner\/repo/,
     );
+});
+
+// ---------------------------------------------------------------------------
+// Universal (custom) tracker
+// ---------------------------------------------------------------------------
+
+// 6b. getByPath — dot paths into nested objects/arrays
+test('getByPath — resolves nested dot paths and array indices', () => {
+    const obj = { data: { items: [{ id: 'X1' }, { id: 'X2' }] } };
+    assert.equal(getByPath(obj, 'data.items.1.id'), 'X2');
+    assert.equal(getByPath(obj, ''), obj);
+    assert.equal(getByPath(obj, 'data.missing.deep'), undefined);
+});
+
+// 6c. pollCustom — maps an arbitrary REST tracker (e.g. Asana-shaped) via field map
+test('pollCustom — fetches and normalizes any REST tracker via field map', async () => {
+    const { fetcher, calls } = captureFetcher({
+        data: [
+            { gid: '111', name: 'Write spec', permalink_url: 'https://app.asana.com/0/1/111', notes: 'do it' },
+            { gid: '222', name: 'Review PR', permalink_url: 'https://app.asana.com/0/1/222' },
+        ],
+    });
+    const config: PollSourceConfig = {
+        id: 's_custom',
+        tenantId: 't1',
+        tracker: 'custom',
+        baseUrl: 'https://app.asana.com/api/1.0',
+        assignee: 'me@acme.io',
+        projectFilter: '99',
+        customConfig: {
+            url: '/tasks?assignee={{assignee}}&project={{projectFilter}}&completed_since=now',
+            auth: 'bearer',
+            itemsPath: 'data',
+            idField: 'gid',
+            titleField: 'name',
+            urlField: 'permalink_url',
+            bodyField: 'notes',
+            idPrefix: 'asana:',
+        },
+    };
+
+    const tickets = await pollCustom(config, 'asana_tok', fetcher);
+
+    // URL built from baseUrl + templated, encoded query
+    assert.match(calls[0]!.url, /^https:\/\/app\.asana\.com\/api\/1\.0\/tasks\?assignee=me%40acme\.io&project=99/);
+    assert.equal(calls[0]!.init?.headers?.['Authorization'], 'Bearer asana_tok');
+    assert.deepEqual(tickets, [
+        { externalId: 'asana:111', title: 'Write spec', url: 'https://app.asana.com/0/1/111', body: 'do it' },
+        { externalId: 'asana:222', title: 'Review PR', url: 'https://app.asana.com/0/1/222', body: undefined },
+    ]);
+});
+
+// 6d. pollCustom — header auth + top-level array + POST body templating
+test('pollCustom — supports header auth, POST body, and top-level array', async () => {
+    const { fetcher, calls } = captureFetcher([{ id: 9, title: 'T' }]);
+    const config: PollSourceConfig = {
+        id: 's',
+        tenantId: 't1',
+        tracker: 'custom',
+        baseUrl: 'https://api.example.com',
+        assignee: 'u-1',
+        customConfig: {
+            url: '/search',
+            method: 'POST',
+            auth: 'header',
+            authHeaderName: 'X-Api-Key',
+            body: '{"assignee":"{{assignee}}"}',
+            idField: 'id',
+            titleField: 'title',
+        },
+    };
+
+    const tickets = await pollCustom(config, 'k3y', fetcher);
+
+    assert.equal(calls[0]!.init?.method, 'POST');
+    assert.equal(calls[0]!.init?.headers?.['X-Api-Key'], 'k3y');
+    assert.equal(calls[0]!.init?.headers?.['Content-Type'], 'application/json');
+    assert.equal(calls[0]!.init?.body, '{"assignee":"u-1"}');
+    assert.deepEqual(tickets, [{ externalId: '9', title: 'T', url: undefined, body: undefined }]);
+});
+
+// 6e. pollCustom — requires url + idField
+test('pollCustom — throws without url/idField config', async () => {
+    await assert.rejects(
+        () =>
+            pollCustom(
+                { id: 's', tenantId: 't1', tracker: 'custom', assignee: 'a', customConfig: null },
+                'tok',
+                captureFetcher({}).fetcher,
+            ),
+        /requires customConfig/,
+    );
+});
+
+// 6f. pollCustom — skips items with no id (can't dedup)
+test('pollCustom — skips items missing the id field', async () => {
+    const { fetcher } = captureFetcher([{ name: 'no id here' }, { ref: 'A', name: 'ok' }]);
+    const tickets = await pollCustom(
+        {
+            id: 's',
+            tenantId: 't1',
+            tracker: 'custom',
+            assignee: 'a',
+            customConfig: { url: 'https://x/list', idField: 'ref', titleField: 'name' },
+        },
+        'tok',
+        fetcher,
+    );
+    assert.deepEqual(tickets, [{ externalId: 'A', title: 'ok', url: undefined, body: undefined }]);
 });
 
 // ---------------------------------------------------------------------------
@@ -319,4 +430,42 @@ test('runTrackerPollSweep — fails closed when token cannot be resolved', async
     // cursor still advanced with lastError recorded
     assert.equal(sourceUpdates.length, 1);
     assert.match(sourceUpdates[0].data.lastError, /credentials unavailable/);
+});
+
+// 12. sweep — custom source with auth='none' polls without a token
+test('runTrackerPollSweep — custom auth=none source polls without credentials', async () => {
+    const source = {
+        id: 's_custom',
+        tenantId: 't1',
+        agentId: null,
+        tracker: 'custom',
+        baseUrl: 'https://public.tracker',
+        assignee: 'a',
+        projectFilter: null,
+        secretRef: null, // no credentials
+        customConfig: { url: '/items', auth: 'none', idField: 'id', titleField: 'name' },
+        enabled: true,
+        intervalSec: 300,
+        lastPolledAt: null,
+    };
+    const { prisma, dispatchCreates } = makeSweepPrisma([source]);
+
+    const calls: Capture[] = [];
+    const fetcher: FetchFn = async (url, init) => {
+        calls.push({ url, init });
+        if (url.includes('/items')) {
+            return { ok: true, status: 200, json: async () => [{ id: 'PUB-1', name: 'Public task' }] } as any;
+        }
+        return { ok: true, status: 200, text: async () => 'ok' } as any;
+    };
+
+    const result = await runTrackerPollSweep(prisma, { fetcher, agentRuntimeUrl: 'http://rt' });
+
+    assert.equal(result.polled, 1);
+    assert.equal(result.dispatched, 1);
+    assert.equal(result.errors, 0);
+    // no Authorization header sent
+    const listCall = calls.find((c) => c.url.includes('/items'));
+    assert.equal(listCall!.init?.headers?.['Authorization'], undefined);
+    assert.equal(dispatchCreates[0].data.externalId, 'PUB-1');
 });

@@ -19,7 +19,7 @@
 
 import type { PrismaClient } from '@prisma/client';
 
-export type TrackerKind = 'jira' | 'linear' | 'github';
+export type TrackerKind = 'jira' | 'linear' | 'github' | 'custom';
 
 export type FetchFn = (
     url: string,
@@ -27,6 +27,41 @@ export type FetchFn = (
 ) => Promise<Response>;
 
 /** Configuration for one poll source (mirrors the TrackerPollSource model). */
+/**
+ * CustomPollSpec — describes how to pull + normalize assigned items from an
+ * arbitrary REST tracker, so the platform supports ANY tool the customer uses
+ * without per-vendor code (Asana, ClickUp, Azure DevOps, Shortcut, ServiceNow…).
+ *
+ * Templating: `url`, `body`, and header values support `{{assignee}}`,
+ * `{{projectFilter}}`, and `{{baseUrl}}` placeholders, substituted (and, in the
+ * URL/query, URL-encoded) at poll time.
+ */
+export type CustomPollSpec = {
+    /** Full URL, or a path appended to `baseUrl`. */
+    url: string;
+    method?: 'GET' | 'POST';
+    /** How the resolved token is attached. Default 'bearer'. */
+    auth?: 'bearer' | 'token' | 'raw' | 'header' | 'none';
+    /** Header name when auth='header' (e.g. 'X-Api-Key'). */
+    authHeaderName?: string;
+    /** Extra static headers (values are templated). */
+    headers?: Record<string, string>;
+    /** Templated request body (e.g. a GraphQL query) for POST. */
+    body?: string;
+    /** Dot path to the array of items in the response. '' / omitted → top-level array. */
+    itemsPath?: string;
+    /** Dot path to the stable item id (required for dedup). */
+    idField: string;
+    /** Dot path to a human title. */
+    titleField?: string;
+    /** Dot path to a web URL. */
+    urlField?: string;
+    /** Dot path to a description/body. */
+    bodyField?: string;
+    /** Optional prefix to make externalId globally unique (e.g. "asana:"). */
+    idPrefix?: string;
+};
+
 export type PollSourceConfig = {
     id: string;
     tenantId: string;
@@ -35,6 +70,8 @@ export type PollSourceConfig = {
     baseUrl?: string | null;
     assignee: string;
     projectFilter?: string | null;
+    /** Required when tracker='custom'. */
+    customConfig?: CustomPollSpec | null;
 };
 
 /** A ticket normalized across trackers. */
@@ -171,6 +208,102 @@ export async function pollGithub(
         }));
 }
 
+// ---------------------------------------------------------------------------
+// Universal (custom) tracker — any REST API, driven by CustomPollSpec.
+// ---------------------------------------------------------------------------
+
+/** Read a value at a dot-path (e.g. "data.issues.0.id"); '' / undefined → root. */
+export function getByPath(obj: unknown, path: string | undefined): unknown {
+    if (!path) return obj;
+    return path.split('.').reduce<unknown>((acc, key) => {
+        if (acc == null) return undefined;
+        if (Array.isArray(acc)) {
+            const idx = Number(key);
+            return Number.isInteger(idx) ? acc[idx] : undefined;
+        }
+        if (typeof acc === 'object') return (acc as Record<string, unknown>)[key];
+        return undefined;
+    }, obj);
+}
+
+/** Substitute {{assignee}} / {{projectFilter}} / {{baseUrl}} placeholders. */
+function applyTemplate(input: string, config: PollSourceConfig, encode: boolean): string {
+    const sub = (v: string | null | undefined): string => {
+        const val = v ?? '';
+        return encode ? encodeURIComponent(val) : val;
+    };
+    return input
+        .replace(/\{\{\s*assignee\s*\}\}/g, sub(config.assignee))
+        .replace(/\{\{\s*projectFilter\s*\}\}/g, sub(config.projectFilter))
+        .replace(/\{\{\s*baseUrl\s*\}\}/g, sub(config.baseUrl));
+}
+
+function asStringOrUndefined(v: unknown): string | undefined {
+    if (v == null) return undefined;
+    if (typeof v === 'string') return v;
+    if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+    return undefined;
+}
+
+/**
+ * pollCustom — generic REST poller. Calls the customer's "list my assigned
+ * items" endpoint and maps the JSON to NormalizedTicket[] via the field map.
+ * Works for any tracker without bespoke code.
+ */
+export async function pollCustom(
+    config: PollSourceConfig,
+    token: string,
+    fetcher: FetchFn,
+): Promise<NormalizedTicket[]> {
+    const spec = config.customConfig;
+    if (!spec || !spec.url || !spec.idField) {
+        throw new Error('custom poll source requires customConfig with url and idField');
+    }
+
+    // Resolve URL: absolute, or appended to baseUrl. Template + encode query parts.
+    const rawUrl = /^https?:\/\//.test(spec.url)
+        ? spec.url
+        : `${(config.baseUrl ?? '').replace(/\/$/, '')}${spec.url.startsWith('/') ? '' : '/'}${spec.url}`;
+    const url = applyTemplate(rawUrl, config, true);
+
+    // Auth header.
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    const auth = spec.auth ?? 'bearer';
+    if (auth === 'bearer') headers['Authorization'] = `Bearer ${token}`;
+    else if (auth === 'token') headers['Authorization'] = `token ${token}`;
+    else if (auth === 'raw') headers['Authorization'] = token;
+    else if (auth === 'header') headers[spec.authHeaderName || 'X-Api-Key'] = token;
+    // auth === 'none' → no auth header
+    for (const [k, v] of Object.entries(spec.headers ?? {})) {
+        headers[k] = applyTemplate(v, config, false);
+    }
+
+    const method = spec.method ?? 'GET';
+    const body = spec.body ? applyTemplate(spec.body, config, false) : undefined;
+    if (body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+
+    const res = await fetcher(url, { method, headers, body });
+    if (!res.ok) throw new Error(`custom tracker request failed ${res.status}`);
+
+    const json = await res.json();
+    const itemsRaw = getByPath(json, spec.itemsPath);
+    const items = Array.isArray(itemsRaw) ? itemsRaw : [];
+
+    const tickets: NormalizedTicket[] = [];
+    for (const item of items) {
+        const id = asStringOrUndefined(getByPath(item, spec.idField));
+        if (!id) continue; // no stable id → can't dedup; skip
+        const externalId = `${spec.idPrefix ?? ''}${id}`;
+        tickets.push({
+            externalId,
+            title: asStringOrUndefined(getByPath(item, spec.titleField)) ?? externalId,
+            url: asStringOrUndefined(getByPath(item, spec.urlField)),
+            body: asStringOrUndefined(getByPath(item, spec.bodyField)),
+        });
+    }
+    return tickets;
+}
+
 /** Dispatch to the right tracker query. */
 export async function pollTracker(
     config: PollSourceConfig,
@@ -184,6 +317,8 @@ export async function pollTracker(
             return pollLinear(config, token, fetcher);
         case 'github':
             return pollGithub(config, token, fetcher);
+        case 'custom':
+            return pollCustom(config, token, fetcher);
         default:
             throw new Error(`unsupported tracker: ${config.tracker as string}`);
     }
@@ -251,16 +386,21 @@ export async function runTrackerPollSweep(
             baseUrl: source.baseUrl,
             assignee: source.assignee,
             projectFilter: source.projectFilter,
+            customConfig: (source as { customConfig?: CustomPollSpec | null }).customConfig ?? null,
         };
+
+        // A custom source with auth='none' (public/unauthenticated tracker)
+        // legitimately needs no token; everything else fails closed without one.
+        const authless = config.tracker === 'custom' && config.customConfig?.auth === 'none';
 
         let lastError: string | null = null;
         try {
             const token = await resolveCredentials(source.secretRef);
-            if (!token) {
+            if (!token && !authless) {
                 throw new Error('credentials unavailable (secretRef did not resolve to a token)');
             }
 
-            const tickets = await pollTracker(config, token, fetcher);
+            const tickets = await pollTracker(config, token ?? '', fetcher);
             result.polled += 1;
 
             // Dedup: which externalIds have we already dispatched for this source?
