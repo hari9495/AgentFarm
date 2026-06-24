@@ -42,6 +42,7 @@ export class WorkerManager {
             { startCrmSyncWorker, stopCrmSyncWorker },
             { startDrainSweep, stopDrainSweep },
             { startMemoryConsolidationWorker, stopMemoryConsolidationWorker },
+            { startShiftVmWorker, stopShiftVmWorker },
         ] = await Promise.all([
             import('./services/provisioning-worker.js'),
             import('./services/connector-token-lifecycle-worker.js'),
@@ -54,6 +55,7 @@ export class WorkerManager {
             import('./services/crm-sync-worker.js'),
             import('./lib/task-queue.js'),
             import('./services/memory-consolidation-worker.js'),
+            import('./services/shift-vm-worker.js'),
         ]);
 
         startProvisioningWorker(log);
@@ -91,6 +93,15 @@ export class WorkerManager {
 
         startMemoryConsolidationWorker();
         this.stopFns.push(stopMemoryConsolidationWorker);
+
+        // H1 — shift-driven workspace VM power. Only meaningful with Azure configured;
+        // without it the power calls would no-op, so gate on AZURE_SUBSCRIPTION_ID.
+        if (process.env['AZURE_SUBSCRIPTION_ID']) {
+            startShiftVmWorker(log);
+            this.stopFns.push(stopShiftVmWorker);
+        } else {
+            log.info('shift VM worker not started — set AZURE_SUBSCRIPTION_ID to enable shift-driven VM power');
+        }
     }
 
     stopAll(): void {
