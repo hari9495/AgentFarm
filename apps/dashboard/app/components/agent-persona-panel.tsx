@@ -12,6 +12,9 @@ type PersonaFormState = {
     disclosureStatement: string;
     language: string;
     timezone: string;
+    employeeId: string;
+    department: string;
+    managerId: string;
 };
 
 const DEFAULT_FORM: PersonaFormState = {
@@ -22,6 +25,9 @@ const DEFAULT_FORM: PersonaFormState = {
     disclosureStatement: 'This message was sent by an AI agent.',
     language: 'en',
     timezone: 'UTC',
+    employeeId: '',
+    department: '',
+    managerId: '',
 };
 
 const COMMUNICATION_STYLES: CommunicationStyle[] = ['professional', 'friendly', 'concise', 'formal'];
@@ -90,6 +96,9 @@ export default function AgentPersonaPanel({ botId }: AgentPersonaPanelProps) {
                             disclosureStatement: data.persona.disclosureStatement ?? DEFAULT_FORM.disclosureStatement,
                             language: data.persona.language ?? 'en',
                             timezone: data.persona.timezone ?? 'UTC',
+                            employeeId: (data.persona as { employeeId?: string | null }).employeeId ?? '',
+                            department: (data.persona as { department?: string | null }).department ?? '',
+                            managerId: (data.persona as { managerId?: string | null }).managerId ?? '',
                         });
                     }
                 }
@@ -120,6 +129,10 @@ export default function AgentPersonaPanel({ botId }: AgentPersonaPanelProps) {
         if (form.avatarUrl.trim()) {
             payload['avatarUrl'] = form.avatarUrl.trim();
         }
+        // Org identity (H2) — send (possibly empty → clears the field).
+        payload['employeeId'] = form.employeeId.trim() || null;
+        payload['department'] = form.department.trim() || null;
+        payload['managerId'] = form.managerId.trim() || null;
 
         try {
             const method = exists ? 'PATCH' : 'POST';
@@ -278,6 +291,40 @@ export default function AgentPersonaPanel({ botId }: AgentPersonaPanelProps) {
                                 <option key={tz} value={tz}>{tz}</option>
                             ))}
                         </select>
+                    </div>
+                </div>
+
+                {/* Org identity (H2) — places the agent in the org chart like a human employee. */}
+                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                    <div style={{ flex: 1 }}>
+                        <label htmlFor="persona-employeeId" style={labelStyle}>Employee ID</label>
+                        <input
+                            id="persona-employeeId"
+                            style={inputStyle}
+                            placeholder="E-1001"
+                            value={form.employeeId}
+                            onChange={(e) => setForm((f) => ({ ...f, employeeId: e.target.value }))}
+                        />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <label htmlFor="persona-department" style={labelStyle}>Department</label>
+                        <input
+                            id="persona-department"
+                            style={inputStyle}
+                            placeholder="Engineering"
+                            value={form.department}
+                            onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
+                        />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <label htmlFor="persona-managerId" style={labelStyle}>Manager (bot ID)</label>
+                        <input
+                            id="persona-managerId"
+                            style={inputStyle}
+                            placeholder="bot_..."
+                            value={form.managerId}
+                            onChange={(e) => setForm((f) => ({ ...f, managerId: e.target.value }))}
+                        />
                     </div>
                 </div>
 

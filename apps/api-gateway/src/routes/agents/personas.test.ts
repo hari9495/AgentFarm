@@ -15,6 +15,9 @@ type StoredPersona = {
     language: string;
     timezone: string;
     workingHours: unknown;
+    employeeId: string | null;
+    department: string | null;
+    managerId: string | null;
     createdAt: Date;
     updatedAt: Date;
 };
@@ -34,12 +37,14 @@ const makeSession = (tenantId = 'tenant_1') => ({
 });
 
 const BOT_ID = 'bot_1';
+const BOT_ID_2 = 'bot_2';
 const OTHER_BOT_ID = 'bot_other';
 
 function buildPrismaStub() {
     const personas = new Map<string, StoredPersona>();
     const bots = new Map<string, StoredBot>([
         [BOT_ID, { id: BOT_ID, workspaceId: 'ws_1', tenantId: 'tenant_1' }],
+        [BOT_ID_2, { id: BOT_ID_2, workspaceId: 'ws_1', tenantId: 'tenant_1' }],
         [OTHER_BOT_ID, { id: OTHER_BOT_ID, workspaceId: 'ws_other', tenantId: 'tenant_other' }],
     ]);
 
@@ -73,6 +78,9 @@ function buildPrismaStub() {
                         language: data.language ?? 'en',
                         timezone: data.timezone ?? 'UTC',
                         workingHours: data.workingHours ?? null,
+                        employeeId: data.employeeId ?? null,
+                        department: data.department ?? null,
+                        managerId: data.managerId ?? null,
                         createdAt: now,
                         updatedAt: now,
                     };
@@ -86,6 +94,8 @@ function buildPrismaStub() {
                     personas.set(where.botId, updated);
                     return updated;
                 },
+                findMany: async ({ where }: { where: { tenantId: string } }) =>
+                    Array.from(personas.values()).filter((p) => p.tenantId === where.tenantId),
             },
         } as unknown as import('@prisma/client').PrismaClient,
     };
@@ -235,4 +245,80 @@ test('GET cannot read persona for bot belonging to another tenant', async () => 
     const res = await app.inject({ method: 'GET', url: `/v1/personas/${OTHER_BOT_ID}` });
     assert.equal(res.statusCode, 404);
     assert.equal(res.json().error, 'bot_not_found');
+});
+
+// ---------------------------------------------------------------------------
+// Org identity (H2)
+// ---------------------------------------------------------------------------
+
+test('POST persona accepts org identity fields and GET returns them', async () => {
+    const { app } = buildApp();
+    const res = await app.inject({
+        method: 'POST',
+        url: `/v1/personas/${BOT_ID}`,
+        payload: {
+            displayName: 'Alex',
+            emailAddress: 'alex@agentfarm.ai',
+            employeeId: 'E-1001',
+            department: 'Engineering',
+        },
+    });
+    assert.equal(res.statusCode, 201);
+    assert.equal(res.json().persona.employeeId, 'E-1001');
+    assert.equal(res.json().persona.department, 'Engineering');
+    assert.equal(res.json().persona.managerId, null);
+
+    const get = await app.inject({ method: 'GET', url: `/v1/personas/${BOT_ID}` });
+    assert.equal(get.json().persona.employeeId, 'E-1001');
+});
+
+test('PATCH updates org identity fields', async () => {
+    const { app } = buildApp();
+    await app.inject({
+        method: 'POST',
+        url: `/v1/personas/${BOT_ID}`,
+        payload: { displayName: 'Alex', emailAddress: 'alex@agentfarm.ai' },
+    });
+    const patch = await app.inject({
+        method: 'PATCH',
+        url: `/v1/personas/${BOT_ID}`,
+        payload: { department: 'Sales', managerId: 'bot_mgr' },
+    });
+    assert.equal(patch.statusCode, 200);
+    assert.equal(patch.json().persona.department, 'Sales');
+    assert.equal(patch.json().persona.managerId, 'bot_mgr');
+});
+
+// ---------------------------------------------------------------------------
+// Org chart (H2)
+// ---------------------------------------------------------------------------
+
+test('GET /v1/personas/org-chart — builds manager→reports tree, tenant-scoped', async () => {
+    const { app } = buildApp();
+    // Manager (bot_1) and a report (bot_2 → managed by bot_1)
+    await app.inject({
+        method: 'POST',
+        url: `/v1/personas/${BOT_ID}`,
+        payload: { displayName: 'Manager', emailAddress: 'm@agentfarm.ai', department: 'Eng' },
+    });
+    await app.inject({
+        method: 'POST',
+        url: `/v1/personas/${BOT_ID_2}`,
+        payload: { displayName: 'Report', emailAddress: 'r@agentfarm.ai', managerId: BOT_ID },
+    });
+
+    const res = await app.inject({ method: 'GET', url: '/v1/personas/org-chart' });
+    assert.equal(res.statusCode, 200);
+    const body = res.json();
+    assert.equal(body.nodes.length, 2);
+    assert.deepEqual(body.roots, [BOT_ID]); // manager is the root
+    const manager = body.nodes.find((n: { botId: string }) => n.botId === BOT_ID);
+    assert.deepEqual(manager.reports, [BOT_ID_2]);
+});
+
+test('GET /v1/personas/org-chart — 401 without session', async () => {
+    const app = Fastify();
+    registerPersonaRoutes(app, { getSession: () => null });
+    const res = await app.inject({ method: 'GET', url: '/v1/personas/org-chart' });
+    assert.equal(res.statusCode, 401);
 });

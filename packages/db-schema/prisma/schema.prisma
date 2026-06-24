@@ -114,11 +114,17 @@ model AgentPersona {
   language            String   @default("en")
   timezone            String   @default("UTC")
   workingHours        Json?
+  // Org identity (H2) — lets agents sit in the org chart like human staff.
+  employeeId          String?  @db.VarChar(64)
+  department          String?  @db.VarChar(100)
+  /// botId of this agent's manager (agent or, by convention, a human stand-in).
+  managerId           String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   bot                 Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
+  @@index([managerId])
 }
 
 // Sprint 3 — Setup Wizard

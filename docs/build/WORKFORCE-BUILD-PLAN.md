@@ -93,8 +93,13 @@
 ### H1 — VM lifecycle tied to shift ⬜
 Start workspace VM at shift start, deallocate at shift end (platform-driven, not external Logic App). Acceptance: VM power state follows persona shift; state persists across stop/start.
 
-### H2 — Org identity fields ⬜
-Add `employeeId`, `department`, `managerId` to `AgentPersona`/`Bot` + migration + surface in UI. Acceptance: org chart queryable.
+### H2 — Org identity fields ✅
+**Built:** `employeeId`, `department`, `managerId` on `AgentPersona` (migration `20260625040000`, applied). Threaded through `@agentfarm/shared-types` `AgentPersonaRecord` + the persona API (GET/POST/PATCH via a shared `toPersonaRecord` helper). New `GET /v1/personas/org-chart` returns every persona's org identity + a manager→reports tree (tenant-scoped, viewer-gated) — **org chart queryable**. Surfaced in the operator persona editor (`agent-persona-panel.tsx`): Employee ID / Department / Manager fields, loaded + saved.
+**Acceptance:**
+- [x] `employeeId`/`department`/`managerId` persisted + surfaced in UI.
+- [x] Org chart queryable (`/v1/personas/org-chart` → nodes + roots + reports tree).
+- [x] typecheck clean (gateway, dashboard, shared-types); 4 new tests, 1896/1896 gateway green.
+**Files:** `schema.prisma` + migration `20260625040000_add_persona_org_identity`, `packages/shared-types/src/persona.ts`, `apps/api-gateway/src/routes/agents/personas.ts(+test)`, `apps/dashboard/app/components/agent-persona-panel.tsx`.
 
 ### H3 — Agent→agent collaboration workflow (proof) ⬜
 Wire one end-to-end multi-agent handoff via orchestrator (`agent-handoff-manager.ts`). Acceptance: Sales→Developer→Support chain demoed with `AgentMessage` trail.

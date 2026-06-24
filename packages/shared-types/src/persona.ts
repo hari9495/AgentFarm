@@ -36,6 +36,11 @@ export interface AgentPersonaRecord {
     /** IANA timezone, e.g. "America/New_York" */
     timezone: string;
     workingHours?: WorkingHours | null;
+    /** Org identity — places the agent in the org chart like a human employee. */
+    employeeId?: string | null;
+    department?: string | null;
+    /** botId of this agent's manager (for org-chart hierarchy). */
+    managerId?: string | null;
     createdAt: string;
     updatedAt: string;
 }

@@ -38,6 +38,45 @@ async function resolveBotForTenant(
     return bot !== null;
 }
 
+/** Map a Prisma AgentPersona row to the API record shape. */
+function toPersonaRecord(persona: {
+    id: string;
+    botId: string;
+    tenantId: string;
+    displayName: string;
+    emailAddress: string;
+    avatarUrl: string | null;
+    communicationStyle: string;
+    disclosureStatement: string;
+    language: string;
+    timezone: string;
+    workingHours: unknown;
+    employeeId?: string | null;
+    department?: string | null;
+    managerId?: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+}): AgentPersonaRecord {
+    return {
+        id: persona.id,
+        botId: persona.botId,
+        tenantId: persona.tenantId,
+        displayName: persona.displayName,
+        emailAddress: persona.emailAddress,
+        avatarUrl: persona.avatarUrl ?? null,
+        communicationStyle: persona.communicationStyle as AgentPersonaRecord['communicationStyle'],
+        disclosureStatement: persona.disclosureStatement,
+        language: persona.language,
+        timezone: persona.timezone,
+        workingHours: (persona.workingHours as AgentPersonaRecord['workingHours']) ?? null,
+        employeeId: persona.employeeId ?? null,
+        department: persona.department ?? null,
+        managerId: persona.managerId ?? null,
+        createdAt: persona.createdAt.toISOString(),
+        updatedAt: persona.updatedAt.toISOString(),
+    };
+}
+
 export const registerPersonaRoutes = async (
     app: FastifyInstance,
     options: RegisterPersonaRoutesOptions,
@@ -71,21 +110,7 @@ export const registerPersonaRoutes = async (
             return reply.code(404).send({ error: 'persona_not_found' });
         }
 
-        const record: AgentPersonaRecord = {
-            id: persona.id,
-            botId: persona.botId,
-            tenantId: persona.tenantId,
-            displayName: persona.displayName,
-            emailAddress: persona.emailAddress,
-            avatarUrl: persona.avatarUrl ?? null,
-            communicationStyle: persona.communicationStyle as AgentPersonaRecord['communicationStyle'],
-            disclosureStatement: persona.disclosureStatement,
-            language: persona.language,
-            timezone: persona.timezone,
-            workingHours: persona.workingHours as AgentPersonaRecord['workingHours'] ?? null,
-            createdAt: persona.createdAt.toISOString(),
-            updatedAt: persona.updatedAt.toISOString(),
-        };
+        const record = toPersonaRecord(persona);
 
         return reply.send({ persona: record });
     });
@@ -143,24 +168,13 @@ export const registerPersonaRoutes = async (
                     workingHours: body.workingHours !== undefined
                         ? (body.workingHours as unknown as import('@prisma/client').Prisma.InputJsonValue)
                         : undefined,
+                    employeeId: body.employeeId ?? null,
+                    department: body.department ?? null,
+                    managerId: body.managerId ?? null,
                 },
             });
 
-            const record: AgentPersonaRecord = {
-                id: persona.id,
-                botId: persona.botId,
-                tenantId: persona.tenantId,
-                displayName: persona.displayName,
-                emailAddress: persona.emailAddress,
-                avatarUrl: persona.avatarUrl ?? null,
-                communicationStyle: persona.communicationStyle as AgentPersonaRecord['communicationStyle'],
-                disclosureStatement: persona.disclosureStatement,
-                language: persona.language,
-                timezone: persona.timezone,
-                workingHours: persona.workingHours as AgentPersonaRecord['workingHours'] ?? null,
-                createdAt: persona.createdAt.toISOString(),
-                updatedAt: persona.updatedAt.toISOString(),
-            };
+            const record = toPersonaRecord(persona);
 
             return reply.code(201).send({ persona: record });
         },
@@ -211,27 +225,16 @@ export const registerPersonaRoutes = async (
             if (body.language !== undefined) updateData['language'] = body.language;
             if (body.timezone !== undefined) updateData['timezone'] = body.timezone;
             if (body.workingHours !== undefined) updateData['workingHours'] = body.workingHours;
+            if (body.employeeId !== undefined) updateData['employeeId'] = body.employeeId;
+            if (body.department !== undefined) updateData['department'] = body.department;
+            if (body.managerId !== undefined) updateData['managerId'] = body.managerId;
 
             const persona = await db.agentPersona.update({
                 where: { botId },
                 data: updateData,
             });
 
-            const record: AgentPersonaRecord = {
-                id: persona.id,
-                botId: persona.botId,
-                tenantId: persona.tenantId,
-                displayName: persona.displayName,
-                emailAddress: persona.emailAddress,
-                avatarUrl: persona.avatarUrl ?? null,
-                communicationStyle: persona.communicationStyle as AgentPersonaRecord['communicationStyle'],
-                disclosureStatement: persona.disclosureStatement,
-                language: persona.language,
-                timezone: persona.timezone,
-                workingHours: persona.workingHours as AgentPersonaRecord['workingHours'] ?? null,
-                createdAt: persona.createdAt.toISOString(),
-                updatedAt: persona.updatedAt.toISOString(),
-            };
+            const record = toPersonaRecord(persona);
 
             return reply.send({ persona: record });
         },
@@ -272,5 +275,42 @@ export const registerPersonaRoutes = async (
         });
 
         return reply.send({ botId, ...status });
+    });
+
+    // -----------------------------------------------------------------------
+    // GET /v1/personas/org-chart — org hierarchy for the tenant.
+    // Returns every persona's org identity plus a manager→reports tree, so the
+    // dashboard can render the agent org chart. (Static path is matched ahead of
+    // /v1/personas/:botId by Fastify's router.)
+    // -----------------------------------------------------------------------
+    app.get('/v1/personas/org-chart', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) {
+            return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
+        }
+        if ((ROLE_RANK[session.role ?? ''] ?? 0) < (ROLE_RANK['viewer'] ?? 99)) {
+            return reply.code(403).send({ error: 'insufficient_role', required: 'viewer', actual: session.role });
+        }
+
+        const db = await resolvePrisma();
+        const personas = await db.agentPersona.findMany({ where: { tenantId: session.tenantId } });
+        const nodes = personas.map((p) => ({
+            botId: p.botId,
+            displayName: p.displayName,
+            employeeId: p.employeeId ?? null,
+            department: p.department ?? null,
+            managerId: p.managerId ?? null,
+            reports: [] as string[],
+        }));
+
+        const byBotId = new Map(nodes.map((n) => [n.botId, n]));
+        const roots: string[] = [];
+        for (const n of nodes) {
+            const mgr = n.managerId ? byBotId.get(n.managerId) : undefined;
+            if (mgr) mgr.reports.push(n.botId);
+            else roots.push(n.botId);
+        }
+
+        return reply.send({ nodes, roots });
     });
 };
