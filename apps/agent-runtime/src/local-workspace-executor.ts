@@ -11608,6 +11608,18 @@ export async function executeLocalWorkspaceAction(input: {
                 return { ok: false, output: '', errorOutput: 'payload.toolName is required for mcp_tool_call.' };
             }
 
+            // Phase 3 — customer governance: block a denied MCP tool before invoking it.
+            const deniedTools = Array.isArray(payload['_mcp_denied_tools'])
+                ? (payload['_mcp_denied_tools'] as unknown[])
+                : [];
+            if (deniedTools.includes(toolName)) {
+                return {
+                    ok: false,
+                    output: '',
+                    errorOutput: `MCP tool '${toolName}' is blocked by customer governance policy.`,
+                };
+            }
+
             const rawHeaders = payload['mcpHeaders'];
             const mcpHeaders: Record<string, string> =
                 rawHeaders !== null && typeof rawHeaders === 'object' && !Array.isArray(rawHeaders)
@@ -11665,6 +11677,19 @@ export async function executeLocalWorkspaceAction(input: {
                     ? (s['toolArgs'] as Record<string, unknown>)
                     : {};
                 steps.push({ toolName, toolArgs });
+            }
+            // Phase 3 — customer governance: block the whole sequence if any step
+            // calls a denied MCP tool.
+            const seqDeniedTools = Array.isArray(payload['_mcp_denied_tools'])
+                ? (payload['_mcp_denied_tools'] as unknown[])
+                : [];
+            const deniedStep = steps.find((s) => seqDeniedTools.includes(s.toolName));
+            if (deniedStep) {
+                return {
+                    ok: false,
+                    output: '',
+                    errorOutput: `MCP tool '${deniedStep.toolName}' is blocked by customer governance policy.`,
+                };
             }
             const rawHeaders = payload['mcpHeaders'];
             const mcpHeaders: Record<string, string> =
