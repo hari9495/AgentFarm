@@ -39,14 +39,48 @@ Decision triage is cheap; end-to-end task throughput is bounded by **downstream 
 | Connector / MCP calls | third-party API latency + rate limits | per-tenant concurrency caps, backoff |
 | Workers | in-process by default | `AF_WORKERS_DISABLED=1` → standalone worker-runner; horizontal scale |
 
-## 3. Next steps (full-stack load test)
+## 3. Full-stack HTTP load harness
 
-The decision-path benchmark proves the CPU core is fast. The remaining, higher-effort measurement is
-an **end-to-end HTTP load test against a running stack** (gateway → runtime → DB/Redis) to publish
-real concurrent-task numbers and find the true saturation point. That requires a provisioned
-environment (and a mock LLM to isolate platform overhead from provider latency) and is tracked as a
-follow-up. Harness pattern: drive `POST /v1/runtime/tasks` at increasing concurrency, record
-completed-tasks/sec and p99 until error rate climbs.
+The decision-path benchmark proves the CPU core is fast. The end-to-end measurement — concurrent-task
+throughput against a running stack (gateway → runtime → DB/Redis) — uses the harness at
+`scripts/load-test-fullstack.mjs`. It is a closed-loop ramp: keeps N requests in flight per step,
+increases concurrency `[1,2,4,8,…]`, and records per step **completed/sec, p50/p95/p99, error rate**,
+stopping at the **saturation point** (error rate > ceiling).
+
+**Harness correctness is proven now** (no stack needed) via a built-in self-test that ramps against an
+internal mock server which overloads at high concurrency:
+
+```
+$ pnpm loadtest:selftest
+self-test OK {"single_ops":225,"saturatedAt":128,"peak":2942}
+```
+
+The self-test asserts: requests complete, throughput is reported, `p99 >= p50`, latency reflects the
+injected delay, and saturation is detected at the concurrency where the mock starts erroring. Run it in
+CI as a regression guard for the harness logic.
+
+**Running against a real stack** (measures *platform* overhead — run with a mock LLM so provider latency
+doesn't dominate):
+
+```
+LLM_PROVIDER=mock docker compose up        # stack with a mock model
+AF_LOAD_URL=http://localhost:4000/tasks/intake \
+AF_LOAD_HEADER="x-runtime-task-token: $RUNTIME_TASK_SHARED_TOKEN" \
+AF_LOAD_BODY='{"task_id":"__ID__","payload":{"actionType":"workspace_read_file"}}' \
+pnpm loadtest
+```
+
+It prints a per-step JSON line and a summary `{ peak_ops_per_sec, peak_concurrency, saturatedAt }`.
+`__ID__` is replaced with a unique id per request. Auth/body are fully configurable so the same harness
+can target the gateway task-queue (with a session cookie) or the runtime intake (with the shared token).
+
+**Status:** harness built + self-test green. Publishing real saturation numbers requires a provisioned
+environment with the stack running under `LLM_PROVIDER=mock`; that run is the one remaining step to put
+concrete concurrent-task figures in the table below.
+
+| Concurrency | completed/sec | p50 | p95 | p99 | error rate |
+|---|---|---|---|---|---|
+| _(to be filled from a provisioned `pnpm loadtest` run)_ | | | | | |
 
 ## 4. Regression guard
 `apps/agent-runtime/src/decision-load-test.test.ts` asserts the decision path sustains a conservative

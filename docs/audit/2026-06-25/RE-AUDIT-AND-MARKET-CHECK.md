@@ -54,7 +54,7 @@ After the build cycle, the integration gap — the #1 critical finding — is **
 ## 4. Remaining gaps (honest, ranked)
 
 **High-value, still open**
-1. **Full-stack load test** — decision path is proven fast (~M/sec) but end-to-end concurrent-task throughput against a running gateway→runtime→DB stack is unmeasured. This is the single biggest credibility item for "scale." (Tracked in `docs/SCALABILITY-BENCHMARKS.md`.)
+1. **Full-stack load test** — decision path is proven fast (~M/sec). The ramping HTTP load **harness is now built and self-test-proven** (`scripts/load-test-fullstack.mjs`, `pnpm loadtest:selftest` → detects saturation correctly). What remains is a single **provisioned run** against a live stack under `LLM_PROVIDER=mock` to publish real concurrent-task saturation numbers. Biggest credibility item for "scale"; now one env away. (See `docs/SCALABILITY-BENCHMARKS.md`.)
 2. **A recorded real autonomous / multi-agent run** — the loop + handoff are proven in tests; a live, telemetry-backed production run (Langfuse trace) would convert "works in tests" to "works in production."
 3. **First-class connector breadth** — 6 named connectors execute first-class; ~12 named registry connectors still rely on the generic-REST/OpenAPI path (works, but needs the customer to supply a spec) rather than turnkey. Each first-class connector added widens turnkey reach.
 
