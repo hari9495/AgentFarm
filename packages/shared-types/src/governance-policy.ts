@@ -128,3 +128,40 @@ export interface PolicyDecision {
      */
     failClosed: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// Phase 5 — customer-uploaded policy documents
+// ---------------------------------------------------------------------------
+
+/**
+ * A governance rule extracted from an uploaded policy document by the LLM,
+ * awaiting human review before it is applied into a GovernancePolicy.
+ */
+export interface ExtractedRuleCandidate extends GovernanceRule {
+    /** Stable id within the document's candidate set (for review selection). */
+    id: string;
+    /** Model confidence 0..1 that this rule reflects the source text. */
+    confidence: number;
+    /** Verbatim snippet from the document that justifies the rule. */
+    sourceQuote?: string;
+}
+
+/** Projection of a PolicyDocument row for the dashboard review flow. */
+export interface PolicyDocumentRecord {
+    id: string;
+    tenantId: string;
+    fileName: string;
+    mimeType: string;
+    status: PolicyDocumentStatus;
+    /** Candidate rules awaiting / available for review. */
+    candidates: ExtractedRuleCandidate[];
+    /** Converted markdown (may be omitted from list views). */
+    extractedText?: string | null;
+    failureReason?: string | null;
+    /** GovernancePolicy id the approved candidates were published into. */
+    appliedPolicyId?: string | null;
+    appliedAt?: string | null;
+    createdBy: string;
+    createdAt: string;
+    updatedAt: string;
+}
