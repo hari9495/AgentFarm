@@ -5,7 +5,7 @@ import { useState } from 'react';
 import {
     ShieldCheck, TrendingUp, GitBranch, ShieldAlert,
     Zap, Eye, RotateCcw, Database, Puzzle, Bot,
-    ExternalLink, ShieldBan,
+    ExternalLink, ShieldBan, FileText,
 } from 'lucide-react';
 import { GovernanceKPIPanel } from '../components/governance-kpis-panel';
 import { GovernanceWorkflowPanel } from '../components/governance-workflow-panel';
@@ -15,16 +15,18 @@ import CircuitBreakersPanel from '../components/circuit-breakers-panel';
 import { DisclosureSettingsPanel } from '../components/disclosure-settings-panel';
 import RetentionPolicyPanel from '../components/retention-policy-panel';
 import GovernancePolicyPanel from '../components/governance-policy-panel';
+import PolicyDocumentsPanel from '../components/policy-documents-panel';
 import { PluginLoadingPanel } from '../components/plugin-loading-panel';
 
 // ── Tab definition ────────────────────────────────────────────────────────────
 
-type Tab = 'kpis' | 'workflows' | 'role-policies' | 'kill-switches' | 'circuit-breakers' | 'disclosure' | 'retention' | 'plugins';
+type Tab = 'kpis' | 'workflows' | 'role-policies' | 'policy-docs' | 'kill-switches' | 'circuit-breakers' | 'disclosure' | 'retention' | 'plugins';
 
 const TABS: { key: Tab; label: string; icon: React.ElementType; desc: string; needsBot?: boolean }[] = [
     { key: 'kpis',             label: 'KPIs',             icon: TrendingUp,  desc: 'Approval rate, decision latency, SLA compliance'      },
     { key: 'workflows',        label: 'Workflows',        icon: GitBranch,   desc: 'Multi-step governance flows'                          },
     { key: 'role-policies',    label: 'Policies',         icon: ShieldBan,   desc: 'Per-role/tenant action, connector & MCP guardrails'   },
+    { key: 'policy-docs',      label: 'Policy Docs',      icon: FileText,    desc: 'Upload policy documents → extract & apply rules'      },
     { key: 'kill-switches',    label: 'Kill Switches',    icon: ShieldAlert, desc: 'Emergency stop per workspace + resume'                },
     { key: 'circuit-breakers', label: 'Circuit Breakers', icon: Zap,         desc: 'Per-service breaker status + manual reset'            },
     { key: 'disclosure',       label: 'Disclosure',       icon: Eye,         desc: 'What each agent is permitted to disclose',  needsBot: true },
@@ -177,6 +179,12 @@ export default function GovernanceHubClient({
                 {activeTab === 'role-policies' && (
                     <TabShell icon={ShieldBan} title="Policies" description="Author guardrails per role or tenant: block action types, restrict connectors to read-only or deny specific verbs, and block MCP tools. All rules tighten the built-in defaults — they can never grant access.">
                         <GovernancePolicyPanel />
+                    </TabShell>
+                )}
+
+                {activeTab === 'policy-docs' && (
+                    <TabShell icon={FileText} title="Policy Documents" description="Upload a policy document (PDF, DOCX, Markdown…). It is embedded for agent grounding and an LLM extracts candidate governance rules. Review the candidates and apply the ones you approve — only then are they enforced.">
+                        <PolicyDocumentsPanel />
                     </TabShell>
                 )}
 
