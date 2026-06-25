@@ -29,6 +29,8 @@ describe('detectMimeType', () => {
         assert.equal(detectMimeType('page.html'),    'text/html');
         assert.equal(detectMimeType('page.htm'),     'text/html');
         assert.equal(detectMimeType('notes.txt'),    'text/plain');
+        assert.equal(detectMimeType('policy.md'),     'text/markdown');
+        assert.equal(detectMimeType('policy.markdown'), 'text/markdown');
         assert.equal(detectMimeType('config.json'),  'application/json');
         assert.equal(detectMimeType('export.csv'),   'text/csv');
     });
