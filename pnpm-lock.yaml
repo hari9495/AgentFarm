@@ -70,6 +70,9 @@ importers:
       '@agentfarm/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@agentfarm/policy-engine':
+        specifier: workspace:*
+        version: link:../../services/policy-engine
       '@agentfarm/redis-client':
         specifier: workspace:*
         version: link:../../packages/redis-client

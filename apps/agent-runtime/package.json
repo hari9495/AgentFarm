@@ -218,6 +218,7 @@
         "@agentfarm/memory-service": "workspace:*",
         "@agentfarm/notification-adapters": "workspace:*",
         "@agentfarm/observability": "workspace:*",
+        "@agentfarm/policy-engine": "workspace:*",
         "@agentfarm/redis-client": "workspace:*",
         "@agentfarm/shared-types": "workspace:*",
         "@prisma/client": "^6.19.3",

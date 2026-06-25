@@ -104,6 +104,7 @@ import { buildErrorQuery, researchForTask, type FetchFn } from './web-research-s
 import { analyzeImage, type VisionLLMCallerFn, type VisionProvider } from './vision-service.js';
 import { FanOutProgressSink, NoopProgressSink, type ProgressMilestone, type ProgressSink } from './task-progress-reporter.js';
 import { createPrismaMemoryStore, searchMemory } from './prisma-memory-store.js';
+import { getPolicyEvaluateFn, initGovernancePolicyBundle } from './policy-runtime.js';
 import {
     createEmbedFn,
     writeEpisodicMemory,
@@ -3822,6 +3823,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         const effectiveModelProvider = modelRoute.provider;
         const effectiveModelProfile = modelRoute.profile;
 
+        const policyEvaluateFn = getPolicyEvaluateFn();
         const result = memoryStore
             ? await processDeveloperTaskWithMemory(
                 task,
@@ -3832,6 +3834,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                     modelProfile: effectiveModelProfile,
                     llmDecisionResolver,
                     progressSink,
+                    policyEvaluateFn,
                 },
             )
             : await processDeveloperTask(task, {
@@ -3840,6 +3843,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 modelProfile: effectiveModelProfile,
                 llmDecisionResolver,
                 progressSink,
+                policyEvaluateFn,
             });
         const executionTask: TaskEnvelope = {
             ...task,
@@ -7970,6 +7974,8 @@ export async function startRuntimeServer(options: RuntimeServerOptions = {}): Pr
     // actually listens where every other service expects to find it (default 4000).
     const port = Number(env.RUNTIME_PORT ?? env.AF_HEALTH_PORT ?? env.AGENTFARM_HEALTH_PORT ?? 4000);
     await startupChecks();
+    // Load the customer-governance OPA policy bundle (best-effort; non-fatal).
+    await initGovernancePolicyBundle();
     await app.listen({ host: '0.0.0.0', port });
     app.log.info({ port }, 'agent-runtime listening');
 
