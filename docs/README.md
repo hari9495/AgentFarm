@@ -43,7 +43,7 @@ d:\AgentFarm\
 │   ├── config/                  # Shared configuration utilities
 │   ├── connector-contracts/     # Connector registry (23 tools), action types, role policies
 │   ├── crm-service/             # CRM integration types/stubs
-│   ├── db-schema/               # Prisma schema + migrations (105 models, 44 migrations)
+│   ├── db-schema/               # Prisma schema + migrations (109 models, 58 migrations)
 │   ├── document-converter/      # Document format conversion utilities
 │   ├── e2e/                     # Playwright end-to-end test suite
 │   ├── erp-service/             # ERP integration types/stubs

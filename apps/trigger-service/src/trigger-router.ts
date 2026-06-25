@@ -29,15 +29,53 @@ Respond ONLY with valid JSON — no markdown fences, no explanation:
 {"tenantId":"...","agentId":"...","reason":"one sentence"}`;
 }
 
+/**
+ * L1 — Normalize an email address for comparison: strip a display name
+ * ("Recruiter <r@acme.com>" → "r@acme.com"), trim, lowercase.
+ */
+export function normalizeEmail(value: string | undefined): string {
+    if (!value) return '';
+    const angle = value.match(/<([^>]+)>/);
+    const addr = angle ? angle[1]! : value;
+    return addr.trim().toLowerCase();
+}
+
+/**
+ * L1 — Deterministically resolve the agent whose persona mailbox matches the recipient.
+ * Returns null when there's no recipient or no configured agent email matches.
+ * Pure — no I/O — so it's the testable core of per-agent inbound mail routing.
+ */
+export function matchAgentByEmail(
+    recipient: string | undefined,
+    tenants: TriggerServiceConfig['tenants'],
+): RoutingDecision | null {
+    const target = normalizeEmail(recipient);
+    if (!target) return null;
+    for (const tenant of tenants) {
+        for (const agent of tenant.agents) {
+            if (agent.email && normalizeEmail(agent.email) === target) {
+                return { tenantId: tenant.tenantId, agentId: agent.agentId, reason: `recipient ${target} matches agent mailbox` };
+            }
+        }
+    }
+    return null;
+}
+
 export class TriggerRouter {
     constructor(private readonly config: TriggerServiceConfig) { }
 
-    async route(body: string, from: string): Promise<RoutingDecision> {
+    async route(body: string, from: string, recipient?: string): Promise<RoutingDecision> {
         const { tenants } = this.config;
 
         if (tenants.length === 0) {
             throw new Error('TriggerRouter: no tenants configured');
         }
+
+        // L1 — deterministic per-agent routing: if the recipient matches an agent's persona
+        // mailbox, route straight to that agent (takes priority over LLM guessing and the
+        // single-tenant default, so a multi-agent tenant still routes to the right inbox).
+        const emailMatch = matchAgentByEmail(recipient, tenants);
+        if (emailMatch) return emailMatch;
 
         // Single-tenant shortcut — skip LLM entirely
         if (tenants.length === 1) {

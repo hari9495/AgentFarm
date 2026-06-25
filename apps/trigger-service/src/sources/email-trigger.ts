@@ -106,11 +106,16 @@ export class EmailTriggerSource implements TriggerSource {
                     let from = 'unknown';
                     let subject: string | undefined;
                     let body = '';
+                    let recipient: string | undefined;
 
                     try {
                         const parsed = await simpleParser(msg.source as Buffer);
                         from = parsed.from?.text ?? 'unknown';
                         subject = parsed.subject ?? undefined;
+                        // L1 — capture the To address so the router can route to the agent
+                        // whose persona mailbox matches (handles To: as object or array).
+                        const to = parsed.to;
+                        recipient = Array.isArray(to) ? to[0]?.text : to?.text;
                         if (parsed.text) {
                             body = parsed.text.slice(0, 4000);
                         } else if (parsed.html) {
@@ -123,6 +128,9 @@ export class EmailTriggerSource implements TriggerSource {
                             ? (envelope.from[0]?.address ?? 'unknown')
                             : 'unknown';
                         subject = typeof envelope.subject === 'string' ? envelope.subject : undefined;
+                        recipient = Array.isArray(envelope.to) && envelope.to.length > 0
+                            ? (envelope.to[0]?.address ?? undefined)
+                            : undefined;
                     }
 
                     if (!body) body = subject ?? '(no body)';
@@ -135,6 +143,7 @@ export class EmailTriggerSource implements TriggerSource {
                         id: crypto.randomUUID(),
                         source: 'email',
                         from,
+                        recipient,
                         subject,
                         body,
                         receivedAt: new Date(),

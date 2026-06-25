@@ -75,7 +75,7 @@ packages/
   config/                Centralised service URL and configuration constants
   connector-contracts/   18-connector registry, 18 normalized action types, 12 role policies
   crm-service/           CRM adapter types and clients (Salesforce, HubSpot)
-  db-schema/             Prisma schema, migrations, and generated client (70 models)
+  db-schema/             Prisma schema, migrations, and generated client (109 models)
   e2e/                   Playwright end-to-end test suite
   erp-service/           ERP adapter types and clients (SAP, Oracle)
   notification-service/  Notification adapter types
@@ -287,7 +287,7 @@ packages/
 
 ## Database
 
-105 Prisma models and 35 enums (44 migrations; verified 2026-06-13) spanning identity/tenancy, agents/personas, task execution, memory, billing, connectors/marketplace, governance/audit, communication/devtools, plus the sales, support, and tenant-portal domains. Core families:
+109 Prisma models and 35 enums (58 migrations; verified 2026-06-25) spanning identity/tenancy, agents/personas, task execution, memory, billing, connectors/marketplace, governance/audit, communication/devtools, plus the sales, support, and tenant-portal domains. Core families:
 
 **Identity and tenancy** (8): `Tenant`, `TenantUser`, `Workspace`, `WorkspaceSessionState`, `TenantLanguageConfig`, `WorkspaceLanguageConfig`, `UserLanguageProfile`, `TenantMcpServer`
 

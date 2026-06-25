@@ -88,7 +88,7 @@ scripts/            30+ dev/ops scripts
 `approval-service`, `connector-gateway` (OAuth + mTLS + plugin loader), `identity-service`, `evidence-service` (HNSW vector search), `meeting-agent` (STT/TTS), `memory-service`, `notification-service`, `policy-engine`, `provisioning-service` (Azure VM state machine), `browser-actions` (Playwright), `audit-storage`.
 
 **Key packages:**
-`db-schema` (Prisma schema + 44 migrations), `shared-types` (100+ TS contracts, only package with a compiled `dist/`), `connector-contracts` (23 connectors incl. telephony, 34 normalized action types, 13 role keys), `observability` (OTEL + Azure Monitor), `llm-trace` (fail-safe Langfuse wrapper: per-call generations, token/cost, prompt registry, eval scores, datasets, ambient task context), `sdk` (AgentFarmClient), `config` (service URLs + constants).
+`db-schema` (Prisma schema + 58 migrations), `shared-types` (100+ TS contracts, only package with a compiled `dist/`), `connector-contracts` (23 connectors incl. telephony, 34 normalized action types, 13 role keys), `observability` (OTEL + Azure Monitor), `llm-trace` (fail-safe Langfuse wrapper: per-call generations, token/cost, prompt registry, eval scores, datasets, ambient task context), `sdk` (AgentFarmClient), `config` (service URLs + constants).
 
 ### Request flow
 
@@ -140,7 +140,7 @@ Voicebox / VoxCPM2  — STT / TTS
 
 ### Database
 
-Schema at `packages/db-schema/prisma/schema.prisma` — 105 models and 35 enums across 11 domains: Identity & Tenancy (incl. SSO, branding, portal accounts), Agents & Bots (incl. personas), Task Execution, Memory & Knowledge, Billing & Subscriptions, Connectors & Marketplace, Governance & Audit, Communication & Developer Tools, Sales (prospects/deals/calls/contracts/NPS), Support (issues/CSAT/chat/diagnosis), Provisioning & VMs.
+Schema at `packages/db-schema/prisma/schema.prisma` — 109 models and 35 enums across 11 domains: Identity & Tenancy (incl. SSO, branding, portal accounts), Agents & Bots (incl. personas), Task Execution, Memory & Knowledge, Billing & Subscriptions, Connectors & Marketplace, Governance & Audit, Communication & Developer Tools, Sales (prospects/deals/calls/contracts/NPS), Support (issues/CSAT/chat/diagnosis), Provisioning & VMs.
 
 ### Environment variables
 

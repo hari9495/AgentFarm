@@ -40,7 +40,7 @@ export class TriggerEngine {
         let event: TriggerEvent;
 
         try {
-            const { tenantId, agentId } = await this.router.route(raw.body, raw.from);
+            const { tenantId, agentId } = await this.router.route(raw.body, raw.from, raw.recipient);
             event = { ...raw, tenantId, agentId };
         } catch (err) {
             console.error('TriggerEngine: routing failed:', err);

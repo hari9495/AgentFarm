@@ -71,6 +71,9 @@ export type TriggerEvent = {
     agentId: string;
     /** Email address or Slack user ID of sender */
     from: string;
+    /** L1 — recipient address the message was sent TO (the agent's persona mailbox), when known.
+     *  Used for deterministic per-agent routing: mail to recruiter@acme.com → the recruiter agent. */
+    recipient?: string;
     /** Thread / channel for reply routing */
     channel?: string;
     /** Email subject or Slack channel name */
@@ -99,6 +102,9 @@ export type AgentConfig = {
     agentId: string;
     /** Human-readable description used in the LLM routing prompt */
     description: string;
+    /** L1 — the agent persona's inbound mailbox. When an email's recipient matches this,
+     *  routing is deterministic (no LLM guess needed). */
+    email?: string;
 };
 
 export type TenantTriggerConfig = {
