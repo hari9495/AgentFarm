@@ -368,6 +368,7 @@ export function InternalSidebar({
                         <SidebarLink href="/connectors"    label="Connectors"    Icon={Link2}      color="blue"   />
                         <SidebarLink href="/task-sources"  label="Task Sources"  Icon={ListChecks} color="amber"  />
                         <SidebarLink href="/platform-mcp"  label="Platform MCP"  Icon={Cpu}        color="cyan"   />
+                        <SidebarLink href="/connector-status" label="Connector Status" Icon={Plug}    color="green"  />
                         <SidebarLink href="/skills"         label="Skills"        Icon={ShoppingBag} color="purple" />
                         <SidebarLink href="/memory"         label="Memory"        Icon={Brain}      color="violet" />
                         <SidebarLink href="/governance"     label="Governance"    Icon={ShieldCheck} color="green" />
