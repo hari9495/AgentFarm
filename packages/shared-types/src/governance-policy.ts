@@ -60,8 +60,8 @@ export interface GovernancePolicyRecord {
     id: string;
     tenantId: string;
     scope: GovernancePolicyScope;
-    /** workspaceId / roleKey / agentId depending on scope; null for tenant scope. */
-    scopeRef?: string | null;
+    /** workspaceId / roleKey / agentId depending on scope; "" for tenant scope. */
+    scopeRef: string;
     version: number;
     status: GovernancePolicyStatus;
     name: string;

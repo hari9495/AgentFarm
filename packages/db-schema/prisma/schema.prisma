@@ -922,7 +922,7 @@ model GovernancePolicy {
   id          String                 @id @default(cuid())
   tenantId    String
   scope       GovernancePolicyScope  @default(tenant)
-  scopeRef    String? // workspaceId / roleKey / agentId depending on scope; null for tenant scope
+  scopeRef    String                 @default("") // workspaceId / roleKey / agentId; "" for tenant scope (NOT NULL so the unique index dedups tenant-wide policies)
   version     Int                    @default(1)
   status      GovernancePolicyStatus @default(draft)
   name        String
