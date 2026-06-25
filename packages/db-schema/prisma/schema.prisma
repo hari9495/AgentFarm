@@ -913,6 +913,54 @@ model RetentionPolicy {
   @@index([tenantId, status])
 }
 
+/// Customer-configurable governance policy. A policy is scoped to a tenant,
+/// optionally narrowed to a workspace / role / agent, and versioned. Only one
+/// version per (tenant, scope, scopeRef) is `active` at a time; publishing a
+/// new version archives the prior active one. `rulesJson` holds the structured
+/// rules pushed to OPA as a per-tenant data overlay.
+model GovernancePolicy {
+  id          String                 @id @default(cuid())
+  tenantId    String
+  scope       GovernancePolicyScope  @default(tenant)
+  scopeRef    String? // workspaceId / roleKey / agentId depending on scope; null for tenant scope
+  version     Int                    @default(1)
+  status      GovernancePolicyStatus @default(draft)
+  name        String
+  description String?
+  rulesJson   Json
+  createdBy   String
+  updatedBy   String
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  @@unique([tenantId, scope, scopeRef, version])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, scope, scopeRef, status])
+}
+
+/// An uploaded governance document (PDF/DOCX/etc.). Phase 1 stores the file and
+/// metadata only; parsing / structured-rule extraction lands in Phase 5.
+/// `extractedRulesJson` is populated once the ingestion pipeline exists.
+model PolicyDocument {
+  id                 String               @id @default(cuid())
+  tenantId           String
+  fileName           String
+  mimeType           String
+  storageKey         String // object-storage key / path
+  sha256             String // content hash for dedup + integrity
+  status             PolicyDocumentStatus @default(uploaded)
+  extractedRulesJson Json?
+  failureReason      String?
+  createdBy          String
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@unique([tenantId, sha256])
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
 model AgentQuestion {
   id              String                     @id @default(cuid())
   contractVersion String
@@ -2446,6 +2494,25 @@ enum RetentionPolicyStatus {
   active
   archived
   superseded
+}
+
+enum GovernancePolicyScope {
+  tenant
+  workspace
+  role
+  agent
+}
+
+enum GovernancePolicyStatus {
+  draft
+  active
+  archived
+}
+
+enum PolicyDocumentStatus {
+  uploaded
+  parsed
+  failed
 }
 
 enum AgentQuestionStatus {
