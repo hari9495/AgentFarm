@@ -2090,6 +2090,7 @@ export * from './audit-ids.js';
 export * from './browser-audit.js';
 export * from './storage-paths.js';
 export * from './retention-policy.js';
+export * from './governance-policy.js';
 export * from './desktop-operator.js';
 export * from './desktop-session.js';
 export * from './task-plan.js';
