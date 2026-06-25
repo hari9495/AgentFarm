@@ -107,6 +107,10 @@ import { getPolicyEvaluateFn, initGovernancePolicyBundle } from './policy-runtim
 import { getBlockedActionsForRole } from './role-action-registry.js';
 import { getActiveRoleBlocklistForTenant } from './role-policy-store.js';
 import {
+    getActiveConnectorPolicyForTenant,
+    isConnectorActionDenied,
+} from './connector-policy-store.js';
+import {
     createEmbedFn,
     writeEpisodicMemory,
     searchEpisodicMemory,
@@ -2703,6 +2707,39 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             source: input.source,
             payloadKeys: Object.keys(input.task.payload),
         });
+
+        // Phase 3 — customer connector/MCP policy (tenant + role scope, strictest-wins).
+        // Tighten-only: deny a specific verb, or block all writes under read-only mode.
+        // Fail-safe: DB absent/error → empty policy → no extra restriction.
+        const connectorPolicy = await getActiveConnectorPolicyForTenant(
+            input.config.tenantId,
+            input.config.roleKey,
+        ).catch(() => null);
+        if (
+            connectorPolicy &&
+            isConnectorActionDenied(connectorPolicy, input.connectorType, input.decision.actionType)
+        ) {
+            advancedFeatures.appendTraceStep(input.task.taskId, 'connector_action_policy_blocked', {
+                connectorType: input.connectorType,
+                actionType: input.decision.actionType,
+            });
+            emitRuntimeEvent('runtime.connector_action_policy_blocked', input.config, {
+                task_id: input.task.taskId,
+                connector_type: input.connectorType,
+                action_type: input.decision.actionType,
+            });
+            return {
+                decision: { ...input.decision, route: 'execute' },
+                status: 'failed',
+                attempts: 0,
+                transientRetries: 0,
+                executionPayload: input.task.payload,
+                payloadOverrideSource: input.payloadOverrideSource,
+                failureClass: 'policy_violation',
+                errorMessage: `Connector action '${input.decision.actionType}' on '${input.connectorType}' is blocked by customer governance policy.`,
+            };
+        }
+
         const connectorPersona = (input.task.payload['_persona'] as AgentPersonaRecord | null | undefined) ?? null;
         const signedConnectorPayload = applyDisclosureToConnectorPayload({
             connectorType: input.connectorType,
@@ -3445,6 +3482,20 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         const mcpToolCatalog = await buildMcpToolCatalog(config.tenantId, config.workspaceId).catch(() => '');
         if (mcpToolCatalog) {
             task = { ...task, payload: { ...task.payload, _mcp_tool_catalog: mcpToolCatalog } };
+
+            // Phase 3 — inject the customer-denied MCP tool list so the executor can
+            // block a denied tool before invoking it. Only attached when a catalog
+            // exists (i.e. the task could actually call a tool). Fail-safe: empty set.
+            const connectorPolicy = await getActiveConnectorPolicyForTenant(
+                config.tenantId,
+                config.roleKey,
+            ).catch(() => null);
+            if (connectorPolicy && connectorPolicy.deniedTools.size > 0) {
+                task = {
+                    ...task,
+                    payload: { ...task.payload, _mcp_denied_tools: [...connectorPolicy.deniedTools] },
+                };
+            }
         }
 
         // C6.2 — Attach the tenant's self-describing Custom API (OpenAPI) catalog so the

@@ -47,6 +47,11 @@ export interface GovernanceRule {
     connector?: string;
     /** Optional MCP tool / verb this rule is scoped to (e.g. 'jira.delete'). */
     tool?: string;
+    /**
+     * Optional connector access mode (Phase 3). `read_only` denies all write
+     * verbs on the scoped `connector`; `full` is the default (no extra restriction).
+     */
+    mode?: 'read_only' | 'full';
     /** Optional environment scope (e.g. 'production' | 'staging'). */
     env?: string;
     /** Human-readable reason surfaced in audit + dashboard. */
