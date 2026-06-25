@@ -186,10 +186,21 @@ Closed the "scalability unproven" gap with measured evidence. `decision-load-tes
 
 ## LOW
 
-### L1 — Per-agent inbound mailbox wiring (persona.emailAddress) ⬜
-### L2 — Collaboration audit (`AgentMessage`) operator visualization ⬜
-### L3 — Repo hygiene: remove build logs, cloudflared.exe, scratch files, untrack .auth.sqlite ⬜
-### L4 — Refresh CLAUDE.md/README counts (106 models, 109 routes, 54 migrations) ⬜
+### L1 — Per-agent inbound mailbox wiring (persona.emailAddress) ✅
+Inbound email now routes to the agent whose persona mailbox matches the recipient (mail to `recruiter@acme.com` → the recruiter agent), instead of always LLM-guessing or hitting the tenant default.
+**Built:** capture the `To` address in `email-trigger.ts`; new `recipient?` on the trigger event; pure `matchAgentByEmail()` + `normalizeEmail()` resolver in `trigger-router.ts` consulted as a deterministic fast-path before the LLM/default; `AgentConfig.email` config field.
+- [x] 5 tests (normalize, match, no-match, router fast-path, fallback). trigger-service 110 tests green; typecheck clean.
+**Files:** `apps/trigger-service/src/{types.ts, trigger-router.ts, trigger-engine.ts, sources/email-trigger.ts}` + `trigger-router-email.test.ts`.
+
+### L2 — Collaboration audit (`AgentMessage`) operator visualization ✅ (already present)
+Already built: `dashboard/app/components/agent-messages-panel.tsx` (651 lines), `handoffs-panel.tsx` (431 lines), `dashboard/app/handoffs/page.tsx`, and the message API proxy routes (`api/agents/[botId]/messages{,/sent,/[id]/reply}`). Operators can view/initiate handoffs and inspect the agent-to-agent message trail (including H3's `HANDOFF_REQUEST` messages). No new build needed.
+
+### L3 — Repo hygiene ✅
+Untracked the locked dev DB `apps/website/.auth.sqlite{,-shm,-wal}` and the scratch files `read.md`, `routes_raw.txt` (`git rm --cached`); added gitignore patterns for all of them so they can't return. Root build logs + `cloudflared.exe` were already gitignored (`*.log`, `cloudflared.exe`) and untracked.
+- [x] `.auth.sqlite` no longer tracked (also fixes the recurring merge-block from the locked file).
+
+### L4 — Refresh doc counts ✅
+Updated stale figures to verified reality (2026-06-25): **109 models** (was 105/70), **58 migrations** (was 44) in `CLAUDE.md`, `README.md` (×2), and `docs/README.md`.
 
 ---
 
@@ -210,6 +221,7 @@ Closed the "scalability unproven" gap with measured evidence. `decision-load-tes
 | 2026-06-25 | H7 done | Autonomy guardrail proof (hard-cap clamp, terminal state, audit trace) + AUTONOMY-GUARDRAILS.md; 3 tests |
 | 2026-06-25 | H8 done | Verified real deploy execution (kubectl apply/terraform apply), HIGH-risk gated; 5 tests. Capability already real — verification gap closed |
 | 2026-06-25 | MEDIUM done | M2 catalog 6→12 (+gitlab/sentry/asana/postgres/google-drive/hubspot, 4 tests); M5 decision-path benchmark ~2.1–2.9M/sec + SCALABILITY-BENCHMARKS.md + CI floor guard. M1/M3/M4 verified already-covered (credential form / H3 handoff / existing shift UI) — no rebuild |
+| 2026-06-25 | LOW done | L1 per-agent inbound mail routing (recipient→persona match, 5 tests); L3 untrack .auth.sqlite + scratch files + gitignore; L4 refresh doc counts (109 models/58 migrations). L2 verified already-covered (agent-messages + handoffs panels). ALL TIERS COMPLETE. |
 | 2026-06-25 | C4 done | Tracker poller (Jira/Linear/GitHub) pulls assigned tickets → /run-task; per-tenant TrackerPollSource config, secret-backed creds (fail-closed), TrackerPollDispatch dedup ledger + migration; cadence-gated sweep wired into main.ts; 11 tests, 94/94 green, typecheck clean |
 | 2026-06-25 | C4.1 done | Universal `tracker='custom'` poll source (CustomPollSpec: templated list endpoint, pluggable auth incl. none, dot-path field map) → any REST tracker without per-vendor code; customConfig Json column + migration; 6 tests, 100/100 green, typecheck clean |
 | 2026-06-25 | C5 done | Shift enforcement: pure timezone-aware shift engine (shared-types/shift.ts); off-shift tasks parked as DeferredTask + released at next shift open (durable); availability API; fixed C4 run-task goal-JSON bug; DeferredTask migration; 18 tests, 105/105 green, 3 typechecks clean |

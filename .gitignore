@@ -37,3 +37,12 @@ packages/e2e/playwright-report/
 packages/e2e/test-results/
 apps/website/.wrangler/
 cloudflared.exe
+
+# Local dev SQLite auth DB (next-auth) — must never be committed
+apps/website/.auth.sqlite
+apps/website/.auth.sqlite-shm
+apps/website/.auth.sqlite-wal
+
+# Scratch / scriptable dumps (not source)
+read.md
+routes_raw.txt
