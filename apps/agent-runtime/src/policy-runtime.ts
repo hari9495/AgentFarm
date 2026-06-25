@@ -68,6 +68,8 @@ export function getPolicyEvaluateFn():
     return async (input: PolicyEvaluationInput): Promise<PolicyDecision> => {
         const active = await getActivePolicy(prisma, input.tenantId).catch(() => null);
         if (!active) return ALLOW; // no custom policy → heuristic floor already applies
+        // Self-heal: ensure the bundle is loaded (covers an OPA-not-ready-at-boot race).
+        await initGovernancePolicyBundle();
         return evaluateWithCache(input, {
             cache,
             policyVersion: active.version,
