@@ -3355,11 +3355,16 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         // persona load, or plan generation — keeping role boundaries hard.
         // Phase 2 — load the customer GovernancePolicy(scope=role) overlay (if any)
         // so it can TIGHTEN the code-registry blocklist. Best-effort: DB absent or
-        // error → empty set → code registry stands.
-        const roleBlockOverride = await getActiveRoleBlocklistForTenant(
-            config.tenantId,
-            config.roleKey,
-        ).catch(() => new Set<string>());
+        // error → empty set → code registry stands. Skip the DB round-trip entirely
+        // for tasks with no action_type — there is nothing for the overlay to match,
+        // keeping the hot path (and trivial/noop tasks) free of governance latency.
+        const hasActionType = typeof task.payload['action_type'] === 'string'
+            && task.payload['action_type'].trim().length > 0;
+        const roleBlockOverride = hasActionType
+            ? await getActiveRoleBlocklistForTenant(config.tenantId, config.roleKey).catch(
+                  () => new Set<string>(),
+              )
+            : new Set<string>();
         const roleEnforcement = await enforceRole(task, config.roleKey as RoleKey, {
             blockedActionsOverride: roleBlockOverride,
         }).catch(() => ({ allowed: true as const }));
