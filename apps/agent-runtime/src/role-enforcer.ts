@@ -23,10 +23,8 @@ import type { RoleKey, RoleEnforcementResult } from '@agentfarm/shared-types';
 import type { TaskEnvelope } from './execution-engine.js';
 import type { TaskClassifierFn } from './task-classifier.js';
 import { classifyTaskForRole } from './task-classifier.js';
-import {
-    DEVELOPER_BLOCKED_ACTIONS,
-    SUGGEST_ROLE_FOR_BLOCKED,
-} from './agents/developer/developer-role-profile.js';
+import { SUGGEST_ROLE_FOR_BLOCKED } from './agents/developer/developer-role-profile.js';
+import { getBlockedActionsForRole } from './role-action-registry.js';
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -78,6 +76,12 @@ export interface EnforceRoleOptions {
      * Pass a custom implementation in tests or when an LLM classifier is available.
      */
     classifierFn?: TaskClassifierFn;
+    /**
+     * Phase 2 — extra hard-block actions from a customer `GovernancePolicy(scope=role)`
+     * overlay. Unioned on top of the code registry: customer policy can only
+     * TIGHTEN (add blocks), never loosen the built-in role blocklist.
+     */
+    blockedActionsOverride?: ReadonlySet<string>;
 }
 
 /**
@@ -97,9 +101,15 @@ export async function enforceRole(
     const taskDescription = getTaskDescription(task);
 
     // -----------------------------------------------------------------------
-    // Phase 1: Hard block — action_type is on the explicit blocklist
+    // Phase 1: Hard block — action_type is on this role's blocklist.
+    // Phase 2: applies to ALL roles via the central registry, plus any
+    // customer GovernancePolicy(scope=role) overlay (union = tighten-only).
     // -----------------------------------------------------------------------
-    if (roleKey === 'developer' && DEVELOPER_BLOCKED_ACTIONS.has(actionType)) {
+    const blockedActions = getBlockedActionsForRole(roleKey);
+    const isBlocked =
+        blockedActions.has(actionType) ||
+        (options?.blockedActionsOverride?.has(actionType) ?? false);
+    if (actionType && isBlocked) {
         return {
             allowed: false,
             declineCode: 'action_blocked',
