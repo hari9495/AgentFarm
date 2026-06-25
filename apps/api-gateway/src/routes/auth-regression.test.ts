@@ -16,6 +16,7 @@ import Fastify from 'fastify';
 import { registerAutonomousLoopRoutes } from './runtime/autonomous-loops.js';
 import { registerWebhookRoutes } from './connectors/webhooks.js';
 import { registerRetentionPolicyRoutes } from './governance/retention-policy.js';
+import { registerRolePolicyRoutes } from './governance/role-policy.js';
 import { registerSkillCompositionRoutes } from './runtime/skill-composition-execute.js';
 import { registerLeadRoutes } from './sales/leads.js';
 import { registerDashboardRoutes } from './platform/dashboard.js';
@@ -191,6 +192,31 @@ describe('AUTH — retention policies (6 routes return 401 without session)', ()
 
     it('POST /v1/retention-policies/:id/set-default → 401', async () => {
         const res = await buildApp().inject({ method: 'POST', url: '/v1/retention-policies/p1/set-default', payload: {} });
+        assert.equal(res.statusCode, 401);
+    });
+});
+
+// ── 5b. Role policies (Governance Phase 2) ────────────────────────────────────
+
+describe('AUTH — role policies (3 routes return 401 without session)', () => {
+    const buildApp = () => {
+        const app = Fastify({ logger: false });
+        registerRolePolicyRoutes(app, mockPrisma, { getSession: noSession });
+        return app;
+    };
+
+    it('POST /v1/governance/role-policies → 401', async () => {
+        const res = await buildApp().inject({ method: 'POST', url: '/v1/governance/role-policies', payload: {} });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('GET /v1/governance/role-policies → 401', async () => {
+        const res = await buildApp().inject({ method: 'GET', url: '/v1/governance/role-policies' });
+        assert.equal(res.statusCode, 401);
+    });
+
+    it('DELETE /v1/governance/role-policies/:id → 401', async () => {
+        const res = await buildApp().inject({ method: 'DELETE', url: '/v1/governance/role-policies/p1' });
         assert.equal(res.statusCode, 401);
     });
 });
