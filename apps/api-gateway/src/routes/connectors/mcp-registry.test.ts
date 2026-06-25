@@ -2,6 +2,15 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import Fastify from 'fastify';
 import { registerMcpRegistryRoutes } from './mcp-registry.js';
+import { MANAGED_MCP_CATALOG } from '../../lib/managed-mcp-catalog.js';
+
+// Helper: temporarily mark a catalog connector live (proxy provisioned) for enable-mechanics tests.
+const withLiveConnector = async <T>(id: string, fn: () => Promise<T>): Promise<T> => {
+    const c = MANAGED_MCP_CATALOG.find((x) => x.id === id)!;
+    const prev = c.live;
+    c.live = true;
+    try { return await fn(); } finally { c.live = prev; }
+};
 
 // ---------------------------------------------------------------------------
 // In-memory repo stub
@@ -356,26 +365,41 @@ describe('POST /v1/mcp/catalog/:connectorId/enable', () => {
         assert.equal(res.statusCode, 404);
     });
 
-    it('returns 400 when required fields are missing for github connector', async () => {
+    it('returns 409 coming_soon when the connector proxy is not yet live', async () => {
         const { app } = buildApp();
-        const res = await app.inject({
-            method: 'POST', url: '/v1/mcp/catalog/github/enable',
-            payload: {},
-        });
-        assert.equal(res.statusCode, 400);
-        assert.equal(res.json().error, 'missing_fields');
-        assert.ok(Array.isArray(res.json().missingFields));
-    });
-
-    it('enables a managed connector when required fields are provided', async () => {
-        const { app } = buildApp();
+        // github is not marked live by default (no proxy provisioned yet).
         const res = await app.inject({
             method: 'POST', url: '/v1/mcp/catalog/github/enable',
             payload: { token: 'ghp_fake_token_12345' },
         });
-        assert.equal(res.statusCode, 201);
-        const body = res.json();
-        assert.equal(body.connectorId, 'github');
-        assert.equal(body.isActive, true);
+        assert.equal(res.statusCode, 409);
+        assert.equal(res.json().error, 'connector_coming_soon');
+    });
+
+    it('returns 400 when required fields are missing for a live connector', async () => {
+        await withLiveConnector('github', async () => {
+            const { app } = buildApp();
+            const res = await app.inject({
+                method: 'POST', url: '/v1/mcp/catalog/github/enable',
+                payload: {},
+            });
+            assert.equal(res.statusCode, 400);
+            assert.equal(res.json().error, 'missing_fields');
+            assert.ok(Array.isArray(res.json().missingFields));
+        });
+    });
+
+    it('enables a live managed connector when required fields are provided', async () => {
+        await withLiveConnector('github', async () => {
+            const { app } = buildApp();
+            const res = await app.inject({
+                method: 'POST', url: '/v1/mcp/catalog/github/enable',
+                payload: { token: 'ghp_fake_token_12345' },
+            });
+            assert.equal(res.statusCode, 201);
+            const body = res.json();
+            assert.equal(body.connectorId, 'github');
+            assert.equal(body.isActive, true);
+        });
     });
 });
