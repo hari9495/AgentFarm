@@ -235,6 +235,7 @@
       RUNTIME_PORT: '4000'
       AF_HEALTH_PORT: '4000'
       API_GATEWAY_URL: http://api-gateway:3000
+      OPA_BASE_URL: http://opa:8181
       VOICEBOX_URL: http://voicebox:17493
       BROWSER_AGENT_URL: http://browser-agent:5002
       DESKTOP_AGENT_URL: http://desktop-agent:5003
@@ -269,6 +270,8 @@
       - agent_data:/data
     depends_on:
       api-gateway:
+        condition: service_healthy
+      opa:
         condition: service_healthy
     healthcheck:
       # /health returns 200 even while the runtime is still in state=created,
