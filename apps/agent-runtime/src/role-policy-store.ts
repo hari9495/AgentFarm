@@ -10,7 +10,7 @@
  * weakens the built-in role blocklist.
  */
 
-import type { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { getActivePolicy } from '@agentfarm/policy-engine';
 
 /**
@@ -35,4 +35,39 @@ export async function getActiveRoleBlocklist(
     } catch {
         return new Set<string>();
     }
+}
+
+// ---------------------------------------------------------------------------
+// Runtime convenience: cached Prisma client (mirrors policy-runtime.ts).
+// No DATABASE_URL → DB disabled → empty set (code registry stands).
+// ---------------------------------------------------------------------------
+
+let _prisma: PrismaClient | null | undefined;
+
+function getCachedPrisma(): PrismaClient | null {
+    if (_prisma !== undefined) return _prisma;
+    if (!process.env['DATABASE_URL']?.trim()) {
+        _prisma = null;
+        return null;
+    }
+    try {
+        _prisma = new PrismaClient();
+    } catch {
+        _prisma = null;
+    }
+    return _prisma;
+}
+
+/**
+ * Runtime entry point: loads the customer role-scope hard-block overlay for the
+ * given tenant+role using a cached Prisma client. Best-effort — returns an empty
+ * set when the database is not configured or on any error.
+ */
+export async function getActiveRoleBlocklistForTenant(
+    tenantId: string,
+    roleKey: string,
+): Promise<ReadonlySet<string>> {
+    const prisma = getCachedPrisma();
+    if (!prisma) return new Set<string>();
+    return getActiveRoleBlocklist(prisma, tenantId, roleKey);
 }

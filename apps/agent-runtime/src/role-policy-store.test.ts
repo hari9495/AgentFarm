@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { getActiveRoleBlocklist } from './role-policy-store.js';
+import { getActiveRoleBlocklist, getActiveRoleBlocklistForTenant } from './role-policy-store.js';
 
 /** Minimal fake of the Prisma surface that getActivePolicy touches. */
 function fakePrisma(findFirst: (args: unknown) => Promise<unknown>): any {
@@ -52,4 +52,15 @@ test('B1: DB error → empty set (fail-safe, never weakens)', async () => {
     });
     const set = await getActiveRoleBlocklist(prisma, 'tenant-x', 'sales_rep');
     assert.equal(set.size, 0);
+});
+
+test('B1: tenant convenience fn returns empty set when no DATABASE_URL (DB disabled)', async () => {
+    const prev = process.env['DATABASE_URL'];
+    delete process.env['DATABASE_URL'];
+    try {
+        const set = await getActiveRoleBlocklistForTenant('tenant-x', 'sales_rep');
+        assert.equal(set.size, 0);
+    } finally {
+        if (prev !== undefined) process.env['DATABASE_URL'] = prev;
+    }
 });
