@@ -51,6 +51,7 @@ import { registerDisclosureRoutes } from './routes/governance/disclosure.js';
 import { registerGovernanceKPIRoutes } from './routes/governance/governance-kpis.js';
 import { registerRetentionPolicyRoutes } from './routes/governance/retention-policy.js';
 import { registerGovernancePolicyRoutes } from './routes/governance/policy.js';
+import { registerPolicyDocumentRoutes } from './routes/governance/policy-documents.js';
 import { registerCircuitBreakerRoutes } from './routes/governance/circuit-breakers.js';
 
 // Memory
@@ -225,6 +226,7 @@ export const registerAllRoutes = async (
     registerGovernanceKPIRoutes(app, { getSession });
     await registerRetentionPolicyRoutes(app, prisma, { getSession });
     await registerGovernancePolicyRoutes(app, prisma, { getSession });
+    await registerPolicyDocumentRoutes(app, prisma, { getSession, embedFn: buildEmbedFn(), embeddingDeployment });
     await registerCircuitBreakerRoutes(app, { getSession });
 
     // Memory
