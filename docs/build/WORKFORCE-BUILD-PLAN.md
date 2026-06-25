@@ -204,6 +204,25 @@ Updated stale figures to verified reality (2026-06-25): **109 models** (was 105/
 
 ---
 
+## GO-TO-MARKET (Tiered connector strategy)
+
+The fragmented-market answer: don't build every tool, don't force one tool. Three tiers (all built):
+**Tier 1** first-class connectors (turnkey, top tools per domain, demand-driven) · **Tier 2** managed catalog of curated vendor MCP servers (near-turnkey: pick + paste token) · **Tier 3** universal escape hatch (generic REST + OpenAPI / custom MCP — any tool, always works).
+
+### GTM1 — Tier-2 self-serve "Connect a tool" in the customer dashboard ✅
+**Why:** turns "we have a catalog in code" into "customers self-serve their own tools," unblocking the non-dev agents (support/sales/etc.) for a large fraction of customers with near-zero per-connector engineering.
+**Built:**
+- Website proxies `GET /api/mcp/catalog` + `POST /api/mcp/catalog/:connectorId/enable` (portal-auth, cookie-forwarded to the gateway).
+- `ConnectToolCatalog` UI in `apps/website/app/dashboard/mcp/page.tsx` — browses the 12 managed connectors as cards (name/category/description/tool-count), "Connect" opens a modal rendering the connector's required/optional fields (token as a password input), activates via the enable endpoint, and refreshes the agent's tool list.
+- Gateway `GET /v1/mcp/catalog` + `POST .../enable` already existed and are tested (validate fields → `buildConnectorHeaders` → register `TenantMcpServer`).
+**Acceptance:**
+- [x] Customer can browse tools, paste a token, and activate — no plumbing.
+- [x] website typecheck clean; gateway catalog/enable + managed-catalog tests green (30).
+- [ ] Live preview pending a provisioned stack + portal session (same env gate as the load test).
+**Files:** `apps/website/app/api/mcp/catalog/route.ts`, `.../[connectorId]/enable/route.ts`, `apps/website/app/dashboard/mcp/page.tsx`.
+
+---
+
 ## Change Log
 | Date | Item | Result |
 |---|---|---|
@@ -222,6 +241,7 @@ Updated stale figures to verified reality (2026-06-25): **109 models** (was 105/
 | 2026-06-25 | H8 done | Verified real deploy execution (kubectl apply/terraform apply), HIGH-risk gated; 5 tests. Capability already real — verification gap closed |
 | 2026-06-25 | MEDIUM done | M2 catalog 6→12 (+gitlab/sentry/asana/postgres/google-drive/hubspot, 4 tests); M5 decision-path benchmark ~2.1–2.9M/sec + SCALABILITY-BENCHMARKS.md + CI floor guard. M1/M3/M4 verified already-covered (credential form / H3 handoff / existing shift UI) — no rebuild |
 | 2026-06-25 | LOW done | L1 per-agent inbound mail routing (recipient→persona match, 5 tests); L3 untrack .auth.sqlite + scratch files + gitignore; L4 refresh doc counts (109 models/58 migrations). L2 verified already-covered (agent-messages + handoffs panels). ALL TIERS COMPLETE. |
+| 2026-06-25 | GTM1 done | Tier-2 self-serve "Connect a tool" catalog in customer dashboard (browse → paste token → activate); website proxies + ConnectToolCatalog UI; gateway endpoints already tested (30 green); typecheck clean |
 | 2026-06-25 | C4 done | Tracker poller (Jira/Linear/GitHub) pulls assigned tickets → /run-task; per-tenant TrackerPollSource config, secret-backed creds (fail-closed), TrackerPollDispatch dedup ledger + migration; cadence-gated sweep wired into main.ts; 11 tests, 94/94 green, typecheck clean |
 | 2026-06-25 | C4.1 done | Universal `tracker='custom'` poll source (CustomPollSpec: templated list endpoint, pluggable auth incl. none, dot-path field map) → any REST tracker without per-vendor code; customConfig Json column + migration; 6 tests, 100/100 green, typecheck clean |
 | 2026-06-25 | C5 done | Shift enforcement: pure timezone-aware shift engine (shared-types/shift.ts); off-shift tasks parked as DeferredTask + released at next shift open (durable); availability API; fixed C4 run-task goal-JSON bug; DeferredTask migration; 18 tests, 105/105 green, 3 typechecks clean |

@@ -139,6 +139,9 @@ export default function CustomerMcpPage() {
                     </div>
                 </section>
 
+                {/* ── Tier 2: browse the managed tool catalog ───────────── */}
+                <ConnectToolCatalog onActivated={load} />
+
                 <div className="space-y-6">
 
                 {/* ── What is MCP — shown only when no servers yet ── */}
@@ -345,5 +348,150 @@ export default function CustomerMcpPage() {
 
             </div>
         </div>
+    );
+}
+
+// ── Tier 2: managed tool catalog (browse → paste token → activate) ──────────────
+
+type CatalogField = { name: string; label: string; type: string; placeholder?: string; helpText?: string };
+type CatalogConnector = {
+    id: string;
+    displayName: string;
+    category: string;
+    description: string;
+    logoSlug: string;
+    tools: string[];
+    supportedRoles: string[];
+    requiredFields: CatalogField[];
+    optionalFields?: CatalogField[];
+};
+
+function ConnectToolCatalog({ onActivated }: { onActivated: () => void | Promise<void> }) {
+    const [catalog, setCatalog] = useState<CatalogConnector[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [configuring, setConfiguring] = useState<CatalogConnector | null>(null);
+    const [values, setValues] = useState<Record<string, string>>({});
+    const [saving, setSaving] = useState(false);
+    const [formError, setFormError] = useState<string | null>(null);
+    const [activated, setActivated] = useState<string | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await fetch("/api/mcp/catalog");
+                const data = await res.json() as { catalog?: CatalogConnector[] };
+                if (!cancelled) setCatalog(Array.isArray(data.catalog) ? data.catalog : []);
+            } catch { /* leave empty */ }
+            finally { if (!cancelled) setLoading(false); }
+        })();
+        return () => { cancelled = true; };
+    }, []);
+
+    const openConfigure = (c: CatalogConnector) => {
+        setConfiguring(c);
+        setValues({});
+        setFormError(null);
+    };
+
+    const activate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!configuring) return;
+        const missing = configuring.requiredFields.filter(f => !values[f.name]?.trim()).map(f => f.label);
+        if (missing.length) { setFormError(`Required: ${missing.join(", ")}`); return; }
+        setSaving(true); setFormError(null);
+        try {
+            const res = await fetch(`/api/mcp/catalog/${encodeURIComponent(configuring.id)}/enable`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(values),
+            });
+            const data = await res.json() as { error?: string; message?: string };
+            if (!res.ok) { setFormError(data.message ?? data.error ?? "Failed to activate."); return; }
+            setActivated(configuring.displayName);
+            setConfiguring(null);
+            await onActivated();
+            setTimeout(() => setActivated(null), 4000);
+        } catch { setFormError("Network error. Please try again."); }
+        finally { setSaving(false); }
+    };
+
+    if (loading) return null;
+    if (catalog.length === 0) return null;
+
+    return (
+        <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-0.5">Connect a tool</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Pick a tool your team already uses and activate it with an access token — no setup required. Your agents gain its tools on their next task.
+                </p>
+            </div>
+
+            {activated && (
+                <div className="mx-6 mt-4 flex items-center gap-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 px-4 py-2.5 text-sm text-emerald-700 dark:text-emerald-300">
+                    <CheckCircle2 className="w-4 h-4" /> <strong>{activated}</strong> connected — your agents can use it now.
+                </div>
+            )}
+
+            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {catalog.map((c) => (
+                    <div key={c.id} className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 flex flex-col">
+                        <div className="flex items-start justify-between mb-2">
+                            <div>
+                                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{c.displayName}</p>
+                                <p className="text-xs text-slate-400 uppercase tracking-wider">{c.category}</p>
+                            </div>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed flex-1">{c.description}</p>
+                        <p className="text-[11px] text-slate-400 mt-2">{c.tools.length} tools</p>
+                        <button
+                            onClick={() => openConfigure(c)}
+                            className="mt-3 flex items-center justify-center gap-1.5 px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors"
+                        >
+                            <Plus className="w-3.5 h-3.5" /> Connect
+                        </button>
+                    </div>
+                ))}
+            </div>
+
+            {configuring && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setConfiguring(null)}>
+                    <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+                            <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Connect {configuring.displayName}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Enter your {configuring.displayName} credentials. Stored encrypted — never shown again.</p>
+                        </div>
+                        <form onSubmit={activate} className="p-6 space-y-4">
+                            {[...configuring.requiredFields, ...(configuring.optionalFields ?? [])].map((f) => {
+                                const required = configuring.requiredFields.some(rf => rf.name === f.name);
+                                return (
+                                    <div key={f.name}>
+                                        <label className={lbl}>{f.label}{required && <span className="text-rose-500"> *</span>}</label>
+                                        <input
+                                            type={f.type === "secret" ? "password" : "text"}
+                                            value={values[f.name] ?? ""}
+                                            onChange={e => setValues(v => ({ ...v, [f.name]: e.target.value }))}
+                                            className={inp}
+                                            placeholder={f.placeholder}
+                                        />
+                                        {f.helpText && <p className="text-[11px] text-slate-400 mt-1">{f.helpText}</p>}
+                                    </div>
+                                );
+                            })}
+                            {formError && (
+                                <div className="flex items-center gap-2 text-sm text-rose-600"><AlertCircle className="w-4 h-4" /> {formError}</div>
+                            )}
+                            <div className="flex gap-2 pt-1">
+                                <button type="button" onClick={() => setConfiguring(null)} className="px-4 py-2.5 rounded-full border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-600 dark:text-slate-300">Cancel</button>
+                                <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-bold">
+                                    {saving ? "Connecting…" : `Connect ${configuring.displayName}`}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </section>
     );
 }
