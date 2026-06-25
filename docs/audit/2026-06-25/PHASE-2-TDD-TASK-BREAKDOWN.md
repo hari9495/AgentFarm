@@ -15,21 +15,18 @@
 
 ---
 
-## Task group A — Role-action registry
+## Task group A — Role-action registry (aggregate existing curated blocklists)
 
-**A1. Ownership map** — `role-action-registry.test.ts`
-- Test: `ACTION_OWNERS` maps a known recruiter action (e.g. `create_job_posting`) to `{recruiter}`; a co-owned/generic action is owned by ≥1 role or none accordingly.
-- Code: build `Map<string, Set<RoleKey>>` from `ROLE_PROFILES[*].allowedActions`.
+**A1. `BLOCKED_ACTIONS_BY_ROLE` map** — `role-action-registry.test.ts`
+- Test: every `RoleKey` has an entry (no missing key); unknown role → empty set.
+- Test: a previously-unwired role (e.g. `recruiter`) returns its curated `RECRUITER_ROLE_BLOCKED_ACTIONS` contents.
+- Code: aggregate `*_ROLE_BLOCKED_ACTIONS` arrays (∪ `*_BLOCKED_ACTIONS` sets where both exist) into `Record<RoleKey, ReadonlySet<string>>`.
 
-**A2. `getBlockedActionsForRole`**
-- Test: for `recruiter`, a developer-owned action is blocked; recruiter's own action is not; a generic unowned action (`workspace_subagent_spawn`) is not blocked.
-- Test: `getBlockedActionsForRole('developer')` is a **superset** of legacy `DEVELOPER_BLOCKED_ACTIONS`.
-- Test: no role blocks any action in its own `allowedActions` (loop all 14 — no self-block).
-- Code: owner-set excludes role ⇒ blocked; union legacy developer set.
-
-**A3. `getSuggestedRoleForAction`**
-- Test: a recruiter-owned action suggests `recruiter`; an unowned action → null.
-- Code: first owner from `ACTION_OWNERS`.
+**A2. `getBlockedActionsForRole` + back-compat supersets**
+- Test: `getBlockedActionsForRole('developer')` ⊇ legacy `DEVELOPER_BLOCKED_ACTIONS`.
+- Test: `tester` / `technical_writer` / `content_writer` aggregated sets ⊇ their `*_ROLE_BLOCKED_ACTIONS` (the if-ladder data being consolidated).
+- Test: no role's blocked set contains one of that role's own curated allowed actions (sanity).
+- Code: lookup into the map; empty set fallback.
 
 ---
 
@@ -46,7 +43,7 @@
 ## Task group C — Enforcer integration
 
 **C1. Remove developer gate** — extend `role-enforcer.test.ts`
-- Test (regression of the gate): a `recruiter` task whose `action_type` is a developer-owned action is hard-blocked with `declineCode: 'action_blocked'`.
+- Test (regression of the gate): a `recruiter` task whose `action_type` is a curated recruiter-blocked action is hard-blocked with `declineCode: 'action_blocked'`.
 - Test: existing developer hard-block cases still decline identically.
 - Code: replace `roleKey === 'developer' && DEVELOPER_BLOCKED_ACTIONS.has(...)` with `getBlockedActionsForRole(roleKey).has(...)`.
 
@@ -55,20 +52,20 @@
 - Test: an override that omits a code-registry block does NOT un-block it (union semantics).
 - Code: `EnforceRoleOptions.blockedActionsOverride`; effective = registry ∪ override.
 
-**C3. Suggested-role fallback**
-- Test: a blocked foreign action populates `suggestedRole` via registry when no keyword match exists.
-- Code: `resolveSuggestedRole` → registry then keyword map.
-
 ---
 
-## Task group D — Runtime wiring + acceptance
+## Task group D — Runtime wiring + consolidation + acceptance
 
 **D1. Wire overlay load in `processOneTask`**
 - Test: integration in `runtime-server.test.ts` — task for a tenant with a `scope=role` overlay adding a block is declined; without overlay it proceeds past hard-block.
 - Code: best-effort `getActiveRolePolicy(prisma, config.tenantId, config.roleKey)` → pass as `blockedActionsOverride`; DB error → no override.
 
-**D2. No-regression gate**
-- Test: full `role-enforcer` + `auth-regression` suites pass unchanged; `pnpm --filter @agentfarm/agent-runtime test` green.
+**D2. Consolidate the if-ladder**
+- Test: a `tester` blocked action still declines after removing `isTesterBlockedAction` (now via `enforceRole`); same for `technical_writer`, `content_writer`.
+- Code: remove the three `is<Role>BlockedAction` helpers + call sites (`3226/3242/3258/3928`) + their imports; rely on `enforceRole`.
+
+**D3. No-regression gate**
+- Test: full `role-enforcer` + `runtime-server` + `auth-regression` suites pass unchanged; `pnpm --filter @agentfarm/agent-runtime test` green.
 
 ---
 
