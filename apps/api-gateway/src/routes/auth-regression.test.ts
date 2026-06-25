@@ -16,7 +16,7 @@ import Fastify from 'fastify';
 import { registerAutonomousLoopRoutes } from './runtime/autonomous-loops.js';
 import { registerWebhookRoutes } from './connectors/webhooks.js';
 import { registerRetentionPolicyRoutes } from './governance/retention-policy.js';
-import { registerRolePolicyRoutes } from './governance/role-policy.js';
+import { registerGovernancePolicyRoutes } from './governance/policy.js';
 import { registerSkillCompositionRoutes } from './runtime/skill-composition-execute.js';
 import { registerLeadRoutes } from './sales/leads.js';
 import { registerDashboardRoutes } from './platform/dashboard.js';
@@ -196,27 +196,27 @@ describe('AUTH — retention policies (6 routes return 401 without session)', ()
     });
 });
 
-// ── 5b. Role policies (Governance Phase 2) ────────────────────────────────────
+// ── 5b. Governance policies (Phases 2 + 3) ────────────────────────────────────
 
-describe('AUTH — role policies (3 routes return 401 without session)', () => {
+describe('AUTH — governance policies (3 routes return 401 without session)', () => {
     const buildApp = () => {
         const app = Fastify({ logger: false });
-        registerRolePolicyRoutes(app, mockPrisma, { getSession: noSession });
+        registerGovernancePolicyRoutes(app, mockPrisma, { getSession: noSession });
         return app;
     };
 
-    it('POST /v1/governance/role-policies → 401', async () => {
-        const res = await buildApp().inject({ method: 'POST', url: '/v1/governance/role-policies', payload: {} });
+    it('POST /v1/governance/policies → 401', async () => {
+        const res = await buildApp().inject({ method: 'POST', url: '/v1/governance/policies', payload: {} });
         assert.equal(res.statusCode, 401);
     });
 
-    it('GET /v1/governance/role-policies → 401', async () => {
-        const res = await buildApp().inject({ method: 'GET', url: '/v1/governance/role-policies' });
+    it('GET /v1/governance/policies → 401', async () => {
+        const res = await buildApp().inject({ method: 'GET', url: '/v1/governance/policies' });
         assert.equal(res.statusCode, 401);
     });
 
-    it('DELETE /v1/governance/role-policies/:id → 401', async () => {
-        const res = await buildApp().inject({ method: 'DELETE', url: '/v1/governance/role-policies/p1' });
+    it('DELETE /v1/governance/policies/:id → 401', async () => {
+        const res = await buildApp().inject({ method: 'DELETE', url: '/v1/governance/policies/p1' });
         assert.equal(res.statusCode, 401);
     });
 });
