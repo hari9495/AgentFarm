@@ -21,7 +21,7 @@ export type ActionResultRecord = {
     status: ActionResultStatus;
     attempts: number;
     retries: number;
-    failureClass?: 'transient_error' | 'runtime_exception' | 'role_enforcement' | 'kill_switch_blocked';
+    failureClass?: 'transient_error' | 'runtime_exception' | 'role_enforcement' | 'kill_switch_blocked' | 'policy_violation';
     errorMessage?: string;
     claimToken?: string;
     leaseId?: string;
