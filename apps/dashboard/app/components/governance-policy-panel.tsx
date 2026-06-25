@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ShieldBan, Plus, X, Loader2, AlertCircle, Save, Trash2, Plug } from 'lucide-react';
+import { ShieldBan, Plus, X, Loader2, AlertCircle, Save, Trash2, Plug, Clock, Globe } from 'lucide-react';
 
 const ROLES: { key: string; label: string }[] = [
     { key: 'developer', label: 'Developer' },
@@ -20,8 +20,12 @@ const ROLES: { key: string; label: string }[] = [
     { key: 'customer_support_executive', label: 'Customer Support Executive' },
 ];
 
-type Rule = { actionType: string; effect: string; connector?: string; tool?: string; mode?: string };
+type TimeWindow = { days?: number[]; start: string; end: string; tz?: string };
+type Rule = { actionType: string; effect: string; connector?: string; tool?: string; mode?: string; env?: string; domain?: string; timeWindow?: TimeWindow };
 type ConnectorAccess = { connector: string; readOnly: boolean; deniedVerbs: string[] };
+type EnvRule = { actionType: string; env: string };
+type TimeRule = { actionType: string; start: string; end: string; tz: string; days: number[] };
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const input: React.CSSProperties = { padding: '8px 11px', borderRadius: 9, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: 13, outline: 'none' };
 const label: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' };
@@ -62,6 +66,10 @@ export default function GovernancePolicyPanel() {
     const [connectors, setConnectors] = useState<ConnectorAccess[]>([]);
     const [deniedTools, setDeniedTools] = useState<string[]>([]);
     const [newConnector, setNewConnector] = useState('');
+    const [envRules, setEnvRules] = useState<EnvRule[]>([]);
+    const [timeRules, setTimeRules] = useState<TimeRule[]>([]);
+    const [webhookMode, setWebhookMode] = useState<'deny' | 'allow'>('deny');
+    const [webhookDomains, setWebhookDomains] = useState<string[]>([]);
 
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -72,8 +80,23 @@ export default function GovernancePolicyPanel() {
         const ba: string[] = [];
         const tools: string[] = [];
         const byConnector = new Map<string, ConnectorAccess>();
+        const envs: EnvRule[] = [];
+        const times: TimeRule[] = [];
+        const whDomains: string[] = [];
+        let whMode: 'deny' | 'allow' = 'deny';
         for (const r of rules) {
+            // webhook domain rules (allow or deny)
+            if (r.connector === 'webhook' && r.domain) {
+                whDomains.push(r.domain);
+                if (r.effect === 'allow') whMode = 'allow';
+                continue;
+            }
             if (r.effect !== 'deny') continue;
+            if (r.timeWindow) {
+                times.push({ actionType: r.actionType || '*', start: r.timeWindow.start, end: r.timeWindow.end, tz: r.timeWindow.tz || 'UTC', days: r.timeWindow.days || [] });
+                continue;
+            }
+            if (r.env) { envs.push({ actionType: r.actionType || '*', env: r.env }); continue; }
             if (r.tool) { tools.push(r.tool); continue; }
             if (r.connector) {
                 let c = byConnector.get(r.connector);
@@ -87,6 +110,10 @@ export default function GovernancePolicyPanel() {
         setBlockedActions(ba);
         setConnectors([...byConnector.values()]);
         setDeniedTools(tools);
+        setEnvRules(envs);
+        setTimeRules(times);
+        setWebhookDomains(whDomains);
+        setWebhookMode(whMode);
     };
 
     const load = useCallback(async () => {
@@ -101,6 +128,7 @@ export default function GovernancePolicyPanel() {
                 parsePolicy(Array.isArray(data.policy.rulesJson) ? data.policy.rulesJson : []);
             } else {
                 setPolicyId(null); setBlockedActions([]); setConnectors([]); setDeniedTools([]);
+                setEnvRules([]); setTimeRules([]); setWebhookDomains([]); setWebhookMode('deny');
             }
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Failed to load');
@@ -110,14 +138,21 @@ export default function GovernancePolicyPanel() {
     useEffect(() => { void load(); }, [load]);
 
     const publish = async () => {
-        if (blockedActions.length === 0 && connectors.length === 0 && deniedTools.length === 0) {
+        if (blockedActions.length === 0 && connectors.length === 0 && deniedTools.length === 0
+            && envRules.length === 0 && timeRules.length === 0 && webhookDomains.length === 0) {
             setError('Add at least one rule before publishing.'); return;
         }
         setSaving(true); setError(null); setSavedMsg(null);
         try {
             const res = await fetch('/api/governance/policies', {
                 method: 'POST', headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ scope, roleKey: scope === 'role' ? roleKey : undefined, blockedActions, connectors, deniedTools }),
+                body: JSON.stringify({
+                    scope, roleKey: scope === 'role' ? roleKey : undefined,
+                    blockedActions, connectors, deniedTools,
+                    envRules,
+                    timeRules: timeRules.map((t) => ({ actionType: t.actionType, start: t.start, end: t.end, tz: t.tz, days: t.days })),
+                    webhookDomains: { mode: webhookMode, domains: webhookDomains },
+                }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data?.error || 'Failed to publish');
@@ -222,6 +257,85 @@ export default function GovernancePolicyPanel() {
                 <AddRow placeholder="e.g. jira.delete" onAdd={(v) => setDeniedTools((a) => a.includes(v) ? a : [...a, v])} />
                 <Chips items={deniedTools} onRemove={(v) => setDeniedTools((a) => a.filter((x) => x !== v))} color="#b42318" />
             </div>
+
+            {/* Environment restrictions */}
+            <div style={card}>
+                <div style={{ ...label, marginBottom: 10 }}>Environment restrictions</div>
+                <div style={{ fontSize: 11.5, color: 'var(--ink-muted)', marginBottom: 8 }}>Deny an action in a given environment (matches the task&apos;s <code style={mono}>environment</code>). Leave action as <code style={mono}>*</code> for all.</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <input id="env-action" placeholder="action (or *)" style={{ ...input, flex: 1, ...mono }} />
+                    <input id="env-env" placeholder="environment, e.g. production" style={{ ...input, flex: 1, ...mono }} />
+                    <button type="button" onClick={() => {
+                        const a = (document.getElementById('env-action') as HTMLInputElement); const e = (document.getElementById('env-env') as HTMLInputElement);
+                        const env = e.value.trim(); if (!env) return;
+                        setEnvRules((cur) => [...cur, { actionType: a.value.trim() || '*', env }]); a.value = ''; e.value = '';
+                    }} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 12px', borderRadius: 9, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}><Plus size={13} /> Add</button>
+                </div>
+                {envRules.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                        {envRules.map((r, i) => (
+                            <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 7px 3px 9px', borderRadius: 9999, background: 'color-mix(in srgb, #b42318 8%, transparent)', border: '1px solid color-mix(in srgb, #b42318 22%, transparent)', fontSize: 12, color: '#b42318', ...mono }}>
+                                {r.actionType} @ {r.env}
+                                <button type="button" onClick={() => setEnvRules((cur) => cur.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b42318', padding: 0, display: 'flex' }}><X size={11} /></button>
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Time-window restrictions */}
+            <div style={card}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}><Clock size={13} color="var(--ink-muted)" /><span style={label}>Working-hours restrictions</span></div>
+                <div style={{ fontSize: 11.5, color: 'var(--ink-muted)', marginBottom: 8 }}>Allow the action only within the window; deny outside it.</div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <input id="t-action" placeholder="action (or *)" style={{ ...input, width: 130, ...mono }} />
+                    <input id="t-start" placeholder="09:00" style={{ ...input, width: 80, ...mono }} />
+                    <span style={{ color: 'var(--ink-muted)' }}>–</span>
+                    <input id="t-end" placeholder="17:00" style={{ ...input, width: 80, ...mono }} />
+                    <input id="t-tz" placeholder="tz (UTC)" style={{ ...input, width: 150, ...mono }} />
+                    <button type="button" onClick={() => {
+                        const a = document.getElementById('t-action') as HTMLInputElement; const s = document.getElementById('t-start') as HTMLInputElement; const e = document.getElementById('t-end') as HTMLInputElement; const tz = document.getElementById('t-tz') as HTMLInputElement;
+                        if (!/^\d{1,2}:\d{2}$/.test(s.value.trim()) || !/^\d{1,2}:\d{2}$/.test(e.value.trim())) { setError('Time must be HH:MM'); return; }
+                        setTimeRules((cur) => [...cur, { actionType: a.value.trim() || '*', start: s.value.trim(), end: e.value.trim(), tz: tz.value.trim() || 'UTC', days: [] }]);
+                        a.value = ''; s.value = ''; e.value = ''; tz.value = '';
+                    }} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 12px', borderRadius: 9, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}><Plus size={13} /> Add</button>
+                </div>
+                {timeRules.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+                        {timeRules.map((r, i) => (
+                            <div key={i} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: 12.5, color: 'var(--ink)', ...mono }}>{r.actionType} · {r.start}–{r.end} {r.tz}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <div style={{ display: 'flex', gap: 4 }}>
+                                        {DOW.map((d, di) => {
+                                            const on = r.days.length === 0 || r.days.includes(di);
+                                            return <button key={di} type="button" onClick={() => setTimeRules((cur) => cur.map((x, j) => j === i ? { ...x, days: x.days.includes(di) ? x.days.filter((y) => y !== di) : [...x.days, di].sort() } : x))} style={{ fontSize: 10.5, padding: '2px 5px', borderRadius: 6, border: '1px solid var(--line)', background: on ? 'color-mix(in srgb, var(--accent) 12%, transparent)' : 'var(--card)', color: on ? 'var(--accent)' : 'var(--ink-muted)', cursor: 'pointer' }}>{d}</button>;
+                                        })}
+                                    </div>
+                                    <button type="button" onClick={() => setTimeRules((cur) => cur.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b42318', display: 'flex' }}><X size={13} /></button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Webhook domains (tenant scope) */}
+            {scope === 'tenant' && (
+                <div style={card}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}><Globe size={13} color="var(--ink-muted)" /><span style={label}>Outbound webhook domains</span></div>
+                    <div style={{ fontSize: 11.5, color: 'var(--ink-muted)', marginBottom: 8 }}>Layered on the always-on SSRF guard. Allow-list = only listed domains permitted; deny-list = listed domains blocked.</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                        <span style={label}>Mode</span>
+                        <select value={webhookMode} onChange={(e) => setWebhookMode(e.target.value as 'deny' | 'allow')} style={{ ...input, width: 160 }}>
+                            <option value="deny">Deny-list</option>
+                            <option value="allow">Allow-list</option>
+                        </select>
+                    </div>
+                    <AddRow placeholder="domain, e.g. hooks.example.com" onAdd={(v) => setWebhookDomains((a) => a.includes(v) ? a : [...a, v])} />
+                    <Chips items={webhookDomains} onRemove={(v) => setWebhookDomains((a) => a.filter((x) => x !== v))} color="#b42318" />
+                </div>
+            )}
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>

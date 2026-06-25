@@ -92,6 +92,24 @@ describe('POST /v1/governance/policies — combined rule document', () => {
         assert.ok(rules.some((r) => r.tool === 'jira.delete'));
     });
 
+    it('publishes env, time, and webhook-domain rules into the document (Phase 4)', async () => {
+        const { app } = buildApp();
+        const res = await app.inject({
+            method: 'POST', url: '/v1/governance/policies',
+            payload: {
+                scope: 'tenant',
+                envRules: [{ env: 'production', actionType: 'deploy_production' }],
+                timeRules: [{ start: '09:00', end: '17:00', tz: 'UTC', days: [1, 2, 3, 4, 5] }],
+                webhookDomains: { mode: 'deny', domains: ['evil.com'] },
+            },
+        });
+        assert.equal(res.statusCode, 201);
+        const rules = res.json().policy.rulesJson as Array<Record<string, unknown>>;
+        assert.ok(rules.some((r) => r.env === 'production' && r.actionType === 'deploy_production'));
+        assert.ok(rules.some((r) => r.timeWindow && (r.timeWindow as any).start === '09:00'));
+        assert.ok(rules.some((r) => r.connector === 'webhook' && r.domain === 'evil.com' && r.effect === 'deny'));
+    });
+
     it('tenant scope uses empty scopeRef', async () => {
         const { app } = buildApp();
         const res = await app.inject({
