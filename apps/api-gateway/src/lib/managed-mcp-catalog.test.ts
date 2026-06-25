@@ -30,6 +30,16 @@ test('newly added connectors are present and discoverable', () => {
     }
 });
 
+test('catalog covers the non-dev agent domains (support, CRM, recruiting, marketing, payments, docs)', () => {
+    for (const id of ['zendesk', 'intercom', 'freshdesk', 'pipedrive', 'greenhouse', 'mailchimp', 'google-analytics', 'stripe', 'confluence', 'airtable']) {
+        assert.ok(findConnectorById(id), `connector ${id} should be in the catalog`);
+    }
+    const categories = new Set(MANAGED_MCP_CATALOG.map((c) => c.category));
+    for (const cat of ['Support', 'CRM', 'Recruiting', 'Marketing', 'Payments']) {
+        assert.ok(categories.has(cat), `catalog should cover the "${cat}" domain`);
+    }
+});
+
 test('buildConnectorHeaders maps the token field to a Bearer Authorization header', () => {
     const gitlab = findConnectorById('gitlab')!;
     const headers = buildConnectorHeaders(gitlab, { token: 'glpat-abc', base_url: 'https://gitlab.example.com' });
