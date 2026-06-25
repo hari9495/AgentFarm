@@ -9,6 +9,7 @@ import {
     getEventDefinition,
     CATALOG,
 } from '../../lib/event-catalog.js';
+import { getWebhookDomainPolicy, isWebhookDomainDenied } from './webhook-domain-policy.js';
 
 // SSRF guard: reject private IPs, loopback, and cloud metadata service addresses
 const PRIVATE_HOST_RE =
@@ -69,6 +70,19 @@ export const registerOutboundWebhookRoutes = async (
 
         if (isSsrfTarget(url)) {
             return reply.code(400).send({ error: 'url must not target a private or reserved address' });
+        }
+
+        // Phase 4 — per-tenant webhook domain governance (layered ON TOP of the SSRF
+        // floor above, which always runs first and is never loosened by this policy).
+        {
+            const db = await resolvePrisma();
+            const domainPolicy = await getWebhookDomainPolicy(db, session.tenantId).catch(() => null);
+            if (domainPolicy && isWebhookDomainDenied(domainPolicy, url)) {
+                return reply.code(403).send({
+                    error: 'webhook_domain_blocked',
+                    message: 'The target domain is blocked by your governance policy.',
+                });
+            }
         }
 
         if (!Array.isArray(events) || events.length === 0) {
