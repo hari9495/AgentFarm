@@ -950,8 +950,11 @@ model PolicyDocument {
   storageKey         String // object-storage key / path
   sha256             String // content hash for dedup + integrity
   status             PolicyDocumentStatus @default(uploaded)
-  extractedRulesJson Json?
+  extractedText      String? // converted markdown (inline storage; single-host)
+  extractedRulesJson Json? // ExtractedRuleCandidate[] awaiting human review
   failureReason      String?
+  appliedPolicyId    String? // GovernancePolicy this doc's rules were published into
+  appliedAt          DateTime?
   createdBy          String
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
