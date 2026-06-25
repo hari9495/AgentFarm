@@ -37,8 +37,9 @@ test('A5: unknown/invalid tz falls back to UTC (no throw)', () => {
 
 test('A6: isTimeDenied — deny when OUTSIDE the allowed window; no window → not denied', () => {
     const now = new Date('2026-06-26T20:00:00Z'); // outside 09-17
-    assert.equal(isTimeDenied({ actionType: '*', effect: 'deny', timeWindow: { start: '09:00', end: '17:00', tz: 'UTC' } }, now), true);
+    const workHours = { timeWindow: { start: '09:00', end: '17:00', tz: 'UTC' } };
+    assert.equal(isTimeDenied(workHours, now), true);
     const inHours = new Date('2026-06-26T13:00:00Z');
-    assert.equal(isTimeDenied({ actionType: '*', effect: 'deny', timeWindow: { start: '09:00', end: '17:00', tz: 'UTC' } }, inHours), false);
-    assert.equal(isTimeDenied({ actionType: '*', effect: 'deny' }, now), false);
+    assert.equal(isTimeDenied(workHours, inHours), false);
+    assert.equal(isTimeDenied({}, now), false);
 });

@@ -111,6 +111,11 @@ import {
     isConnectorActionDenied,
 } from './connector-policy-store.js';
 import {
+    getActiveGovernanceRulesForTenant,
+    isEnvDenied,
+    isActionTimeDenied,
+} from './action-governance.js';
+import {
     createEmbedFn,
     writeEpisodicMemory,
     searchEpisodicMemory,
@@ -3954,6 +3959,49 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 errorMessage: `Role ${config.roleKey} blocked action '${result.decision.actionType}'.`,
             });
             return;
+        }
+
+        // Phase 4 — environment + time-window governance (customer policy, tenant+role
+        // scope). Deny the decided action when an env rule matches the task environment
+        // or a working-hours rule is violated. Tighten-only, fail-safe (no rules → proceed).
+        // Only evaluated on the execute path: approval-routed actions get human review,
+        // and skipping the DB load there keeps the approval hot path latency-free.
+        if (result.decision.route === 'execute') {
+            const envTimeRules = await getActiveGovernanceRulesForTenant(config.tenantId, config.roleKey).catch(() => []);
+            if (envTimeRules.length > 0) {
+                const envName = typeof executionTask.payload['environment'] === 'string'
+                    ? (executionTask.payload['environment'] as string).trim()
+                    : '';
+                const connectorName = typeof executionTask.payload['_connector_type'] === 'string'
+                    ? (executionTask.payload['_connector_type'] as string)
+                    : undefined;
+                const envHit = isEnvDenied(envTimeRules, { actionType: result.decision.actionType, connector: connectorName, env: envName });
+                const timeHit = isActionTimeDenied(envTimeRules, { actionType: result.decision.actionType, connector: connectorName, now: new Date() });
+                const hit = envHit ?? timeHit;
+                if (hit) {
+                    workerLoop.failedTasks += 1;
+                    const kind = envHit ? 'environment' : 'time_window';
+                    advancedFeatures.appendTraceStep(task.taskId, 'action_env_time_blocked', {
+                        actionType: result.decision.actionType,
+                        kind,
+                        env: envName || null,
+                        reason: hit.reason ?? null,
+                    });
+                    emitRuntimeEvent('runtime.action_env_time_blocked', config, {
+                        task_id: task.taskId,
+                        action_type: result.decision.actionType,
+                        kind,
+                        env: envName || null,
+                    });
+                    await persistActionResultRecord(executionTask, config, {
+                        ...result,
+                        status: 'failed',
+                        failureClass: 'policy_violation',
+                        errorMessage: `Action '${result.decision.actionType}' blocked by customer ${kind} policy${envName ? ` (env=${envName})` : ''}.`,
+                    });
+                    return;
+                }
+            }
         }
 
         // Gap 5: Tester role may only edit test files. Block source-file edits
