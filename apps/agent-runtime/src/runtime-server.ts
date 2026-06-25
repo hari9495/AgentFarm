@@ -68,7 +68,6 @@ import { postTaskCloseOut } from './post-task-closeout.js';
 import {
     TESTER_ROLE_ALLOWED_CONNECTORS,
     TESTER_ROLE_ALLOWED_LOCAL_ACTIONS,
-    TESTER_ROLE_BLOCKED_ACTIONS,
     isTesterRoleProfile,
 } from './agents/tester/tester-agent-profile.js';
 import { evaluateTesterEditGuard } from './agents/tester/tester-edit-guard.js';
@@ -105,6 +104,8 @@ import { analyzeImage, type VisionLLMCallerFn, type VisionProvider } from './vis
 import { FanOutProgressSink, NoopProgressSink, type ProgressMilestone, type ProgressSink } from './task-progress-reporter.js';
 import { createPrismaMemoryStore, searchMemory } from './prisma-memory-store.js';
 import { getPolicyEvaluateFn, initGovernancePolicyBundle } from './policy-runtime.js';
+import { getBlockedActionsForRole } from './role-action-registry.js';
+import { getActiveRoleBlocklistForTenant } from './role-policy-store.js';
 import {
     createEmbedFn,
     writeEpisodicMemory,
@@ -149,7 +150,6 @@ import { getCorporateAssistantMcpClients } from './agents/corporate-assistant/co
 import {
     TECHNICAL_WRITER_ROLE_ALLOWED_CONNECTORS,
     TECHNICAL_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS,
-    TECHNICAL_WRITER_ROLE_BLOCKED_ACTIONS,
     isTechnicalWriterRoleProfile,
 } from './agents/technical-writer/technical-writer-agent-profile.js';
 import { getTechnicalWriterDefaultPersona } from './agents/technical-writer/technical-writer-persona-defaults.js';
@@ -158,7 +158,6 @@ import { getTechnicalWriterMcpClients } from './agents/technical-writer/technica
 import {
     CONTENT_WRITER_ROLE_ALLOWED_CONNECTORS,
     CONTENT_WRITER_ROLE_ALLOWED_LOCAL_ACTIONS,
-    CONTENT_WRITER_ROLE_BLOCKED_ACTIONS,
     isContentWriterRoleProfile,
 } from './agents/content-writer/content-writer-agent-profile.js';
 import { getContentWriterDefaultPersona } from './agents/content-writer/content-writer-persona-defaults.js';
@@ -1004,29 +1003,13 @@ const getAllowedActionsForRole = (roleKey: RoleKey): string[] => {
     return Array.from(new Set([...connectorActions, ...localActions, 'mcp_tool_call', 'mcp_tool_sequence']));
 };
 
-const isTesterBlockedAction = (roleKey: RoleKey, actionType: string): boolean => {
-    if (roleKey !== 'tester') {
-        return false;
-    }
-    return TESTER_ROLE_BLOCKED_ACTIONS.includes(actionType as (typeof TESTER_ROLE_BLOCKED_ACTIONS)[number]);
-};
-
-const isTechnicalWriterBlockedAction = (roleKey: RoleKey, actionType: string): boolean => {
-    if (roleKey !== 'technical_writer') {
-        return false;
-    }
-    return TECHNICAL_WRITER_ROLE_BLOCKED_ACTIONS.includes(
-        actionType as (typeof TECHNICAL_WRITER_ROLE_BLOCKED_ACTIONS)[number],
-    );
-};
-
-const isContentWriterBlockedAction = (roleKey: RoleKey, actionType: string): boolean => {
-    if (roleKey !== 'content_writer') {
-        return false;
-    }
-    return CONTENT_WRITER_ROLE_BLOCKED_ACTIONS.includes(
-        actionType as (typeof CONTENT_WRITER_ROLE_BLOCKED_ACTIONS)[number],
-    );
+// Phase 2 — post-classification defense-in-depth: a single registry-backed
+// check covering ALL roles, replacing the former per-role helpers (tester /
+// technical_writer / content_writer). The intake gate (`enforceRole`) is the
+// primary block; this guards the case where the LLM classifier resolves a
+// benign-looking payload into an action that the role may not perform.
+const isActionBlockedForRole = (roleKey: RoleKey, actionType: string): boolean => {
+    return !!actionType && getBlockedActionsForRole(roleKey).has(actionType);
 };
 
 const defaultSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
@@ -3223,12 +3206,12 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         task = enrichTaskWithRuntimeContext(task, config);
         const progressSink = buildProgressSinkForTask(task, config);
         const decision = buildDecision(task);
-        if (isTesterBlockedAction(config.roleKey, decision.actionType)) {
+        if (isActionBlockedForRole(config.roleKey, decision.actionType)) {
             return {
                 decision: {
                     ...decision,
                     route: 'execute',
-                    reason: `Action '${decision.actionType}' is explicitly blocked for tester role.`,
+                    reason: `Action '${decision.actionType}' is explicitly blocked for the ${config.roleKey} role.`,
                 },
                 status: 'failed',
                 attempts: 0,
@@ -3236,39 +3219,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 executionPayload: task.payload,
                 payloadOverrideSource,
                 failureClass: 'runtime_exception',
-                errorMessage: `Tester role blocked action '${decision.actionType}'.`,
-            };
-        }
-        if (isTechnicalWriterBlockedAction(config.roleKey, decision.actionType)) {
-            return {
-                decision: {
-                    ...decision,
-                    route: 'execute',
-                    reason: `Action '${decision.actionType}' is explicitly blocked for technical_writer role.`,
-                },
-                status: 'failed',
-                attempts: 0,
-                transientRetries: 0,
-                executionPayload: task.payload,
-                payloadOverrideSource,
-                failureClass: 'runtime_exception',
-                errorMessage: `Technical writer role blocked action '${decision.actionType}'.`,
-            };
-        }
-        if (isContentWriterBlockedAction(config.roleKey, decision.actionType)) {
-            return {
-                decision: {
-                    ...decision,
-                    route: 'execute',
-                    reason: `Action '${decision.actionType}' is explicitly blocked for content_writer role.`,
-                },
-                status: 'failed',
-                attempts: 0,
-                transientRetries: 0,
-                executionPayload: task.payload,
-                payloadOverrideSource,
-                failureClass: 'runtime_exception',
-                errorMessage: `Content writer role blocked action '${decision.actionType}'.`,
+                errorMessage: `Role ${config.roleKey} blocked action '${decision.actionType}'.`,
             };
         }
         // Gap 5: Tester role may only edit test files. Reject source-file edits
@@ -3402,7 +3353,21 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         // ---- Role enforcement: hard block + semantic soft-block ----
         // First gate in task processing. Declined tasks never reach the LLM,
         // persona load, or plan generation — keeping role boundaries hard.
-        const roleEnforcement = await enforceRole(task, config.roleKey as RoleKey).catch(() => ({ allowed: true as const }));
+        // Phase 2 — load the customer GovernancePolicy(scope=role) overlay (if any)
+        // so it can TIGHTEN the code-registry blocklist. Best-effort: DB absent or
+        // error → empty set → code registry stands. Skip the DB round-trip entirely
+        // for tasks with no action_type — there is nothing for the overlay to match,
+        // keeping the hot path (and trivial/noop tasks) free of governance latency.
+        const hasActionType = typeof task.payload['action_type'] === 'string'
+            && task.payload['action_type'].trim().length > 0;
+        const roleBlockOverride = hasActionType
+            ? await getActiveRoleBlocklistForTenant(config.tenantId, config.roleKey).catch(
+                  () => new Set<string>(),
+              )
+            : new Set<string>();
+        const roleEnforcement = await enforceRole(task, config.roleKey as RoleKey, {
+            blockedActionsOverride: roleBlockOverride,
+        }).catch(() => ({ allowed: true as const }));
         if (!roleEnforcement.allowed) {
             workerLoop.processedTasks += 1;
             workerLoop.failedTasks += 1;
@@ -3925,16 +3890,17 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             classificationSource: result.llmExecution?.classificationSource ?? 'heuristic',
         });
 
-        if (isTesterBlockedAction(config.roleKey, result.decision.actionType)) {
+        if (isActionBlockedForRole(config.roleKey, result.decision.actionType)) {
             workerLoop.failedTasks += 1;
-            advancedFeatures.appendTraceStep(task.taskId, 'tester_role_action_blocked', {
+            advancedFeatures.appendTraceStep(task.taskId, 'role_action_blocked', {
+                roleKey: config.roleKey,
                 actionType: result.decision.actionType,
             });
             await persistActionResultRecord(executionTask, config, {
                 ...result,
                 status: 'failed',
                 failureClass: 'runtime_exception',
-                errorMessage: `Tester role blocked action '${result.decision.actionType}'.`,
+                errorMessage: `Role ${config.roleKey} blocked action '${result.decision.actionType}'.`,
             });
             return;
         }

@@ -145,3 +145,57 @@ describe('enforceRole — out-of-role tasks are blocked', () => {
         }
     });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 2 — hard-block now applies to ALL roles (not just developer)
+// ---------------------------------------------------------------------------
+
+describe('enforceRole — Phase 2: all-role hard block', () => {
+    it('blocks a recruiter from a curated engineering action (code_edit)', async () => {
+        const task = makeTask('code_edit', 'Patch the auth service to fix a bug');
+        const result = await enforceRole(task, 'recruiter', { classifierFn: allowClassifier });
+        assert.equal(result.allowed, false);
+        if (!result.allowed) {
+            assert.equal(result.declineCode, 'action_blocked');
+        }
+    });
+
+    it('allows a recruiter to perform a non-blocked action', async () => {
+        const task = makeTask('create_job_posting', 'Draft a JD for a backend engineer');
+        const result = await enforceRole(task, 'recruiter', { classifierFn: allowClassifier });
+        assert.equal(result.allowed, true);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 2 — customer overlay can only TIGHTEN (union), never loosen
+// ---------------------------------------------------------------------------
+
+describe('enforceRole — Phase 2: blockedActionsOverride (tighten-only)', () => {
+    it('blocks an otherwise-allowed action when the overlay adds it', async () => {
+        const task = makeTask('cw_custom_noop', 'A neutral content-writer action');
+        const allowed = await enforceRole(task, 'content_writer', { classifierFn: allowClassifier });
+        assert.equal(allowed.allowed, true);
+
+        const tightened = await enforceRole(task, 'content_writer', {
+            classifierFn: allowClassifier,
+            blockedActionsOverride: new Set(['cw_custom_noop']),
+        });
+        assert.equal(tightened.allowed, false);
+        if (!tightened.allowed) {
+            assert.equal(tightened.declineCode, 'action_blocked');
+        }
+    });
+
+    it('does not un-block a registry block when the overlay omits it', async () => {
+        const task = makeTask('code_edit', 'Refactor the payments module');
+        const result = await enforceRole(task, 'recruiter', {
+            classifierFn: allowClassifier,
+            blockedActionsOverride: new Set(['something_unrelated']),
+        });
+        assert.equal(result.allowed, false);
+        if (!result.allowed) {
+            assert.equal(result.declineCode, 'action_blocked');
+        }
+    });
+});
