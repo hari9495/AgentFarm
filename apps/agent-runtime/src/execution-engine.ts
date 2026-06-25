@@ -1046,6 +1046,8 @@ export async function processDeveloperTaskWithMemory(
         modelProfile?: string;
         llmDecisionResolver?: LlmDecisionResolver;
         progressSink?: ProgressSink;
+        killSwitchCheckFn?: KillSwitchCheckFn;
+        policyEvaluateFn?: PolicyEvaluateFn;
     },
 ): Promise<ProcessedTaskResult> {
     let memoryContext: unknown = null;
