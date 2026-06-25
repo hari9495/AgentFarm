@@ -18,7 +18,7 @@
  *   - Episodic memory recording     → application/episodic-recorder.ts
  */
 
-import type { ProviderFailoverTraceRecord } from '@agentfarm/shared-types';
+import type { ProviderFailoverTraceRecord, PolicyDecision, PolicyEvaluationInput } from '@agentfarm/shared-types';
 import { type ProgressSink, NoopProgressSink, reportProgress } from './task-progress-reporter.js';
 import { buildErrorQuery, researchForTask, type FetchFn } from './web-research-service.js';
 import { buildAuditContextPayload, buildRuntimeAuditContext } from './runtime-audit-integration.js';
@@ -120,6 +120,75 @@ export type KillSwitchCheckFn = (params: {
     botId: string;
 }) => Promise<{ blocked: boolean; killSwitchId?: string }>;
 
+/**
+ * Injectable customer-policy evaluator (wired in runtime-server to the
+ * policy-engine OPA evaluator + cache). Kept as an injected function so the
+ * execution engine carries no hard dependency on OPA/Redis and stays unit-testable.
+ */
+export type PolicyEvaluateFn = (input: PolicyEvaluationInput) => Promise<PolicyDecision>;
+
+/**
+ * Merges a customer PolicyDecision into the already-settled action decision.
+ *
+ * Customer policy may only TIGHTEN — never downgrade the heuristic/LLM floor:
+ *   - deny            → block the task (denied: true); decision marked high/approval.
+ *   - require_approval → force route to approval (bump low→medium); no downgrade.
+ *   - allow           → leave the decision untouched.
+ *
+ * Pure function (no I/O) — the runtime decides what to do with `denied`.
+ */
+export function applyPolicyDecision(
+    decision: ActionDecision,
+    policy: PolicyDecision,
+): { decision: ActionDecision; denied: boolean } {
+    if (policy.effect === 'deny') {
+        return {
+            decision: {
+                ...decision,
+                riskLevel: 'high',
+                route: 'approval',
+                reason: `${decision.reason} [policy: DENY — ${policy.reason}]`,
+            },
+            denied: true,
+        };
+    }
+    if (policy.effect === 'require_approval' && decision.route !== 'approval') {
+        return {
+            decision: {
+                ...decision,
+                riskLevel: decision.riskLevel === 'low' ? 'medium' : decision.riskLevel,
+                route: 'approval',
+                reason: `${decision.reason} [policy: requires approval — ${policy.reason}]`,
+            },
+            denied: false,
+        };
+    }
+    // allow, or already at/above the policy's required strictness → no change.
+    return { decision, denied: false };
+}
+
+/** Builds the policy evaluation input from a settled decision + task payload. */
+export function buildPolicyEvaluationInput(
+    payload: Record<string, unknown>,
+    actionType: string,
+): PolicyEvaluationInput | null {
+    const tenantId = typeof payload['tenantId'] === 'string' ? payload['tenantId'].trim() : '';
+    if (!tenantId) return null; // cannot scope an evaluation without a tenant
+    const str = (k: string): string | undefined =>
+        typeof payload[k] === 'string' && payload[k] ? (payload[k] as string) : undefined;
+    return {
+        tenantId,
+        workspaceId: str('workspaceId'),
+        roleKey:
+            str('roleKey') ?? str('roleProfile') ?? str('audit_role') ?? 'developer',
+        actionType,
+        connector: str('connector') ?? str('connectorId'),
+        tool: str('mcpTool') ?? str('tool'),
+        env: str('env') ?? str('environment'),
+        time: new Date().toISOString(),
+    };
+}
+
 export type LlmDecisionResolver = (input: {
     task: TaskEnvelope;
     heuristicDecision: ActionDecision;
@@ -136,9 +205,11 @@ export type ProcessedTaskResult = {
     transientRetries: number;
     executionPayload: Record<string, unknown>;
     payloadOverrideSource: PayloadOverrideSource;
-    failureClass?: 'transient_error' | 'runtime_exception' | 'role_enforcement' | 'kill_switch_blocked';
+    failureClass?: 'transient_error' | 'runtime_exception' | 'role_enforcement' | 'kill_switch_blocked' | 'policy_violation';
     errorMessage?: string;
     llmExecution?: LlmDecisionMetadata;
+    /** Customer-policy decision applied to this task (when a policy evaluator ran). */
+    policyDecision?: PolicyDecision;
     /**
      * Raw JSON output from the workspace action, forwarded so episodic memory
      * can capture files_changed, code_diff, and test_failure_summary.
@@ -635,6 +706,7 @@ async function processDeveloperTaskInner(
         progressSink?: ProgressSink;
         roleClassifierFn?: TaskClassifierFn;
         killSwitchCheckFn?: KillSwitchCheckFn;
+        policyEvaluateFn?: PolicyEvaluateFn;
     },
 ): Promise<ProcessedTaskResult> {
     const taskWithAuditContext: TaskEnvelope = { ...task, payload: enrichPayloadWithAuditContext(task.payload, task.taskId) };
@@ -810,9 +882,43 @@ async function processDeveloperTaskInner(
         }
     }
 
+    // Phase 7: Customer governance policy (OPA). Evaluated after the action is
+    // classified; the injected evaluator is fail-closed and may only TIGHTEN the
+    // heuristic/LLM floor (deny → block, require_approval → approval, allow → no-op).
+    let policyDecision: PolicyDecision | undefined;
+    if (options?.policyEvaluateFn) {
+        const policyInput = buildPolicyEvaluationInput(executionPayload, decision.actionType);
+        if (policyInput) {
+            try {
+                policyDecision = await options.policyEvaluateFn(policyInput);
+                const merged = applyPolicyDecision(decision, policyDecision);
+                decision = merged.decision;
+                if (merged.denied) {
+                    await reportProgress(progressCtx, 'failed', 'Task blocked by customer governance policy.', sink);
+                    return {
+                        decision,
+                        status: 'failed',
+                        attempts: 0,
+                        transientRetries: 0,
+                        executionPayload,
+                        payloadOverrideSource,
+                        llmExecution,
+                        failureClass: 'policy_violation',
+                        errorMessage: `[POLICY_DENIED] ${policyDecision.reason}${policyDecision.matchedPolicyId ? ` | policy=${policyDecision.matchedPolicyId}@v${policyDecision.matchedPolicyVersion ?? '?'}` : ''}`,
+                        policyDecision,
+                    };
+                }
+            } catch {
+                // Fail-safe: an unexpected evaluator throw must never crash or downgrade.
+                // The injected evaluator is itself fail-closed; keep the existing decision.
+                llmExecution = { ...llmExecution, fallbackReason: 'policy_eval_failed' };
+            }
+        }
+    }
+
     if (decision.route === 'approval') {
         await reportProgress(progressCtx, 'waiting_for_approval', 'Task requires human approval before execution.', sink);
-        return { decision, status: 'approval_required', attempts: 0, transientRetries: 0, executionPayload, payloadOverrideSource, llmExecution };
+        return { decision, status: 'approval_required', attempts: 0, transientRetries: 0, executionPayload, payloadOverrideSource, llmExecution, policyDecision };
     }
 
     await reportProgress(progressCtx, 'coding_started', 'Executing low-risk developer task.', sink);
@@ -924,7 +1030,7 @@ async function processDeveloperTaskInner(
             .catch(() => { /* best-effort */ });
     }
 
-    return finalResult;
+    return policyDecision ? { ...finalResult, policyDecision } : finalResult;
 }
 
 /**
