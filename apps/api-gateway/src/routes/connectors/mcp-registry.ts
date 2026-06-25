@@ -285,7 +285,7 @@ export async function registerMcpRegistryRoutes(
             return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
         }
         // Strip out any sensitive defaults; return catalog metadata only
-        const catalog = MANAGED_MCP_CATALOG.map(({ id, displayName, category, description, logoSlug, tools, supportedRoles, requiredFields, optionalFields }) => ({
+        const catalog = MANAGED_MCP_CATALOG.map(({ id, displayName, category, description, logoSlug, tools, supportedRoles, requiredFields, optionalFields, live }) => ({
             id,
             displayName,
             category,
@@ -293,6 +293,7 @@ export async function registerMcpRegistryRoutes(
             logoSlug,
             tools,
             supportedRoles,
+            live: live === true,
             requiredFields: requiredFields.map(({ name, label, type, placeholder, helpText }) => ({
                 name, label, type, placeholder, helpText,
             })),
@@ -316,6 +317,15 @@ export async function registerMcpRegistryRoutes(
             const connector = findConnectorById(connectorId);
             if (!connector) {
                 return reply.code(404).send({ error: 'not_found', message: `Managed connector '${connectorId}' not found in catalog.` });
+            }
+
+            // Fail-closed: a connector cannot be activated until its hosted MCP proxy is live.
+            // Prevents a customer connecting a tool that would silently do nothing.
+            if (connector.live !== true) {
+                return reply.code(409).send({
+                    error: 'connector_coming_soon',
+                    message: `${connector.displayName} is coming soon — its hosted connector is not yet available.`,
+                });
             }
 
             // Validate required fields are present

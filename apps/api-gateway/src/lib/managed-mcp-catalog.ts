@@ -40,6 +40,13 @@ export type ManagedConnectorDefinition = {
     tools: string[];
     /** Agent roles that can use this connector */
     supportedRoles: string[];
+    /**
+     * Whether the AgentFarm-hosted MCP proxy behind `serverUrl` is actually provisioned and live.
+     * Defaults to false ("coming soon") — the catalog ships the full roadmap, but a connector
+     * cannot be activated until ops stands up its proxy (see the MCP connector proxy provisioning
+     * runbook) and flips this to true. Prevents customers connecting a tool that silently no-ops.
+     */
+    live?: boolean;
 };
 
 // ── Catalog ──────────────────────────────────────────────────────────────────

@@ -364,6 +364,7 @@ type CatalogConnector = {
     supportedRoles: string[];
     requiredFields: CatalogField[];
     optionalFields?: CatalogField[];
+    live?: boolean;
 };
 
 function ConnectToolCatalog({ onActivated }: { onActivated: () => void | Promise<void> }) {
@@ -389,6 +390,7 @@ function ConnectToolCatalog({ onActivated }: { onActivated: () => void | Promise
     }, []);
 
     const openConfigure = (c: CatalogConnector) => {
+        if (!c.live) return; // coming soon — not yet activatable
         setConfiguring(c);
         setValues({});
         setFormError(null);
@@ -442,14 +444,18 @@ function ConnectToolCatalog({ onActivated }: { onActivated: () => void | Promise
                                 <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{c.displayName}</p>
                                 <p className="text-xs text-slate-400 uppercase tracking-wider">{c.category}</p>
                             </div>
+                            {!c.live && (
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-full px-2 py-0.5">Coming soon</span>
+                            )}
                         </div>
                         <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed flex-1">{c.description}</p>
                         <p className="text-[11px] text-slate-400 mt-2">{c.tools.length} tools</p>
                         <button
                             onClick={() => openConfigure(c)}
-                            className="mt-3 flex items-center justify-center gap-1.5 px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors"
+                            disabled={!c.live}
+                            className={`mt-3 flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-colors ${c.live ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"}`}
                         >
-                            <Plus className="w-3.5 h-3.5" /> Connect
+                            <Plus className="w-3.5 h-3.5" /> {c.live ? "Connect" : "Coming soon"}
                         </button>
                     </div>
                 ))}
