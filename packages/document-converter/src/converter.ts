@@ -60,6 +60,7 @@ async function markitdownConvert(buffer: Buffer, ext: string): Promise<string> {
 
 export const SUPPORTED_MIME_TYPES = [
     'text/plain',
+    'text/markdown',
     'text/html',
     'text/csv',
     'text/xml',
@@ -80,6 +81,8 @@ export type SupportedMimeType = (typeof SUPPORTED_MIME_TYPES)[number];
 
 const EXT_MIME_MAP: Record<string, string> = {
     '.txt': 'text/plain',
+    '.md': 'text/markdown',
+    '.markdown': 'text/markdown',
     '.html': 'text/html',
     '.htm': 'text/html',
     '.csv': 'text/csv',
@@ -168,6 +171,10 @@ export async function convertToMarkdown(buffer: Buffer, mimeType: string): Promi
 
     switch (base) {
         case 'text/plain':
+            return buffer.toString('utf8');
+
+        case 'text/markdown':
+            // Already markdown — pass through unchanged.
             return buffer.toString('utf8');
 
         case 'text/csv':
