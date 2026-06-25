@@ -54,6 +54,17 @@ export interface GovernanceRule {
     mode?: 'read_only' | 'full';
     /** Optional environment scope (e.g. 'production' | 'staging'). */
     env?: string;
+    /**
+     * Optional time-window restriction (Phase 4). The window is the ALLOWED hours;
+     * the rule's `deny` fires when evaluated outside it. tz-aware, supports overnight
+     * ranges and an optional day-of-week filter (0=Sun..6=Sat in `tz`).
+     */
+    timeWindow?: {
+        days?: number[];
+        start: string;
+        end: string;
+        tz?: string;
+    };
     /** Human-readable reason surfaced in audit + dashboard. */
     reason?: string;
     /** Reason code for machine handling; defaults to 'policy_violation' for deny. */
