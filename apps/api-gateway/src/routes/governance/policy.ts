@@ -24,15 +24,23 @@ type SessionContext = {
 
 type Options = { getSession: (request: FastifyRequest) => SessionContext | null };
 
+type TimeWindow = { days?: number[]; start: string; end: string; tz?: string };
+
 type Rule = {
     actionType: string;
-    effect: 'deny';
+    effect: 'deny' | 'allow';
     connector?: string;
     tool?: string;
     mode?: 'read_only';
+    env?: string;
+    domain?: string;
+    timeWindow?: TimeWindow;
 };
 
 type ConnectorInput = { connector?: string; readOnly?: boolean; deniedVerbs?: unknown };
+type EnvInput = { env?: string; actionType?: string; connector?: string };
+type TimeInput = { days?: unknown; start?: string; end?: string; tz?: string; actionType?: string; connector?: string };
+type WebhookInput = { mode?: string; domains?: unknown };
 
 const cleanStrings = (v: unknown): string[] =>
     Array.isArray(v)
@@ -63,6 +71,9 @@ export async function registerGovernancePolicyRoutes(
             blockedActions?: unknown;
             connectors?: unknown;
             deniedTools?: unknown;
+            envRules?: unknown;
+            timeRules?: unknown;
+            webhookDomains?: unknown;
         };
 
         const scope = body.scope === 'tenant' || body.scope === 'role' ? body.scope : null;
@@ -87,6 +98,36 @@ export async function registerGovernancePolicyRoutes(
         }
         for (const tool of cleanStrings(body.deniedTools)) {
             rules.push({ actionType: '*', effect: 'deny', tool });
+        }
+        // Phase 4 — env rules: deny an action/connector in a given environment.
+        const envRules = Array.isArray(body.envRules) ? (body.envRules as EnvInput[]) : [];
+        for (const e of envRules) {
+            const env = typeof e?.env === 'string' ? e.env.trim() : '';
+            if (!env) continue;
+            const rule: Rule = { actionType: typeof e.actionType === 'string' && e.actionType.trim() ? e.actionType.trim() : '*', effect: 'deny', env };
+            if (typeof e.connector === 'string' && e.connector.trim()) rule.connector = e.connector.trim();
+            rules.push(rule);
+        }
+        // Phase 4 — time rules: restrict an action/connector to a working-hours window.
+        const timeRules = Array.isArray(body.timeRules) ? (body.timeRules as TimeInput[]) : [];
+        for (const t of timeRules) {
+            const start = typeof t?.start === 'string' ? t.start.trim() : '';
+            const end = typeof t?.end === 'string' ? t.end.trim() : '';
+            if (!start || !end) continue;
+            const window: TimeWindow = { start, end };
+            if (Array.isArray(t.days)) window.days = t.days.filter((d): d is number => typeof d === 'number');
+            if (typeof t.tz === 'string' && t.tz.trim()) window.tz = t.tz.trim();
+            const rule: Rule = { actionType: typeof t.actionType === 'string' && t.actionType.trim() ? t.actionType.trim() : '*', effect: 'deny', timeWindow: window };
+            if (typeof t.connector === 'string' && t.connector.trim()) rule.connector = t.connector.trim();
+            rules.push(rule);
+        }
+        // Phase 4 — webhook domain rules (tenant scope is the meaningful one).
+        const webhook = (body.webhookDomains ?? null) as WebhookInput | null;
+        if (webhook && typeof webhook === 'object') {
+            const effect: 'allow' | 'deny' = webhook.mode === 'allow' ? 'allow' : 'deny';
+            for (const domain of cleanStrings(webhook.domains)) {
+                rules.push({ actionType: '*', effect, connector: 'webhook', domain });
+            }
         }
 
         if (rules.length === 0) {
