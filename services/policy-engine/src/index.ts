@@ -20,3 +20,17 @@ export {
     type TenantOverlay,
 } from './opa-loader.js';
 
+export {
+    getActivePolicy,
+    nextVersion,
+    publishPolicy,
+    type PublishResult,
+} from './policy-store.js';
+
+export {
+    evaluateWithCache,
+    invalidateTenant,
+    type CacheClient,
+    type EvaluateWithCacheDeps,
+} from './policy-cache.js';
+
