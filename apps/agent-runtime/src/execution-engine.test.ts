@@ -13,7 +13,7 @@ import {
 } from './execution-engine.js';
 
 const lowExecuteDecision = (overrides: Partial<ActionDecision> = {}): ActionDecision => ({
-    actionType: 'workspace_subagent_spawn',
+    actionType: 'read_task',
     confidence: 0.95,
     riskLevel: 'low',
     route: 'execute',
