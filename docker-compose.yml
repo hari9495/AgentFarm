@@ -160,6 +160,12 @@
       # Query-scoped token for the dashboard Infra Monitoring read path.
       AXIOM_QUERY_TOKEN: ${AXIOM_QUERY_TOKEN:-}
       AXIOM_DATASET_AUDIT: ${AXIOM_DATASET_AUDIT:-axiom-audit}
+      # Phase 5 — policy-document rule extraction (gateway-scoped LLM). Mapped to
+      # AF_OPENAI_* which the extractor reads; isolated from agent-runtime's own
+      # AF_OPENAI_* (NVIDIA NIM) so the two services use different providers.
+      AF_OPENAI_API_KEY: ${POLICY_EXTRACT_OPENAI_API_KEY:-}
+      AF_OPENAI_BASE_URL: ${POLICY_EXTRACT_OPENAI_BASE_URL:-https://api.openai.com/v1}
+      AF_OPENAI_MODEL: ${POLICY_EXTRACT_OPENAI_MODEL:-gpt-4o-mini}
     volumes:
       - gateway_secrets:/data
     depends_on:
