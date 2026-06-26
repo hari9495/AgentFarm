@@ -2,6 +2,10 @@ import { createHmac } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
 import { isAllowed, recordSuccess, recordFailure, resetCircuit } from './circuit-breaker.js';
 import { getSchemaVersion } from './event-catalog.js';
+import {
+    getWebhookDomainPolicy,
+    isWebhookDomainDenied,
+} from '../routes/connectors/webhook-domain-policy.js';
 
 const DLQ_THRESHOLD = 5;
 
@@ -30,8 +34,31 @@ export async function dispatchOutboundWebhooks(
             (w.workspaceId == null || w.workspaceId === event.workspaceId),
     );
 
+    // Phase 4 — dispatch-time domain governance. Re-check the tenant's webhook
+    // domain policy at fire time (not just at create time), so a policy tightened
+    // after a webhook was registered still blocks delivery. Policy-blocked sends
+    // are logged as failed deliveries but do NOT count toward the DLQ threshold.
+    const domainPolicy = await getWebhookDomainPolicy(prisma, event.tenantId);
+
     await Promise.allSettled(
         matching.map(async (w) => {
+            if (isWebhookDomainDenied(domainPolicy, w.url)) {
+                await prisma.outboundWebhookDelivery
+                    .create({
+                        data: {
+                            webhookId: w.id,
+                            tenantId: event.tenantId,
+                            eventType: event.eventType,
+                            payload: (event.payload ?? {}) as object,
+                            responseStatus: null,
+                            responseBody: 'domain_policy_blocked',
+                            durationMs: 0,
+                            success: false,
+                        },
+                    })
+                    .catch(() => { });
+                return;
+            }
             const result = await fireWebhook(w, event, prisma);
             if (result.success) {
                 await prisma.outboundWebhook.update({
