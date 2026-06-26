@@ -219,7 +219,7 @@ export const registerAllRoutes = async (
     await registerApprovalRoutes(app, { getSession });
     await registerAuditRoutes(app, { getSession });
     await registerBudgetPolicyRoutes(app, { getSession });
-    await registerGovernanceWorkflowRoutes(app, { getSession });
+    await registerGovernanceWorkflowRoutes(app, { getSession, prisma });
     await registerKillSwitchRoutes(app, { getSession });
     await registerActivityRoutes(app, { getSession });
     await registerActivityFeedRoutes(app, { getSession });

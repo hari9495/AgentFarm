@@ -10,6 +10,12 @@ import {
     type RiskLevel,
 } from '@agentfarm/shared-types';
 import { randomUUID } from 'node:crypto';
+import type { PrismaClient } from '@prisma/client';
+import {
+    type GovernanceWorkflowStore,
+    InMemoryGovernanceWorkflowStore,
+    PrismaGovernanceWorkflowStore,
+} from './governance-workflow-store.js';
 
 type SessionContext = {
     userId: string;
@@ -17,18 +23,6 @@ type SessionContext = {
     workspaceIds: string[];
     expiresAt: number;
 };
-
-interface GovernanceStore {
-    templates: Map<string, GovernanceWorkflowTemplate>;
-    workflows: Map<string, GovernanceWorkflowInstance>;
-    decisions: Map<string, GovernanceWorkflowDecisionRecord[]>;
-}
-
-const createStore = (): GovernanceStore => ({
-    templates: new Map(),
-    workflows: new Map(),
-    decisions: new Map(),
-});
 
 const normalizeRiskLevel = (value: unknown): RiskLevel | null => {
     if (typeof value !== 'string') return null;
@@ -85,7 +79,8 @@ const resolveApproverIds = (
 type RegisterGovernanceWorkflowRoutesOptions = {
     getSession: (request: FastifyRequest) => SessionContext | null;
     now?: () => number;
-    store?: GovernanceStore;
+    store?: GovernanceWorkflowStore;
+    prisma?: PrismaClient;
     workflowSlaSeconds?: number;
 };
 
@@ -93,7 +88,11 @@ export const registerGovernanceWorkflowRoutes = async (
     app: FastifyInstance,
     options: RegisterGovernanceWorkflowRoutesOptions,
 ): Promise<void> => {
-    const store = options.store ?? createStore();
+    const store: GovernanceWorkflowStore =
+        options.store ??
+        (options.prisma
+            ? new PrismaGovernanceWorkflowStore(options.prisma)
+            : new InMemoryGovernanceWorkflowStore());
     const now = options.now ?? (() => Date.now());
     const workflowSlaSeconds = options.workflowSlaSeconds ?? 300;
 
@@ -103,9 +102,7 @@ export const registerGovernanceWorkflowRoutes = async (
         if (!session) {
             return reply.code(401).send({ error: 'unauthorized', message: 'A valid authenticated session is required.' });
         }
-        const templates = Array.from(store.templates.values()).filter(
-            (t) => t.tenantId === session.tenantId,
-        );
+        const templates = await store.listTemplates(session.tenantId);
         return reply.code(200).send({ templates, total: templates.length });
     });
 
@@ -172,7 +169,7 @@ export const registerGovernanceWorkflowRoutes = async (
             updatedAt: nowIso,
         };
 
-        store.templates.set(template.id, template);
+        await store.saveTemplate(template);
 
         return reply.code(201).send({
             template_id: template.id,
@@ -209,7 +206,7 @@ export const registerGovernanceWorkflowRoutes = async (
             return reply.code(403).send({ error: 'workspace_scope_violation', message: 'workspace_id is not in your authenticated session scope.' });
         }
 
-        const template = store.templates.get(templateId);
+        const template = await store.getTemplate(templateId);
         if (!template || template.tenantId !== session.tenantId) {
             return reply.code(404).send({ error: 'template_not_found', message: 'Governance template not found for tenant.' });
         }
@@ -243,8 +240,8 @@ export const registerGovernanceWorkflowRoutes = async (
             updatedAt: nowIso,
         };
 
-        store.workflows.set(workflow.id, workflow);
-        store.decisions.set(workflow.id, []);
+        await store.saveWorkflow(workflow);
+        await store.saveDecisions(workflow.id, []);
 
         return reply.code(201).send({
             workflow_id: workflow.id,
@@ -263,7 +260,7 @@ export const registerGovernanceWorkflowRoutes = async (
         }
 
         const params = request.params as { workflowId: string };
-        const workflow = store.workflows.get(params.workflowId);
+        const workflow = await store.getWorkflow(params.workflowId);
         if (!workflow || workflow.tenantId !== session.tenantId) {
             return reply.code(404).send({ error: 'workflow_not_found', message: 'Governance workflow not found.' });
         }
@@ -287,7 +284,7 @@ export const registerGovernanceWorkflowRoutes = async (
             });
         }
 
-        const template = store.templates.get(workflow.templateId);
+        const template = await store.getTemplate(workflow.templateId);
         if (!template) {
             return reply.code(404).send({ error: 'template_not_found', message: 'Workflow template was not found.' });
         }
@@ -315,15 +312,15 @@ export const registerGovernanceWorkflowRoutes = async (
             decidedAt: nowIso,
         };
 
-        const decisions = store.decisions.get(workflow.id) ?? [];
+        const decisions = await store.getDecisions(workflow.id);
         decisions.push(decisionRecord);
-        store.decisions.set(workflow.id, decisions);
+        await store.saveDecisions(workflow.id, decisions);
 
         if (decision === 'rejected' || decision === 'timeout_rejected') {
             workflow.status = decision === 'rejected' ? 'rejected' : 'timed_out';
             workflow.updatedAt = nowIso;
             workflow.completedAt = nowIso;
-            store.workflows.set(workflow.id, workflow);
+            await store.saveWorkflow(workflow);
             return {
                 workflow_id: workflow.id,
                 status: workflow.status,
@@ -351,7 +348,7 @@ export const registerGovernanceWorkflowRoutes = async (
         }
 
         workflow.updatedAt = nowIso;
-        store.workflows.set(workflow.id, workflow);
+        await store.saveWorkflow(workflow);
 
         return {
             workflow_id: workflow.id,
@@ -376,8 +373,8 @@ export const registerGovernanceWorkflowRoutes = async (
             return reply.code(403).send({ error: 'workspace_scope_violation', message: 'workspace_id is not in your authenticated session scope.' });
         }
 
-        const inScope = Array.from(store.workflows.values()).filter(
-            (workflow) => workflow.tenantId === session.tenantId && workflow.workspaceId === workspaceId,
+        const inScope = (await store.listWorkflows(session.tenantId)).filter(
+            (workflow) => workflow.workspaceId === workspaceId,
         );
 
         const pending = inScope.filter((workflow) => workflow.status === 'pending' || workflow.status === 'in_review');
@@ -399,7 +396,7 @@ export const registerGovernanceWorkflowRoutes = async (
 
         const latencies: number[] = [];
         for (const workflow of inScope) {
-            const decisions = store.decisions.get(workflow.id) ?? [];
+            const decisions = await store.getDecisions(workflow.id);
             for (const decision of decisions) {
                 const elapsed = new Date(decision.decidedAt).getTime() - new Date(workflow.createdAt).getTime();
                 if (elapsed >= 0) {
@@ -435,10 +432,8 @@ export const registerGovernanceWorkflowRoutes = async (
         const query = request.query as { workspace_id?: string };
         const workspaceIdFilter = query.workspace_id?.trim();
 
-        const workflows = Array.from(store.workflows.values()).filter(
-            (wf) =>
-                wf.tenantId === session.tenantId &&
-                (!workspaceIdFilter || wf.workspaceId === workspaceIdFilter),
+        const workflows = (await store.listWorkflows(session.tenantId)).filter(
+            (wf) => !workspaceIdFilter || wf.workspaceId === workspaceIdFilter,
         );
 
         return reply.code(200).send({ workflows, total: workflows.length });
@@ -451,7 +446,7 @@ export const registerGovernanceWorkflowRoutes = async (
         }
 
         const params = request.params as { workflowId: string };
-        const wf = store.workflows.get(params.workflowId);
+        const wf = await store.getWorkflow(params.workflowId);
         if (!wf) {
             return reply.code(404).send({ error: 'not_found', message: 'Governance workflow not found.' });
         }
@@ -460,7 +455,7 @@ export const registerGovernanceWorkflowRoutes = async (
             return reply.code(403).send({ error: 'forbidden', message: 'Access denied.' });
         }
 
-        const decisions = store.decisions.get(params.workflowId) ?? [];
+        const decisions = await store.getDecisions(params.workflowId);
         return reply.code(200).send({ workflow: wf, decisions });
     });
 };
