@@ -54,6 +54,7 @@ import { registerGovernancePolicyRoutes } from './routes/governance/policy.js';
 import { registerPolicyDocumentRoutes } from './routes/governance/policy-documents.js';
 import { registerComplianceExportRoutes } from './routes/governance/compliance-export.js';
 import { registerPolicySimulateRoutes } from './routes/governance/policy-simulate.js';
+import { registerRoleBaselineBlockRoutes } from './routes/governance/role-baseline-blocks.js';
 import { registerCircuitBreakerRoutes } from './routes/governance/circuit-breakers.js';
 
 // Memory
@@ -231,6 +232,7 @@ export const registerAllRoutes = async (
     await registerPolicyDocumentRoutes(app, prisma, { getSession, embedFn: buildEmbedFn(), embeddingDeployment });
     await registerComplianceExportRoutes(app, prisma, { getSession });
     await registerPolicySimulateRoutes(app, prisma, { getSession });
+    await registerRoleBaselineBlockRoutes(app, { getSession });
     await registerCircuitBreakerRoutes(app, { getSession });
 
     // Memory
