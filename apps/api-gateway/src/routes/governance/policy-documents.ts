@@ -51,7 +51,7 @@ export type RegisterPolicyDocumentRoutesOptions = {
 
 type AppliedRule = {
     actionType: string;
-    effect: 'deny';
+    effect: 'deny' | 'require_approval';
     connector?: string;
     tool?: string;
     mode?: 'read_only';
@@ -59,11 +59,11 @@ type AppliedRule = {
     reason?: string;
 };
 
-/** Maps an approved candidate to a tighten-only deny rule, or null if not enforceable. */
+/** Maps an approved candidate to a tighten-only enforceable rule, or null if not enforceable. */
 function candidateToRule(c: ExtractedRuleCandidate): AppliedRule | null {
-    // Only deny-effect candidates are enforced by the direct-read enforcers.
-    if (c.effect !== 'deny') return null;
-    const rule: AppliedRule = { actionType: c.actionType, effect: 'deny' };
+    // deny and require_approval are both enforced (B4); `allow` is not tighten-only.
+    if (c.effect !== 'deny' && c.effect !== 'require_approval') return null;
+    const rule: AppliedRule = { actionType: c.actionType, effect: c.effect };
     if (c.connector) rule.connector = c.connector;
     if (c.tool) rule.tool = c.tool;
     if (c.mode === 'read_only') rule.mode = 'read_only';
@@ -235,10 +235,10 @@ export async function registerPolicyDocumentRoutes(
         for (const c of selected) {
             const rule = candidateToRule(c);
             if (rule) newRules.push(rule);
-            else skipped.push({ id: c.id, reason: `effect '${c.effect}' is not enforceable via direct-read policy (only 'deny')` });
+            else skipped.push({ id: c.id, reason: `effect '${c.effect}' is not enforceable (only 'deny' and 'require_approval')` });
         }
         if (newRules.length === 0) {
-            return res.status(400).send({ error: 'No enforceable (deny) candidates selected.', skipped });
+            return res.status(400).send({ error: 'No enforceable (deny / require_approval) candidates selected.', skipped });
         }
 
         try {

@@ -24,7 +24,7 @@ export interface GovernanceActionInput {
 }
 
 export interface GovernanceMatchResult {
-    effect: 'deny' | 'allow';
+    effect: 'deny' | 'require_approval' | 'allow';
     matchedRule?: GovernanceRule;
     reason: string;
     /** Rules that match the surface but are time-windowed (decision depends on the clock). */
@@ -42,46 +42,54 @@ function actionMatches(rule: GovernanceRule, input: GovernanceActionInput): bool
     return rule.actionType === '*' || rule.actionType === input.actionType;
 }
 
+/** Does a non-time-windowed rule match this action's surface? (mode handled by caller) */
+function ruleApplies(rule: GovernanceRule, input: GovernanceActionInput): boolean {
+    if (!scopeMatches(rule, input)) return false;
+    if (rule.mode === 'read_only') return input.isWrite === true; // read_only denies writes only
+    return actionMatches(rule, input);
+}
+
+function ruleReason(rule: GovernanceRule, verb: string): string {
+    if (rule.reason) return rule.reason;
+    if (rule.mode === 'read_only') return `Connector '${rule.connector ?? '*'}' is read-only — write actions are ${verb}.`;
+    return `${verb} by policy rule on '${rule.actionType}'${rule.connector ? ` (connector ${rule.connector})` : ''}${rule.env ? ` in env ${rule.env}` : ''}.`;
+}
+
 /**
- * Evaluates a sample/real action against deny rules. First matching deny wins
- * (strictest-wins). Time-window rules are reported separately (their decision
- * depends on the runtime clock and is enforced by the time enforcer).
+ * Evaluates an action against customer rules with strictest-wins:
+ *   deny > require_approval > allow.
+ * First matching deny wins; otherwise first matching require_approval; else allow.
+ * Time-window rules are reported separately (their decision depends on the runtime
+ * clock and is enforced by the time enforcer).
  */
 export function evaluateGovernanceRules(
     rules: GovernanceRule[],
     input: GovernanceActionInput,
 ): GovernanceMatchResult {
     const timeDependentRules: GovernanceRule[] = [];
+    let firstApproval: GovernanceRule | undefined;
 
     for (const rule of rules) {
-        if (rule.effect !== 'deny') continue;
-        if (!scopeMatches(rule, input)) continue;
-
-        if (rule.mode === 'read_only') {
-            if (input.isWrite) {
-                return {
-                    effect: 'deny',
-                    matchedRule: rule,
-                    reason: `Connector '${rule.connector ?? '*'}' is read-only — write actions are denied.`,
-                    timeDependentRules,
-                };
-            }
-            continue;
-        }
-
-        if (!actionMatches(rule, input)) continue;
+        if (rule.effect !== 'deny' && rule.effect !== 'require_approval') continue;
+        if (!ruleApplies(rule, input)) continue;
 
         if (rule.timeWindow) {
             timeDependentRules.push(rule);
             continue;
         }
 
+        if (rule.effect === 'deny') {
+            return { effect: 'deny', matchedRule: rule, reason: ruleReason(rule, 'Denied'), timeDependentRules };
+        }
+        // require_approval — remember the first, but keep scanning for a stricter deny
+        if (!firstApproval) firstApproval = rule;
+    }
+
+    if (firstApproval) {
         return {
-            effect: 'deny',
-            matchedRule: rule,
-            reason:
-                rule.reason ??
-                `Denied by policy rule on '${rule.actionType}'${rule.connector ? ` (connector ${rule.connector})` : ''}${rule.env ? ` in env ${rule.env}` : ''}.`,
+            effect: 'require_approval',
+            matchedRule: firstApproval,
+            reason: ruleReason(firstApproval, 'Requires approval'),
             timeDependentRules,
         };
     }

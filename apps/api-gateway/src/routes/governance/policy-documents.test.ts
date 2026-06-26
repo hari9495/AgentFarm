@@ -68,6 +68,7 @@ function makeApp(sess: typeof session | null, prisma: PrismaClient) {
         _extractRulesFn: async () => [
             { id: 'c1', actionType: 'deploy_production', effect: 'deny', confidence: 0.9, sourceQuote: 'No prod.' },
             { id: 'c2', actionType: 'send_email', effect: 'require_approval', confidence: 0.6 },
+            { id: 'c3', actionType: 'deploy_staging', effect: 'allow', confidence: 0.5 },
         ],
     });
     return app;
@@ -114,7 +115,7 @@ test('POST upload ingests, returns parsed + candidates', async () => {
     assert.equal(res.statusCode, 201);
     const json = res.json();
     assert.equal(json.status, 'parsed');
-    assert.equal(json.candidates.length, 2);
+    assert.equal(json.candidates.length, 3);
 });
 
 test('POST upload dedups identical content (200)', async () => {
@@ -131,7 +132,7 @@ test('POST upload dedups identical content (200)', async () => {
 
 // --- apply (human review gate) ------------------------------------------------
 
-test('POST apply publishes deny candidate into a role policy, skips non-deny', async () => {
+test('POST apply publishes deny + require_approval candidates, skips allow-only', async () => {
     const { prisma, policies } = makePrisma();
     const app = makeApp(session, prisma);
     const f = multipartFile('No production deploys allowed.');
@@ -145,16 +146,16 @@ test('POST apply publishes deny candidate into a role policy, skips non-deny', a
     await app.close();
     assert.equal(res.statusCode, 201);
     const json = res.json();
-    assert.equal(json.appliedCount, 1, 'only the deny candidate is enforceable');
-    assert.equal(json.skipped.length, 1);
-    assert.equal(json.skipped[0].id, 'c2');
-    // policy created with the deny rule
+    assert.equal(json.appliedCount, 2, 'deny + require_approval are enforceable');
+    assert.equal(json.skipped.length, 1, 'allow-only candidate skipped');
+    assert.equal(json.skipped[0].id, 'c3');
     assert.equal(policies.length, 1);
     assert.equal(policies[0].scope, 'role');
-    assert.equal(policies[0].rulesJson[0].actionType, 'deploy_production');
+    const effects = policies[0].rulesJson.map((r: { effect: string }) => r.effect).sort();
+    assert.deepEqual(effects, ['deny', 'require_approval']);
 });
 
-test('POST apply 400 when no enforceable candidates selected', async () => {
+test('POST apply 400 when only a non-enforceable (allow) candidate is selected', async () => {
     const { prisma } = makePrisma();
     const app = makeApp(session, prisma);
     const f = multipartFile('x');
@@ -162,7 +163,7 @@ test('POST apply 400 when no enforceable candidates selected', async () => {
     const docId = up.json().id;
     const res = await app.inject({
         method: 'POST', url: `/v1/governance/policy-documents/${docId}/apply`,
-        payload: { scope: 'role', roleKey: 'developer', candidateIds: ['c2'] }, // only the require_approval one
+        payload: { scope: 'role', roleKey: 'developer', candidateIds: ['c3'] }, // allow-only
     });
     await app.close();
     assert.equal(res.statusCode, 400);
@@ -177,11 +178,11 @@ test('GET list and GET one return documents scoped to tenant', async () => {
 
     const list = await app.inject({ method: 'GET', url: '/v1/governance/policy-documents' });
     assert.equal(list.json().documents.length, 1);
-    assert.equal(list.json().documents[0].candidateCount, 2);
+    assert.equal(list.json().documents[0].candidateCount, 3);
 
     const one = await app.inject({ method: 'GET', url: `/v1/governance/policy-documents/${docId}` });
     await app.close();
     assert.equal(one.statusCode, 200);
     assert.match(one.json().document.extractedText, /# Policy/);
-    assert.equal(one.json().document.candidates.length, 2);
+    assert.equal(one.json().document.candidates.length, 3);
 });

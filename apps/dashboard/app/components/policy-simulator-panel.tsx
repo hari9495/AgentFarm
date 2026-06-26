@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { FlaskConical, Loader2, ShieldX, ShieldCheck, AlertCircle } from 'lucide-react';
+import { FlaskConical, Loader2, ShieldX, ShieldCheck, ShieldQuestion, AlertCircle } from 'lucide-react';
 
 const ROLES = [
     { key: '', label: 'Tenant only (no role)' },
@@ -26,7 +26,13 @@ const label: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: 'var(
 const inputS: React.CSSProperties = { padding: '8px 11px', borderRadius: 9, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: 13, outline: 'none', fontFamily: 'ui-monospace, monospace' };
 const field = (w: number): React.CSSProperties => ({ display: 'flex', flexDirection: 'column', gap: 5, width: w });
 
-type Result = { effect: 'deny' | 'allow'; reason: string; matchedRule?: Record<string, unknown>; timeDependentRules: unknown[] };
+type Result = { effect: 'deny' | 'require_approval' | 'allow'; reason: string; matchedRule?: Record<string, unknown>; timeDependentRules: unknown[] };
+
+const VERDICT: Record<Result['effect'], { color: string; label: string }> = {
+    deny: { color: '#e5484d', label: 'DENIED by customer policy' },
+    require_approval: { color: '#b54708', label: 'REQUIRES APPROVAL per customer policy' },
+    allow: { color: 'var(--accent)', label: 'Allowed by customer policy' },
+};
 
 export default function PolicySimulatorPanel() {
     const [roleKey, setRoleKey] = useState('');
@@ -54,7 +60,7 @@ export default function PolicySimulatorPanel() {
         finally { setLoading(false); }
     };
 
-    const denied = result?.effect === 'deny';
+    const verdict = result ? VERDICT[result.effect] : null;
 
     return (
         <div style={{ ...card, marginTop: 16 }}>
@@ -100,11 +106,11 @@ export default function PolicySimulatorPanel() {
 
             {error && <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#e5484d' }}><AlertCircle size={15} />{error}</div>}
 
-            {result && (
-                <div style={{ marginTop: 14, padding: 12, borderRadius: 9, border: `1px solid ${denied ? '#e5484d' : 'var(--accent)'}`, background: `color-mix(in srgb, ${denied ? '#e5484d' : 'var(--accent)'} 6%, transparent)` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 14, color: denied ? '#e5484d' : 'var(--accent)' }}>
-                        {denied ? <ShieldX size={16} /> : <ShieldCheck size={16} />}
-                        {denied ? 'DENIED by customer policy' : 'Allowed by customer policy'}
+            {result && verdict && (
+                <div style={{ marginTop: 14, padding: 12, borderRadius: 9, border: `1px solid ${verdict.color}`, background: `color-mix(in srgb, ${verdict.color} 6%, transparent)` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 14, color: verdict.color }}>
+                        {result.effect === 'deny' ? <ShieldX size={16} /> : result.effect === 'require_approval' ? <ShieldQuestion size={16} /> : <ShieldCheck size={16} />}
+                        {verdict.label}
                     </div>
                     <div style={{ fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 6 }}>{result.reason}</div>
                     {result.matchedRule && (

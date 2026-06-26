@@ -80,6 +80,8 @@ export function getPolicyEvaluateFn():
                 env: input.env,
             };
 
+            // Strictest-wins across scopes: a deny anywhere beats a require_approval anywhere.
+            let approval: PolicyDecision | undefined;
             for (const policy of [tenant, role]) {
                 if (!policy) continue;
                 const rules = (policy.rules ?? []) as GovernanceRule[];
@@ -96,8 +98,20 @@ export function getPolicyEvaluateFn():
                         failClosed: false,
                     };
                 }
+                if (result.effect === 'require_approval' && !approval) {
+                    approval = {
+                        effect: 'require_approval',
+                        requireApproval: true,
+                        escalate: false,
+                        reasonCode: 'policy_violation',
+                        reason: result.reason,
+                        matchedPolicyId: policy.id,
+                        matchedPolicyVersion: policy.version,
+                        failClosed: false,
+                    };
+                }
             }
-            return ALLOW;
+            return approval ?? ALLOW;
         } catch {
             // Fail-safe: DB error degrades to allow (heuristic floor + execution-layer
             // enforcers still apply). Never weakens the built-in floor.
