@@ -63,6 +63,7 @@ export default function GovernancePolicyPanel() {
 
     const [policyId, setPolicyId] = useState<string | null>(null);
     const [blockedActions, setBlockedActions] = useState<string[]>([]);
+    const [approvalActions, setApprovalActions] = useState<string[]>([]);
     const [connectors, setConnectors] = useState<ConnectorAccess[]>([]);
     const [deniedTools, setDeniedTools] = useState<string[]>([]);
     const [newConnector, setNewConnector] = useState('');
@@ -78,6 +79,7 @@ export default function GovernancePolicyPanel() {
 
     const parsePolicy = (rules: Rule[]) => {
         const ba: string[] = [];
+        const aa: string[] = [];
         const tools: string[] = [];
         const byConnector = new Map<string, ConnectorAccess>();
         const envs: EnvRule[] = [];
@@ -89,6 +91,10 @@ export default function GovernancePolicyPanel() {
             if (r.connector === 'webhook' && r.domain) {
                 whDomains.push(r.domain);
                 if (r.effect === 'allow') whMode = 'allow';
+                continue;
+            }
+            if (r.effect === 'require_approval') {
+                if (r.actionType && r.actionType !== '*') aa.push(r.actionType);
                 continue;
             }
             if (r.effect !== 'deny') continue;
@@ -108,6 +114,7 @@ export default function GovernancePolicyPanel() {
             if (r.actionType && r.actionType !== '*') ba.push(r.actionType);
         }
         setBlockedActions(ba);
+        setApprovalActions(aa);
         setConnectors([...byConnector.values()]);
         setDeniedTools(tools);
         setEnvRules(envs);
@@ -127,7 +134,7 @@ export default function GovernancePolicyPanel() {
                 setPolicyId(data.policy.id);
                 parsePolicy(Array.isArray(data.policy.rulesJson) ? data.policy.rulesJson : []);
             } else {
-                setPolicyId(null); setBlockedActions([]); setConnectors([]); setDeniedTools([]);
+                setPolicyId(null); setBlockedActions([]); setApprovalActions([]); setConnectors([]); setDeniedTools([]);
                 setEnvRules([]); setTimeRules([]); setWebhookDomains([]); setWebhookMode('deny');
             }
         } catch (e) {
@@ -138,7 +145,7 @@ export default function GovernancePolicyPanel() {
     useEffect(() => { void load(); }, [load]);
 
     const publish = async () => {
-        if (blockedActions.length === 0 && connectors.length === 0 && deniedTools.length === 0
+        if (blockedActions.length === 0 && approvalActions.length === 0 && connectors.length === 0 && deniedTools.length === 0
             && envRules.length === 0 && timeRules.length === 0 && webhookDomains.length === 0) {
             setError('Add at least one rule before publishing.'); return;
         }
@@ -148,7 +155,7 @@ export default function GovernancePolicyPanel() {
                 method: 'POST', headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({
                     scope, roleKey: scope === 'role' ? roleKey : undefined,
-                    blockedActions, connectors, deniedTools,
+                    blockedActions, approvalActions, connectors, deniedTools,
                     envRules,
                     timeRules: timeRules.map((t) => ({ actionType: t.actionType, start: t.start, end: t.end, tz: t.tz, days: t.days })),
                     webhookDomains: { mode: webhookMode, domains: webhookDomains },
@@ -210,6 +217,13 @@ export default function GovernancePolicyPanel() {
 
             {error && <div style={{ display: 'flex', gap: 8, alignItems: 'center', color: '#b42318', fontSize: 13, background: 'rgba(180,35,24,0.06)', border: '1px solid rgba(180,35,24,0.2)', borderRadius: 9, padding: '9px 12px' }}><AlertCircle size={14} /> {error}</div>}
             {savedMsg && <div style={{ color: 'var(--accent)', fontSize: 13 }}>{savedMsg}</div>}
+
+            {/* Approval-required actions */}
+            <div style={{ ...card, marginBottom: 14 }}>
+                <div style={{ ...label, marginBottom: 10 }}>Approval-required action types</div>
+                <AddRow placeholder="e.g. send_email" onAdd={(v) => setApprovalActions((a) => a.includes(v) ? a : [...a, v])} />
+                <Chips items={approvalActions} onRemove={(v) => setApprovalActions((a) => a.filter((x) => x !== v))} color="#b54708" />
+            </div>
 
             {/* Blocked actions */}
             <div style={card}>

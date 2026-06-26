@@ -51,3 +51,23 @@ test('tool scope must match', () => {
     assert.equal(simulatePolicyAction(rules, { actionType: 'x', tool: 'jira.delete' }).effect, 'deny');
     assert.equal(simulatePolicyAction(rules, { actionType: 'x', tool: 'jira.read' }).effect, 'allow');
 });
+
+// --- B4: require_approval rules ---------------------------------------------
+
+test('require_approval rule matches → effect require_approval', () => {
+    const r = simulatePolicyAction([{ actionType: 'send_email', effect: 'require_approval' }], { actionType: 'send_email' });
+    assert.equal(r.effect, 'require_approval');
+});
+
+test('deny beats require_approval (strictest-wins)', () => {
+    const rules = [
+        { actionType: 'deploy_production', effect: 'require_approval' as const },
+        { actionType: 'deploy_production', effect: 'deny' as const },
+    ];
+    assert.equal(simulatePolicyAction(rules, { actionType: 'deploy_production' }).effect, 'deny');
+});
+
+test('require_approval with no matching action → allow', () => {
+    const r = simulatePolicyAction([{ actionType: 'send_email', effect: 'require_approval' }], { actionType: 'read_task' });
+    assert.equal(r.effect, 'allow');
+});

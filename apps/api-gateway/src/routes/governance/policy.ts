@@ -28,7 +28,7 @@ type TimeWindow = { days?: number[]; start: string; end: string; tz?: string };
 
 type Rule = {
     actionType: string;
-    effect: 'deny' | 'allow';
+    effect: 'deny' | 'allow' | 'require_approval';
     connector?: string;
     tool?: string;
     mode?: 'read_only';
@@ -69,6 +69,7 @@ export async function registerGovernancePolicyRoutes(
             name?: string;
             description?: string;
             blockedActions?: unknown;
+            approvalActions?: unknown;
             connectors?: unknown;
             deniedTools?: unknown;
             envRules?: unknown;
@@ -86,6 +87,9 @@ export async function registerGovernancePolicyRoutes(
         const rules: Rule[] = [];
         for (const action of cleanStrings(body.blockedActions)) {
             rules.push({ actionType: action, effect: 'deny' });
+        }
+        for (const action of cleanStrings(body.approvalActions)) {
+            rules.push({ actionType: action, effect: 'require_approval' });
         }
         const connectors = Array.isArray(body.connectors) ? (body.connectors as ConnectorInput[]) : [];
         for (const c of connectors) {
