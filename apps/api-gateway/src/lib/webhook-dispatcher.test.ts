@@ -141,6 +141,61 @@ test('dispatchOutboundWebhooks — fetch throws — success=false logged, no thr
     assert.equal(deliveries[0].responseStatus, null);
 });
 
+test('dispatchOutboundWebhooks — dispatch-time domain policy blocks denied URL (no fetch, blocked delivery logged)', async (t) => {
+    const fetchCalls: unknown[] = [];
+    t.mock.method(globalThis, 'fetch', async (...args: unknown[]) => {
+        fetchCalls.push(args);
+        return new Response('ok', { status: 200 });
+    });
+
+    const deliveries: DeliveryData[] = [];
+    const prisma = {
+        outboundWebhook: { findMany: async () => [makeWebhook({ url: 'https://blocked.example.com/hook' })] },
+        outboundWebhookDelivery: {
+            create: ({ data }: { data: DeliveryData }) => { deliveries.push(data); return Promise.resolve({}); },
+        },
+        governancePolicy: {
+            findFirst: async () => ({
+                rulesJson: [{ effect: 'deny', connector: 'webhook', domain: 'blocked.example.com' }],
+            }),
+        },
+    } as any;
+
+    await dispatchOutboundWebhooks(makeEvent(), prisma);
+    await Promise.resolve();
+
+    assert.equal(fetchCalls.length, 0, 'denied domain is never fetched');
+    assert.equal(deliveries.length, 1);
+    assert.equal(deliveries[0].success, false);
+    assert.equal((deliveries[0] as unknown as { responseBody: string }).responseBody, 'domain_policy_blocked');
+});
+
+test('dispatchOutboundWebhooks — domain policy allows non-denied URL (fetch proceeds)', async (t) => {
+    const fetchCalls: unknown[] = [];
+    t.mock.method(globalThis, 'fetch', async (...args: unknown[]) => {
+        fetchCalls.push(args);
+        return new Response('ok', { status: 200 });
+    });
+
+    const prisma = {
+        outboundWebhook: { findMany: async () => [makeWebhook({ url: 'https://customer.example.com/hook' })] },
+        outboundWebhook2: {},
+        outboundWebhookDelivery: { create: () => Promise.resolve({}) },
+        outboundWebhookUpdate: {},
+        governancePolicy: {
+            findFirst: async () => ({
+                rulesJson: [{ effect: 'deny', connector: 'webhook', domain: 'blocked.example.com' }],
+            }),
+        },
+    } as any;
+    // add update used by the success path
+    prisma.outboundWebhook.update = async () => ({});
+    prisma.outboundWebhook.findUnique = async () => ({ failureCount: 0 });
+
+    await dispatchOutboundWebhooks(makeEvent(), prisma);
+    assert.equal(fetchCalls.length, 1, 'non-denied domain proceeds to fetch');
+});
+
 test('dispatchOutboundWebhooks — workspaceId filter — only fires for matching workspace', async (t) => {
     const fetchCalls: unknown[] = [];
     t.mock.method(globalThis, 'fetch', async (...args: unknown[]) => {
