@@ -2091,6 +2091,7 @@ export * from './browser-audit.js';
 export * from './storage-paths.js';
 export * from './retention-policy.js';
 export * from './governance-policy.js';
+export * from './governance-rule-matcher.js';
 export * from './role-baseline-blocks.js';
 export * from './desktop-operator.js';
 export * from './desktop-session.js';

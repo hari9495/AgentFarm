@@ -1,33 +1,30 @@
 /**
  * policy-runtime.ts — composition root for customer governance policy in the
- * agent runtime. Builds the `policyEvaluateFn` injected into the execution
- * engine and loads the OPA bundle at startup.
+ * agent runtime. Builds the `policyEvaluateFn` injected into the execution engine.
+ *
+ * A2 (consolidation): the action-level evaluator reads the SAME active
+ * `GovernancePolicy` document from the database (tenant + role scope, merged) and
+ * applies the SHARED matcher (`evaluateGovernanceRules`) — identical to the
+ * direct-read enforcers and the dashboard simulator. This replaces the previous
+ * OPA round-trip, whose overlay was never populated by the unified policy editor,
+ * eliminating the dual-path inconsistency.
  *
  * Behavior:
- *   - No DATABASE_URL          → returns undefined (no custom-policy enforcement;
- *                                the heuristic risk floor still applies).
- *   - Tenant has no active     → returns `allow` WITHOUT calling OPA (the
- *     custom policy               heuristic floor already encodes the defaults,
- *                                so OPA is only consulted when a tenant has
- *                                actually published a policy).
- *   - Tenant has an active     → OPA evaluation via the version-keyed cache.
- *     policy
+ *   - No DATABASE_URL                  → undefined (enforcement disabled; the
+ *                                        heuristic risk floor still applies).
+ *   - No active tenant/role policy     → `allow` (heuristic floor already covers
+ *                                        the built-in defaults).
+ *   - Active policy present            → deny if any matching deny rule fires.
  *
- * Fail-safety: a DB lookup error degrades to `allow` (never weakens the floor —
- * high-risk actions still route to approval via the heuristic). An OPA outage is
- * handled inside evaluate(), which returns a fail-closed `require_approval`.
+ * Fail-safety: a DB lookup error degrades to `allow` — never weakens the floor
+ * (high-risk actions still route to approval via the heuristic, and the
+ * execution-layer enforcers remain as defense-in-depth).
  */
 
 import { PrismaClient } from '@prisma/client';
-import type { PolicyDecision, PolicyEvaluationInput } from '@agentfarm/shared-types';
-import {
-    evaluate as opaEvaluate,
-    evaluateWithCache,
-    getActivePolicy,
-    loadPolicyBundle,
-    type CacheClient,
-} from '@agentfarm/policy-engine';
-import { getRedisClient } from '@agentfarm/redis-client';
+import type { PolicyDecision, PolicyEvaluationInput, GovernanceRule } from '@agentfarm/shared-types';
+import { evaluateGovernanceRules } from '@agentfarm/shared-types';
+import { getActivePolicy } from '@agentfarm/policy-engine';
 
 let _prisma: PrismaClient | null | undefined;
 
@@ -63,36 +60,57 @@ export function getPolicyEvaluateFn():
     | undefined {
     const prisma = getPrisma();
     if (!prisma) return undefined;
-    const cache = getRedisClient() as unknown as CacheClient | null;
 
     return async (input: PolicyEvaluationInput): Promise<PolicyDecision> => {
-        const active = await getActivePolicy(prisma, input.tenantId).catch(() => null);
-        if (!active) return ALLOW; // no custom policy → heuristic floor already applies
-        // Self-heal: ensure the bundle is loaded (covers an OPA-not-ready-at-boot race).
-        await initGovernancePolicyBundle();
-        return evaluateWithCache(input, {
-            cache,
-            policyVersion: active.version,
-            evaluateFn: (i) => opaEvaluate(i),
-        });
+        try {
+            // Read the active tenant- and role-scope policies (strictest-wins: a
+            // deny from either blocks). Same DB document the direct-read enforcers use.
+            const [tenant, role] = await Promise.all([
+                getActivePolicy(prisma, input.tenantId, 'tenant', ''),
+                input.roleKey
+                    ? getActivePolicy(prisma, input.tenantId, 'role', input.roleKey)
+                    : Promise.resolve(null),
+            ]);
+            if (!tenant && !role) return ALLOW;
+
+            const action = {
+                actionType: input.actionType,
+                connector: input.connector,
+                tool: input.tool,
+                env: input.env,
+            };
+
+            for (const policy of [tenant, role]) {
+                if (!policy) continue;
+                const rules = (policy.rules ?? []) as GovernanceRule[];
+                const result = evaluateGovernanceRules(rules, action);
+                if (result.effect === 'deny') {
+                    return {
+                        effect: 'deny',
+                        requireApproval: false,
+                        escalate: false,
+                        reasonCode: 'policy_violation',
+                        reason: result.reason,
+                        matchedPolicyId: policy.id,
+                        matchedPolicyVersion: policy.version,
+                        failClosed: false,
+                    };
+                }
+            }
+            return ALLOW;
+        } catch {
+            // Fail-safe: DB error degrades to allow (heuristic floor + execution-layer
+            // enforcers still apply). Never weakens the built-in floor.
+            return ALLOW;
+        }
     };
 }
 
-let _bundleLoaded = false;
-
-/** Loads the governance Rego bundle into OPA. Best-effort, idempotent. */
+/**
+ * No-op retained for backward compatibility. Governance is now evaluated directly
+ * against the database policy document (see getPolicyEvaluateFn) — the runtime no
+ * longer depends on OPA. Safe to call; does nothing.
+ */
 export async function initGovernancePolicyBundle(): Promise<void> {
-    if (_bundleLoaded) return;
-    try {
-        await loadPolicyBundle();
-        _bundleLoaded = true;
-        // eslint-disable-next-line no-console
-        console.log('[governance] OPA policy bundle loaded.');
-    } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn(
-            '[governance] failed to load OPA policy bundle (custom policies inactive until loaded):',
-            err instanceof Error ? err.message : String(err),
-        );
-    }
+    /* OPA no longer used by the runtime governance path. */
 }
