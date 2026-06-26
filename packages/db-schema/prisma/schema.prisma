@@ -989,6 +989,33 @@ model PolicyViolation {
   @@index([tenantId, matchedPolicyId])
 }
 
+/// Durable storage for governance workflow templates (Phase 6 Group D — replaces
+/// the in-memory Map). The full template contract is stored as JSON.
+model GovernanceWorkflowTemplate {
+  id        String   @id
+  tenantId  String
+  dataJson  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+/// Durable storage for governance workflow instances + their decision records
+/// (decisionsJson is the appended decision list). Replaces the in-memory Maps.
+model GovernanceWorkflowInstance {
+  id            String   @id
+  tenantId      String
+  templateId    String
+  status        String
+  dataJson      Json
+  decisionsJson Json     @default("[]")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
 model AgentQuestion {
   id              String                     @id @default(cuid())
   contractVersion String
