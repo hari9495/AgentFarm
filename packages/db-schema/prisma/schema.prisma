@@ -964,6 +964,31 @@ model PolicyDocument {
   @@index([tenantId, status])
 }
 
+/// Append-only record of an enforcement `deny`. Populated at the runtime
+/// action-result chokepoint whenever a task is blocked by a governance policy.
+/// Powers the compliance export's violation history.
+model PolicyViolation {
+  id              String   @id @default(cuid())
+  tenantId        String
+  workspaceId     String?
+  botId           String?
+  taskId          String?
+  actionType      String
+  connector       String?
+  riskLevel       String?
+  effect          String   @default("deny")
+  reason          String
+  matchedPolicyId String? // GovernancePolicy id that produced the deny, when known
+  policyVersion   Int?
+  source          String   @default("runtime") // connector | env_time | role | document | runtime
+  correlationId   String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, matchedPolicyId])
+}
+
 model AgentQuestion {
   id              String                     @id @default(cuid())
   contractVersion String

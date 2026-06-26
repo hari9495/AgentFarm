@@ -165,3 +165,41 @@ export interface PolicyDocumentRecord {
     createdAt: string;
     updatedAt: string;
 }
+
+// ---------------------------------------------------------------------------
+// Phase 6 — policy-violation history (compliance)
+// ---------------------------------------------------------------------------
+
+/** An append-only record of an enforcement deny (mirrors PolicyViolation row). */
+export interface PolicyViolationRecord {
+    id: string;
+    tenantId: string;
+    workspaceId?: string | null;
+    botId?: string | null;
+    taskId?: string | null;
+    actionType: string;
+    connector?: string | null;
+    riskLevel?: string | null;
+    effect: string;
+    reason: string;
+    matchedPolicyId?: string | null;
+    policyVersion?: number | null;
+    /** Which enforcer recorded it: connector | env_time | role | document | runtime. */
+    source: string;
+    correlationId?: string | null;
+    createdAt: string;
+}
+
+/** Per-tenant compliance export payload. */
+export interface ComplianceExport {
+    tenantId: string;
+    generatedAt: string;
+    activePolicies: GovernancePolicyRecord[];
+    policyDocuments: PolicyDocumentRecord[];
+    violations: PolicyViolationRecord[];
+    summary: {
+        activePolicyCount: number;
+        appliedDocumentCount: number;
+        violationCount: number;
+    };
+}
