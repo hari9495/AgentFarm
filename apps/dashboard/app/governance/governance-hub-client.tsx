@@ -17,6 +17,7 @@ import RetentionPolicyPanel from '../components/retention-policy-panel';
 import GovernancePolicyPanel from '../components/governance-policy-panel';
 import PolicyDocumentsPanel from '../components/policy-documents-panel';
 import ComplianceExportPanel from '../components/compliance-export-panel';
+import PolicySimulatorPanel from '../components/policy-simulator-panel';
 import { PluginLoadingPanel } from '../components/plugin-loading-panel';
 
 // ── Tab definition ────────────────────────────────────────────────────────────
@@ -181,6 +182,7 @@ export default function GovernanceHubClient({
                 {activeTab === 'role-policies' && (
                     <TabShell icon={ShieldBan} title="Policies" description="Author guardrails per role or tenant: block action types, restrict connectors to read-only or deny specific verbs, and block MCP tools. All rules tighten the built-in defaults — they can never grant access.">
                         <GovernancePolicyPanel />
+                        <PolicySimulatorPanel />
                     </TabShell>
                 )}
 
