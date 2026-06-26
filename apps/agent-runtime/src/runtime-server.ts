@@ -104,6 +104,7 @@ import { analyzeImage, type VisionLLMCallerFn, type VisionProvider } from './vis
 import { FanOutProgressSink, NoopProgressSink, type ProgressMilestone, type ProgressSink } from './task-progress-reporter.js';
 import { createPrismaMemoryStore, searchMemory } from './prisma-memory-store.js';
 import { getPolicyEvaluateFn, initGovernancePolicyBundle } from './policy-runtime.js';
+import { recordPolicyViolation } from './policy-violation-recorder.js';
 import { getBlockedActionsForRole } from './role-action-registry.js';
 import { getActiveRoleBlocklistForTenant } from './role-policy-store.js';
 import {
@@ -4644,6 +4645,21 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             riskLevel: result.decision.riskLevel,
         });
         advancedFeatures.recordEnd(task, result);
+
+        // Phase 6 — record a policy-violation row for compliance history whenever a
+        // task was blocked by a governance policy. Best-effort, fire-and-forget.
+        if (result.failureClass === 'policy_violation') {
+            void recordPolicyViolation({
+                tenantId: config.tenantId,
+                workspaceId: config.workspaceId,
+                botId: config.botId,
+                taskId: task.taskId,
+                actionType: result.decision.actionType,
+                riskLevel: result.decision.riskLevel,
+                reason: result.errorMessage ?? 'Blocked by governance policy.',
+                correlationId: config.correlationId,
+            });
+        }
 
         const claimToken =
             typeof task.payload['_claim_token'] === 'string'
