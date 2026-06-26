@@ -156,8 +156,11 @@ test('processDeveloperTask queues medium/high-risk tasks for approval instead of
     assert.equal(createPrRisk.decision.riskLevel, 'medium');
     assert.equal(createPrRisk.attempts, 0);
 
-    assert.equal(mergePrRisk.status, 'approval_required');
-    assert.equal(mergePrRisk.decision.riskLevel, 'high');
+    // merge_pr is on the developer role's hard blocklist (Phase 2 RBAC): the
+    // developer agent opens PRs and merges releases, but merging PRs is a human
+    // gate — so it is declined by role enforcement, not routed to approval.
+    assert.equal(mergePrRisk.status, 'failed');
+    assert.equal(mergePrRisk.failureClass, 'role_enforcement');
     assert.equal(mergePrRisk.attempts, 0);
 
     assert.equal(meetingSpeakRisk.status, 'approval_required');
