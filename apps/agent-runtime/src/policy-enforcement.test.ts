@@ -12,6 +12,7 @@ import assert from 'node:assert/strict';
 import type { PolicyDecision } from '@agentfarm/shared-types';
 import {
     processDeveloperTask,
+    processApprovedTask,
     applyPolicyDecision,
     buildPolicyEvaluationInput,
     type ActionDecision,
@@ -178,4 +179,52 @@ test('D4: evaluator throw keeps heuristic decision (no crash, no downgrade)', as
     });
     // low-risk heuristic preserved → executes; engine did not crash
     assert.equal(result.status, 'success');
+});
+
+// --- A1: deny re-check on the approved-resume path -----------------------------
+
+const approvedTask = () => taskEnvelope({
+    action_type: 'read_task',
+    summary: 'Deploy build to production cluster',
+    target: 'prod',
+    tenantId: 'tenant-x',
+    workspaceId: 'ws1',
+    roleKey: 'developer',
+});
+
+test('A1: deny added after approval still blocks the approved task', async () => {
+    const result = await processApprovedTask(approvedTask(), {
+        policyEvaluateFn: async () =>
+            policy({
+                effect: 'deny',
+                reasonCode: 'policy_violation',
+                reason: 'production deploy revoked',
+                matchedPolicyId: 'pol-x',
+                matchedPolicyVersion: 5,
+            }),
+    });
+    assert.equal(result.status, 'failed');
+    assert.equal(result.failureClass, 'policy_violation');
+    assert.match(result.errorMessage ?? '', /POLICY_DENIED/);
+    assert.match(result.errorMessage ?? '', /pol-x@v5/);
+});
+
+test('A1: allow/require_approval do not re-block an already-approved task', async () => {
+    const allowRes = await processApprovedTask(approvedTask(), {
+        policyEvaluateFn: async () => policy({ effect: 'allow' }),
+    });
+    assert.notEqual(allowRes.status, 'failed');
+
+    const approvalRes = await processApprovedTask(approvedTask(), {
+        policyEvaluateFn: async () => policy({ effect: 'require_approval', reason: 'needs sign-off' }),
+    });
+    // require_approval must NOT re-block — the human already approved
+    assert.notEqual(approvalRes.status, 'failed');
+});
+
+test('A1: evaluator throw does not block an approved task (fail-safe)', async () => {
+    const result = await processApprovedTask(approvedTask(), {
+        policyEvaluateFn: async () => { throw new Error('opa down'); },
+    });
+    assert.notEqual(result.status, 'failed');
 });

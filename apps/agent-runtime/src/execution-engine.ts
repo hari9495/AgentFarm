@@ -544,6 +544,7 @@ async function processApprovedTaskInner(
         modelProfile?: string;
         progressSink?: ProgressSink;
         killSwitchCheckFn?: KillSwitchCheckFn;
+        policyEvaluateFn?: PolicyEvaluateFn;
         llmCodeGenFn?: LlmCodeGenFn;
         llmPlannerFn?: LlmCodeGenFn;
     },
@@ -566,6 +567,37 @@ async function processApprovedTaskInner(
         });
         if (ksResult.blocked) {
             return { decision: baseDecision, status: 'failed', attempts: 0, transientRetries: 0, executionPayload: taskWithAuditContext.payload, payloadOverrideSource: 'none', failureClass: 'kill_switch_blocked', errorMessage: KILL_SWITCH_BLOCKED_MESSAGE(ksResult.killSwitchId) };
+        }
+    }
+
+    // A1 — re-evaluate customer policy at approval-resume time. A DENY added
+    // between the approval request and the grant must still block (deny always
+    // wins, even over a human approval). require_approval/allow do NOT re-block
+    // here — the human has already approved.
+    let approvedPolicyDecision: PolicyDecision | undefined;
+    if (options?.policyEvaluateFn) {
+        const policyInput = buildPolicyEvaluationInput(taskWithAuditContext.payload, baseDecision.actionType);
+        if (policyInput) {
+            try {
+                approvedPolicyDecision = await options.policyEvaluateFn(policyInput);
+                if (approvedPolicyDecision.effect === 'deny') {
+                    await reportProgress(progressCtx, 'failed', 'Approved task blocked by customer governance policy.', sink);
+                    return {
+                        decision: { ...baseDecision, route: 'approval', riskLevel: 'high', reason: `${baseDecision.reason} [policy: DENY — ${approvedPolicyDecision.reason}]` },
+                        status: 'failed',
+                        attempts: 0,
+                        transientRetries: 0,
+                        executionPayload: taskWithAuditContext.payload,
+                        payloadOverrideSource: 'none',
+                        failureClass: 'policy_violation',
+                        errorMessage: `[POLICY_DENIED] ${approvedPolicyDecision.reason}${approvedPolicyDecision.matchedPolicyId ? ` | policy=${approvedPolicyDecision.matchedPolicyId}@v${approvedPolicyDecision.matchedPolicyVersion ?? '?'}` : ''}`,
+                        policyDecision: approvedPolicyDecision,
+                    };
+                }
+            } catch {
+                // Fail-safe: an evaluator throw must not block an already-approved task.
+                // The kill-switch (above) and execution-layer enforcers still apply.
+            }
         }
     }
 

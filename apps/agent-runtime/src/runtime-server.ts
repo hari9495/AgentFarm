@@ -3370,6 +3370,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             modelProvider: activeModelProvider,
             modelProfile: resolveDefaultModelProfile(capabilitySnapshotCache),
             progressSink,
+            policyEvaluateFn: getPolicyEvaluateFn(),
             llmCodeGenFn: activeCodeGenFn,
             llmPlannerFn: activePlannerFn,
         });
