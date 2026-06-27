@@ -14,7 +14,19 @@ type SessionContext = {
     expiresAt: number;
 };
 
-type ConnectorType = 'jira' | 'teams' | 'github' | 'email' | 'custom_api' | 'slack' | 'gitlab' | 'linear';
+type ConnectorType =
+    | 'jira'
+    | 'teams'
+    | 'github'
+    | 'email'
+    | 'custom_api'
+    | 'slack'
+    | 'gitlab'
+    | 'linear'
+    | 'asana'
+    | 'trello'
+    | 'clickup'
+    | 'azure_devops';
 type ConnectorActionType =
     | 'read_task'
     | 'create_comment'
@@ -246,7 +258,20 @@ type HealthCheckBody = {
 };
 
 
-const SUPPORTED_CONNECTORS: ConnectorType[] = ['jira', 'teams', 'github', 'email', 'custom_api', 'slack', 'gitlab', 'linear'];
+const SUPPORTED_CONNECTORS: ConnectorType[] = [
+    'jira',
+    'teams',
+    'github',
+    'email',
+    'custom_api',
+    'slack',
+    'gitlab',
+    'linear',
+    'asana',
+    'trello',
+    'clickup',
+    'azure_devops',
+];
 const SUPPORTED_ACTIONS: ConnectorActionType[] = [
     'read_task',
     'create_comment',
@@ -299,6 +324,10 @@ const CONNECTOR_TOOL_ALIAS: Record<ConnectorType, ConnectorTool | null> = {
     slack: 'slack',
     gitlab: 'gitlab',
     linear: 'linear',
+    asana: 'asana',
+    trello: 'trello',
+    clickup: 'clickup',
+    azure_devops: 'azure_devops',
 };
 
 const ACTION_ALIAS: Record<ConnectorActionType, NormalizedActionType> = {
@@ -1384,6 +1413,39 @@ export const registerConnectorActionRoutes = async (
         linear: (c) => {
             if (typeof c['api_key'] !== 'string' || !c['api_key']) {
                 return 'linear credentials must include api_key (string)';
+            }
+            return null;
+        },
+        asana: (c) => {
+            if (typeof c['access_token'] !== 'string' || !c['access_token']) {
+                return 'asana credentials must include access_token (string, Personal Access Token)';
+            }
+            if (c['base_url'] !== undefined && typeof c['base_url'] !== 'string') {
+                return 'asana base_url, if provided, must be a string';
+            }
+            return null;
+        },
+        trello: (c) => {
+            if (typeof c['api_key'] !== 'string' || !c['api_key']) {
+                return 'trello credentials must include api_key (string)';
+            }
+            if (typeof c['token'] !== 'string' || !c['token']) {
+                return 'trello credentials must include token (string)';
+            }
+            return null;
+        },
+        clickup: (c) => {
+            if (typeof c['api_key'] !== 'string' || !c['api_key']) {
+                return 'clickup credentials must include api_key (string, personal API token)';
+            }
+            return null;
+        },
+        azure_devops: (c) => {
+            if (typeof c['access_token'] !== 'string' || !c['access_token']) {
+                return 'azure_devops credentials must include access_token (string, Personal Access Token)';
+            }
+            if (typeof c['organization'] !== 'string' || !c['organization']) {
+                return 'azure_devops credentials must include organization (string, your ADO org name or URL)';
             }
             return null;
         },

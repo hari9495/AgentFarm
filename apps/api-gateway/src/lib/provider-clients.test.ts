@@ -980,3 +980,285 @@ test('custom_api health probe: returns network_timeout when fetch throws twice',
 
     assert.equal(result.outcome, 'network_timeout');
 });
+
+// ===========================================================================
+// Task-tracker / code connectors: Asana, Trello, ClickUp, Azure DevOps
+// ===========================================================================
+
+const SECRET_REF_ASANA = 'kv://vault/secrets/asana-connector';
+const SECRET_REF_TRELLO = 'kv://vault/secrets/trello-connector';
+const SECRET_REF_CLICKUP = 'kv://vault/secrets/clickup-connector';
+const SECRET_REF_AZDO = 'kv://vault/secrets/azure-devops-connector';
+
+const makeTrackerStore = () =>
+    createInMemorySecretStore({
+        [SECRET_REF_ASANA]: JSON.stringify({ access_token: 'asana-pat-1' }),
+        [SECRET_REF_TRELLO]: JSON.stringify({ api_key: 'trello-key', token: 'trello-token' }),
+        [SECRET_REF_CLICKUP]: JSON.stringify({ api_key: 'clickup-pk-1' }),
+        [SECRET_REF_AZDO]: JSON.stringify({ access_token: 'azdo-pat-1', organization: 'acme-org' }),
+    });
+
+// --- Asana ---
+
+test('asana read_task returns task name and completion state', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 200, body: { data: { name: 'Ship release', completed: false } } }]);
+    const executor = createRealProviderExecutor(makeTrackerStore(), fetcher);
+    const result = await executor({
+        connectorType: 'asana',
+        actionType: 'read_task',
+        payload: { task_gid: '12345' },
+        attempt: 1,
+        secretRefId: SECRET_REF_ASANA,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('Ship release'));
+    assert.ok(result.resultSummary.includes('open'));
+    assert.ok(calls[0]!.url.includes('/tasks/12345'));
+    assert.equal(calls[0]!.headers!['Authorization'], 'Bearer asana-pat-1');
+});
+
+test('asana create_comment posts a story and returns its gid', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 201, body: { data: { gid: 'story-9' } } }]);
+    const executor = createRealProviderExecutor(makeTrackerStore(), fetcher);
+    const result = await executor({
+        connectorType: 'asana',
+        actionType: 'create_comment',
+        payload: { task_gid: '12345', body: 'Looks good' },
+        attempt: 1,
+        secretRefId: SECRET_REF_ASANA,
+    });
+    assert.equal(result.ok, true);
+    assert.equal(calls[0]!.method, 'POST');
+    assert.deepEqual(calls[0]!.body, { data: { text: 'Looks good' } });
+    assert.ok(result.resultSummary.includes('story-9'));
+});
+
+test('asana update_status marks the task completed', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 200, body: { data: { completed: true } } }]);
+    const executor = createRealProviderExecutor(makeTrackerStore(), fetcher);
+    const result = await executor({
+        connectorType: 'asana',
+        actionType: 'update_status',
+        payload: { task_gid: '12345', completed: true },
+        attempt: 1,
+        secretRefId: SECRET_REF_ASANA,
+    });
+    assert.equal(result.ok, true);
+    assert.equal(calls[0]!.method, 'PUT');
+    assert.deepEqual(calls[0]!.body, { data: { completed: true } });
+});
+
+test('asana read_task returns invalid_format when task_gid missing', async () => {
+    const { fetcher } = makeFetch([]);
+    const executor = createRealProviderExecutor(makeTrackerStore(), fetcher);
+    const result = await executor({
+        connectorType: 'asana',
+        actionType: 'read_task',
+        payload: {},
+        attempt: 1,
+        secretRefId: SECRET_REF_ASANA,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'invalid_format');
+});
+
+// --- Trello ---
+
+test('trello read_task returns card name and list', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 200, body: { name: 'Design spec', idList: 'list-1' } }]);
+    const executor = createRealProviderExecutor(makeTrackerStore(), fetcher);
+    const result = await executor({
+        connectorType: 'trello',
+        actionType: 'read_task',
+        payload: { card_id: 'card-7' },
+        attempt: 1,
+        secretRefId: SECRET_REF_TRELLO,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('Design spec'));
+    assert.ok(calls[0]!.url.includes('/cards/card-7'));
+    assert.ok(calls[0]!.url.includes('key=trello-key'));
+    assert.ok(calls[0]!.url.includes('token=trello-token'));
+});
+
+test('trello create_comment posts comment via query param', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 200, body: { id: 'comment-3' } }]);
+    const executor = createRealProviderExecutor(makeTrackerStore(), fetcher);
+    const result = await executor({
+        connectorType: 'trello',
+        actionType: 'create_comment',
+        payload: { card_id: 'card-7', body: 'Nice work' },
+        attempt: 1,
+        secretRefId: SECRET_REF_TRELLO,
+    });
+    assert.equal(result.ok, true);
+    assert.equal(calls[0]!.method, 'POST');
+    assert.ok(calls[0]!.url.includes('text=Nice%20work'));
+    assert.ok(result.resultSummary.includes('comment-3'));
+});
+
+test('trello update_status moves card to target list', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 200, body: { id: 'card-7', idList: 'list-2' } }]);
+    const executor = createRealProviderExecutor(makeTrackerStore(), fetcher);
+    const result = await executor({
+        connectorType: 'trello',
+        actionType: 'update_status',
+        payload: { card_id: 'card-7', list_id: 'list-2' },
+        attempt: 1,
+        secretRefId: SECRET_REF_TRELLO,
+    });
+    assert.equal(result.ok, true);
+    assert.equal(calls[0]!.method, 'PUT');
+    assert.ok(calls[0]!.url.includes('idList=list-2'));
+});
+
+test('trello update_status returns invalid_format when list_id missing', async () => {
+    const { fetcher } = makeFetch([]);
+    const executor = createRealProviderExecutor(makeTrackerStore(), fetcher);
+    const result = await executor({
+        connectorType: 'trello',
+        actionType: 'update_status',
+        payload: { card_id: 'card-7' },
+        attempt: 1,
+        secretRefId: SECRET_REF_TRELLO,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'invalid_format');
+});
+
+// --- ClickUp ---
+
+test('clickup read_task returns task name and status', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 200, body: { name: 'API work', status: { status: 'in progress' } } }]);
+    const executor = createRealProviderExecutor(makeTrackerStore(), fetcher);
+    const result = await executor({
+        connectorType: 'clickup',
+        actionType: 'read_task',
+        payload: { task_id: 'abc123' },
+        attempt: 1,
+        secretRefId: SECRET_REF_CLICKUP,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('API work'));
+    assert.ok(result.resultSummary.includes('in progress'));
+    assert.equal(calls[0]!.headers!['Authorization'], 'clickup-pk-1');
+    assert.ok(calls[0]!.url.includes('/task/abc123'));
+});
+
+test('clickup update_status sets the status field', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 200, body: { id: 'abc123' } }]);
+    const executor = createRealProviderExecutor(makeTrackerStore(), fetcher);
+    const result = await executor({
+        connectorType: 'clickup',
+        actionType: 'update_status',
+        payload: { task_id: 'abc123', status: 'done' },
+        attempt: 1,
+        secretRefId: SECRET_REF_CLICKUP,
+    });
+    assert.equal(result.ok, true);
+    assert.equal(calls[0]!.method, 'PUT');
+    assert.deepEqual(calls[0]!.body, { status: 'done' });
+});
+
+test('clickup read_task classifies 401 as permission_denied', async () => {
+    const { fetcher } = makeFetch([{ status: 401 }]);
+    const executor = createRealProviderExecutor(makeTrackerStore(), fetcher);
+    const result = await executor({
+        connectorType: 'clickup',
+        actionType: 'read_task',
+        payload: { task_id: 'abc123' },
+        attempt: 1,
+        secretRefId: SECRET_REF_CLICKUP,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'permission_denied');
+});
+
+// --- Azure DevOps ---
+
+test('azure_devops read_task returns work item title and state', async () => {
+    const { fetcher, calls } = makeFetch([
+        { status: 200, body: { fields: { 'System.Title': 'Login bug', 'System.State': 'Active' } } },
+    ]);
+    const executor = createRealProviderExecutor(makeTrackerStore(), fetcher);
+    const result = await executor({
+        connectorType: 'azure_devops',
+        actionType: 'read_task',
+        payload: { project: 'web', work_item_id: '42' },
+        attempt: 1,
+        secretRefId: SECRET_REF_AZDO,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('Login bug'));
+    assert.ok(result.resultSummary.includes('Active'));
+    assert.ok(calls[0]!.url.includes('/acme-org/'));
+    assert.ok(calls[0]!.url.includes('/web/_apis/wit/workitems/42'));
+    assert.ok(calls[0]!.headers!['Authorization'].startsWith('Basic '));
+});
+
+test('azure_devops update_status PATCHes System.State via json-patch', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 200, body: { id: 42 } }]);
+    const executor = createRealProviderExecutor(makeTrackerStore(), fetcher);
+    const result = await executor({
+        connectorType: 'azure_devops',
+        actionType: 'update_status',
+        payload: { project: 'web', work_item_id: '42', state: 'Resolved' },
+        attempt: 1,
+        secretRefId: SECRET_REF_AZDO,
+    });
+    assert.equal(result.ok, true);
+    assert.equal(calls[0]!.method, 'PATCH');
+    assert.equal(calls[0]!.headers!['Content-Type'], 'application/json-patch+json');
+    assert.deepEqual(calls[0]!.body, [{ op: 'add', path: '/fields/System.State', value: 'Resolved' }]);
+});
+
+test('azure_devops returns invalid_format when project missing', async () => {
+    const { fetcher } = makeFetch([]);
+    const executor = createRealProviderExecutor(makeTrackerStore(), fetcher);
+    const result = await executor({
+        connectorType: 'azure_devops',
+        actionType: 'read_task',
+        payload: { work_item_id: '42' },
+        attempt: 1,
+        secretRefId: SECRET_REF_AZDO,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'invalid_format');
+});
+
+// --- credential validation + health probes ---
+
+test('executor returns upgrade_required when azure_devops organization missing', async () => {
+    const store = createInMemorySecretStore({ [SECRET_REF_AZDO]: JSON.stringify({ access_token: 'x' }) });
+    const { fetcher } = makeFetch([]);
+    const executor = createRealProviderExecutor(store, fetcher);
+    const result = await executor({
+        connectorType: 'azure_devops',
+        actionType: 'read_task',
+        payload: { project: 'web', work_item_id: '42' },
+        attempt: 1,
+        secretRefId: SECRET_REF_AZDO,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'upgrade_required');
+});
+
+test('health probe: asana returns ok when /users/me returns 200', async () => {
+    const { fetcher } = makeFetch([{ status: 200 }]);
+    const probe = createRealConnectorHealthProbe(makeTrackerStore(), fetcher);
+    const result = await probe({
+        connectorType: 'asana',
+        metadata: { connectorId: 'asana:t:w', connectorType: 'asana', secretRefId: SECRET_REF_ASANA, status: 'connected', scopeStatus: 'full', lastErrorClass: null },
+    });
+    assert.equal(result.outcome, 'ok');
+});
+
+test('health probe: clickup returns auth_failure on 401', async () => {
+    const { fetcher } = makeFetch([{ status: 401 }]);
+    const probe = createRealConnectorHealthProbe(makeTrackerStore(), fetcher);
+    const result = await probe({
+        connectorType: 'clickup',
+        metadata: { connectorId: 'clickup:t:w', connectorType: 'clickup', secretRefId: SECRET_REF_CLICKUP, status: 'connected', scopeStatus: 'full', lastErrorClass: null },
+    });
+    assert.equal(result.outcome, 'auth_failure');
+});
