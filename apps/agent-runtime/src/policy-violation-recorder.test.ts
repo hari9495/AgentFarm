@@ -39,7 +39,21 @@ test('inferViolationSource classifies by markers', () => {
 function fakePrisma() {
     const created: Record<string, unknown>[] = [];
     return {
-        prisma: { policyViolation: { create: async ({ data }: { data: Record<string, unknown> }) => { created.push(data); return { id: 'v1', ...data }; } } },
+        prisma: {
+            policyViolation: {
+                findFirst: async () => {
+                    // latest hashed row for the tenant (test is single-tenant)
+                    for (let i = created.length - 1; i >= 0; i--) {
+                        if (created[i].hash != null) return created[i];
+                    }
+                    return null;
+                },
+                create: async ({ data }: { data: Record<string, unknown> }) => {
+                    created.push(data);
+                    return { id: `v${created.length}`, ...data };
+                },
+            },
+        },
         created,
     };
 }
@@ -71,4 +85,20 @@ test('recordPolicyViolation is best-effort (swallows prisma errors)', async () =
     const prisma = { policyViolation: { create: async () => { throw new Error('db down'); } } };
     const ok = await recordPolicyViolation({ tenantId: 't1', actionType: 'x', reason: 'y' }, prisma as never);
     assert.equal(ok, false);
+});
+
+// --- tamper-evident hash chain ------------------------------------------------
+
+test('recordPolicyViolation populates prevHash/hash and chains across rows', async () => {
+    const { prisma, created } = fakePrisma();
+    await recordPolicyViolation({ tenantId: 't1', actionType: 'deploy_production', reason: 'first' }, prisma as never);
+    await recordPolicyViolation({ tenantId: 't1', actionType: 'merge_pr', reason: 'second' }, prisma as never);
+
+    assert.equal(created.length, 2);
+    // genesis: first row links to empty prevHash
+    assert.equal(created[0].prevHash, '');
+    assert.ok(typeof created[0].hash === 'string' && (created[0].hash as string).length === 64);
+    // second row links to the first row's hash
+    assert.equal(created[1].prevHash, created[0].hash);
+    assert.notEqual(created[1].hash, created[0].hash);
 });

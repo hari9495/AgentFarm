@@ -982,6 +982,8 @@ model PolicyViolation {
   policyVersion   Int?
   source          String   @default("runtime") // connector | env_time | role | document | runtime
   correlationId   String?
+  prevHash        String? // tamper-evident chain: hash of the previous violation for this tenant
+  hash            String? // sha256(prevHash + canonical material fields)
   createdAt       DateTime @default(now())
 
   @@index([tenantId])
