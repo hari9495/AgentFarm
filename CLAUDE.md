@@ -68,7 +68,7 @@ AgentFarm is a **multi-tenant AI agent orchestration platform** — a TypeScript
 
 ```
 apps/               6 runtime services
-services/           17 domain modules (imported into apps, not standalone containers)
+services/           15 domain modules (imported into apps, not standalone containers)
 packages/           16 shared packages (no dist/ in dev — resolved via TS path aliases)
 scripts/            30+ dev/ops scripts
 ```
@@ -85,10 +85,10 @@ scripts/            30+ dev/ops scripts
 | `website` | varies | Marketing, signup, onboarding (Cloudflare in prod) |
 
 **Key services** (imported by api-gateway / agent-runtime):
-`approval-service`, `connector-gateway` (OAuth + mTLS + plugin loader), `identity-service`, `evidence-service` (HNSW vector search), `meeting-agent` (STT/TTS), `memory-service`, `notification-service`, `policy-engine`, `provisioning-service` (Azure VM state machine), `browser-actions` (Playwright), `audit-storage`.
+`approval-service`, `connector-gateway` (OAuth + mTLS + plugin loader), `identity-service`, `evidence-service` (HNSW vector search), `meeting-agent` (STT/TTS), `policy-engine`, `provisioning-service` (Azure VM state machine), `browser-actions` (Playwright), `audit-storage`. (Memory and notification logic live in `packages/memory-service` and `packages/notification-service` (`@agentfarm/notification-adapters`); the former `services/` duplicates were removed.)
 
 **Key packages:**
-`db-schema` (Prisma schema + 58 migrations), `shared-types` (100+ TS contracts, only package with a compiled `dist/`), `connector-contracts` (23 connectors incl. telephony, 34 normalized action types, 13 role keys), `observability` (OTEL + Azure Monitor), `llm-trace` (fail-safe Langfuse wrapper: per-call generations, token/cost, prompt registry, eval scores, datasets, ambient task context), `sdk` (AgentFarmClient), `config` (service URLs + constants).
+`db-schema` (Prisma schema + 64 migrations), `shared-types` (100+ TS contracts, only package with a compiled `dist/`), `connector-contracts` (23 connectors incl. telephony, 34 normalized action types, 13 role keys), `observability` (OTEL + Azure Monitor), `llm-trace` (fail-safe Langfuse wrapper: per-call generations, token/cost, prompt registry, eval scores, datasets, ambient task context), `sdk` (AgentFarmClient), `config` (service URLs + constants).
 
 ### Request flow
 
@@ -130,7 +130,7 @@ Voicebox / VoxCPM2  — STT / TTS
 
 **Inter-service auth:** HMAC shared tokens per route group (`APPROVAL_INTAKE_SHARED_TOKEN`, `RUNTIME_TASK_SHARED_TOKEN`, etc.). Use `timingSafeEqual` for all token comparisons — `task-notify.ts` is the reference implementation.
 
-**Connector framework:** 18 connectors with OAuth 2.0/API key/basic auth. Token lifecycle workers handle auto-refresh, revoke, and re-consent. Marketplace registry with health monitoring.
+**Connector framework:** 23 connectors registered (`CONNECTOR_REGISTRY`) with OAuth 2.0/API key/basic auth. Executable reach: 6 first-class native executors (jira, github, slack, teams, gitlab, linear) + 5 generic-REST/SMTP-backed; the rest are tracked `KNOWN_UNIMPLEMENTED` (see `connector-coverage.test.ts`, which fails CI if a connector is advertised without a conscious execution decision). Token lifecycle workers handle auto-refresh, revoke, and re-consent. Marketplace registry with health monitoring.
 
 **Billing:** Tenant and agent subscriptions, grace periods, hard-stop enforcement, daily lifecycle sweep. Stripe + Razorpay webhooks. Budget policy with daily/monthly limits, 80% warning, 90% throttle.
 
@@ -140,7 +140,7 @@ Voicebox / VoxCPM2  — STT / TTS
 
 ### Database
 
-Schema at `packages/db-schema/prisma/schema.prisma` — 109 models and 35 enums across 11 domains: Identity & Tenancy (incl. SSO, branding, portal accounts), Agents & Bots (incl. personas), Task Execution, Memory & Knowledge, Billing & Subscriptions, Connectors & Marketplace, Governance & Audit, Communication & Developer Tools, Sales (prospects/deals/calls/contracts/NPS), Support (issues/CSAT/chat/diagnosis), Provisioning & VMs.
+Schema at `packages/db-schema/prisma/schema.prisma` — 114 models and 38 enums across 11 domains: Identity & Tenancy (incl. SSO, branding, portal accounts), Agents & Bots (incl. personas), Task Execution, Memory & Knowledge, Billing & Subscriptions, Connectors & Marketplace, Governance & Audit, Communication & Developer Tools, Sales (prospects/deals/calls/contracts/NPS), Support (issues/CSAT/chat/diagnosis), Provisioning & VMs.
 
 ### Environment variables
 
