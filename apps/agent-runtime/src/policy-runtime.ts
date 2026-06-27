@@ -24,7 +24,7 @@
 import { PrismaClient } from '@prisma/client';
 import type { PolicyDecision, PolicyEvaluationInput, GovernanceRule } from '@agentfarm/shared-types';
 import { evaluateGovernanceRules } from '@agentfarm/shared-types';
-import { getActivePolicy } from '@agentfarm/policy-engine';
+import { getActivePoliciesForScopes } from '@agentfarm/policy-engine';
 
 let _prisma: PrismaClient | null | undefined;
 
@@ -63,15 +63,15 @@ export function getPolicyEvaluateFn():
 
     return async (input: PolicyEvaluationInput): Promise<PolicyDecision> => {
         try {
-            // Read the active tenant- and role-scope policies (strictest-wins: a
-            // deny from either blocks). Same DB document the direct-read enforcers use.
-            const [tenant, role] = await Promise.all([
-                getActivePolicy(prisma, input.tenantId, 'tenant', ''),
-                input.roleKey
-                    ? getActivePolicy(prisma, input.tenantId, 'role', input.roleKey)
-                    : Promise.resolve(null),
-            ]);
-            if (!tenant && !role) return ALLOW;
+            // Read every applicable scope (tenant/workspace/role/agent) in ONE query.
+            // Strictest-wins: a deny in any scope blocks; same DB document the
+            // direct-read enforcers use.
+            const policies = await getActivePoliciesForScopes(prisma, input.tenantId, {
+                workspaceId: input.workspaceId,
+                roleKey: input.roleKey,
+                agentId: input.agentId,
+            });
+            if (policies.length === 0) return ALLOW;
 
             const action = {
                 actionType: input.actionType,
@@ -82,8 +82,7 @@ export function getPolicyEvaluateFn():
 
             // Strictest-wins across scopes: a deny anywhere beats a require_approval anywhere.
             let approval: PolicyDecision | undefined;
-            for (const policy of [tenant, role]) {
-                if (!policy) continue;
+            for (const policy of policies) {
                 const rules = (policy.rules ?? []) as GovernanceRule[];
                 const result = evaluateGovernanceRules(rules, action);
                 if (result.effect === 'deny') {

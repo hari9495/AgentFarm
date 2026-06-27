@@ -2720,6 +2720,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         const connectorPolicy = await getActiveConnectorPolicyForTenant(
             input.config.tenantId,
             input.config.roleKey,
+            { workspaceId: input.config.workspaceId, agentId: input.config.botId },
         ).catch(() => null);
         if (
             connectorPolicy &&
@@ -3496,6 +3497,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             const connectorPolicy = await getActiveConnectorPolicyForTenant(
                 config.tenantId,
                 config.roleKey,
+                { workspaceId: config.workspaceId, agentId: config.botId },
             ).catch(() => null);
             if (connectorPolicy && connectorPolicy.deniedTools.size > 0) {
                 task = {
@@ -3969,7 +3971,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         // Only evaluated on the execute path: approval-routed actions get human review,
         // and skipping the DB load there keeps the approval hot path latency-free.
         if (result.decision.route === 'execute') {
-            const envTimeRules = await getActiveGovernanceRulesForTenant(config.tenantId, config.roleKey).catch(() => []);
+            const envTimeRules = await getActiveGovernanceRulesForTenant(config.tenantId, config.roleKey, { workspaceId: config.workspaceId, agentId: config.botId }).catch(() => []);
             if (envTimeRules.length > 0) {
                 const envName = typeof executionTask.payload['environment'] === 'string'
                     ? (executionTask.payload['environment'] as string).trim()
