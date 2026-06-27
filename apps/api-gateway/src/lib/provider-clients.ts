@@ -28,7 +28,19 @@ import { resolveOperation, type CustomApiTool } from './openapi-catalog.js';
 // Re-exported types that connector-actions.ts uses
 // ---------------------------------------------------------------------------
 
-export type ConnectorType = 'jira' | 'teams' | 'github' | 'email' | 'custom_api' | 'slack' | 'gitlab' | 'linear';
+export type ConnectorType =
+    | 'jira'
+    | 'teams'
+    | 'github'
+    | 'email'
+    | 'custom_api'
+    | 'slack'
+    | 'gitlab'
+    | 'linear'
+    | 'asana'
+    | 'trello'
+    | 'clickup'
+    | 'azure_devops';
 export type ConnectorActionType =
     | 'read_task'
     | 'create_comment'
@@ -124,6 +136,14 @@ type CustomApiCredentials = {
 type GitLabCredentials = { access_token: string; base_url?: string };
 // Linear: personal API key (sent as the raw Authorization header value).
 type LinearCredentials = { api_key: string };
+// Asana: Personal Access Token (Bearer). base_url optional (defaults to public API).
+type AsanaCredentials = { access_token: string; base_url?: string };
+// Trello: API key + token, both sent as query params on every request.
+type TrelloCredentials = { api_key: string; token: string };
+// ClickUp: personal API token (sent as the raw Authorization header value).
+type ClickUpCredentials = { api_key: string };
+// Azure DevOps: PAT (HTTP Basic with empty user) + organization; project from payload.
+type AzureDevOpsCredentials = { access_token: string; organization: string };
 
 type FetchFn = (url: string | URL, init?: RequestInit) => Promise<Response>;
 
@@ -1093,6 +1113,370 @@ const executeLinear = async (
 };
 
 // ---------------------------------------------------------------------------
+// Shared helpers for the task-tracker / code connectors below
+// ---------------------------------------------------------------------------
+
+const networkError = (provider: string, host: string, err: unknown): ProviderExecutionResult => ({
+    ok: false,
+    providerResponseCode: '0',
+    resultSummary: `Network error reaching ${provider}`,
+    transient: true,
+    errorCode: 'provider_unavailable',
+    errorMessage: String(err),
+    remediationHint: `Check network connectivity to ${host}.`,
+});
+
+const missingFields = (fields: string, detail: string): ProviderExecutionResult => ({
+    ok: false,
+    providerResponseCode: '400',
+    resultSummary: `Missing required field(s): ${fields}`,
+    errorCode: 'invalid_format',
+    errorMessage: detail,
+    remediationHint: `Provide ${fields} in the payload.`,
+});
+
+const unsupported = (provider: string, supported: string): ProviderExecutionResult => ({
+    ok: false,
+    providerResponseCode: '400',
+    resultSummary: `Action is not supported by the ${provider} connector`,
+    errorCode: 'unsupported_action',
+    errorMessage: `${provider} supports: ${supported}`,
+});
+
+// ---------------------------------------------------------------------------
+// Asana connector (REST, Personal Access Token)
+// ---------------------------------------------------------------------------
+
+const executeAsana = async (
+    actionType: ConnectorActionType,
+    payload: Record<string, unknown>,
+    credentials: AsanaCredentials,
+    fetcher: FetchFn,
+): Promise<ProviderExecutionResult> => {
+    const baseUrl = (credentials.base_url ?? 'https://app.asana.com/api/1.0').replace(/\/$/, '');
+    const headers: Record<string, string> = {
+        Authorization: `Bearer ${credentials.access_token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+    };
+    const taskGid = String(payload['task_gid'] ?? payload['issue_key'] ?? payload['issue_id'] ?? '').trim();
+
+    if (actionType === 'read_task') {
+        if (!taskGid) return missingFields('task_gid', 'task_gid is required for read_task.');
+        let res: Response;
+        try {
+            res = await fetcher(`${baseUrl}/tasks/${encodeURIComponent(taskGid)}`, { headers });
+        } catch (err) {
+            return networkError('Asana', 'app.asana.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Asana returned ${res.status} for task ${taskGid}`);
+        const json = (await res.json()) as { data?: { name?: string; completed?: boolean } };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Task ${taskGid}: ${json.data?.name ?? '(no name)'} [${json.data?.completed ? 'completed' : 'open'}]`,
+        };
+    }
+
+    if (actionType === 'create_comment') {
+        const body = String(payload['body'] ?? '').trim();
+        if (!taskGid || !body) return missingFields('task_gid, body', 'task_gid and body are required for create_comment.');
+        let res: Response;
+        try {
+            res = await fetcher(`${baseUrl}/tasks/${encodeURIComponent(taskGid)}/stories`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ data: { text: body } }),
+            });
+        } catch (err) {
+            return networkError('Asana', 'app.asana.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Asana comment creation failed with ${res.status}`);
+        const json = (await res.json()) as { data?: { gid?: string } };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Comment ${json.data?.gid ?? 'created'} added to Asana task ${taskGid}`,
+        };
+    }
+
+    if (actionType === 'update_status') {
+        if (!taskGid) return missingFields('task_gid', 'task_gid is required for update_status.');
+        // Asana models open/done as the boolean `completed`. Accept completed|status.
+        const raw = payload['completed'] ?? payload['status'];
+        const completed = typeof raw === 'boolean' ? raw : String(raw ?? '').toLowerCase() === 'completed';
+        let res: Response;
+        try {
+            res = await fetcher(`${baseUrl}/tasks/${encodeURIComponent(taskGid)}`, {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify({ data: { completed } }),
+            });
+        } catch (err) {
+            return networkError('Asana', 'app.asana.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Asana status update failed for ${taskGid}`);
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Asana task ${taskGid} marked ${completed ? 'completed' : 'open'}`,
+        };
+    }
+
+    return unsupported('Asana', 'read_task, create_comment, update_status');
+};
+
+// ---------------------------------------------------------------------------
+// Trello connector (REST, key+token query params)
+// ---------------------------------------------------------------------------
+
+const executeTrello = async (
+    actionType: ConnectorActionType,
+    payload: Record<string, unknown>,
+    credentials: TrelloCredentials,
+    fetcher: FetchFn,
+): Promise<ProviderExecutionResult> => {
+    const auth = `key=${encodeURIComponent(credentials.api_key)}&token=${encodeURIComponent(credentials.token)}`;
+    const cardId = String(payload['card_id'] ?? payload['issue_key'] ?? payload['issue_id'] ?? '').trim();
+
+    if (actionType === 'read_task') {
+        if (!cardId) return missingFields('card_id', 'card_id is required for read_task.');
+        let res: Response;
+        try {
+            res = await fetcher(`https://api.trello.com/1/cards/${encodeURIComponent(cardId)}?${auth}`);
+        } catch (err) {
+            return networkError('Trello', 'api.trello.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Trello returned ${res.status} for card ${cardId}`);
+        const json = (await res.json()) as { name?: string; idList?: string; closed?: boolean };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Card ${cardId}: ${json.name ?? '(no name)'} [list ${json.idList ?? 'unknown'}${json.closed ? ', archived' : ''}]`,
+        };
+    }
+
+    if (actionType === 'create_comment') {
+        const body = String(payload['body'] ?? '').trim();
+        if (!cardId || !body) return missingFields('card_id, body', 'card_id and body are required for create_comment.');
+        let res: Response;
+        try {
+            res = await fetcher(
+                `https://api.trello.com/1/cards/${encodeURIComponent(cardId)}/actions/comments?text=${encodeURIComponent(body)}&${auth}`,
+                { method: 'POST' },
+            );
+        } catch (err) {
+            return networkError('Trello', 'api.trello.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Trello comment creation failed with ${res.status}`);
+        const json = (await res.json()) as { id?: string };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Comment ${json.id ?? 'created'} added to Trello card ${cardId}`,
+        };
+    }
+
+    if (actionType === 'update_status') {
+        // Trello status == which list the card sits in. Require target list id.
+        const idList = String(payload['list_id'] ?? payload['status'] ?? '').trim();
+        if (!cardId || !idList) return missingFields('card_id, list_id', 'card_id and list_id are required for update_status.');
+        let res: Response;
+        try {
+            res = await fetcher(
+                `https://api.trello.com/1/cards/${encodeURIComponent(cardId)}?idList=${encodeURIComponent(idList)}&${auth}`,
+                { method: 'PUT' },
+            );
+        } catch (err) {
+            return networkError('Trello', 'api.trello.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Trello status update failed for ${cardId}`);
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Trello card ${cardId} moved to list ${idList}`,
+        };
+    }
+
+    return unsupported('Trello', 'read_task, create_comment, update_status');
+};
+
+// ---------------------------------------------------------------------------
+// ClickUp connector (REST, personal API token in Authorization header)
+// ---------------------------------------------------------------------------
+
+const executeClickUp = async (
+    actionType: ConnectorActionType,
+    payload: Record<string, unknown>,
+    credentials: ClickUpCredentials,
+    fetcher: FetchFn,
+): Promise<ProviderExecutionResult> => {
+    const headers: Record<string, string> = {
+        Authorization: credentials.api_key,
+        'Content-Type': 'application/json',
+    };
+    const taskId = String(payload['task_id'] ?? payload['issue_key'] ?? payload['issue_id'] ?? '').trim();
+
+    if (actionType === 'read_task') {
+        if (!taskId) return missingFields('task_id', 'task_id is required for read_task.');
+        let res: Response;
+        try {
+            res = await fetcher(`https://api.clickup.com/api/v2/task/${encodeURIComponent(taskId)}`, { headers });
+        } catch (err) {
+            return networkError('ClickUp', 'api.clickup.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `ClickUp returned ${res.status} for task ${taskId}`);
+        const json = (await res.json()) as { name?: string; status?: { status?: string } };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Task ${taskId}: ${json.name ?? '(no name)'} [${json.status?.status ?? 'unknown'}]`,
+        };
+    }
+
+    if (actionType === 'create_comment') {
+        const body = String(payload['body'] ?? '').trim();
+        if (!taskId || !body) return missingFields('task_id, body', 'task_id and body are required for create_comment.');
+        let res: Response;
+        try {
+            res = await fetcher(`https://api.clickup.com/api/v2/task/${encodeURIComponent(taskId)}/comment`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ comment_text: body }),
+            });
+        } catch (err) {
+            return networkError('ClickUp', 'api.clickup.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `ClickUp comment creation failed with ${res.status}`);
+        const json = (await res.json()) as { id?: string };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Comment ${json.id ?? 'created'} added to ClickUp task ${taskId}`,
+        };
+    }
+
+    if (actionType === 'update_status') {
+        const status = String(payload['status'] ?? '').trim();
+        if (!taskId || !status) return missingFields('task_id, status', 'task_id and status are required for update_status.');
+        let res: Response;
+        try {
+            res = await fetcher(`https://api.clickup.com/api/v2/task/${encodeURIComponent(taskId)}`, {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify({ status }),
+            });
+        } catch (err) {
+            return networkError('ClickUp', 'api.clickup.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `ClickUp status update failed for ${taskId}`);
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `ClickUp task ${taskId} status set to "${status}"`,
+        };
+    }
+
+    return unsupported('ClickUp', 'read_task, create_comment, update_status');
+};
+
+// ---------------------------------------------------------------------------
+// Azure DevOps connector (REST, PAT via HTTP Basic; work-item API)
+// ---------------------------------------------------------------------------
+
+const AZDO_API_VERSION = '7.0';
+
+const executeAzureDevOps = async (
+    actionType: ConnectorActionType,
+    payload: Record<string, unknown>,
+    credentials: AzureDevOpsCredentials,
+    fetcher: FetchFn,
+): Promise<ProviderExecutionResult> => {
+    const org = credentials.organization.replace(/\/$/, '');
+    const project = String(payload['project'] ?? '').trim();
+    const workItemId = String(payload['work_item_id'] ?? payload['issue_key'] ?? payload['issue_id'] ?? '').trim();
+    // Azure DevOps PAT auth: HTTP Basic with empty username.
+    const basic = Buffer.from(`:${credentials.access_token}`).toString('base64');
+    const authHeader = `Basic ${basic}`;
+    const base = org.startsWith('http') ? org : `https://dev.azure.com/${encodeURIComponent(org)}`;
+
+    if (!project) return missingFields('project', 'project is required for Azure DevOps actions.');
+
+    if (actionType === 'read_task') {
+        if (!workItemId) return missingFields('work_item_id', 'work_item_id is required for read_task.');
+        let res: Response;
+        try {
+            res = await fetcher(
+                `${base}/${encodeURIComponent(project)}/_apis/wit/workitems/${encodeURIComponent(workItemId)}?api-version=${AZDO_API_VERSION}`,
+                { headers: { Authorization: authHeader, Accept: 'application/json' } },
+            );
+        } catch (err) {
+            return networkError('Azure DevOps', 'dev.azure.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Azure DevOps returned ${res.status} for work item ${workItemId}`);
+        const json = (await res.json()) as { fields?: Record<string, unknown> };
+        const title = String(json.fields?.['System.Title'] ?? '(no title)');
+        const state = String(json.fields?.['System.State'] ?? 'unknown');
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Work item ${workItemId}: ${title} [${state}]`,
+        };
+    }
+
+    if (actionType === 'create_comment') {
+        const body = String(payload['body'] ?? '').trim();
+        if (!workItemId || !body) return missingFields('work_item_id, body', 'work_item_id and body are required for create_comment.');
+        let res: Response;
+        try {
+            res = await fetcher(
+                `${base}/${encodeURIComponent(project)}/_apis/wit/workItems/${encodeURIComponent(workItemId)}/comments?api-version=${AZDO_API_VERSION}-preview.3`,
+                {
+                    method: 'POST',
+                    headers: { Authorization: authHeader, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: body }),
+                },
+            );
+        } catch (err) {
+            return networkError('Azure DevOps', 'dev.azure.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Azure DevOps comment creation failed with ${res.status}`);
+        const json = (await res.json()) as { id?: number };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Comment ${json.id ?? 'created'} added to work item ${workItemId}`,
+        };
+    }
+
+    if (actionType === 'update_status') {
+        const state = String(payload['state'] ?? payload['status'] ?? '').trim();
+        if (!workItemId || !state) return missingFields('work_item_id, state', 'work_item_id and state are required for update_status.');
+        let res: Response;
+        try {
+            res = await fetcher(
+                `${base}/${encodeURIComponent(project)}/_apis/wit/workitems/${encodeURIComponent(workItemId)}?api-version=${AZDO_API_VERSION}`,
+                {
+                    method: 'PATCH',
+                    headers: { Authorization: authHeader, 'Content-Type': 'application/json-patch+json' },
+                    body: JSON.stringify([{ op: 'add', path: '/fields/System.State', value: state }]),
+                },
+            );
+        } catch (err) {
+            return networkError('Azure DevOps', 'dev.azure.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Azure DevOps status update failed for ${workItemId}`);
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Work item ${workItemId} transitioned to "${state}"`,
+        };
+    }
+
+    return unsupported('Azure DevOps', 'read_task, create_comment, update_status');
+};
+
+// ---------------------------------------------------------------------------
 // Email connector (SendGrid + SMTP fallback via nodemailer-style validation)
 // ---------------------------------------------------------------------------
 
@@ -1663,6 +2047,67 @@ const probeSlack = async (
 // Credential-absent fallback (health probe with no credentials)
 // ---------------------------------------------------------------------------
 
+const classifyProbeStatus = (provider: string, status: number, okIsOk = true): HealthProbeResult => {
+    if (status >= 200 && status < 300 && okIsOk) {
+        return { outcome: 'ok', message: `${provider} auth probe returned ${status}` };
+    }
+    if (status === 401 || status === 403) {
+        return { outcome: 'auth_failure', message: `${provider} auth check returned ${status}` };
+    }
+    if (status === 429) {
+        return { outcome: 'rate_limited', message: `${provider} rate limit reached` };
+    }
+    return { outcome: 'network_timeout', message: `${provider} health check returned ${status}` };
+};
+
+const probeAsana = async (credentials: AsanaCredentials, fetcher: FetchFn): Promise<HealthProbeResult> => {
+    const baseUrl = (credentials.base_url ?? 'https://app.asana.com/api/1.0').replace(/\/$/, '');
+    try {
+        const res = await fetcher(`${baseUrl}/users/me`, {
+            headers: { Authorization: `Bearer ${credentials.access_token}`, Accept: 'application/json' },
+        });
+        return classifyProbeStatus('Asana', res.status);
+    } catch {
+        return { outcome: 'network_timeout', message: 'Asana unreachable' };
+    }
+};
+
+const probeTrello = async (credentials: TrelloCredentials, fetcher: FetchFn): Promise<HealthProbeResult> => {
+    try {
+        const res = await fetcher(
+            `https://api.trello.com/1/members/me?key=${encodeURIComponent(credentials.api_key)}&token=${encodeURIComponent(credentials.token)}`,
+        );
+        return classifyProbeStatus('Trello', res.status);
+    } catch {
+        return { outcome: 'network_timeout', message: 'Trello unreachable' };
+    }
+};
+
+const probeClickUp = async (credentials: ClickUpCredentials, fetcher: FetchFn): Promise<HealthProbeResult> => {
+    try {
+        const res = await fetcher('https://api.clickup.com/api/v2/user', {
+            headers: { Authorization: credentials.api_key },
+        });
+        return classifyProbeStatus('ClickUp', res.status);
+    } catch {
+        return { outcome: 'network_timeout', message: 'ClickUp unreachable' };
+    }
+};
+
+const probeAzureDevOps = async (credentials: AzureDevOpsCredentials, fetcher: FetchFn): Promise<HealthProbeResult> => {
+    const org = credentials.organization.replace(/\/$/, '');
+    const base = org.startsWith('http') ? org : `https://dev.azure.com/${encodeURIComponent(org)}`;
+    const basic = Buffer.from(`:${credentials.access_token}`).toString('base64');
+    try {
+        const res = await fetcher(`${base}/_apis/projects?api-version=${AZDO_API_VERSION}`, {
+            headers: { Authorization: `Basic ${basic}`, Accept: 'application/json' },
+        });
+        return classifyProbeStatus('Azure DevOps', res.status);
+    } catch {
+        return { outcome: 'network_timeout', message: 'Azure DevOps unreachable' };
+    }
+};
+
 const probeWithoutCredentials = (connectorType: ConnectorType, metadata: ConnectorAuthMetadata): HealthProbeResult => {
     if (metadata.status === 'permission_invalid' || metadata.status === 'consent_pending') {
         return { outcome: 'auth_failure', message: `${connectorType} connector auth is invalid — re-authenticate required.` };
@@ -1827,6 +2272,66 @@ export const createRealProviderExecutor = (
         return executeLinear(actionType, payload, creds, fetcher);
     }
 
+    if (connectorType === 'asana') {
+        const creds = parseCredentials<AsanaCredentials>(rawSecret);
+        if (!creds?.access_token) {
+            return {
+                ok: false,
+                providerResponseCode: '401',
+                resultSummary: 'Invalid Asana credentials format',
+                errorCode: 'upgrade_required',
+                errorMessage: 'Asana credentials must include access_token.',
+                remediationHint: 'Re-authenticate the Asana connector.',
+            };
+        }
+        return executeAsana(actionType, payload, creds, fetcher);
+    }
+
+    if (connectorType === 'trello') {
+        const creds = parseCredentials<TrelloCredentials>(rawSecret);
+        if (!creds?.api_key || !creds?.token) {
+            return {
+                ok: false,
+                providerResponseCode: '401',
+                resultSummary: 'Invalid Trello credentials format',
+                errorCode: 'upgrade_required',
+                errorMessage: 'Trello credentials must include api_key and token.',
+                remediationHint: 'Re-configure the Trello connector with a valid key and token.',
+            };
+        }
+        return executeTrello(actionType, payload, creds, fetcher);
+    }
+
+    if (connectorType === 'clickup') {
+        const creds = parseCredentials<ClickUpCredentials>(rawSecret);
+        if (!creds?.api_key) {
+            return {
+                ok: false,
+                providerResponseCode: '401',
+                resultSummary: 'Invalid ClickUp credentials format',
+                errorCode: 'upgrade_required',
+                errorMessage: 'ClickUp credentials must include api_key.',
+                remediationHint: 'Re-configure the ClickUp connector with a valid API token.',
+            };
+        }
+        return executeClickUp(actionType, payload, creds, fetcher);
+    }
+
+    if (connectorType === 'azure_devops') {
+        const creds = parseCredentials<AzureDevOpsCredentials>(rawSecret);
+        if (!creds?.access_token || !creds?.organization) {
+            return {
+                ok: false,
+                providerResponseCode: '401',
+                resultSummary: 'Invalid Azure DevOps credentials format',
+                errorCode: 'upgrade_required',
+                errorMessage: 'Azure DevOps credentials must include access_token and organization.',
+                remediationHint: 'Re-authenticate the Azure DevOps connector.',
+            };
+        }
+        return executeAzureDevOps(actionType, payload, creds, fetcher);
+    }
+
     return {
         ok: false,
         providerResponseCode: '400',
@@ -1916,6 +2421,38 @@ export const createRealConnectorHealthProbe = (
             return { outcome: 'auth_failure', message: 'Linear credentials missing api_key' };
         }
         return probeLinear(creds, fetcher);
+    }
+
+    if (connectorType === 'asana') {
+        const creds = parseCredentials<AsanaCredentials>(rawSecret);
+        if (!creds?.access_token) {
+            return { outcome: 'auth_failure', message: 'Asana credentials missing access_token' };
+        }
+        return probeAsana(creds, fetcher);
+    }
+
+    if (connectorType === 'trello') {
+        const creds = parseCredentials<TrelloCredentials>(rawSecret);
+        if (!creds?.api_key || !creds?.token) {
+            return { outcome: 'auth_failure', message: 'Trello credentials missing api_key or token' };
+        }
+        return probeTrello(creds, fetcher);
+    }
+
+    if (connectorType === 'clickup') {
+        const creds = parseCredentials<ClickUpCredentials>(rawSecret);
+        if (!creds?.api_key) {
+            return { outcome: 'auth_failure', message: 'ClickUp credentials missing api_key' };
+        }
+        return probeClickUp(creds, fetcher);
+    }
+
+    if (connectorType === 'azure_devops') {
+        const creds = parseCredentials<AzureDevOpsCredentials>(rawSecret);
+        if (!creds?.access_token || !creds?.organization) {
+            return { outcome: 'auth_failure', message: 'Azure DevOps credentials missing access_token or organization' };
+        }
+        return probeAzureDevOps(creds, fetcher);
     }
 
     return { outcome: 'ok', message: `No live probe implemented for ${connectorType}` };

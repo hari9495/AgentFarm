@@ -19,6 +19,10 @@ const FIRST_CLASS: ReadonlySet<ConnectorTool> = new Set([
     'teams',
     'gitlab',
     'linear',
+    'asana',
+    'trello',
+    'clickup',
+    'azure_devops',
 ]);
 
 // Connectors that execute through the generic REST / SMTP escape hatch (custom_api / email
@@ -36,15 +40,11 @@ const GENERIC_REST_BACKED: ReadonlySet<ConnectorTool> = new Set([
 // roadmap. Adding to it is a conscious decision, never a silent default.
 const KNOWN_UNIMPLEMENTED: ReadonlySet<ConnectorTool> = new Set([
     'amazon_connect',
-    'asana',
-    'azure_devops',
-    'clickup',
     'generic_telephony',
     'genesys',
     'gmail',
     'monday',
     'outlook',
-    'trello',
     'twilio',
     'vonage',
 ]);
