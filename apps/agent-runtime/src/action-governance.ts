@@ -11,7 +11,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import type { GovernanceRule } from '@agentfarm/shared-types';
-import { getActivePolicy } from '@agentfarm/policy-engine';
+import { getActivePoliciesForScopes } from '@agentfarm/policy-engine';
 import { isTimeDenied } from './time-window.js';
 
 export interface ActionContext {
@@ -55,18 +55,20 @@ export function isActionTimeDenied(
     return null;
 }
 
-/** Merged active tenant + role policy rules. Fail-safe → []. */
+/** Merged active rules across tenant/workspace/role/agent scopes. Fail-safe → []. */
 export async function getActiveGovernanceRules(
     prisma: PrismaClient,
     tenantId: string,
     roleKey: string,
+    opts: { workspaceId?: string; agentId?: string } = {},
 ): Promise<GovernanceRule[]> {
     try {
-        const [tenantPolicy, rolePolicy] = await Promise.all([
-            getActivePolicy(prisma, tenantId, 'tenant', '').catch(() => null),
-            getActivePolicy(prisma, tenantId, 'role', roleKey).catch(() => null),
-        ]);
-        return [...(tenantPolicy?.rules ?? []), ...(rolePolicy?.rules ?? [])];
+        const policies = await getActivePoliciesForScopes(prisma, tenantId, {
+            workspaceId: opts.workspaceId,
+            roleKey,
+            agentId: opts.agentId,
+        });
+        return policies.flatMap((p) => p.rules ?? []);
     } catch {
         return [];
     }
@@ -96,8 +98,9 @@ function getCachedPrisma(): PrismaClient | null {
 export async function getActiveGovernanceRulesForTenant(
     tenantId: string,
     roleKey: string,
+    opts: { workspaceId?: string; agentId?: string } = {},
 ): Promise<GovernanceRule[]> {
     const prisma = getCachedPrisma();
     if (!prisma) return [];
-    return getActiveGovernanceRules(prisma, tenantId, roleKey);
+    return getActiveGovernanceRules(prisma, tenantId, roleKey, opts);
 }

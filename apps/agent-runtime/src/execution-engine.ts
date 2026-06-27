@@ -179,6 +179,7 @@ export function buildPolicyEvaluationInput(
     return {
         tenantId,
         workspaceId: str('workspaceId'),
+        agentId: str('agentId') ?? str('botId') ?? str('audit_agent_instance_id'),
         roleKey:
             str('roleKey') ?? str('roleProfile') ?? str('audit_role') ?? 'developer',
         actionType,

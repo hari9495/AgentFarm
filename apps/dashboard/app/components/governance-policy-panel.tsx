@@ -58,8 +58,9 @@ function AddRow({ placeholder, onAdd }: { placeholder: string; onAdd: (v: string
 }
 
 export default function GovernancePolicyPanel() {
-    const [scope, setScope] = useState<'role' | 'tenant'>('role');
+    const [scope, setScope] = useState<'role' | 'tenant' | 'workspace' | 'agent'>('role');
     const [roleKey, setRoleKey] = useState(ROLES[0].key);
+    const [scopeRef, setScopeRef] = useState('');
 
     const [policyId, setPolicyId] = useState<string | null>(null);
     const [blockedActions, setBlockedActions] = useState<string[]>([]);
@@ -126,7 +127,9 @@ export default function GovernancePolicyPanel() {
     const load = useCallback(async () => {
         setLoading(true); setError(null); setSavedMsg(null);
         try {
-            const q = scope === 'role' ? `scope=role&roleKey=${encodeURIComponent(roleKey)}` : 'scope=tenant';
+            const q = scope === 'role' ? `scope=role&roleKey=${encodeURIComponent(roleKey)}`
+                : scope === 'tenant' ? 'scope=tenant'
+                : `scope=${scope}&scopeRef=${encodeURIComponent(scopeRef)}`;
             const res = await fetch(`/api/governance/policies?${q}`, { cache: 'no-store' });
             const data = await res.json();
             if (!res.ok) throw new Error(data?.error || 'Failed to load');
@@ -140,7 +143,7 @@ export default function GovernancePolicyPanel() {
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Failed to load');
         } finally { setLoading(false); }
-    }, [scope, roleKey]);
+    }, [scope, roleKey, scopeRef]);
 
     useEffect(() => { void load(); }, [load]);
 
@@ -154,7 +157,9 @@ export default function GovernancePolicyPanel() {
             const res = await fetch('/api/governance/policies', {
                 method: 'POST', headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({
-                    scope, roleKey: scope === 'role' ? roleKey : undefined,
+                    scope,
+                    roleKey: scope === 'role' ? roleKey : undefined,
+                    scopeRef: scope === 'workspace' || scope === 'agent' ? scopeRef : undefined,
                     blockedActions, approvalActions, connectors, deniedTools,
                     envRules,
                     timeRules: timeRules.map((t) => ({ actionType: t.actionType, start: t.start, end: t.end, tz: t.tz, days: t.days })),
@@ -203,14 +208,24 @@ export default function GovernancePolicyPanel() {
             {/* Scope selectors */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <span style={label}>Scope</span>
-                <select value={scope} onChange={(e) => setScope(e.target.value as 'role' | 'tenant')} style={{ ...input, minWidth: 140 }}>
-                    <option value="role">Role</option>
+                <select value={scope} onChange={(e) => setScope(e.target.value as 'role' | 'tenant' | 'workspace' | 'agent')} style={{ ...input, minWidth: 140 }}>
                     <option value="tenant">Tenant (all agents)</option>
+                    <option value="role">Role</option>
+                    <option value="workspace">Workspace</option>
+                    <option value="agent">Agent</option>
                 </select>
                 {scope === 'role' && (
                     <select value={roleKey} onChange={(e) => setRoleKey(e.target.value)} style={{ ...input, minWidth: 240 }}>
                         {ROLES.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
                     </select>
+                )}
+                {(scope === 'workspace' || scope === 'agent') && (
+                    <input
+                        value={scopeRef}
+                        onChange={(e) => setScopeRef(e.target.value)}
+                        placeholder={scope === 'workspace' ? 'workspace id' : 'agent / bot id'}
+                        style={{ ...input, minWidth: 260, fontFamily: 'ui-monospace, monospace' }}
+                    />
                 )}
                 {loading && <Loader2 size={14} className="spin" color="var(--ink-muted)" />}
             </div>

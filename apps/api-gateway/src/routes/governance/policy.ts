@@ -66,6 +66,7 @@ export async function registerGovernancePolicyRoutes(
         const body = (req.body ?? {}) as {
             scope?: string;
             roleKey?: string;
+            scopeRef?: string;
             name?: string;
             description?: string;
             blockedActions?: unknown;
@@ -77,11 +78,18 @@ export async function registerGovernancePolicyRoutes(
             webhookDomains?: unknown;
         };
 
-        const scope = body.scope === 'tenant' || body.scope === 'role' ? body.scope : null;
-        if (!scope) return res.status(400).send({ error: "scope must be 'tenant' or 'role'" });
+        const VALID_SCOPES = ['tenant', 'role', 'workspace', 'agent'] as const;
+        const scope = (VALID_SCOPES as readonly string[]).includes(body.scope ?? '')
+            ? (body.scope as (typeof VALID_SCOPES)[number])
+            : null;
+        if (!scope) return res.status(400).send({ error: "scope must be 'tenant', 'role', 'workspace', or 'agent'" });
         const roleKey = typeof body.roleKey === 'string' ? body.roleKey.trim() : '';
-        if (scope === 'role' && !roleKey) return res.status(400).send({ error: 'roleKey is required for role scope' });
-        const scopeRef = scope === 'role' ? roleKey : '';
+        // scopeRef: role→roleKey (back-compat), workspace/agent→scopeRef, tenant→''
+        const rawScopeRef = typeof body.scopeRef === 'string' ? body.scopeRef.trim() : '';
+        const scopeRef = scope === 'role' ? roleKey : scope === 'tenant' ? '' : rawScopeRef;
+        if (scope !== 'tenant' && !scopeRef) {
+            return res.status(400).send({ error: `${scope === 'role' ? 'roleKey' : 'scopeRef'} is required for ${scope} scope` });
+        }
 
         // Build the combined rule set.
         const rules: Rule[] = [];
@@ -158,7 +166,7 @@ export async function registerGovernancePolicyRoutes(
                         scopeRef,
                         version,
                         status: 'active',
-                        name: body.name?.trim() || `${scope === 'role' ? roleKey : 'tenant'} policy v${version}`,
+                        name: body.name?.trim() || `${scope}${scopeRef ? `:${scopeRef}` : ''} policy v${version}`,
                         description: body.description?.trim() || null,
                         rulesJson: rules as unknown as object,
                         createdBy: session.userId,
@@ -178,12 +186,12 @@ export async function registerGovernancePolicyRoutes(
         const session = getSession(req);
         if (!session) return res.status(401).send({ error: 'Unauthorized' });
 
-        const { scope, roleKey } = (req.query ?? {}) as { scope?: string; roleKey?: string };
-        const sc = scope === 'tenant' || scope === 'role' ? scope : 'role';
-        const scopeRef = sc === 'role' ? (roleKey ?? '') : '';
+        const { scope, roleKey, scopeRef: qScopeRef } = (req.query ?? {}) as { scope?: string; roleKey?: string; scopeRef?: string };
+        const sc = ['tenant', 'role', 'workspace', 'agent'].includes(scope ?? '') ? (scope as string) : 'role';
+        const scopeRef = sc === 'tenant' ? '' : sc === 'role' ? (roleKey ?? qScopeRef ?? '') : (qScopeRef ?? '');
         try {
             const policy = await prisma.governancePolicy.findFirst({
-                where: { tenantId: session.tenantId, scope: sc, scopeRef, status: 'active' },
+                where: { tenantId: session.tenantId, scope: sc as never, scopeRef, status: 'active' },
                 orderBy: { version: 'desc' },
             });
             return res.send({ policy: policy ?? null });

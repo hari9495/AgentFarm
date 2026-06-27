@@ -96,6 +96,8 @@ export interface GovernancePolicyRecord {
 export interface PolicyEvaluationInput {
     tenantId: string;
     workspaceId?: string;
+    /** Agent/bot id, for agent-scoped policies. */
+    agentId?: string;
     roleKey: string;
     actionType: string;
     connector?: string;

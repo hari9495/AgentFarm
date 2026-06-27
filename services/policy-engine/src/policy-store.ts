@@ -71,6 +71,48 @@ export async function getActivePolicy(
     return row ? toRecord(row as Row) : null;
 }
 
+export interface ScopeSelector {
+    workspaceId?: string;
+    roleKey?: string;
+    agentId?: string;
+}
+
+/**
+ * Returns every active policy applicable to an action in ONE query: the tenant
+ * default plus any active workspace-, role-, and agent-scoped policies that match
+ * the given refs. Ordered tenant → workspace → role → agent (broadest first).
+ * Keeps the runtime hot path to a single DB round-trip regardless of scope count.
+ */
+export async function getActivePoliciesForScopes(
+    prisma: PrismaClient,
+    tenantId: string,
+    sel: ScopeSelector,
+): Promise<GovernancePolicyRecord[]> {
+    const or: { scope: GovernancePolicyScope; scopeRef: string }[] = [
+        { scope: 'tenant', scopeRef: TENANT_SCOPE_REF },
+    ];
+    if (sel.workspaceId) or.push({ scope: 'workspace', scopeRef: sel.workspaceId });
+    if (sel.roleKey) or.push({ scope: 'role', scopeRef: sel.roleKey });
+    if (sel.agentId) or.push({ scope: 'agent', scopeRef: sel.agentId });
+
+    const rows = (await prisma.governancePolicy.findMany({
+        where: { tenantId, status: 'active', OR: or },
+        orderBy: { version: 'desc' },
+    })) as Row[];
+
+    // One active policy per (scope, scopeRef); de-dup keeping highest version (already desc).
+    const seen = new Set<string>();
+    const order: GovernancePolicyScope[] = ['tenant', 'workspace', 'role', 'agent'];
+    const picked: GovernancePolicyRecord[] = [];
+    for (const row of rows) {
+        const key = `${row.scope}:${row.scopeRef}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        picked.push(toRecord(row));
+    }
+    return picked.sort((a, b) => order.indexOf(a.scope) - order.indexOf(b.scope));
+}
+
 /** Returns the next version number for a scope (max existing + 1). */
 export async function nextVersion(
     prisma: PrismaClient,

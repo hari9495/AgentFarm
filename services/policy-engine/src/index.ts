@@ -22,6 +22,7 @@ export {
 
 export {
     getActivePolicy,
+    getActivePoliciesForScopes,
     nextVersion,
     publishPolicy,
     type PublishResult,

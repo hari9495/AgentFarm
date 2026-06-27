@@ -13,7 +13,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import type { GovernanceRule } from '@agentfarm/shared-types';
-import { getActivePolicy } from '@agentfarm/policy-engine';
+import { getActivePoliciesForScopes } from '@agentfarm/policy-engine';
 import { isWriteVerb } from './connector-verb-classifier.js';
 
 export interface ConnectorRule {
@@ -63,15 +63,16 @@ export async function getActiveConnectorPolicy(
     prisma: PrismaClient,
     tenantId: string,
     roleKey: string,
+    opts: { workspaceId?: string; agentId?: string } = {},
 ): Promise<ConnectorPolicy> {
     const policy = emptyPolicy();
     try {
-        const [tenantPolicy, rolePolicy] = await Promise.all([
-            getActivePolicy(prisma, tenantId, 'tenant', '').catch(() => null),
-            getActivePolicy(prisma, tenantId, 'role', roleKey).catch(() => null),
-        ]);
-        if (tenantPolicy) applyRules(policy, tenantPolicy.rules);
-        if (rolePolicy) applyRules(policy, rolePolicy.rules);
+        const policies = await getActivePoliciesForScopes(prisma, tenantId, {
+            workspaceId: opts.workspaceId,
+            roleKey,
+            agentId: opts.agentId,
+        });
+        for (const p of policies) applyRules(policy, p.rules);
     } catch {
         return emptyPolicy();
     }
@@ -116,8 +117,9 @@ function getCachedPrisma(): PrismaClient | null {
 export async function getActiveConnectorPolicyForTenant(
     tenantId: string,
     roleKey: string,
+    opts: { workspaceId?: string; agentId?: string } = {},
 ): Promise<ConnectorPolicy> {
     const prisma = getCachedPrisma();
     if (!prisma) return emptyPolicy();
-    return getActiveConnectorPolicy(prisma, tenantId, roleKey);
+    return getActiveConnectorPolicy(prisma, tenantId, roleKey, opts);
 }
