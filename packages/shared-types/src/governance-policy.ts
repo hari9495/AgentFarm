@@ -202,4 +202,11 @@ export interface ComplianceExport {
         appliedDocumentCount: number;
         violationCount: number;
     };
+    /** Tamper-evidence: result of re-walking the per-tenant violation hash chain. */
+    integrity: {
+        chainValid: boolean;
+        recordsChecked: number;
+        /** id of the first row whose hash/link failed verification, if any. */
+        brokenAtId?: string;
+    };
 }

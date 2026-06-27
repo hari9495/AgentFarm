@@ -11,6 +11,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { computeViolationHash } from '@agentfarm/shared-types';
 
 let _prisma: PrismaClient | null | undefined;
 
@@ -68,6 +69,9 @@ type PrismaLike = Pick<PrismaClient, 'policyViolation'>;
 /**
  * Persists a PolicyViolation. `prismaOverride` is for tests; production uses the
  * lazy singleton. Returns true on write, false when skipped/failed (best-effort).
+ *
+ * Maintains a per-tenant tamper-evident hash chain: each row links to the
+ * previous tenant row via `prevHash`, and `hash = sha256(prevHash + content)`.
  */
 export async function recordPolicyViolation(
     input: PolicyViolationInput,
@@ -76,7 +80,27 @@ export async function recordPolicyViolation(
     const prisma = prismaOverride ?? getPrisma();
     if (!prisma || !input.tenantId) return false;
     const prov = parsePolicyProvenance(input.reason);
+    const reason = input.reason.slice(0, 1000);
+    const source = inferViolationSource(input.reason, input.actionType);
     try {
+        // Link to the tenant's latest hashed row (genesis '' if none).
+        const last = await prisma.policyViolation.findFirst({
+            where: { tenantId: input.tenantId, hash: { not: null } },
+            orderBy: { createdAt: 'desc' },
+            select: { hash: true },
+        });
+        const prevHash = last?.hash ?? '';
+        const hash = computeViolationHash(prevHash, {
+            tenantId: input.tenantId,
+            actionType: input.actionType,
+            connector: input.connector || null,
+            effect: 'deny',
+            reason,
+            matchedPolicyId: prov.matchedPolicyId ?? null,
+            policyVersion: prov.policyVersion ?? null,
+            source,
+        });
+
         await prisma.policyViolation.create({
             data: {
                 tenantId: input.tenantId,
@@ -87,11 +111,13 @@ export async function recordPolicyViolation(
                 connector: input.connector || null,
                 riskLevel: input.riskLevel || null,
                 effect: 'deny',
-                reason: input.reason.slice(0, 1000),
+                reason,
                 matchedPolicyId: prov.matchedPolicyId ?? null,
                 policyVersion: prov.policyVersion ?? null,
-                source: inferViolationSource(input.reason, input.actionType),
+                source,
                 correlationId: input.correlationId || null,
+                prevHash,
+                hash,
             },
         });
         return true;

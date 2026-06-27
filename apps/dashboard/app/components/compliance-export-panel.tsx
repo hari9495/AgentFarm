@@ -13,6 +13,7 @@ type Report = {
     tenantId: string; generatedAt: string;
     activePolicies: Policy[]; policyDocuments: Doc[]; violations: Violation[];
     summary: { activePolicyCount: number; appliedDocumentCount: number; violationCount: number };
+    integrity?: { chainValid: boolean; recordsChecked: number; brokenAtId?: string };
 };
 
 const card: React.CSSProperties = { background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: 16 };
@@ -67,6 +68,23 @@ export default function ComplianceExportPanel() {
                 <Stat icon={FileText} label="Applied documents" value={report.summary.appliedDocumentCount} />
                 <Stat icon={Ban} label="Violations recorded" value={report.summary.violationCount} />
             </div>
+
+            {report.integrity && (
+                <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 10, borderColor: report.integrity.chainValid ? 'var(--accent)' : '#e5484d' }}>
+                    {report.integrity.chainValid
+                        ? <ShieldCheck size={18} color="var(--accent)" />
+                        : <Ban size={18} color="#e5484d" />}
+                    <div>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: report.integrity.chainValid ? 'var(--accent)' : '#e5484d' }}>
+                            {report.integrity.chainValid ? 'Audit trail verified — tamper-evident' : 'Audit trail INTEGRITY FAILURE'}
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--ink-muted)' }}>
+                            {report.integrity.recordsChecked} violation record(s) hash-chain checked
+                            {report.integrity.brokenAtId ? ` · broken at ${report.integrity.brokenAtId}` : ''}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div style={card}>
                 <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12 }}>Active policies</div>

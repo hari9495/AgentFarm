@@ -19,16 +19,53 @@ import type {
     GovernanceRule,
     GovernancePolicyScope,
 } from '@agentfarm/shared-types';
+import { computeViolationHash } from '@agentfarm/shared-types';
 
 export type PrismaLike = Pick<PrismaClient, 'governancePolicy' | 'policyDocument' | 'policyViolation'>;
 
 const VIOLATION_LIMIT = 500;
 
+/**
+ * Re-walks the tenant's policy-violation hash chain (oldest→newest over hashed
+ * rows) and recomputes each link. Any tampering (edited/inserted/deleted row)
+ * breaks the chain and is reported with the offending row id.
+ */
+export async function verifyViolationChain(
+    prisma: PrismaLike,
+    tenantId: string,
+): Promise<{ chainValid: boolean; recordsChecked: number; brokenAtId?: string }> {
+    const rows = await prisma.policyViolation.findMany({
+        where: { tenantId, hash: { not: null } },
+        orderBy: { createdAt: 'asc' },
+    });
+    let prev = '';
+    for (const r of rows) {
+        if ((r.prevHash ?? '') !== prev) {
+            return { chainValid: false, recordsChecked: rows.length, brokenAtId: r.id };
+        }
+        const expected = computeViolationHash(prev, {
+            tenantId: r.tenantId,
+            actionType: r.actionType,
+            connector: r.connector,
+            effect: r.effect,
+            reason: r.reason,
+            matchedPolicyId: r.matchedPolicyId,
+            policyVersion: r.policyVersion,
+            source: r.source,
+        });
+        if (expected !== r.hash) {
+            return { chainValid: false, recordsChecked: rows.length, brokenAtId: r.id };
+        }
+        prev = r.hash as string;
+    }
+    return { chainValid: true, recordsChecked: rows.length };
+}
+
 export async function getComplianceExport(
     prisma: PrismaLike,
     tenantId: string,
 ): Promise<ComplianceExport> {
-    const [policies, documents, violations] = await Promise.all([
+    const [policies, documents, violations, integrity] = await Promise.all([
         prisma.governancePolicy.findMany({
             where: { tenantId, status: 'active' },
             orderBy: [{ scope: 'asc' }, { version: 'desc' }],
@@ -42,6 +79,7 @@ export async function getComplianceExport(
             orderBy: { createdAt: 'desc' },
             take: VIOLATION_LIMIT,
         }),
+        verifyViolationChain(prisma, tenantId),
     ]);
 
     const activePolicies: GovernancePolicyRecord[] = policies.map((p) => ({
@@ -106,5 +144,6 @@ export async function getComplianceExport(
             appliedDocumentCount: policyDocuments.filter((d) => d.appliedPolicyId).length,
             violationCount: violationRecords.length,
         },
+        integrity,
     };
 }
