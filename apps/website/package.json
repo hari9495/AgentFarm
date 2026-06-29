@@ -34,7 +34,7 @@
         "clsx": "^2.1.1",
         "framer-motion": "^12.36.0",
         "lucide-react": "^0.577.0",
-        "motion": "^12.38.0",
+        "motion": "^12.42.0",
         "next": "15.5.18",
         "razorpay": "^2.9.6",
         "react": "^19.0.0",
