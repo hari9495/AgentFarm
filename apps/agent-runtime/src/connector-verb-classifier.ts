@@ -28,6 +28,8 @@ const READ_VERBS: ReadonlySet<string> = new Set<string>([
     'get_call_recording',
     'get_record',
     'search_records',
+    'get_content',
+    'list_content',
 ]);
 
 /** Returns true when the verb mutates state (or is unknown — fail-safe). */

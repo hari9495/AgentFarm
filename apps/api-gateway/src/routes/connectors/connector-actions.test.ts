@@ -3025,3 +3025,147 @@ test('salesforce executes search_records (low risk) through the real executor an
         await app.close();
     }
 });
+
+// ---------------------------------------------------------------------------
+// Greenhouse / WordPress — ATS + CMS connectors through the execute route
+// ---------------------------------------------------------------------------
+
+test('greenhouse executes get_record (low risk) through the real executor for the recruiter role', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+
+    const secretRefId = 'kv://vault/secrets/greenhouse-tenant1';
+    const store = createInMemorySecretStore({
+        [secretRefId]: JSON.stringify({ api_key: 'gh-key', on_behalf_of: '4001' }),
+    });
+
+    const connectorId = 'greenhouse:tenant_1:ws_1';
+    repo.metadata.set(connectorId, {
+        connectorId,
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        connectorType: 'greenhouse',
+        status: 'connected',
+        secretRefId,
+        scopeStatus: 'full',
+        lastErrorClass: null,
+    });
+
+    const ghFetcher = async () =>
+        new Response(JSON.stringify({ id: 9001, first_name: 'Ada', last_name: 'Lovelace' }), { status: 200 }) as Response;
+    const providerExecutor = createRealProviderExecutor(store, ghFetcher as typeof fetch);
+
+    await registerConnectorActionRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+        secretStore: store,
+        providerExecutor,
+        sleep: async () => {},
+    });
+
+    try {
+        const execRes = await app.inject({
+            method: 'POST',
+            url: '/v1/connectors/actions/execute',
+            payload: {
+                connector_type: 'greenhouse',
+                workspace_id: 'ws_1',
+                bot_id: 'bot_1',
+                role_key: 'recruiter',
+                action_type: 'get_record',
+                payload: { record_type: 'candidates', record_id: '9001' },
+            },
+        });
+        assert.equal(execRes.statusCode, 200);
+        const execBody = execRes.json() as { status: string; result_summary: string };
+        assert.equal(execBody.status, 'success');
+        assert.ok(execBody.result_summary.includes('Ada'));
+    } finally {
+        await app.close();
+    }
+});
+
+test('wordpress executes list_content (low risk) through the real executor for the content writer role', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+
+    const secretRefId = 'kv://vault/secrets/wordpress-tenant1';
+    const store = createInMemorySecretStore({
+        [secretRefId]: JSON.stringify({ base_url: 'https://blog.acme.com', username: 'agent', app_password: 'pw' }),
+    });
+
+    const connectorId = 'wordpress:tenant_1:ws_1';
+    repo.metadata.set(connectorId, {
+        connectorId,
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        connectorType: 'wordpress',
+        status: 'connected',
+        secretRefId,
+        scopeStatus: 'full',
+        lastErrorClass: null,
+    });
+
+    const wpFetcher = async () =>
+        new Response(JSON.stringify([{ id: 42, status: 'publish', title: { rendered: 'Hello World' } }]), { status: 200 }) as Response;
+    const providerExecutor = createRealProviderExecutor(store, wpFetcher as typeof fetch);
+
+    await registerConnectorActionRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+        secretStore: store,
+        providerExecutor,
+        sleep: async () => {},
+    });
+
+    try {
+        const execRes = await app.inject({
+            method: 'POST',
+            url: '/v1/connectors/actions/execute',
+            payload: {
+                connector_type: 'wordpress',
+                workspace_id: 'ws_1',
+                bot_id: 'bot_1',
+                role_key: 'content_writer',
+                action_type: 'list_content',
+                payload: { max_results: 5 },
+            },
+        });
+        assert.equal(execRes.statusCode, 200);
+        const execBody = execRes.json() as { status: string; result_summary: string };
+        assert.equal(execBody.status, 'success');
+        assert.ok(execBody.result_summary.includes('Hello World'));
+    } finally {
+        await app.close();
+    }
+});
+
+test('PUT credentials returns 400 when wordpress credentials missing app_password', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    const store = createInMemorySecretStore({});
+    const connectorId = 'wordpress:tenant_1:ws_1';
+    repo.metadata.set(connectorId, {
+        connectorId,
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        connectorType: 'wordpress',
+        status: 'not_configured',
+        secretRefId: null,
+        scopeStatus: null,
+        lastErrorClass: null,
+    });
+
+    await registerConnectorActionRoutes(app, { getSession: () => sessionContext(), repo, secretStore: store });
+
+    try {
+        const res = await app.inject({
+            method: 'PUT',
+            url: `/v1/connectors/${connectorId}/credentials`,
+            payload: { credentials: { base_url: 'https://blog.acme.com', username: 'agent' } },
+        });
+        assert.equal(res.statusCode, 400);
+    } finally {
+        await app.close();
+    }
+});

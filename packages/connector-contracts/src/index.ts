@@ -7,7 +7,9 @@ export type ConnectorCategory =
   | 'code'           // GitHub, GitLab, Bitbucket, Azure DevOps
   | 'email'          // Outlook (Graph), Gmail, Exchange
   | 'telephony'      // Twilio, Vonage, Amazon Connect, Genesys, Generic
-  | 'crm';           // HubSpot, Salesforce
+  | 'crm'            // HubSpot, Salesforce
+  | 'ats'            // Greenhouse
+  | 'cms';           // WordPress
 
 // ─── Supported tool slugs per category ───────────────────────────────────
 export type TaskTrackerTool = 'jira' | 'linear' | 'asana' | 'monday' | 'trello' | 'clickup' | 'generic_rest';
@@ -16,7 +18,9 @@ export type CodeTool = 'github' | 'gitlab' | 'bitbucket' | 'azure_devops' | 'gen
 export type EmailTool = 'outlook' | 'gmail' | 'exchange' | 'generic_smtp' | 'generic_rest_email';
 export type TelephonyTool = 'twilio' | 'vonage' | 'amazon_connect' | 'genesys' | 'generic_telephony';
 export type CrmTool = 'hubspot' | 'salesforce';
-export type ConnectorTool = TaskTrackerTool | MessagingTool | CodeTool | EmailTool | TelephonyTool | CrmTool;
+export type AtsTool = 'greenhouse';
+export type CmsTool = 'wordpress';
+export type ConnectorTool = TaskTrackerTool | MessagingTool | CodeTool | EmailTool | TelephonyTool | CrmTool | AtsTool | CmsTool;
 
 // Legacy alias kept for back-compat with existing gateway code
 export type ConnectorId = ConnectorTool;
@@ -83,12 +87,17 @@ export type NormalizedActionType =
   | 'get_call_status'
   | 'get_call_recording'
   | 'send_dtmf'
-  // crm (record = contact / deal / company / lead / opportunity …)
+  // crm / ats (record = contact / deal / candidate / application …)
   | 'get_record'
   | 'search_records'
   | 'create_record'
   | 'update_record'
-  | 'log_activity';
+  | 'log_activity'
+  // cms
+  | 'get_content'
+  | 'list_content'
+  | 'publish_content'
+  | 'update_content';
 
 // ─── Connector definition (what the registry stores) ─────────────────────
 export interface ConnectorDefinition {
@@ -421,6 +430,28 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
     oauthScopes: ['api', 'refresh_token'],
     supportedActions: ['get_record', 'search_records', 'create_record', 'update_record', 'log_activity'],
     docsUrl: 'https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/',
+  },
+  // ── ATS ──────────────────────────────────────────────────────────────
+  {
+    tool: 'greenhouse',
+    category: 'ats',
+    displayName: 'Greenhouse',
+    logoUrl: '/icons/connectors/greenhouse.svg',
+    authMethod: 'api_key',
+    allowedRoles: ['recruiter'],
+    supportedActions: ['get_record', 'search_records', 'create_record', 'update_record', 'log_activity'],
+    docsUrl: 'https://developers.greenhouse.io/harvest.html',
+  },
+  // ── CMS ──────────────────────────────────────────────────────────────
+  {
+    tool: 'wordpress',
+    category: 'cms',
+    displayName: 'WordPress',
+    logoUrl: '/icons/connectors/wordpress.svg',
+    authMethod: 'basic',
+    allowedRoles: ['content_writer', 'marketing_specialist', 'technical_writer'],
+    supportedActions: ['get_content', 'list_content', 'publish_content', 'update_content'],
+    docsUrl: 'https://developer.wordpress.org/rest-api/reference/posts/',
   },
   // ── Generic REST (bring your own tool) ──────────────────────────────
   {

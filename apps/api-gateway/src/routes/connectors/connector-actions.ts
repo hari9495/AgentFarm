@@ -30,7 +30,9 @@ type ConnectorType =
     | 'gmail'
     | 'outlook'
     | 'hubspot'
-    | 'salesforce';
+    | 'salesforce'
+    | 'greenhouse'
+    | 'wordpress';
 type ConnectorActionType =
     | 'read_task'
     | 'create_comment'
@@ -49,7 +51,11 @@ type ConnectorActionType =
     | 'search_records'
     | 'create_record'
     | 'update_record'
-    | 'log_activity';
+    | 'log_activity'
+    | 'get_content'
+    | 'list_content'
+    | 'publish_content'
+    | 'update_content';
 
 type ConnectorActionErrorCode =
     | 'rate_limit'
@@ -288,6 +294,8 @@ const SUPPORTED_CONNECTORS: ConnectorType[] = [
     'outlook',
     'hubspot',
     'salesforce',
+    'greenhouse',
+    'wordpress',
 ];
 const SUPPORTED_ACTIONS: ConnectorActionType[] = [
     'read_task',
@@ -308,6 +316,10 @@ const SUPPORTED_ACTIONS: ConnectorActionType[] = [
     'create_record',
     'update_record',
     'log_activity',
+    'get_content',
+    'list_content',
+    'publish_content',
+    'update_content',
 ];
 
 const CONTRACT_VERSION = 'v1.0';
@@ -331,6 +343,10 @@ const CONNECTOR_ACTION_RISK: Record<ConnectorActionType, 'low' | 'medium' | 'hig
     create_record: 'medium',
     update_record: 'medium',
     log_activity: 'medium',
+    get_content: 'low',
+    list_content: 'low',
+    publish_content: 'medium',
+    update_content: 'medium',
     create_pr: 'high',
     merge_pr: 'high',
 };
@@ -367,6 +383,8 @@ const CONNECTOR_TOOL_ALIAS: Record<ConnectorType, ConnectorTool | null> = {
     outlook: 'outlook',
     hubspot: 'hubspot',
     salesforce: 'salesforce',
+    greenhouse: 'greenhouse',
+    wordpress: 'wordpress',
 };
 
 const ACTION_ALIAS: Record<ConnectorActionType, NormalizedActionType> = {
@@ -388,6 +406,10 @@ const ACTION_ALIAS: Record<ConnectorActionType, NormalizedActionType> = {
     create_record: 'create_record',
     update_record: 'update_record',
     log_activity: 'log_activity',
+    get_content: 'get_content',
+    list_content: 'list_content',
+    publish_content: 'publish_content',
+    update_content: 'update_content',
 };
 
 const getPrisma = async () => {
@@ -1521,6 +1543,27 @@ export const registerConnectorActionRoutes = async (
             }
             if (typeof c['instance_url'] !== 'string' || !c['instance_url']) {
                 return 'salesforce credentials must include instance_url (string, e.g. https://org.my.salesforce.com)';
+            }
+            return null;
+        },
+        greenhouse: (c) => {
+            if (typeof c['api_key'] !== 'string' || !c['api_key']) {
+                return 'greenhouse credentials must include api_key (string, Harvest API key)';
+            }
+            if (c['on_behalf_of'] !== undefined && typeof c['on_behalf_of'] !== 'string') {
+                return 'greenhouse on_behalf_of, if provided, must be a string Harvest user id';
+            }
+            return null;
+        },
+        wordpress: (c) => {
+            if (typeof c['base_url'] !== 'string' || !c['base_url']) {
+                return 'wordpress credentials must include base_url (string, e.g. https://blog.example.com)';
+            }
+            if (typeof c['username'] !== 'string' || !c['username']) {
+                return 'wordpress credentials must include username (string)';
+            }
+            if (typeof c['app_password'] !== 'string' || !c['app_password']) {
+                return 'wordpress credentials must include app_password (string, Application Password)';
             }
             return null;
         },

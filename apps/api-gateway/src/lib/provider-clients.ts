@@ -21,6 +21,8 @@
  *   Outlook:{ "access_token": "..." }          (Microsoft Graph bearer)
  *   HubSpot:{ "access_token": "..." }          (private-app token, Bearer)
  *   Salesforce: { "access_token": "...", "instance_url": "https://org.my.salesforce.com" }
+ *   Greenhouse: { "api_key": "...", "on_behalf_of"?: "<harvest user id, required for writes>" }
+ *   WordPress: { "base_url": "https://blog.example.com", "username": "...", "app_password": "..." }
  *
  * All actions accept a typed payload object (see ActionPayload* below).
  */
@@ -48,7 +50,9 @@ export type ConnectorType =
     | 'gmail'
     | 'outlook'
     | 'hubspot'
-    | 'salesforce';
+    | 'salesforce'
+    | 'greenhouse'
+    | 'wordpress';
 export type ConnectorActionType =
     | 'read_task'
     | 'create_comment'
@@ -67,7 +71,11 @@ export type ConnectorActionType =
     | 'search_records'
     | 'create_record'
     | 'update_record'
-    | 'log_activity';
+    | 'log_activity'
+    | 'get_content'
+    | 'list_content'
+    | 'publish_content'
+    | 'update_content';
 
 export type ConnectorActionErrorCode =
     | 'rate_limit'
@@ -165,6 +173,8 @@ type GmailCredentials = { access_token: string };
 type OutlookCredentials = { access_token: string };
 type HubSpotCredentials = { access_token: string };
 type SalesforceCredentials = { access_token: string; instance_url: string };
+type GreenhouseCredentials = { api_key: string; on_behalf_of?: string };
+type WordPressCredentials = { base_url: string; username: string; app_password: string };
 
 type FetchFn = (url: string | URL, init?: RequestInit) => Promise<Response>;
 
@@ -2149,6 +2159,286 @@ const executeSalesforce = async (
 };
 
 // ---------------------------------------------------------------------------
+// Greenhouse connector (Harvest API, Basic auth: api key as username)
+// ---------------------------------------------------------------------------
+
+const GREENHOUSE_BASE = 'https://harvest.greenhouse.io/v1';
+
+const executeGreenhouse = async (
+    actionType: ConnectorActionType,
+    payload: Record<string, unknown>,
+    credentials: GreenhouseCredentials,
+    fetcher: FetchFn,
+): Promise<ProviderExecutionResult> => {
+    const headers: Record<string, string> = {
+        Authorization: `Basic ${Buffer.from(`${credentials.api_key}:`).toString('base64')}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+    };
+    // Harvest requires the acting user for every write.
+    const onBehalfOf = String(credentials.on_behalf_of ?? '').trim();
+    const requireOnBehalfOf = (): ProviderExecutionResult | null => {
+        if (!onBehalfOf) {
+            return missingFields(
+                'on_behalf_of',
+                'Greenhouse writes require on_behalf_of (Harvest user id) in the connector credentials.',
+            );
+        }
+        headers['On-Behalf-Of'] = onBehalfOf;
+        return null;
+    };
+    const recordType = String(payload['record_type'] ?? '').trim().toLowerCase();
+    const recordId = String(payload['record_id'] ?? '').trim();
+
+    if (actionType === 'get_record') {
+        if (!recordType || !recordId) {
+            return missingFields('record_type, record_id', 'record_type and record_id are required for get_record.');
+        }
+        let res: Response;
+        try {
+            res = await fetcher(`${GREENHOUSE_BASE}/${encodeURIComponent(recordType)}/${encodeURIComponent(recordId)}`, { headers });
+        } catch (err) {
+            return networkError('Greenhouse', 'harvest.greenhouse.io', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Greenhouse returned ${res.status} for ${recordType}/${recordId}`);
+        const json = (await res.json()) as Record<string, unknown>;
+        const name = [json['first_name'], json['last_name']].filter(Boolean).join(' ') || (json['name'] as string | undefined) || '';
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `${recordType} ${recordId}: ${name || '(unnamed)'}${json['title'] ? ` — ${String(json['title'])}` : ''}`,
+        };
+    }
+
+    if (actionType === 'search_records') {
+        const query = String(payload['query'] ?? '').trim();
+        if (!recordType || !query) {
+            return missingFields('record_type, query', 'record_type and query are required for search_records.');
+        }
+        const limit = Number(payload['limit'] ?? 10);
+        // Harvest list endpoints filter by exact email; that is the reliable search key.
+        const params = new URLSearchParams({ per_page: String(limit) });
+        if (query.includes('@')) params.set('email', query);
+        else params.set('candidate_ids', query);
+        let res: Response;
+        try {
+            res = await fetcher(`${GREENHOUSE_BASE}/${encodeURIComponent(recordType)}?${params.toString()}`, { headers });
+        } catch (err) {
+            return networkError('Greenhouse', 'harvest.greenhouse.io', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Greenhouse search failed with ${res.status}`);
+        const json = (await res.json()) as Array<Record<string, unknown>>;
+        const items = (json ?? []).map((r) => `${String(r['id'] ?? '?')} (${[r['first_name'], r['last_name']].filter(Boolean).join(' ') || '(unnamed)'})`);
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `${items.length} ${recordType} matching "${query}": ${items.join(', ') || '(none)'}`,
+        };
+    }
+
+    if (actionType === 'create_record') {
+        const fields = payload['fields'];
+        if (!recordType || !fields || typeof fields !== 'object') {
+            return missingFields('record_type, fields', 'record_type and fields are required for create_record.');
+        }
+        const gate = requireOnBehalfOf();
+        if (gate) return gate;
+        let res: Response;
+        try {
+            res = await fetcher(`${GREENHOUSE_BASE}/${encodeURIComponent(recordType)}`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(fields),
+            });
+        } catch (err) {
+            return networkError('Greenhouse', 'harvest.greenhouse.io', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Greenhouse create failed with ${res.status}`);
+        const json = (await res.json()) as { id?: number };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Created ${recordType} ${json.id ?? '(id unknown)'}`,
+        };
+    }
+
+    if (actionType === 'update_record') {
+        const fields = payload['fields'];
+        if (!recordType || !recordId || !fields || typeof fields !== 'object') {
+            return missingFields('record_type, record_id, fields', 'record_type, record_id, and fields are required for update_record.');
+        }
+        const gate = requireOnBehalfOf();
+        if (gate) return gate;
+        // Applications move between stages via a dedicated endpoint.
+        const fieldRecord = fields as Record<string, unknown>;
+        const isStageMove = recordType === 'applications' && fieldRecord['to_stage_id'] !== undefined;
+        const url = isStageMove
+            ? `${GREENHOUSE_BASE}/applications/${encodeURIComponent(recordId)}/move`
+            : `${GREENHOUSE_BASE}/${encodeURIComponent(recordType)}/${encodeURIComponent(recordId)}`;
+        let res: Response;
+        try {
+            res = await fetcher(url, {
+                method: isStageMove ? 'POST' : 'PATCH',
+                headers,
+                body: JSON.stringify(fields),
+            });
+        } catch (err) {
+            return networkError('Greenhouse', 'harvest.greenhouse.io', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Greenhouse update failed with ${res.status} for ${recordType}/${recordId}`);
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: isStageMove
+                ? `Application ${recordId} moved to stage ${String(fieldRecord['to_stage_id'])}`
+                : `Updated ${recordType} ${recordId}`,
+        };
+    }
+
+    if (actionType === 'log_activity') {
+        const body = String(payload['body'] ?? '').trim();
+        if (!recordId || !body) {
+            return missingFields('record_id, body', 'record_id and body are required for log_activity.');
+        }
+        const gate = requireOnBehalfOf();
+        if (gate) return gate;
+        let res: Response;
+        try {
+            res = await fetcher(`${GREENHOUSE_BASE}/candidates/${encodeURIComponent(recordId)}/activity_feed/notes`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ user_id: onBehalfOf, body, visibility: 'admin_only' }),
+            });
+        } catch (err) {
+            return networkError('Greenhouse', 'harvest.greenhouse.io', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Greenhouse note creation failed with ${res.status}`);
+        const json = (await res.json()) as { id?: number };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Note ${json.id ?? 'created'} logged on candidate ${recordId}`,
+        };
+    }
+
+    return unsupported('Greenhouse', 'get_record, search_records, create_record, update_record, log_activity');
+};
+
+// ---------------------------------------------------------------------------
+// WordPress connector (REST v2 posts, Application Password Basic auth)
+// ---------------------------------------------------------------------------
+
+const executeWordPress = async (
+    actionType: ConnectorActionType,
+    payload: Record<string, unknown>,
+    credentials: WordPressCredentials,
+    fetcher: FetchFn,
+): Promise<ProviderExecutionResult> => {
+    const base = `${credentials.base_url.replace(/\/$/, '')}/wp-json/wp/v2`;
+    const headers: Record<string, string> = {
+        Authorization: `Basic ${Buffer.from(`${credentials.username}:${credentials.app_password}`).toString('base64')}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+    };
+    const contentId = String(payload['content_id'] ?? '').trim();
+
+    if (actionType === 'publish_content') {
+        const title = String(payload['title'] ?? '').trim();
+        const content = String(payload['content'] ?? '').trim();
+        if (!title || !content) {
+            return missingFields('title, content', 'title and content are required for publish_content.');
+        }
+        const status = String(payload['status'] ?? 'publish').trim();
+        let res: Response;
+        try {
+            res = await fetcher(`${base}/posts`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ title, content, status }),
+            });
+        } catch (err) {
+            return networkError('WordPress', credentials.base_url, err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `WordPress publish failed with ${res.status}`);
+        const json = (await res.json()) as { id?: number; link?: string; status?: string };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Post ${json.id ?? '(id unknown)'} ${json.status ?? status}: ${json.link ?? '(no link)'}`,
+        };
+    }
+
+    if (actionType === 'update_content') {
+        if (!contentId) return missingFields('content_id', 'content_id is required for update_content.');
+        const updates: Record<string, unknown> = {};
+        for (const key of ['title', 'content', 'status', 'excerpt'] as const) {
+            const value = payload[key];
+            if (typeof value === 'string' && value.trim()) updates[key] = value;
+        }
+        if (Object.keys(updates).length === 0) {
+            return missingFields('title|content|status|excerpt', 'Provide at least one field to update.');
+        }
+        let res: Response;
+        try {
+            res = await fetcher(`${base}/posts/${encodeURIComponent(contentId)}`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(updates),
+            });
+        } catch (err) {
+            return networkError('WordPress', credentials.base_url, err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `WordPress update failed with ${res.status} for post ${contentId}`);
+        const json = (await res.json()) as { id?: number; link?: string };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Post ${json.id ?? contentId} updated: ${json.link ?? '(no link)'}`,
+        };
+    }
+
+    if (actionType === 'get_content') {
+        if (!contentId) return missingFields('content_id', 'content_id is required for get_content.');
+        let res: Response;
+        try {
+            res = await fetcher(`${base}/posts/${encodeURIComponent(contentId)}?context=edit`, { headers });
+        } catch (err) {
+            return networkError('WordPress', credentials.base_url, err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `WordPress returned ${res.status} for post ${contentId}`);
+        const json = (await res.json()) as { id?: number; status?: string; title?: { rendered?: string; raw?: string } };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Post ${json.id ?? contentId} [${json.status ?? 'unknown'}]: ${json.title?.raw ?? json.title?.rendered ?? '(no title)'}`,
+        };
+    }
+
+    if (actionType === 'list_content') {
+        const limit = Number(payload['max_results'] ?? 10);
+        const status = String(payload['status'] ?? '').trim();
+        const params = new URLSearchParams({ per_page: String(limit), context: 'edit' });
+        if (status) params.set('status', status);
+        let res: Response;
+        try {
+            res = await fetcher(`${base}/posts?${params.toString()}`, { headers });
+        } catch (err) {
+            return networkError('WordPress', credentials.base_url, err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `WordPress list failed with ${res.status}`);
+        const json = (await res.json()) as Array<{ id?: number; status?: string; title?: { rendered?: string; raw?: string } }>;
+        const items = (json ?? []).map((p) => `${p.id} [${p.status}] "${p.title?.raw ?? p.title?.rendered ?? '(no title)'}"`);
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `${items.length} post(s): ${items.join('; ') || '(none)'}`,
+        };
+    }
+
+    return unsupported('WordPress', 'get_content, list_content, publish_content, update_content');
+};
+
+// ---------------------------------------------------------------------------
 // Email connector (SendGrid + SMTP fallback via nodemailer-style validation)
 // ---------------------------------------------------------------------------
 
@@ -2825,6 +3115,34 @@ const probeSalesforce = async (credentials: SalesforceCredentials, fetcher: Fetc
     }
 };
 
+const probeGreenhouse = async (credentials: GreenhouseCredentials, fetcher: FetchFn): Promise<HealthProbeResult> => {
+    try {
+        const res = await fetcher(`${GREENHOUSE_BASE}/user_roles`, {
+            headers: {
+                Authorization: `Basic ${Buffer.from(`${credentials.api_key}:`).toString('base64')}`,
+                Accept: 'application/json',
+            },
+        });
+        return classifyProbeStatus('Greenhouse', res.status);
+    } catch {
+        return { outcome: 'network_timeout', message: 'Greenhouse unreachable' };
+    }
+};
+
+const probeWordPress = async (credentials: WordPressCredentials, fetcher: FetchFn): Promise<HealthProbeResult> => {
+    try {
+        const res = await fetcher(`${credentials.base_url.replace(/\/$/, '')}/wp-json/wp/v2/users/me`, {
+            headers: {
+                Authorization: `Basic ${Buffer.from(`${credentials.username}:${credentials.app_password}`).toString('base64')}`,
+                Accept: 'application/json',
+            },
+        });
+        return classifyProbeStatus('WordPress', res.status);
+    } catch {
+        return { outcome: 'network_timeout', message: 'WordPress unreachable' };
+    }
+};
+
 const probeWithoutCredentials = (connectorType: ConnectorType, metadata: ConnectorAuthMetadata): HealthProbeResult => {
     if (metadata.status === 'permission_invalid' || metadata.status === 'consent_pending') {
         return { outcome: 'auth_failure', message: `${connectorType} connector auth is invalid — re-authenticate required.` };
@@ -3109,6 +3427,36 @@ export const createRealProviderExecutor = (
         return executeSalesforce(actionType, payload, creds, fetcher);
     }
 
+    if (connectorType === 'greenhouse') {
+        const creds = parseCredentials<GreenhouseCredentials>(rawSecret);
+        if (!creds?.api_key) {
+            return {
+                ok: false,
+                providerResponseCode: '401',
+                resultSummary: 'Invalid Greenhouse credentials format',
+                errorCode: 'upgrade_required',
+                errorMessage: 'Greenhouse credentials must include api_key (Harvest API key).',
+                remediationHint: 'Re-configure the Greenhouse connector with a valid Harvest API key.',
+            };
+        }
+        return executeGreenhouse(actionType, payload, creds, fetcher);
+    }
+
+    if (connectorType === 'wordpress') {
+        const creds = parseCredentials<WordPressCredentials>(rawSecret);
+        if (!creds?.base_url || !creds?.username || !creds?.app_password) {
+            return {
+                ok: false,
+                providerResponseCode: '401',
+                resultSummary: 'Invalid WordPress credentials format',
+                errorCode: 'upgrade_required',
+                errorMessage: 'WordPress credentials must include base_url, username, and app_password.',
+                remediationHint: 'Re-configure the WordPress connector with an Application Password.',
+            };
+        }
+        return executeWordPress(actionType, payload, creds, fetcher);
+    }
+
     return {
         ok: false,
         providerResponseCode: '400',
@@ -3262,6 +3610,22 @@ export const createRealConnectorHealthProbe = (
             return { outcome: 'auth_failure', message: 'Salesforce credentials missing access_token or instance_url' };
         }
         return probeSalesforce(creds, fetcher);
+    }
+
+    if (connectorType === 'greenhouse') {
+        const creds = parseCredentials<GreenhouseCredentials>(rawSecret);
+        if (!creds?.api_key) {
+            return { outcome: 'auth_failure', message: 'Greenhouse credentials missing api_key' };
+        }
+        return probeGreenhouse(creds, fetcher);
+    }
+
+    if (connectorType === 'wordpress') {
+        const creds = parseCredentials<WordPressCredentials>(rawSecret);
+        if (!creds?.base_url || !creds?.username || !creds?.app_password) {
+            return { outcome: 'auth_failure', message: 'WordPress credentials missing base_url, username, or app_password' };
+        }
+        return probeWordPress(creds, fetcher);
     }
 
     return { outcome: 'ok', message: `No live probe implemented for ${connectorType}` };

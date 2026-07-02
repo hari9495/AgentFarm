@@ -594,3 +594,10 @@ test('classifyRisk treats CRM reads as low and CRM writes as medium', () => {
     assert.equal(classifyRisk('update_record', 0.9, {}).riskLevel, 'medium');
     assert.equal(classifyRisk('log_activity', 0.9, {}).riskLevel, 'medium');
 });
+
+test('classifyRisk treats CMS publishing as medium and CMS reads as low', () => {
+    assert.equal(classifyRisk('publish_content', 0.9, {}).riskLevel, 'medium');
+    assert.equal(classifyRisk('update_content', 0.9, {}).riskLevel, 'medium');
+    assert.equal(classifyRisk('get_content', 0.9, {}).riskLevel, 'low');
+    assert.equal(classifyRisk('list_content', 0.9, {}).riskLevel, 'low');
+});

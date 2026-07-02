@@ -296,7 +296,9 @@ type DispatchableConnectorType =
     | 'gmail'
     | 'outlook'
     | 'hubspot'
-    | 'salesforce';
+    | 'salesforce'
+    | 'greenhouse'
+    | 'wordpress';
 
 type DispatchableConnectorActionType =
     | 'read_task'
@@ -316,7 +318,11 @@ type DispatchableConnectorActionType =
     | 'search_records'
     | 'create_record'
     | 'update_record'
-    | 'log_activity';
+    | 'log_activity'
+    | 'get_content'
+    | 'list_content'
+    | 'publish_content'
+    | 'update_content';
 
 type ConnectorActionExecuteClient = (input: {
     baseUrl: string;
@@ -691,6 +697,10 @@ const CONNECTOR_ACTION_TYPES = new Set([
     'create_record',
     'update_record',
     'log_activity',
+    'get_content',
+    'list_content',
+    'publish_content',
+    'update_content',
 ] as const);
 
 const collectConnectorsUsed = (task: TaskEnvelope, actionType: string): string[] => {
@@ -979,7 +989,11 @@ type RuntimeConnectorActionType =
     | 'search_records'
     | 'create_record'
     | 'update_record'
-    | 'log_activity';
+    | 'log_activity'
+    | 'get_content'
+    | 'list_content'
+    | 'publish_content'
+    | 'update_content';
 
 type RuntimeLocalWorkspaceActionType = LocalWorkspaceActionType;
 
@@ -1015,6 +1029,8 @@ const CONNECTOR_ACTION_POLICY: Partial<Record<RuntimeConnectorType, RuntimeConne
     outlook: ['send_email', 'list_emails', 'read_email', 'reply_email', 'read_thread'],
     hubspot: ['get_record', 'search_records', 'create_record', 'update_record', 'log_activity'],
     salesforce: ['get_record', 'search_records', 'create_record', 'update_record', 'log_activity'],
+    greenhouse: ['get_record', 'search_records', 'create_record', 'update_record', 'log_activity'],
+    wordpress: ['get_content', 'list_content', 'publish_content', 'update_content'],
     // Action sets mirror the real gateway executors in provider-clients.ts.
     gitlab: ['read_task', 'create_comment', 'create_pr_comment', 'create_pr', 'merge_pr', 'list_prs'],
     linear: ['read_task', 'create_comment', 'update_status'],
@@ -1744,6 +1760,8 @@ const DISPATCHABLE_CONNECTOR_TYPES: ReadonlySet<string> = new Set<DispatchableCo
     'outlook',
     'hubspot',
     'salesforce',
+    'greenhouse',
+    'wordpress',
 ]);
 
 const normalizeConnectorType = (value: unknown): DispatchableConnectorType | null => {

@@ -5979,3 +5979,69 @@ test('sales rep tasks dispatch hubspot and salesforce CRM actions to the execute
         await app.close();
     }
 });
+
+test('recruiter and content writer tasks dispatch greenhouse and wordpress actions to the execute client', async () => {
+    const cases: Array<{ profile: string; connectorType: string; actionType: string; payload: Record<string, unknown> }> = [
+        {
+            profile: 'Recruiter',
+            connectorType: 'greenhouse',
+            actionType: 'get_record',
+            payload: { record_type: 'candidates', record_id: '9001' },
+        },
+        {
+            profile: 'Content Writer',
+            connectorType: 'wordpress',
+            actionType: 'list_content',
+            payload: { max_results: 5 },
+        },
+    ];
+
+    for (const testCase of cases) {
+        const connectorCalls: Array<{ connectorType: string; actionType: string }> = [];
+        const app = buildRuntimeServer({
+            env: {
+                ...baseEnv(),
+                AF_ROLE_PROFILE: testCase.profile,
+                AF_APPROVAL_API_URL: 'http://127.0.0.1:9',
+                AF_EVIDENCE_API_URL: 'http://127.0.0.1:9',
+            },
+            closeOnKill: false,
+            dependencyProbe: async () => true,
+            workerPollMs: 10,
+            connectorActionExecuteClient: async (input) => {
+                connectorCalls.push({ connectorType: input.connectorType, actionType: input.actionType });
+                return { ok: true, statusCode: 200 };
+            },
+        });
+
+        try {
+            await app.inject({ method: 'POST', url: '/startup' });
+            const intakeRes = await app.inject({
+                method: 'POST',
+                url: '/tasks/intake',
+                payload: {
+                    task_id: `dispatch-${testCase.connectorType}-1`,
+                    payload: {
+                        action_type: testCase.actionType,
+                        connector_type: testCase.connectorType,
+                        summary: `Fetch current data from ${testCase.connectorType} for review`,
+                        target: 'workload-item-1',
+                        ...testCase.payload,
+                    },
+                },
+            });
+            assert.equal(intakeRes.statusCode, 202);
+
+            const calls = await waitForValue(
+                () => (connectorCalls.length >= 1 ? connectorCalls : undefined),
+                { timeoutMs: 60_000, pollMs: 100 },
+            );
+            assert.ok(
+                calls?.some((c) => c.connectorType === testCase.connectorType && c.actionType === testCase.actionType),
+                `expected a ${testCase.actionType} dispatch for ${testCase.connectorType}`,
+            );
+        } finally {
+            await app.close();
+        }
+    }
+});

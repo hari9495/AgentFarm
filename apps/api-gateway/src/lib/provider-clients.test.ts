@@ -1932,3 +1932,295 @@ test('health probe: salesforce returns auth_failure when limits endpoint returns
     assert.equal(result.outcome, 'auth_failure');
     assert.ok(calls[0]!.url.startsWith('https://acme.my.salesforce.com/'));
 });
+
+// ---------------------------------------------------------------------------
+// Greenhouse (ATS) / WordPress (CMS) native connectors
+// ---------------------------------------------------------------------------
+
+const SECRET_REF_GREENHOUSE = 'kv://vault/secrets/greenhouse-connector';
+const SECRET_REF_WORDPRESS = 'kv://vault/secrets/wordpress-connector';
+
+const makeAtsCmsStore = () =>
+    createInMemorySecretStore({
+        [SECRET_REF_GREENHOUSE]: JSON.stringify({ api_key: 'gh-harvest-key', on_behalf_of: '4001' }),
+        [SECRET_REF_WORDPRESS]: JSON.stringify({
+            base_url: 'https://blog.acme.com',
+            username: 'agent',
+            app_password: 'abcd efgh ijkl',
+        }),
+    });
+
+// --- Greenhouse ---
+
+test('greenhouse get_record fetches a candidate with Basic api-key auth', async () => {
+    const { fetcher, calls } = makeFetch([
+        { status: 200, body: { id: 9001, first_name: 'Ada', last_name: 'Lovelace', title: 'Engineer' } },
+    ]);
+    const executor = createRealProviderExecutor(makeAtsCmsStore(), fetcher);
+    const result = await executor({
+        connectorType: 'greenhouse',
+        actionType: 'get_record',
+        payload: { record_type: 'candidates', record_id: '9001' },
+        attempt: 1,
+        secretRefId: SECRET_REF_GREENHOUSE,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('Ada'));
+    assert.ok(calls[0]!.url.includes('harvest.greenhouse.io/v1/candidates/9001'));
+    const expectedBasic = `Basic ${Buffer.from('gh-harvest-key:').toString('base64')}`;
+    assert.equal(calls[0]!.headers!['Authorization'], expectedBasic);
+});
+
+test('greenhouse search_records lists candidates by email query', async () => {
+    const { fetcher, calls } = makeFetch([
+        { status: 200, body: [{ id: 9001, first_name: 'Ada', last_name: 'Lovelace' }] },
+    ]);
+    const executor = createRealProviderExecutor(makeAtsCmsStore(), fetcher);
+    const result = await executor({
+        connectorType: 'greenhouse',
+        actionType: 'search_records',
+        payload: { record_type: 'candidates', query: 'ada@example.com', limit: 5 },
+        attempt: 1,
+        secretRefId: SECRET_REF_GREENHOUSE,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('9001'));
+    assert.ok(calls[0]!.url.includes('email=ada%40example.com'));
+    assert.ok(calls[0]!.url.includes('per_page=5'));
+});
+
+test('greenhouse create_record posts a candidate with On-Behalf-Of header', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 201, body: { id: 9002 } }]);
+    const executor = createRealProviderExecutor(makeAtsCmsStore(), fetcher);
+    const result = await executor({
+        connectorType: 'greenhouse',
+        actionType: 'create_record',
+        payload: {
+            record_type: 'candidates',
+            fields: { first_name: 'Grace', last_name: 'Hopper', applications: [{ job_id: 77 }] },
+        },
+        attempt: 1,
+        secretRefId: SECRET_REF_GREENHOUSE,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('9002'));
+    assert.equal(calls[0]!.method, 'POST');
+    assert.equal(calls[0]!.headers!['On-Behalf-Of'], '4001');
+    assert.deepEqual(calls[0]!.body, { first_name: 'Grace', last_name: 'Hopper', applications: [{ job_id: 77 }] });
+});
+
+test('greenhouse create_record fails invalid_format when on_behalf_of missing for writes', async () => {
+    const store = createInMemorySecretStore({ [SECRET_REF_GREENHOUSE]: JSON.stringify({ api_key: 'k' }) });
+    const { fetcher } = makeFetch([]);
+    const executor = createRealProviderExecutor(store, fetcher);
+    const result = await executor({
+        connectorType: 'greenhouse',
+        actionType: 'create_record',
+        payload: { record_type: 'candidates', fields: { first_name: 'X' } },
+        attempt: 1,
+        secretRefId: SECRET_REF_GREENHOUSE,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'invalid_format');
+});
+
+test('greenhouse update_record on applications moves the candidate stage', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 200, body: { id: 555, status: 'active' } }]);
+    const executor = createRealProviderExecutor(makeAtsCmsStore(), fetcher);
+    const result = await executor({
+        connectorType: 'greenhouse',
+        actionType: 'update_record',
+        payload: {
+            record_type: 'applications',
+            record_id: '555',
+            fields: { from_stage_id: 10, to_stage_id: 11 },
+        },
+        attempt: 1,
+        secretRefId: SECRET_REF_GREENHOUSE,
+    });
+    assert.equal(result.ok, true);
+    assert.equal(calls[0]!.method, 'POST');
+    assert.ok(calls[0]!.url.includes('/v1/applications/555/move'));
+    assert.deepEqual(calls[0]!.body, { from_stage_id: 10, to_stage_id: 11 });
+});
+
+test('greenhouse log_activity posts a note on the candidate activity feed', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 201, body: { id: 321, body: 'Phone screen done.' } }]);
+    const executor = createRealProviderExecutor(makeAtsCmsStore(), fetcher);
+    const result = await executor({
+        connectorType: 'greenhouse',
+        actionType: 'log_activity',
+        payload: { record_id: '9001', body: 'Phone screen done.' },
+        attempt: 1,
+        secretRefId: SECRET_REF_GREENHOUSE,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(calls[0]!.url.includes('/v1/candidates/9001/activity_feed/notes'));
+    const body = calls[0]!.body as { body: string; user_id: string; visibility: string };
+    assert.equal(body.body, 'Phone screen done.');
+    assert.equal(body.user_id, '4001');
+});
+
+test('greenhouse get_record classifies 401 as permission_denied', async () => {
+    const { fetcher } = makeFetch([{ status: 401 }]);
+    const executor = createRealProviderExecutor(makeAtsCmsStore(), fetcher);
+    const result = await executor({
+        connectorType: 'greenhouse',
+        actionType: 'get_record',
+        payload: { record_type: 'candidates', record_id: '1' },
+        attempt: 1,
+        secretRefId: SECRET_REF_GREENHOUSE,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'permission_denied');
+});
+
+// --- WordPress ---
+
+test('wordpress publish_content creates a published post via application password', async () => {
+    const { fetcher, calls } = makeFetch([
+        { status: 201, body: { id: 42, link: 'https://blog.acme.com/hello-world', status: 'publish' } },
+    ]);
+    const executor = createRealProviderExecutor(makeAtsCmsStore(), fetcher);
+    const result = await executor({
+        connectorType: 'wordpress',
+        actionType: 'publish_content',
+        payload: { title: 'Hello World', content: '<p>First post.</p>' },
+        attempt: 1,
+        secretRefId: SECRET_REF_WORDPRESS,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('42'));
+    assert.ok(result.resultSummary.includes('https://blog.acme.com/hello-world'));
+    assert.ok(calls[0]!.url.includes('https://blog.acme.com/wp-json/wp/v2/posts'));
+    assert.equal(calls[0]!.method, 'POST');
+    const expectedBasic = `Basic ${Buffer.from('agent:abcd efgh ijkl').toString('base64')}`;
+    assert.equal(calls[0]!.headers!['Authorization'], expectedBasic);
+    const body = calls[0]!.body as { title: string; content: string; status: string };
+    assert.equal(body.status, 'publish');
+});
+
+test('wordpress publish_content honors an explicit draft status', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 201, body: { id: 43, status: 'draft' } }]);
+    const executor = createRealProviderExecutor(makeAtsCmsStore(), fetcher);
+    const result = await executor({
+        connectorType: 'wordpress',
+        actionType: 'publish_content',
+        payload: { title: 'WIP', content: 'draft body', status: 'draft' },
+        attempt: 1,
+        secretRefId: SECRET_REF_WORDPRESS,
+    });
+    assert.equal(result.ok, true);
+    assert.equal((calls[0]!.body as { status: string }).status, 'draft');
+});
+
+test('wordpress update_content patches an existing post', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 200, body: { id: 42, link: 'https://blog.acme.com/hello-world' } }]);
+    const executor = createRealProviderExecutor(makeAtsCmsStore(), fetcher);
+    const result = await executor({
+        connectorType: 'wordpress',
+        actionType: 'update_content',
+        payload: { content_id: '42', content: '<p>Updated.</p>' },
+        attempt: 1,
+        secretRefId: SECRET_REF_WORDPRESS,
+    });
+    assert.equal(result.ok, true);
+    assert.equal(calls[0]!.method, 'POST');
+    assert.ok(calls[0]!.url.includes('/wp-json/wp/v2/posts/42'));
+});
+
+test('wordpress get_content fetches a post title and status', async () => {
+    const { fetcher, calls } = makeFetch([
+        { status: 200, body: { id: 42, status: 'publish', title: { rendered: 'Hello World' } } },
+    ]);
+    const executor = createRealProviderExecutor(makeAtsCmsStore(), fetcher);
+    const result = await executor({
+        connectorType: 'wordpress',
+        actionType: 'get_content',
+        payload: { content_id: '42' },
+        attempt: 1,
+        secretRefId: SECRET_REF_WORDPRESS,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('Hello World'));
+    assert.ok(calls[0]!.url.includes('/wp-json/wp/v2/posts/42'));
+});
+
+test('wordpress list_content lists recent posts with titles', async () => {
+    const { fetcher, calls } = makeFetch([
+        {
+            status: 200,
+            body: [
+                { id: 42, status: 'publish', title: { rendered: 'Hello World' } },
+                { id: 43, status: 'draft', title: { rendered: 'WIP' } },
+            ],
+        },
+    ]);
+    const executor = createRealProviderExecutor(makeAtsCmsStore(), fetcher);
+    const result = await executor({
+        connectorType: 'wordpress',
+        actionType: 'list_content',
+        payload: { max_results: 5 },
+        attempt: 1,
+        secretRefId: SECRET_REF_WORDPRESS,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('Hello World'));
+    assert.ok(result.resultSummary.includes('WIP'));
+    assert.ok(calls[0]!.url.includes('per_page=5'));
+});
+
+test('wordpress publish_content returns invalid_format when title or content missing', async () => {
+    const { fetcher } = makeFetch([]);
+    const executor = createRealProviderExecutor(makeAtsCmsStore(), fetcher);
+    const result = await executor({
+        connectorType: 'wordpress',
+        actionType: 'publish_content',
+        payload: { title: 'no body' },
+        attempt: 1,
+        secretRefId: SECRET_REF_WORDPRESS,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'invalid_format');
+});
+
+test('executor returns upgrade_required when wordpress base_url missing', async () => {
+    const store = createInMemorySecretStore({
+        [SECRET_REF_WORDPRESS]: JSON.stringify({ username: 'agent', app_password: 'x' }),
+    });
+    const { fetcher } = makeFetch([]);
+    const executor = createRealProviderExecutor(store, fetcher);
+    const result = await executor({
+        connectorType: 'wordpress',
+        actionType: 'get_content',
+        payload: { content_id: '42' },
+        attempt: 1,
+        secretRefId: SECRET_REF_WORDPRESS,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'upgrade_required');
+});
+
+// --- ATS / CMS health probes ---
+
+test('health probe: greenhouse returns ok when user_roles endpoint returns 200', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 200, body: [] }]);
+    const probe = createRealConnectorHealthProbe(makeAtsCmsStore(), fetcher);
+    const result = await probe({
+        connectorType: 'greenhouse',
+        metadata: { connectorId: 'greenhouse:t:w', connectorType: 'greenhouse', secretRefId: SECRET_REF_GREENHOUSE, status: 'connected', scopeStatus: 'full', lastErrorClass: null },
+    });
+    assert.equal(result.outcome, 'ok');
+    assert.ok(calls[0]!.url.includes('harvest.greenhouse.io'));
+});
+
+test('health probe: wordpress returns auth_failure when users/me returns 401', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 401 }]);
+    const probe = createRealConnectorHealthProbe(makeAtsCmsStore(), fetcher);
+    const result = await probe({
+        connectorType: 'wordpress',
+        metadata: { connectorId: 'wordpress:t:w', connectorType: 'wordpress', secretRefId: SECRET_REF_WORDPRESS, status: 'connected', scopeStatus: 'full', lastErrorClass: null },
+    });
+    assert.equal(result.outcome, 'auth_failure');
+    assert.ok(calls[0]!.url.includes('/wp-json/wp/v2/users/me'));
+});

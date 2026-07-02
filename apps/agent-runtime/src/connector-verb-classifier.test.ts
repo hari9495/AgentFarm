@@ -44,3 +44,10 @@ test('CRM verbs classify reads as read and writes as write (fail-safe)', () => {
     assert.equal(isWriteVerb('update_record'), true);
     assert.equal(isWriteVerb('log_activity'), true);
 });
+
+test('CMS verbs classify reads as read and publish/update as write', () => {
+    assert.equal(isReadVerb('get_content'), true);
+    assert.equal(isReadVerb('list_content'), true);
+    assert.equal(isWriteVerb('publish_content'), true);
+    assert.equal(isWriteVerb('update_content'), true);
+});

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 
 // ── Types (mirrors connector-contracts, safe to duplicate for client) ──────
-type ConnectorCategory = "task_tracker" | "messaging" | "code" | "email" | "crm";
+type ConnectorCategory = "task_tracker" | "messaging" | "code" | "email" | "crm" | "ats" | "cms";
 type ConnectorAuthMethod = "oauth2" | "api_key" | "bearer_token" | "basic" | "generic_rest";
 type ConnectorStatus = "connected" | "disconnected" | "error" | "pending_auth";
 
@@ -74,9 +74,11 @@ const CATEGORY_LABELS: Record<ConnectorCategory, string> = {
     code: "Code & Version Control",
     email: "Email",
     crm: "CRM",
+    ats: "Recruiting (ATS)",
+    cms: "Content (CMS)",
 };
 
-const CATEGORY_ORDER: ConnectorCategory[] = ["task_tracker", "messaging", "code", "email", "crm"];
+const CATEGORY_ORDER: ConnectorCategory[] = ["task_tracker", "messaging", "code", "email", "crm", "ats", "cms"];
 
 const STATUS_COLORS: Record<ConnectorStatus, string> = {
     connected: "bg-[var(--accent-green)]/10 text-[var(--accent-green)]",
@@ -537,6 +539,8 @@ export default function ConnectorsPage() {
         code: "generic_rest_code",
         email: "generic_rest_email",
         crm: "generic_rest",
+        ats: "generic_rest",
+        cms: "generic_rest",
     };
 
     const getPreferredCustomConnector = (): AvailableConnector | undefined => {
@@ -608,6 +612,8 @@ export default function ConnectorsPage() {
                                     code: "bg-[var(--surface-el)]",
                                     email: "bg-[var(--accent-green)]/10",
                                     crm: "bg-amber-500/10",
+                                    ats: "bg-emerald-500/10",
+                                    cms: "bg-sky-500/10",
                                 };
                                 return (
                                     <div key={c.tool} className={`flex flex-col items-center gap-2 p-3 rounded-xl ${categoryColor[c.category]} border border-transparent hover:border-[var(--hairline)] transition-colors cursor-default`}>

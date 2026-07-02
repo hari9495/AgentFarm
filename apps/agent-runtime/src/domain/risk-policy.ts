@@ -69,10 +69,13 @@ export const MEDIUM_RISK_ACTIONS = new Set([
     // Outbound email leaves the tenant boundary — always human-gated
     'send_email',
     'reply_email',
-    // CRM writes mutate customer-of-customer data — human-gated
+    // CRM/ATS writes mutate customer-of-customer data — human-gated
     'create_record',
     'update_record',
     'log_activity',
+    // CMS publishing is outward-facing content — human-gated
+    'publish_content',
+    'update_content',
     // Local workspace: executing code or committing changes is medium-risk
     'code_edit',
     'code_edit_patch',
