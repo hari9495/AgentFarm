@@ -250,11 +250,10 @@ describe('workspace_fsd_perf_profile', () => {
                 tenantId: 't1', botId: 'b1', taskId: 'task-1',
             });
 
-            // Should still return ok:true with a degraded summary (not crash)
-            assert.equal(result.ok, true);
-            const parsed = JSON.parse(result.output) as Record<string, unknown>;
-            assert.equal(parsed['score'], 0);
-            assert.match(String(parsed['summary']), /playwright not installed/i);
+            // Hard-fail contract: when the profiler cannot run at all, the
+            // action fails loudly instead of returning a fabricated report.
+            assert.equal(result.ok, false);
+            assert.match(result.errorOutput ?? '', /playwright not installed/i);
         });
     });
 });

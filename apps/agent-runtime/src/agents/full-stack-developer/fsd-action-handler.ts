@@ -1793,31 +1793,44 @@ export async function handleFsdAction(
                 content:   script,
             });
 
-            // 2. Run the script — capture stdout + stderr
-            let report = parseBrowserDebugOutput('', targetUrl);   // safe default
+            // 2. Run the script — capture stdout + stderr.
+            // Hard-fail contract: if the tooling cannot run at all, this action
+            // FAILS — a fabricated empty report would read as a clean scan.
+            let runResult: { stdout: string; stderr: string; exitCode: number };
             try {
-                const runResult = await runCommand(
+                runResult = await runCommand(
                     ['node', scriptPath],
                     workspaceDir,
                     timeoutMs + 10_000,
                 );
-                report = parseBrowserDebugOutput(
-                    runResult.stdout + '\n' + runResult.stderr,
-                    targetUrl,
-                );
             } catch (runErr) {
                 const msg = runErr instanceof Error ? runErr.message : String(runErr);
-                report = {
-                    targetUrl,
-                    errors: [{
-                        id:       'BROWSER-000',
-                        source:   'other',
-                        severity: 'error',
-                        message:  `Playwright not available or script error: ${msg}. Ensure playwright is installed (npm install playwright).`,
-                    }],
-                    networkFailures: [],
-                    score:   0,
-                    summary: `Browser debug failed — Playwright not available: ${msg}`,
+                return {
+                    ok: false,
+                    output: '',
+                    errorOutput: `workspace_fsd_browser_debug: debug script could not be spawned: ${msg}. Ensure Node and Playwright are installed (npm install playwright).`,
+                };
+            }
+
+            const combinedOutput = runResult.stdout + '\n' + runResult.stderr;
+            let report = parseBrowserDebugOutput(combinedOutput, targetUrl);
+            const salvagedFindings = report.errors.length > 0 || report.networkFailures.length > 0;
+
+            if (runResult.exitCode !== 0 && !salvagedFindings) {
+                return {
+                    ok: false,
+                    output: '',
+                    errorOutput:
+                        `workspace_fsd_browser_debug: debug script exited ${runResult.exitCode} without producing a report: ` +
+                        `${runResult.stderr.trim().slice(0, 400) || '(no stderr)'}. ` +
+                        'Ensure Playwright is installed (npm install playwright).',
+                };
+            }
+            if (runResult.exitCode === 0 && !combinedOutput.includes('{')) {
+                return {
+                    ok: false,
+                    output: '',
+                    errorOutput: 'workspace_fsd_browser_debug: debug script produced no report output — cannot assess the page.',
                 };
             }
 
@@ -1917,15 +1930,38 @@ export async function handleFsdAction(
             const scriptPath = '__fsd_perf_profile.cjs';
             await executeAction('workspace_write_file', { file_path: scriptPath, content: script });
 
-            let report = parseCpuProfile('', targetUrl);
+            // Hard-fail contract: a zero-sample "profile" from a crashed script
+            // is not a measurement — fail so the runtime records it as such.
+            let profileRun: { stdout: string; stderr: string; exitCode: number };
             try {
-                const runResult = await runCommand(['node', scriptPath], workspaceDir, durationMs + 40_000);
-                report = parseCpuProfile(runResult.stdout + '\n' + runResult.stderr, targetUrl);
+                profileRun = await runCommand(['node', scriptPath], workspaceDir, durationMs + 40_000);
             } catch (runErr) {
                 const msg = runErr instanceof Error ? runErr.message : String(runErr);
-                report = {
-                    targetUrl, totalSamples: 0, durationMs, hotFunctions: [], score: 0,
-                    summary: `Profiling failed — Playwright not available or script error: ${msg}. Run: npm install playwright`,
+                return {
+                    ok: false,
+                    output: '',
+                    errorOutput: `workspace_fsd_perf_profile: profiling script could not be spawned: ${msg}. Ensure Node and Playwright are installed (npm install playwright).`,
+                };
+            }
+
+            const profileOutput = profileRun.stdout + '\n' + profileRun.stderr;
+            let report = parseCpuProfile(profileOutput, targetUrl);
+
+            if (profileRun.exitCode !== 0 && report.totalSamples === 0) {
+                return {
+                    ok: false,
+                    output: '',
+                    errorOutput:
+                        `workspace_fsd_perf_profile: profiling script exited ${profileRun.exitCode} without producing a profile: ` +
+                        `${profileRun.stderr.trim().slice(0, 400) || '(no stderr)'}. ` +
+                        'Ensure Playwright is installed (npm install playwright).',
+                };
+            }
+            if (profileRun.exitCode === 0 && !profileOutput.includes('{')) {
+                return {
+                    ok: false,
+                    output: '',
+                    errorOutput: 'workspace_fsd_perf_profile: profiling script produced no profile output — cannot measure the page.',
                 };
             }
 
