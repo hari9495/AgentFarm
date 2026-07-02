@@ -569,3 +569,20 @@ test('B2: processApprovedTask blocks approved task when kill-switch is active', 
         `errorMessage should include kill-switch id`,
     );
 });
+
+test('classifyRisk treats outbound mailbox actions as medium and mailbox reads as low', () => {
+    const send = classifyRisk('send_email', 0.9, {});
+    assert.equal(send.riskLevel, 'medium');
+
+    const reply = classifyRisk('reply_email', 0.9, {});
+    assert.equal(reply.riskLevel, 'medium');
+
+    const list = classifyRisk('list_emails', 0.9, {});
+    assert.equal(list.riskLevel, 'low');
+
+    const read = classifyRisk('read_email', 0.9, {});
+    assert.equal(read.riskLevel, 'low');
+
+    const thread = classifyRisk('read_thread', 0.9, {});
+    assert.equal(thread.riskLevel, 'low');
+});

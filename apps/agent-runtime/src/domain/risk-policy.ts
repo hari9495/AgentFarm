@@ -66,6 +66,9 @@ export const MEDIUM_RISK_ACTIONS = new Set([
     'create_pr_comment',
     'create_pr',
     'send_message',
+    // Outbound email leaves the tenant boundary — always human-gated
+    'send_email',
+    'reply_email',
     // Local workspace: executing code or committing changes is medium-risk
     'code_edit',
     'code_edit_patch',

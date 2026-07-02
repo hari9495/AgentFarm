@@ -1262,3 +1262,371 @@ test('health probe: clickup returns auth_failure on 401', async () => {
     });
     assert.equal(result.outcome, 'auth_failure');
 });
+
+// ---------------------------------------------------------------------------
+// Gmail / Outlook native mailbox connectors
+// ---------------------------------------------------------------------------
+
+const SECRET_REF_GMAIL = 'kv://vault/secrets/gmail-connector';
+const SECRET_REF_OUTLOOK = 'kv://vault/secrets/outlook-connector';
+
+const makeMailboxStore = () =>
+    createInMemorySecretStore({
+        [SECRET_REF_GMAIL]: JSON.stringify({ access_token: 'gmail-oauth-1' }),
+        [SECRET_REF_OUTLOOK]: JSON.stringify({ access_token: 'outlook-graph-1' }),
+    });
+
+// --- Gmail ---
+
+test('gmail send_email posts base64url raw RFC822 message and returns message id', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 200, body: { id: 'msg-abc123' } }]);
+    const executor = createRealProviderExecutor(makeMailboxStore(), fetcher);
+    const result = await executor({
+        connectorType: 'gmail',
+        actionType: 'send_email',
+        payload: { to: 'alice@example.com', subject: 'Hello', body: 'Hi Alice' },
+        attempt: 1,
+        secretRefId: SECRET_REF_GMAIL,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('msg-abc123'));
+    assert.equal(calls[0]!.method, 'POST');
+    assert.ok(calls[0]!.url.includes('/gmail/v1/users/me/messages/send'));
+    assert.equal(calls[0]!.headers!['Authorization'], 'Bearer gmail-oauth-1');
+    const raw = (calls[0]!.body as { raw: string }).raw;
+    // base64url — no +, /, or = padding
+    assert.ok(/^[A-Za-z0-9_-]+$/.test(raw));
+    const decoded = Buffer.from(raw, 'base64url').toString('utf8');
+    assert.ok(decoded.includes('To: alice@example.com'));
+    assert.ok(decoded.includes('Subject: Hello'));
+    assert.ok(decoded.includes('Hi Alice'));
+});
+
+test('gmail send_email returns invalid_format when to/subject/body missing', async () => {
+    const { fetcher } = makeFetch([]);
+    const executor = createRealProviderExecutor(makeMailboxStore(), fetcher);
+    const result = await executor({
+        connectorType: 'gmail',
+        actionType: 'send_email',
+        payload: { subject: 'no recipient' },
+        attempt: 1,
+        secretRefId: SECRET_REF_GMAIL,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'invalid_format');
+});
+
+test('gmail list_emails passes query and returns message count', async () => {
+    const { fetcher, calls } = makeFetch([
+        { status: 200, body: { messages: [{ id: 'm1' }, { id: 'm2' }], resultSizeEstimate: 2 } },
+    ]);
+    const executor = createRealProviderExecutor(makeMailboxStore(), fetcher);
+    const result = await executor({
+        connectorType: 'gmail',
+        actionType: 'list_emails',
+        payload: { query: 'is:unread', max_results: 10 },
+        attempt: 1,
+        secretRefId: SECRET_REF_GMAIL,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('2'));
+    assert.ok(result.resultSummary.includes('m1'));
+    assert.ok(calls[0]!.url.includes('q=is%3Aunread'));
+    assert.ok(calls[0]!.url.includes('maxResults=10'));
+});
+
+test('gmail read_email returns subject, from, and snippet', async () => {
+    const { fetcher, calls } = makeFetch([
+        {
+            status: 200,
+            body: {
+                id: 'm1',
+                snippet: 'Quarterly numbers attached',
+                payload: {
+                    headers: [
+                        { name: 'Subject', value: 'Q2 Report' },
+                        { name: 'From', value: 'bob@example.com' },
+                    ],
+                },
+            },
+        },
+    ]);
+    const executor = createRealProviderExecutor(makeMailboxStore(), fetcher);
+    const result = await executor({
+        connectorType: 'gmail',
+        actionType: 'read_email',
+        payload: { message_id: 'm1' },
+        attempt: 1,
+        secretRefId: SECRET_REF_GMAIL,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('Q2 Report'));
+    assert.ok(result.resultSummary.includes('bob@example.com'));
+    assert.ok(result.resultSummary.includes('Quarterly numbers attached'));
+    assert.ok(calls[0]!.url.includes('/messages/m1'));
+});
+
+test('gmail reply_email fetches original metadata then sends threaded reply', async () => {
+    const { fetcher, calls } = makeFetch([
+        {
+            status: 200,
+            body: {
+                id: 'm1',
+                threadId: 'thread-9',
+                payload: {
+                    headers: [
+                        { name: 'Subject', value: 'Q2 Report' },
+                        { name: 'From', value: 'bob@example.com' },
+                        { name: 'Message-ID', value: '<orig-msg-id@example.com>' },
+                    ],
+                },
+            },
+        },
+        { status: 200, body: { id: 'msg-reply-1' } },
+    ]);
+    const executor = createRealProviderExecutor(makeMailboxStore(), fetcher);
+    const result = await executor({
+        connectorType: 'gmail',
+        actionType: 'reply_email',
+        payload: { message_id: 'm1', body: 'Thanks, received.' },
+        attempt: 1,
+        secretRefId: SECRET_REF_GMAIL,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('msg-reply-1'));
+    assert.equal(calls[1]!.method, 'POST');
+    const sendBody = calls[1]!.body as { raw: string; threadId: string };
+    assert.equal(sendBody.threadId, 'thread-9');
+    const decoded = Buffer.from(sendBody.raw, 'base64url').toString('utf8');
+    assert.ok(decoded.includes('To: bob@example.com'));
+    assert.ok(decoded.includes('Subject: Re: Q2 Report'));
+    assert.ok(decoded.includes('In-Reply-To: <orig-msg-id@example.com>'));
+    assert.ok(decoded.includes('Thanks, received.'));
+});
+
+test('gmail read_thread returns message count and first subject', async () => {
+    const { fetcher, calls } = makeFetch([
+        {
+            status: 200,
+            body: {
+                id: 'thread-9',
+                messages: [
+                    { id: 'm1', payload: { headers: [{ name: 'Subject', value: 'Q2 Report' }] } },
+                    { id: 'm2', payload: { headers: [] } },
+                ],
+            },
+        },
+    ]);
+    const executor = createRealProviderExecutor(makeMailboxStore(), fetcher);
+    const result = await executor({
+        connectorType: 'gmail',
+        actionType: 'read_thread',
+        payload: { thread_id: 'thread-9' },
+        attempt: 1,
+        secretRefId: SECRET_REF_GMAIL,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('2 message'));
+    assert.ok(result.resultSummary.includes('Q2 Report'));
+    assert.ok(calls[0]!.url.includes('/threads/thread-9'));
+});
+
+test('gmail send_email classifies 401 as permission_denied', async () => {
+    const { fetcher } = makeFetch([{ status: 401 }]);
+    const executor = createRealProviderExecutor(makeMailboxStore(), fetcher);
+    const result = await executor({
+        connectorType: 'gmail',
+        actionType: 'send_email',
+        payload: { to: 'a@b.c', subject: 's', body: 'b' },
+        attempt: 1,
+        secretRefId: SECRET_REF_GMAIL,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'permission_denied');
+});
+
+test('executor returns upgrade_required when gmail access_token missing', async () => {
+    const store = createInMemorySecretStore({ [SECRET_REF_GMAIL]: JSON.stringify({}) });
+    const { fetcher } = makeFetch([]);
+    const executor = createRealProviderExecutor(store, fetcher);
+    const result = await executor({
+        connectorType: 'gmail',
+        actionType: 'send_email',
+        payload: { to: 'a@b.c', subject: 's', body: 'b' },
+        attempt: 1,
+        secretRefId: SECRET_REF_GMAIL,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'upgrade_required');
+});
+
+// --- Outlook (Microsoft Graph) ---
+
+test('outlook send_email posts Graph sendMail payload and succeeds on 202', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 202 }]);
+    const executor = createRealProviderExecutor(makeMailboxStore(), fetcher);
+    const result = await executor({
+        connectorType: 'outlook',
+        actionType: 'send_email',
+        payload: { to: ['alice@example.com'], subject: 'Hello', body: 'Hi Alice' },
+        attempt: 1,
+        secretRefId: SECRET_REF_OUTLOOK,
+    });
+    assert.equal(result.ok, true);
+    assert.equal(calls[0]!.method, 'POST');
+    assert.ok(calls[0]!.url.includes('graph.microsoft.com/v1.0/me/sendMail'));
+    assert.equal(calls[0]!.headers!['Authorization'], 'Bearer outlook-graph-1');
+    const body = calls[0]!.body as {
+        message: { subject: string; body: { content: string }; toRecipients: Array<{ emailAddress: { address: string } }> };
+    };
+    assert.equal(body.message.subject, 'Hello');
+    assert.equal(body.message.toRecipients[0]!.emailAddress.address, 'alice@example.com');
+});
+
+test('outlook send_email returns invalid_format when recipient missing', async () => {
+    const { fetcher } = makeFetch([]);
+    const executor = createRealProviderExecutor(makeMailboxStore(), fetcher);
+    const result = await executor({
+        connectorType: 'outlook',
+        actionType: 'send_email',
+        payload: { subject: 'no recipient', body: 'x' },
+        attempt: 1,
+        secretRefId: SECRET_REF_OUTLOOK,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'invalid_format');
+});
+
+test('outlook list_emails returns subjects of recent messages', async () => {
+    const { fetcher, calls } = makeFetch([
+        {
+            status: 200,
+            body: {
+                value: [
+                    { id: 'o1', subject: 'Standup notes', from: { emailAddress: { address: 'pm@example.com' } } },
+                    { id: 'o2', subject: 'Invoice', from: { emailAddress: { address: 'fin@example.com' } } },
+                ],
+            },
+        },
+    ]);
+    const executor = createRealProviderExecutor(makeMailboxStore(), fetcher);
+    const result = await executor({
+        connectorType: 'outlook',
+        actionType: 'list_emails',
+        payload: { max_results: 5 },
+        attempt: 1,
+        secretRefId: SECRET_REF_OUTLOOK,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('Standup notes'));
+    assert.ok(result.resultSummary.includes('Invoice'));
+    assert.ok(calls[0]!.url.includes('$top=5'));
+});
+
+test('outlook read_email returns subject, from, and preview', async () => {
+    const { fetcher, calls } = makeFetch([
+        {
+            status: 200,
+            body: {
+                id: 'o1',
+                subject: 'Standup notes',
+                from: { emailAddress: { address: 'pm@example.com' } },
+                bodyPreview: 'Yesterday we shipped...',
+            },
+        },
+    ]);
+    const executor = createRealProviderExecutor(makeMailboxStore(), fetcher);
+    const result = await executor({
+        connectorType: 'outlook',
+        actionType: 'read_email',
+        payload: { message_id: 'o1' },
+        attempt: 1,
+        secretRefId: SECRET_REF_OUTLOOK,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('Standup notes'));
+    assert.ok(result.resultSummary.includes('pm@example.com'));
+    assert.ok(result.resultSummary.includes('Yesterday we shipped'));
+    assert.ok(calls[0]!.url.includes('/messages/o1'));
+});
+
+test('outlook reply_email posts reply comment to the message', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 202 }]);
+    const executor = createRealProviderExecutor(makeMailboxStore(), fetcher);
+    const result = await executor({
+        connectorType: 'outlook',
+        actionType: 'reply_email',
+        payload: { message_id: 'o1', body: 'Thanks, received.' },
+        attempt: 1,
+        secretRefId: SECRET_REF_OUTLOOK,
+    });
+    assert.equal(result.ok, true);
+    assert.equal(calls[0]!.method, 'POST');
+    assert.ok(calls[0]!.url.includes('/messages/o1/reply'));
+    assert.deepEqual(calls[0]!.body, { comment: 'Thanks, received.' });
+});
+
+test('outlook read_thread lists messages in a conversation', async () => {
+    const { fetcher, calls } = makeFetch([
+        {
+            status: 200,
+            body: {
+                value: [
+                    { id: 'o1', subject: 'Standup notes' },
+                    { id: 'o2', subject: 'RE: Standup notes' },
+                ],
+            },
+        },
+    ]);
+    const executor = createRealProviderExecutor(makeMailboxStore(), fetcher);
+    const result = await executor({
+        connectorType: 'outlook',
+        actionType: 'read_thread',
+        payload: { conversation_id: 'conv-1' },
+        attempt: 1,
+        secretRefId: SECRET_REF_OUTLOOK,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('2 message'));
+    assert.ok(calls[0]!.url.includes('conversationId'));
+    assert.ok(calls[0]!.url.includes('conv-1'));
+});
+
+test('outlook send_email classifies 429 as rate_limit transient', async () => {
+    const { fetcher } = makeFetch([{ status: 429 }]);
+    const executor = createRealProviderExecutor(makeMailboxStore(), fetcher);
+    const result = await executor({
+        connectorType: 'outlook',
+        actionType: 'send_email',
+        payload: { to: 'a@b.c', subject: 's', body: 'b' },
+        attempt: 1,
+        secretRefId: SECRET_REF_OUTLOOK,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'rate_limit');
+    assert.equal(result.transient, true);
+});
+
+// --- Mailbox health probes ---
+
+test('health probe: gmail returns ok when profile endpoint returns 200', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 200, body: { emailAddress: 'agent@tenant.com' } }]);
+    const probe = createRealConnectorHealthProbe(makeMailboxStore(), fetcher);
+    const result = await probe({
+        connectorType: 'gmail',
+        metadata: { connectorId: 'gmail:t:w', connectorType: 'gmail', secretRefId: SECRET_REF_GMAIL, status: 'connected', scopeStatus: 'full', lastErrorClass: null },
+    });
+    assert.equal(result.outcome, 'ok');
+    assert.ok(calls[0]!.url.includes('/gmail/v1/users/me/profile'));
+});
+
+test('health probe: outlook returns auth_failure when Graph /me returns 401', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 401 }]);
+    const probe = createRealConnectorHealthProbe(makeMailboxStore(), fetcher);
+    const result = await probe({
+        connectorType: 'outlook',
+        metadata: { connectorId: 'outlook:t:w', connectorType: 'outlook', secretRefId: SECRET_REF_OUTLOOK, status: 'connected', scopeStatus: 'full', lastErrorClass: null },
+    });
+    assert.equal(result.outcome, 'auth_failure');
+    assert.ok(calls[0]!.url.includes('graph.microsoft.com/v1.0/me'));
+});

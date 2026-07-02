@@ -17,6 +17,8 @@
  *              "api_key"?: "...", "api_key_header"?: "X-API-Key",
  *              "bearer_token"?: "...", "basic_user"?: "...", "basic_pass"?: "..." }
  *   Slack:  { "botToken": "xoxb-...", "defaultChannel"?: "#general" }
+ *   Gmail:  { "access_token": "..." }          (Google OAuth bearer)
+ *   Outlook:{ "access_token": "..." }          (Microsoft Graph bearer)
  *
  * All actions accept a typed payload object (see ActionPayload* below).
  */
@@ -40,7 +42,9 @@ export type ConnectorType =
     | 'asana'
     | 'trello'
     | 'clickup'
-    | 'azure_devops';
+    | 'azure_devops'
+    | 'gmail'
+    | 'outlook';
 export type ConnectorActionType =
     | 'read_task'
     | 'create_comment'
@@ -50,7 +54,11 @@ export type ConnectorActionType =
     | 'create_pr'
     | 'merge_pr'
     | 'list_prs'
-    | 'send_email';
+    | 'send_email'
+    | 'list_emails'
+    | 'read_email'
+    | 'reply_email'
+    | 'read_thread';
 
 export type ConnectorActionErrorCode =
     | 'rate_limit'
@@ -144,6 +152,8 @@ type TrelloCredentials = { api_key: string; token: string };
 type ClickUpCredentials = { api_key: string };
 // Azure DevOps: PAT (HTTP Basic with empty user) + organization; project from payload.
 type AzureDevOpsCredentials = { access_token: string; organization: string };
+type GmailCredentials = { access_token: string };
+type OutlookCredentials = { access_token: string };
 
 type FetchFn = (url: string | URL, init?: RequestInit) => Promise<Response>;
 
@@ -1477,6 +1487,338 @@ const executeAzureDevOps = async (
 };
 
 // ---------------------------------------------------------------------------
+// Gmail connector (Gmail REST API, OAuth bearer)
+// ---------------------------------------------------------------------------
+
+const GMAIL_BASE = 'https://gmail.googleapis.com/gmail/v1/users/me';
+
+type GmailHeader = { name?: string; value?: string };
+type GmailMessageMeta = {
+    id?: string;
+    threadId?: string;
+    snippet?: string;
+    payload?: { headers?: GmailHeader[] };
+};
+
+const gmailHeader = (headers: GmailHeader[] | undefined, name: string): string =>
+    headers?.find((h) => (h.name ?? '').toLowerCase() === name.toLowerCase())?.value ?? '';
+
+// Gmail send/reply take a full RFC822 message, base64url-encoded.
+const buildRfc822 = (fields: Record<string, string>, body: string): string => {
+    const headerLines = Object.entries(fields)
+        .filter(([, v]) => v !== '')
+        .map(([k, v]) => `${k}: ${v}`);
+    return `${headerLines.join('\r\n')}\r\nContent-Type: text/plain; charset="UTF-8"\r\n\r\n${body}`;
+};
+
+const executeGmail = async (
+    actionType: ConnectorActionType,
+    payload: Record<string, unknown>,
+    credentials: GmailCredentials,
+    fetcher: FetchFn,
+): Promise<ProviderExecutionResult> => {
+    const headers: Record<string, string> = {
+        Authorization: `Bearer ${credentials.access_token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+    };
+
+    if (actionType === 'send_email') {
+        const to = String(payload['to'] ?? '').trim();
+        const subject = String(payload['subject'] ?? '').trim();
+        const body = String(payload['body'] ?? '').trim();
+        if (!to || !subject || !body) {
+            return missingFields('to, subject, body', 'to, subject, and body are required for send_email.');
+        }
+        const raw = Buffer.from(buildRfc822({ To: to, Subject: subject }, body)).toString('base64url');
+        let res: Response;
+        try {
+            res = await fetcher(`${GMAIL_BASE}/messages/send`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ raw }),
+            });
+        } catch (err) {
+            return networkError('Gmail', 'gmail.googleapis.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Gmail send failed with ${res.status}`);
+        const json = (await res.json()) as { id?: string };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Email ${json.id ?? 'sent'} sent to ${to}`,
+        };
+    }
+
+    if (actionType === 'list_emails') {
+        const query = String(payload['query'] ?? '').trim();
+        const maxResults = Number(payload['max_results'] ?? 10);
+        const params = new URLSearchParams({ maxResults: String(maxResults) });
+        if (query) params.set('q', query);
+        let res: Response;
+        try {
+            res = await fetcher(`${GMAIL_BASE}/messages?${params.toString()}`, { headers });
+        } catch (err) {
+            return networkError('Gmail', 'gmail.googleapis.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Gmail list failed with ${res.status}`);
+        const json = (await res.json()) as { messages?: Array<{ id?: string }>; resultSizeEstimate?: number };
+        const ids = (json.messages ?? []).map((m) => m.id ?? '').filter(Boolean);
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `${ids.length} message(s)${query ? ` matching "${query}"` : ''}: ${ids.join(', ') || '(none)'}`,
+        };
+    }
+
+    if (actionType === 'read_email') {
+        const messageId = String(payload['message_id'] ?? '').trim();
+        if (!messageId) return missingFields('message_id', 'message_id is required for read_email.');
+        let res: Response;
+        try {
+            res = await fetcher(
+                `${GMAIL_BASE}/messages/${encodeURIComponent(messageId)}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date`,
+                { headers },
+            );
+        } catch (err) {
+            return networkError('Gmail', 'gmail.googleapis.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Gmail returned ${res.status} for message ${messageId}`);
+        const json = (await res.json()) as GmailMessageMeta;
+        const subject = gmailHeader(json.payload?.headers, 'Subject') || '(no subject)';
+        const from = gmailHeader(json.payload?.headers, 'From') || '(unknown sender)';
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `"${subject}" from ${from} — ${json.snippet ?? ''}`,
+        };
+    }
+
+    if (actionType === 'reply_email') {
+        const messageId = String(payload['message_id'] ?? '').trim();
+        const body = String(payload['body'] ?? '').trim();
+        if (!messageId || !body) {
+            return missingFields('message_id, body', 'message_id and body are required for reply_email.');
+        }
+        // Fetch the original for threading headers, then send within the same thread.
+        let metaRes: Response;
+        try {
+            metaRes = await fetcher(
+                `${GMAIL_BASE}/messages/${encodeURIComponent(messageId)}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Message-ID`,
+                { headers },
+            );
+        } catch (err) {
+            return networkError('Gmail', 'gmail.googleapis.com', err);
+        }
+        if (!metaRes.ok) return failFromStatus(metaRes.status, `Gmail returned ${metaRes.status} for message ${messageId}`);
+        const meta = (await metaRes.json()) as GmailMessageMeta;
+        const origSubject = gmailHeader(meta.payload?.headers, 'Subject');
+        const origFrom = gmailHeader(meta.payload?.headers, 'From');
+        const origMessageId = gmailHeader(meta.payload?.headers, 'Message-ID');
+        const replyTo = String(payload['to'] ?? '').trim() || origFrom;
+        if (!replyTo) return missingFields('to', 'Original sender unknown; provide "to" explicitly for reply_email.');
+        const subject = origSubject.toLowerCase().startsWith('re:') ? origSubject : `Re: ${origSubject}`;
+        const raw = Buffer.from(
+            buildRfc822(
+                { To: replyTo, Subject: subject, 'In-Reply-To': origMessageId, References: origMessageId },
+                body,
+            ),
+        ).toString('base64url');
+        let res: Response;
+        try {
+            res = await fetcher(`${GMAIL_BASE}/messages/send`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ raw, threadId: meta.threadId }),
+            });
+        } catch (err) {
+            return networkError('Gmail', 'gmail.googleapis.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Gmail reply failed with ${res.status}`);
+        const json = (await res.json()) as { id?: string };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Reply ${json.id ?? 'sent'} sent to ${replyTo} on thread ${meta.threadId ?? '(unknown)'}`,
+        };
+    }
+
+    if (actionType === 'read_thread') {
+        const threadId = String(payload['thread_id'] ?? '').trim();
+        if (!threadId) return missingFields('thread_id', 'thread_id is required for read_thread.');
+        let res: Response;
+        try {
+            res = await fetcher(`${GMAIL_BASE}/threads/${encodeURIComponent(threadId)}?format=metadata&metadataHeaders=Subject`, {
+                headers,
+            });
+        } catch (err) {
+            return networkError('Gmail', 'gmail.googleapis.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Gmail returned ${res.status} for thread ${threadId}`);
+        const json = (await res.json()) as { messages?: GmailMessageMeta[] };
+        const messages = json.messages ?? [];
+        const firstSubject = gmailHeader(messages[0]?.payload?.headers, 'Subject') || '(no subject)';
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Thread ${threadId}: ${messages.length} message(s), subject "${firstSubject}"`,
+        };
+    }
+
+    return unsupported('Gmail', 'send_email, list_emails, read_email, reply_email, read_thread');
+};
+
+// ---------------------------------------------------------------------------
+// Outlook connector (Microsoft Graph mail, OAuth bearer)
+// ---------------------------------------------------------------------------
+
+const GRAPH_MAIL_BASE = 'https://graph.microsoft.com/v1.0/me';
+
+type GraphMessage = {
+    id?: string;
+    subject?: string;
+    bodyPreview?: string;
+    from?: { emailAddress?: { address?: string } };
+};
+
+const executeOutlook = async (
+    actionType: ConnectorActionType,
+    payload: Record<string, unknown>,
+    credentials: OutlookCredentials,
+    fetcher: FetchFn,
+): Promise<ProviderExecutionResult> => {
+    const headers: Record<string, string> = {
+        Authorization: `Bearer ${credentials.access_token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+    };
+
+    if (actionType === 'send_email') {
+        const toRaw = payload['to'];
+        const to = Array.isArray(toRaw) ? (toRaw as unknown[]).map(String) : typeof toRaw === 'string' && toRaw.trim() ? [toRaw.trim()] : [];
+        const subject = String(payload['subject'] ?? '').trim();
+        const body = String(payload['body'] ?? '').trim();
+        if (to.length === 0 || !subject || !body) {
+            return missingFields('to, subject, body', 'to, subject, and body are required for send_email.');
+        }
+        let res: Response;
+        try {
+            res = await fetcher(`${GRAPH_MAIL_BASE}/sendMail`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    message: {
+                        subject,
+                        body: { contentType: 'Text', content: body },
+                        toRecipients: to.map((address) => ({ emailAddress: { address } })),
+                    },
+                }),
+            });
+        } catch (err) {
+            return networkError('Outlook', 'graph.microsoft.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Outlook send failed with ${res.status}`);
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Email sent to ${to.join(', ')}`,
+        };
+    }
+
+    if (actionType === 'list_emails') {
+        const maxResults = Number(payload['max_results'] ?? 10);
+        let res: Response;
+        try {
+            res = await fetcher(
+                `${GRAPH_MAIL_BASE}/messages?$top=${maxResults}&$select=id,subject,from,receivedDateTime`,
+                { headers },
+            );
+        } catch (err) {
+            return networkError('Outlook', 'graph.microsoft.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Outlook list failed with ${res.status}`);
+        const json = (await res.json()) as { value?: GraphMessage[] };
+        const items = (json.value ?? []).map(
+            (m) => `"${m.subject ?? '(no subject)'}" from ${m.from?.emailAddress?.address ?? '(unknown)'}`,
+        );
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `${items.length} message(s): ${items.join('; ') || '(none)'}`,
+        };
+    }
+
+    if (actionType === 'read_email') {
+        const messageId = String(payload['message_id'] ?? '').trim();
+        if (!messageId) return missingFields('message_id', 'message_id is required for read_email.');
+        let res: Response;
+        try {
+            res = await fetcher(
+                `${GRAPH_MAIL_BASE}/messages/${encodeURIComponent(messageId)}?$select=id,subject,from,bodyPreview,receivedDateTime`,
+                { headers },
+            );
+        } catch (err) {
+            return networkError('Outlook', 'graph.microsoft.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Outlook returned ${res.status} for message ${messageId}`);
+        const json = (await res.json()) as GraphMessage;
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `"${json.subject ?? '(no subject)'}" from ${json.from?.emailAddress?.address ?? '(unknown)'} — ${json.bodyPreview ?? ''}`,
+        };
+    }
+
+    if (actionType === 'reply_email') {
+        const messageId = String(payload['message_id'] ?? '').trim();
+        const body = String(payload['body'] ?? '').trim();
+        if (!messageId || !body) {
+            return missingFields('message_id, body', 'message_id and body are required for reply_email.');
+        }
+        let res: Response;
+        try {
+            res = await fetcher(`${GRAPH_MAIL_BASE}/messages/${encodeURIComponent(messageId)}/reply`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ comment: body }),
+            });
+        } catch (err) {
+            return networkError('Outlook', 'graph.microsoft.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Outlook reply failed with ${res.status}`);
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Reply sent on message ${messageId}`,
+        };
+    }
+
+    if (actionType === 'read_thread') {
+        const conversationId = String(payload['conversation_id'] ?? payload['thread_id'] ?? '').trim();
+        if (!conversationId) return missingFields('conversation_id', 'conversation_id is required for read_thread.');
+        let res: Response;
+        try {
+            res = await fetcher(
+                `${GRAPH_MAIL_BASE}/messages?$filter=${encodeURIComponent(`conversationId eq '${conversationId}'`)}&$select=id,subject,from`,
+                { headers },
+            );
+        } catch (err) {
+            return networkError('Outlook', 'graph.microsoft.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Outlook returned ${res.status} for conversation ${conversationId}`);
+        const json = (await res.json()) as { value?: GraphMessage[] };
+        const messages = json.value ?? [];
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Conversation ${conversationId}: ${messages.length} message(s), latest "${messages[messages.length - 1]?.subject ?? '(no subject)'}"`,
+        };
+    }
+
+    return unsupported('Outlook', 'send_email, list_emails, read_email, reply_email, read_thread');
+};
+
+// ---------------------------------------------------------------------------
 // Email connector (SendGrid + SMTP fallback via nodemailer-style validation)
 // ---------------------------------------------------------------------------
 
@@ -2108,6 +2450,28 @@ const probeAzureDevOps = async (credentials: AzureDevOpsCredentials, fetcher: Fe
     }
 };
 
+const probeGmail = async (credentials: GmailCredentials, fetcher: FetchFn): Promise<HealthProbeResult> => {
+    try {
+        const res = await fetcher(`${GMAIL_BASE}/profile`, {
+            headers: { Authorization: `Bearer ${credentials.access_token}`, Accept: 'application/json' },
+        });
+        return classifyProbeStatus('Gmail', res.status);
+    } catch {
+        return { outcome: 'network_timeout', message: 'Gmail unreachable' };
+    }
+};
+
+const probeOutlook = async (credentials: OutlookCredentials, fetcher: FetchFn): Promise<HealthProbeResult> => {
+    try {
+        const res = await fetcher('https://graph.microsoft.com/v1.0/me', {
+            headers: { Authorization: `Bearer ${credentials.access_token}`, Accept: 'application/json' },
+        });
+        return classifyProbeStatus('Outlook', res.status);
+    } catch {
+        return { outcome: 'network_timeout', message: 'Outlook unreachable' };
+    }
+};
+
 const probeWithoutCredentials = (connectorType: ConnectorType, metadata: ConnectorAuthMetadata): HealthProbeResult => {
     if (metadata.status === 'permission_invalid' || metadata.status === 'consent_pending') {
         return { outcome: 'auth_failure', message: `${connectorType} connector auth is invalid — re-authenticate required.` };
@@ -2332,6 +2696,36 @@ export const createRealProviderExecutor = (
         return executeAzureDevOps(actionType, payload, creds, fetcher);
     }
 
+    if (connectorType === 'gmail') {
+        const creds = parseCredentials<GmailCredentials>(rawSecret);
+        if (!creds?.access_token) {
+            return {
+                ok: false,
+                providerResponseCode: '401',
+                resultSummary: 'Invalid Gmail credentials format',
+                errorCode: 'upgrade_required',
+                errorMessage: 'Gmail credentials must include access_token.',
+                remediationHint: 'Re-initiate the Google OAuth flow for this connector.',
+            };
+        }
+        return executeGmail(actionType, payload, creds, fetcher);
+    }
+
+    if (connectorType === 'outlook') {
+        const creds = parseCredentials<OutlookCredentials>(rawSecret);
+        if (!creds?.access_token) {
+            return {
+                ok: false,
+                providerResponseCode: '401',
+                resultSummary: 'Invalid Outlook credentials format',
+                errorCode: 'upgrade_required',
+                errorMessage: 'Outlook credentials must include access_token.',
+                remediationHint: 'Re-initiate the Microsoft OAuth flow for this connector.',
+            };
+        }
+        return executeOutlook(actionType, payload, creds, fetcher);
+    }
+
     return {
         ok: false,
         providerResponseCode: '400',
@@ -2453,6 +2847,22 @@ export const createRealConnectorHealthProbe = (
             return { outcome: 'auth_failure', message: 'Azure DevOps credentials missing access_token or organization' };
         }
         return probeAzureDevOps(creds, fetcher);
+    }
+
+    if (connectorType === 'gmail') {
+        const creds = parseCredentials<GmailCredentials>(rawSecret);
+        if (!creds?.access_token) {
+            return { outcome: 'auth_failure', message: 'Gmail credentials missing access_token' };
+        }
+        return probeGmail(creds, fetcher);
+    }
+
+    if (connectorType === 'outlook') {
+        const creds = parseCredentials<OutlookCredentials>(rawSecret);
+        if (!creds?.access_token) {
+            return { outcome: 'auth_failure', message: 'Outlook credentials missing access_token' };
+        }
+        return probeOutlook(creds, fetcher);
     }
 
     return { outcome: 'ok', message: `No live probe implemented for ${connectorType}` };

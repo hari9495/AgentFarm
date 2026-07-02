@@ -2718,3 +2718,158 @@ test('GET custom-api-catalog accepts the service token + x-tenant-id (runtime pa
         await app.close();
     }
 });
+
+// ---------------------------------------------------------------------------
+// Gmail / Outlook — native mailbox connectors through the execute route
+// ---------------------------------------------------------------------------
+
+test('gmail e2e: PUT access_token credentials → execute send_email via real executor → success logged', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    const store = createInMemorySecretStore({});
+
+    const connectorId = 'gmail:tenant_1:ws_1';
+    repo.metadata.set(connectorId, {
+        connectorId,
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        connectorType: 'gmail',
+        status: 'not_configured',
+        secretRefId: null,
+        scopeStatus: null,
+        lastErrorClass: null,
+    });
+
+    const gmailFetcher = async () =>
+        new Response(JSON.stringify({ id: 'msg-e2e-1' }), { status: 200 }) as Response;
+    const providerExecutor = createRealProviderExecutor(store, gmailFetcher as typeof fetch);
+
+    await registerConnectorActionRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+        secretStore: store,
+        providerExecutor,
+        sleep: async () => {},
+    });
+
+    try {
+        const putRes = await app.inject({
+            method: 'PUT',
+            url: `/v1/connectors/${connectorId}/credentials`,
+            payload: { credentials: { access_token: 'ya29.gmail-oauth' } },
+        });
+        assert.equal(putRes.statusCode, 200);
+
+        const execRes = await app.inject({
+            method: 'POST',
+            url: '/v1/connectors/actions/execute',
+            payload: {
+                connector_type: 'gmail',
+                workspace_id: 'ws_1',
+                bot_id: 'bot_1',
+                role_key: 'corporate_assistant',
+                action_type: 'send_email',
+                payload: { to: 'alice@example.com', subject: 'Weekly summary', body: 'All green.' },
+            },
+        });
+        assert.equal(execRes.statusCode, 200);
+        const execBody = execRes.json() as { status: string; result_summary: string };
+        assert.equal(execBody.status, 'success');
+        assert.ok(execBody.result_summary.includes('msg-e2e-1'));
+
+        assert.equal(repo.logs.length, 1);
+        assert.equal(repo.logs[0]!.connectorType, 'gmail');
+        assert.equal(repo.logs[0]!.actionType, 'send_email');
+        assert.equal(repo.logs[0]!.resultStatus, 'success');
+    } finally {
+        await app.close();
+    }
+});
+
+test('PUT credentials returns 400 when gmail credentials missing access_token', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    const store = createInMemorySecretStore({});
+    const connectorId = 'gmail:tenant_1:ws_1';
+    repo.metadata.set(connectorId, {
+        connectorId,
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        connectorType: 'gmail',
+        status: 'not_configured',
+        secretRefId: null,
+        scopeStatus: null,
+        lastErrorClass: null,
+    });
+
+    await registerConnectorActionRoutes(app, { getSession: () => sessionContext(), repo, secretStore: store });
+
+    try {
+        const res = await app.inject({
+            method: 'PUT',
+            url: `/v1/connectors/${connectorId}/credentials`,
+            payload: { credentials: { refresh_token: 'only-refresh' } },
+        });
+        assert.equal(res.statusCode, 400);
+    } finally {
+        await app.close();
+    }
+});
+
+test('outlook executes list_emails (low risk) through the real executor and logs it', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+
+    const secretRefId = 'kv://vault/secrets/outlook-tenant1';
+    const store = createInMemorySecretStore({
+        [secretRefId]: JSON.stringify({ access_token: 'graph-token-1' }),
+    });
+
+    const connectorId = 'outlook:tenant_1:ws_1';
+    repo.metadata.set(connectorId, {
+        connectorId,
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        connectorType: 'outlook',
+        status: 'connected',
+        secretRefId,
+        scopeStatus: 'full',
+        lastErrorClass: null,
+    });
+
+    const graphFetcher = async () =>
+        new Response(
+            JSON.stringify({ value: [{ id: 'o1', subject: 'Board deck', from: { emailAddress: { address: 'ceo@example.com' } } }] }),
+            { status: 200 },
+        ) as Response;
+    const providerExecutor = createRealProviderExecutor(store, graphFetcher as typeof fetch);
+
+    await registerConnectorActionRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+        secretStore: store,
+        providerExecutor,
+        sleep: async () => {},
+    });
+
+    try {
+        const execRes = await app.inject({
+            method: 'POST',
+            url: '/v1/connectors/actions/execute',
+            payload: {
+                connector_type: 'outlook',
+                workspace_id: 'ws_1',
+                bot_id: 'bot_1',
+                role_key: 'corporate_assistant',
+                action_type: 'list_emails',
+                payload: { max_results: 5 },
+            },
+        });
+        assert.equal(execRes.statusCode, 200);
+        const execBody = execRes.json() as { status: string; result_summary: string };
+        assert.equal(execBody.status, 'success');
+        assert.ok(execBody.result_summary.includes('Board deck'));
+    } finally {
+        await app.close();
+    }
+});

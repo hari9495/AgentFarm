@@ -130,7 +130,7 @@ Voicebox / VoxCPM2  — STT / TTS
 
 **Inter-service auth:** HMAC shared tokens per route group (`APPROVAL_INTAKE_SHARED_TOKEN`, `RUNTIME_TASK_SHARED_TOKEN`, etc.). Use `timingSafeEqual` for all token comparisons — `task-notify.ts` is the reference implementation.
 
-**Connector framework:** 23 connectors registered (`CONNECTOR_REGISTRY`) with OAuth 2.0/API key/basic auth. Executable reach: 10 first-class native executors (jira, github, slack, teams, gitlab, linear, asana, trello, clickup, azure_devops) + 5 generic-REST/SMTP-backed; the rest (gmail, outlook, monday + telephony) are tracked `KNOWN_UNIMPLEMENTED` (see `connector-coverage.test.ts`, which fails CI if a connector is advertised without a conscious execution decision). Token lifecycle workers handle auto-refresh, revoke, and re-consent. Marketplace registry with health monitoring.
+**Connector framework:** 23 connectors registered (`CONNECTOR_REGISTRY`) with OAuth 2.0/API key/basic auth. Executable reach: 12 first-class native executors (jira, github, slack, teams, gitlab, linear, asana, trello, clickup, azure_devops, gmail, outlook) + 5 generic-REST/SMTP-backed; the rest (monday + telephony) are tracked `KNOWN_UNIMPLEMENTED` (see `connector-coverage.test.ts`, which fails CI if a connector is advertised without a conscious execution decision). Token lifecycle workers handle auto-refresh, revoke, and re-consent. Marketplace registry with health monitoring.
 
 **Billing:** Tenant and agent subscriptions, grace periods, hard-stop enforcement, daily lifecycle sweep. Stripe + Razorpay webhooks. Budget policy with daily/monthly limits, 80% warning, 90% throttle.
 

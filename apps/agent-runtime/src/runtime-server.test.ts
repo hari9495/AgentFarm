@@ -5755,3 +5755,39 @@ test('startRuntimeServer scheduler callback covers dry-run path via tick()', asy
         await app.close();
     }
 });
+
+test('corporate assistant capability snapshot includes native mailbox actions (gmail/outlook)', async () => {
+    const app = buildRuntimeServer({
+        env: {
+            ...baseEnv(),
+            AF_ROLE_PROFILE: 'Corporate Assistant',
+        },
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+    });
+
+    try {
+        const startupRes = await app.inject({ method: 'POST', url: '/startup' });
+        assert.equal(startupRes.statusCode, 200);
+        const startupBody = startupRes.json() as { role_key: string };
+        assert.equal(startupBody.role_key, 'corporate_assistant');
+
+        const snapshotRes = await app.inject({ method: 'GET', url: '/runtime/capability-snapshot' });
+        assert.equal(snapshotRes.statusCode, 200);
+        const snapshotBody = snapshotRes.json() as {
+            snapshot: { allowedConnectorTools: string[]; allowedActions: string[] };
+        };
+
+        assert.ok(snapshotBody.snapshot.allowedConnectorTools.includes('gmail'));
+        assert.ok(snapshotBody.snapshot.allowedConnectorTools.includes('outlook'));
+        for (const action of ['send_email', 'list_emails', 'read_email', 'reply_email', 'read_thread']) {
+            assert.ok(
+                snapshotBody.snapshot.allowedActions.includes(action),
+                `corporate_assistant should be allowed '${action}' via gmail/outlook`,
+            );
+        }
+    } finally {
+        await app.close();
+    }
+});

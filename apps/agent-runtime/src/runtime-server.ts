@@ -284,7 +284,7 @@ type ConnectorActionExecuteClient = (input: {
     workspaceId: string;
     botId: string;
     roleKey: RoleKey;
-    connectorType: 'jira' | 'teams' | 'github' | 'email' | 'slack' | 'custom_api';
+    connectorType: 'jira' | 'teams' | 'github' | 'email' | 'slack' | 'custom_api' | 'gmail' | 'outlook';
     actionType:
     | 'read_task'
     | 'create_comment'
@@ -294,7 +294,11 @@ type ConnectorActionExecuteClient = (input: {
     | 'create_pr'
     | 'merge_pr'
     | 'list_prs'
-    | 'send_email';
+    | 'send_email'
+    | 'list_emails'
+    | 'read_email'
+    | 'reply_email'
+    | 'read_thread';
     payload: Record<string, unknown>;
     correlationId: string;
     claimToken?: string;
@@ -650,6 +654,10 @@ const CONNECTOR_ACTION_TYPES = new Set([
     'merge_pr',
     'list_prs',
     'send_email',
+    'list_emails',
+    'read_email',
+    'reply_email',
+    'read_thread',
 ] as const);
 
 const collectConnectorsUsed = (task: TaskEnvelope, actionType: string): string[] => {
@@ -929,7 +937,11 @@ type RuntimeConnectorActionType =
     | 'create_pr'
     | 'merge_pr'
     | 'list_prs'
-    | 'send_email';
+    | 'send_email'
+    | 'list_emails'
+    | 'read_email'
+    | 'reply_email'
+    | 'read_thread';
 
 type RuntimeLocalWorkspaceActionType = LocalWorkspaceActionType;
 
@@ -961,6 +973,8 @@ const CONNECTOR_ACTION_POLICY: Partial<Record<RuntimeConnectorType, RuntimeConne
     teams: ['send_message'],
     github: ['create_pr_comment', 'create_pr', 'merge_pr', 'list_prs'],
     email: ['send_email'],
+    gmail: ['send_email', 'list_emails', 'read_email', 'reply_email', 'read_thread'],
+    outlook: ['send_email', 'list_emails', 'read_email', 'reply_email', 'read_thread'],
     // Generic REST connector: read_task carries the HTTP verb in its params
     // ({path, method, body}), so a single action covers arbitrary REST calls.
     custom_api: ['read_task'],
@@ -1666,7 +1680,7 @@ const defaultApprovalIntakeClient: ApprovalIntakeClient = async (input) => {
 
 const normalizeConnectorType = (
     value: unknown,
-): 'jira' | 'teams' | 'github' | 'email' | 'custom_api' | null => {
+): 'jira' | 'teams' | 'github' | 'email' | 'custom_api' | 'gmail' | 'outlook' | null => {
     if (typeof value !== 'string' || !value.trim()) {
         return null;
     }
@@ -1677,7 +1691,9 @@ const normalizeConnectorType = (
         normalized === 'teams' ||
         normalized === 'github' ||
         normalized === 'email' ||
-        normalized === 'custom_api'
+        normalized === 'custom_api' ||
+        normalized === 'gmail' ||
+        normalized === 'outlook'
     ) {
         return normalized;
     }
@@ -2703,7 +2719,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             route: 'execute' | 'approval';
             reason: string;
         };
-        connectorType: 'jira' | 'teams' | 'github' | 'email' | 'custom_api';
+        connectorType: 'jira' | 'teams' | 'github' | 'email' | 'custom_api' | 'gmail' | 'outlook';
         source: 'approval_decision_webhook' | 'approval_decision_cache' | 'direct_execute';
         payloadOverrideSource: PayloadOverrideSource;
     }): Promise<ProcessedTaskResult> => {
@@ -2778,7 +2794,11 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 | 'create_pr'
                 | 'merge_pr'
                 | 'list_prs'
-                | 'send_email',
+                | 'send_email'
+                | 'list_emails'
+                | 'read_email'
+                | 'reply_email'
+                | 'read_thread',
             payload: signedConnectorPayload.payload,
             correlationId: `${input.config.correlationId}:${input.task.taskId}`,
             claimToken:
@@ -3344,7 +3364,11 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             | 'create_pr'
             | 'merge_pr'
             | 'list_prs'
-            | 'send_email',
+            | 'send_email'
+            | 'list_emails'
+            | 'read_email'
+            | 'reply_email'
+            | 'read_thread',
         );
 
         if (connectorType && isConnectorAction) {

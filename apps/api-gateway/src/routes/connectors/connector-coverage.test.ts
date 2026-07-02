@@ -23,6 +23,8 @@ const FIRST_CLASS: ReadonlySet<ConnectorTool> = new Set([
     'trello',
     'clickup',
     'azure_devops',
+    'gmail',
+    'outlook',
 ]);
 
 // Connectors that execute through the generic REST / SMTP escape hatch (custom_api / email
@@ -42,9 +44,7 @@ const KNOWN_UNIMPLEMENTED: ReadonlySet<ConnectorTool> = new Set([
     'amazon_connect',
     'generic_telephony',
     'genesys',
-    'gmail',
     'monday',
-    'outlook',
     'twilio',
     'vonage',
 ]);

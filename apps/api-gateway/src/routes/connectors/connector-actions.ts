@@ -26,7 +26,9 @@ type ConnectorType =
     | 'asana'
     | 'trello'
     | 'clickup'
-    | 'azure_devops';
+    | 'azure_devops'
+    | 'gmail'
+    | 'outlook';
 type ConnectorActionType =
     | 'read_task'
     | 'create_comment'
@@ -36,7 +38,11 @@ type ConnectorActionType =
     | 'create_pr'
     | 'merge_pr'
     | 'list_prs'
-    | 'send_email';
+    | 'send_email'
+    | 'list_emails'
+    | 'read_email'
+    | 'reply_email'
+    | 'read_thread';
 
 type ConnectorActionErrorCode =
     | 'rate_limit'
@@ -271,6 +277,8 @@ const SUPPORTED_CONNECTORS: ConnectorType[] = [
     'trello',
     'clickup',
     'azure_devops',
+    'gmail',
+    'outlook',
 ];
 const SUPPORTED_ACTIONS: ConnectorActionType[] = [
     'read_task',
@@ -282,6 +290,10 @@ const SUPPORTED_ACTIONS: ConnectorActionType[] = [
     'merge_pr',
     'list_prs',
     'send_email',
+    'list_emails',
+    'read_email',
+    'reply_email',
+    'read_thread',
 ];
 
 const CONTRACT_VERSION = 'v1.0';
@@ -296,6 +308,10 @@ const CONNECTOR_ACTION_RISK: Record<ConnectorActionType, 'low' | 'medium' | 'hig
     update_status: 'medium',
     send_message: 'medium',
     send_email: 'medium',
+    list_emails: 'low',
+    read_email: 'low',
+    read_thread: 'low',
+    reply_email: 'medium',
     create_pr: 'high',
     merge_pr: 'high',
 };
@@ -328,6 +344,8 @@ const CONNECTOR_TOOL_ALIAS: Record<ConnectorType, ConnectorTool | null> = {
     trello: 'trello',
     clickup: 'clickup',
     azure_devops: 'azure_devops',
+    gmail: 'gmail',
+    outlook: 'outlook',
 };
 
 const ACTION_ALIAS: Record<ConnectorActionType, NormalizedActionType> = {
@@ -340,6 +358,10 @@ const ACTION_ALIAS: Record<ConnectorActionType, NormalizedActionType> = {
     merge_pr: 'merge_pr',
     list_prs: 'list_prs',
     send_email: 'send_email',
+    list_emails: 'list_emails',
+    read_email: 'read_email',
+    reply_email: 'reply_email',
+    read_thread: 'read_thread',
 };
 
 const getPrisma = async () => {
@@ -1446,6 +1468,18 @@ export const registerConnectorActionRoutes = async (
             }
             if (typeof c['organization'] !== 'string' || !c['organization']) {
                 return 'azure_devops credentials must include organization (string, your ADO org name or URL)';
+            }
+            return null;
+        },
+        gmail: (c) => {
+            if (typeof c['access_token'] !== 'string' || !c['access_token']) {
+                return 'gmail credentials must include access_token (string, Google OAuth access token)';
+            }
+            return null;
+        },
+        outlook: (c) => {
+            if (typeof c['access_token'] !== 'string' || !c['access_token']) {
+                return 'outlook credentials must include access_token (string, Microsoft Graph OAuth access token)';
             }
             return null;
         },
