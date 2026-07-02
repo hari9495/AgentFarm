@@ -5791,3 +5791,130 @@ test('corporate assistant capability snapshot includes native mailbox actions (g
         await app.close();
     }
 });
+
+test('developer tasks dispatch gitlab, linear, and azure_devops connector actions to the execute client', async () => {
+    const connectorCalls: Array<{ connectorType: string; actionType: string }> = [];
+
+    const app = buildRuntimeServer({
+        env: {
+            ...baseEnv(),
+            // Loopback (closed port) instead of .local hostnames: Windows mDNS
+            // lookups add ~5s per best-effort POST, serializing to ~10s per task.
+            AF_APPROVAL_API_URL: 'http://127.0.0.1:9',
+            AF_EVIDENCE_API_URL: 'http://127.0.0.1:9',
+        },
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        connectorActionExecuteClient: async (input) => {
+            connectorCalls.push({ connectorType: input.connectorType, actionType: input.actionType });
+            return { ok: true, statusCode: 200 };
+        },
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/startup' });
+
+        const targets: Array<{ taskId: string; connectorType: string }> = [
+            { taskId: 'tracker-dispatch-gitlab', connectorType: 'gitlab' },
+            { taskId: 'tracker-dispatch-linear', connectorType: 'linear' },
+            { taskId: 'tracker-dispatch-azdo', connectorType: 'azure_devops' },
+        ];
+        for (const target of targets) {
+            const intakeRes = await app.inject({
+                method: 'POST',
+                url: '/tasks/intake',
+                payload: {
+                    task_id: target.taskId,
+                    payload: {
+                        action_type: 'read_task',
+                        connector_type: target.connectorType,
+                        summary: `Read the current tracker item state via ${target.connectorType}`,
+                        target: 'tracker-item-1',
+                        issue_key: 'AF-1',
+                        project: 'web',
+                        work_item_id: '42',
+                    },
+                },
+            });
+            assert.equal(intakeRes.statusCode, 202);
+        }
+
+        const calls = await waitForValue(
+            () => (connectorCalls.length >= 3 ? connectorCalls : undefined),
+            { timeoutMs: 60_000, pollMs: 100 },
+        );
+        assert.ok(calls, 'expected three connector dispatches');
+        for (const target of targets) {
+            assert.ok(
+                calls?.some((c) => c.connectorType === target.connectorType && c.actionType === 'read_task'),
+                `expected a read_task dispatch for ${target.connectorType}`,
+            );
+        }
+    } finally {
+        await app.close();
+    }
+});
+
+test('project manager tasks dispatch asana, trello, and clickup connector actions to the execute client', async () => {
+    const connectorCalls: Array<{ connectorType: string; actionType: string }> = [];
+
+    const app = buildRuntimeServer({
+        env: {
+            ...baseEnv(),
+            AF_ROLE_PROFILE: 'Project Manager / Product Owner / Scrum Master',
+            AF_APPROVAL_API_URL: 'http://127.0.0.1:9',
+            AF_EVIDENCE_API_URL: 'http://127.0.0.1:9',
+        },
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        connectorActionExecuteClient: async (input) => {
+            connectorCalls.push({ connectorType: input.connectorType, actionType: input.actionType });
+            return { ok: true, statusCode: 200 };
+        },
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/startup' });
+
+        const targets: Array<{ taskId: string; connectorType: string }> = [
+            { taskId: 'tracker-dispatch-asana', connectorType: 'asana' },
+            { taskId: 'tracker-dispatch-trello', connectorType: 'trello' },
+            { taskId: 'tracker-dispatch-clickup', connectorType: 'clickup' },
+        ];
+        for (const target of targets) {
+            const intakeRes = await app.inject({
+                method: 'POST',
+                url: '/tasks/intake',
+                payload: {
+                    task_id: target.taskId,
+                    payload: {
+                        action_type: 'read_task',
+                        connector_type: target.connectorType,
+                        summary: `Read the current board item state via ${target.connectorType}`,
+                        target: 'board-item-1',
+                        task_gid: '12345',
+                        card_id: 'card-1',
+                        task_id_provider: 'task-1',
+                    },
+                },
+            });
+            assert.equal(intakeRes.statusCode, 202);
+        }
+
+        const calls = await waitForValue(
+            () => (connectorCalls.length >= 3 ? connectorCalls : undefined),
+            { timeoutMs: 60_000, pollMs: 100 },
+        );
+        assert.ok(calls, 'expected three connector dispatches');
+        for (const target of targets) {
+            assert.ok(
+                calls?.some((c) => c.connectorType === target.connectorType && c.actionType === 'read_task'),
+                `expected a read_task dispatch for ${target.connectorType}`,
+            );
+        }
+    } finally {
+        await app.close();
+    }
+});

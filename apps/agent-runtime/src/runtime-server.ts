@@ -277,15 +277,26 @@ type ApprovalIntakeClient = (input: {
     approvalId?: string;
 }>;
 
-type ConnectorActionExecuteClient = (input: {
-    baseUrl: string;
-    token: string | null;
-    tenantId: string;
-    workspaceId: string;
-    botId: string;
-    roleKey: RoleKey;
-    connectorType: 'jira' | 'teams' | 'github' | 'email' | 'slack' | 'custom_api' | 'gmail' | 'outlook';
-    actionType:
+// Every connector type the api-gateway execute route can dispatch to a real
+// provider executor. Must stay in sync with SUPPORTED_CONNECTORS in
+// apps/api-gateway/src/routes/connectors/connector-actions.ts.
+type DispatchableConnectorType =
+    | 'jira'
+    | 'teams'
+    | 'github'
+    | 'email'
+    | 'slack'
+    | 'custom_api'
+    | 'gitlab'
+    | 'linear'
+    | 'asana'
+    | 'trello'
+    | 'clickup'
+    | 'azure_devops'
+    | 'gmail'
+    | 'outlook';
+
+type DispatchableConnectorActionType =
     | 'read_task'
     | 'create_comment'
     | 'update_status'
@@ -299,6 +310,16 @@ type ConnectorActionExecuteClient = (input: {
     | 'read_email'
     | 'reply_email'
     | 'read_thread';
+
+type ConnectorActionExecuteClient = (input: {
+    baseUrl: string;
+    token: string | null;
+    tenantId: string;
+    workspaceId: string;
+    botId: string;
+    roleKey: RoleKey;
+    connectorType: DispatchableConnectorType;
+    actionType: DispatchableConnectorActionType;
     payload: Record<string, unknown>;
     correlationId: string;
     claimToken?: string;
@@ -975,6 +996,13 @@ const CONNECTOR_ACTION_POLICY: Partial<Record<RuntimeConnectorType, RuntimeConne
     email: ['send_email'],
     gmail: ['send_email', 'list_emails', 'read_email', 'reply_email', 'read_thread'],
     outlook: ['send_email', 'list_emails', 'read_email', 'reply_email', 'read_thread'],
+    // Action sets mirror the real gateway executors in provider-clients.ts.
+    gitlab: ['read_task', 'create_comment', 'create_pr_comment', 'create_pr', 'merge_pr', 'list_prs'],
+    linear: ['read_task', 'create_comment', 'update_status'],
+    asana: ['read_task', 'create_comment', 'update_status'],
+    trello: ['read_task', 'create_comment', 'update_status'],
+    clickup: ['read_task', 'create_comment', 'update_status'],
+    azure_devops: ['read_task', 'create_comment', 'update_status'],
     // Generic REST connector: read_task carries the HTTP verb in its params
     // ({path, method, body}), so a single action covers arbitrary REST calls.
     custom_api: ['read_task'],
@@ -985,6 +1013,8 @@ const ROLE_CONNECTOR_ACTION_OVERRIDES: Partial<
 > = {
     tester: {
         github: ['create_pr_comment', 'create_pr', 'list_prs'],
+        // Same guardrail as github: testers may open/comment on MRs but never merge.
+        gitlab: ['read_task', 'create_comment', 'create_pr_comment', 'create_pr', 'list_prs'],
     },
 };
 
@@ -1678,27 +1708,32 @@ const defaultApprovalIntakeClient: ApprovalIntakeClient = async (input) => {
     }
 };
 
-const normalizeConnectorType = (
-    value: unknown,
-): 'jira' | 'teams' | 'github' | 'email' | 'custom_api' | 'gmail' | 'outlook' | null => {
+const DISPATCHABLE_CONNECTOR_TYPES: ReadonlySet<string> = new Set<DispatchableConnectorType>([
+    'jira',
+    'teams',
+    'github',
+    'email',
+    'slack',
+    'custom_api',
+    'gitlab',
+    'linear',
+    'asana',
+    'trello',
+    'clickup',
+    'azure_devops',
+    'gmail',
+    'outlook',
+]);
+
+const normalizeConnectorType = (value: unknown): DispatchableConnectorType | null => {
     if (typeof value !== 'string' || !value.trim()) {
         return null;
     }
 
     const normalized = value.trim().toLowerCase();
-    if (
-        normalized === 'jira' ||
-        normalized === 'teams' ||
-        normalized === 'github' ||
-        normalized === 'email' ||
-        normalized === 'custom_api' ||
-        normalized === 'gmail' ||
-        normalized === 'outlook'
-    ) {
-        return normalized;
-    }
-
-    return null;
+    return DISPATCHABLE_CONNECTOR_TYPES.has(normalized)
+        ? (normalized as DispatchableConnectorType)
+        : null;
 };
 
 const defaultConnectorActionExecuteClient: ConnectorActionExecuteClient = async (input) => {
@@ -2719,7 +2754,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             route: 'execute' | 'approval';
             reason: string;
         };
-        connectorType: 'jira' | 'teams' | 'github' | 'email' | 'custom_api' | 'gmail' | 'outlook';
+        connectorType: DispatchableConnectorType;
         source: 'approval_decision_webhook' | 'approval_decision_cache' | 'direct_execute';
         payloadOverrideSource: PayloadOverrideSource;
     }): Promise<ProcessedTaskResult> => {
@@ -2785,20 +2820,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             botId: input.config.botId,
             roleKey: input.config.roleKey,
             connectorType: input.connectorType,
-            actionType: input.decision.actionType as
-                | 'read_task'
-                | 'create_comment'
-                | 'update_status'
-                | 'send_message'
-                | 'create_pr_comment'
-                | 'create_pr'
-                | 'merge_pr'
-                | 'list_prs'
-                | 'send_email'
-                | 'list_emails'
-                | 'read_email'
-                | 'reply_email'
-                | 'read_thread',
+            actionType: input.decision.actionType as DispatchableConnectorActionType,
             payload: signedConnectorPayload.payload,
             correlationId: `${input.config.correlationId}:${input.task.taskId}`,
             claimToken:
@@ -2995,8 +3017,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                         workspaceId: input.config.workspaceId,
                         botId: input.config.botId,
                         roleKey: input.config.roleKey,
-                        connectorType: connInput.connectorType as 'slack',
-                        actionType: connInput.actionType as 'send_message',
+                        connectorType: connInput.connectorType as DispatchableConnectorType,
+                        actionType: connInput.actionType as DispatchableConnectorActionType,
                         payload: connInput.payload,
                         correlationId: `${input.config.correlationId}:${runtimeScopedTask.taskId}:local_workspace`,
                     }),
@@ -3355,20 +3377,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         }
 
         const isConnectorAction = CONNECTOR_ACTION_TYPES.has(
-            decision.actionType as
-            | 'read_task'
-            | 'create_comment'
-            | 'update_status'
-            | 'send_message'
-            | 'create_pr_comment'
-            | 'create_pr'
-            | 'merge_pr'
-            | 'list_prs'
-            | 'send_email'
-            | 'list_emails'
-            | 'read_email'
-            | 'reply_email'
-            | 'read_thread',
+            decision.actionType as DispatchableConnectorActionType,
         );
 
         if (connectorType && isConnectorAction) {
@@ -4475,18 +4484,8 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
 
         const connectorType = normalizeConnectorType(executionTask.payload['connector_type']);
         const directConnectorAction = CONNECTOR_ACTION_TYPES.has(
-            result.decision.actionType as
-            | 'read_task'
-            | 'create_comment'
-            | 'update_status'
-            | 'send_message'
-            | 'create_pr_comment'
-            | 'create_pr'
-            | 'merge_pr'
-            | 'list_prs'
-            | 'send_email',
+            result.decision.actionType as DispatchableConnectorActionType,
         );
-
         if (result.status === 'success' && connectorType && directConnectorAction) {
             advancedFeatures.appendTraceStep(task.taskId, 'connector_execution_started', {
                 connectorType,
