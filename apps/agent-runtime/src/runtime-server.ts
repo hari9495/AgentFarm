@@ -1063,6 +1063,7 @@ const LOCAL_WORKSPACE_ACTION_POLICY: Record<RoleKey, RuntimeLocalWorkspaceAction
         'file_move',
         'file_delete',
         'autonomous_loop',
+        'autonomous_pr_loop',
         'run_shell_command',
         'create_pr_from_workspace',
     ],

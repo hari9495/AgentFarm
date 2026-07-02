@@ -3786,3 +3786,23 @@ test('workspace_visual_task round-trips create -> submit -> poll against the des
         (globalThis as unknown as { fetch: typeof fetch }).fetch = originalFetch;
     }
 });
+test('autonomous_pr_loop action runs the issue->PR pipeline in dry-run and reports its steps', async () => {
+    const result = await executeLocalWorkspaceAction({
+        tenantId: 'tenant_test',
+        botId: 'bot_test',
+        taskId: 'task-pr-loop-1',
+        actionType: 'autonomous_pr_loop',
+        payload: {
+            task_description: 'Fix issue #7: null check in session parser',
+            issue_number: 7,
+            dry_run: true,
+            ci_check_wait_mins: 0,
+        },
+    });
+    assert.equal(result.ok, true);
+    const parsed = JSON.parse(result.output) as { steps: Array<{ step: string }>; branch_name?: string };
+    const stepNames = parsed.steps.map((s) => s.step);
+    assert.ok(stepNames.includes('analyze_issue'));
+    assert.ok(stepNames.includes('create_pr'));
+    assert.ok(typeof parsed.branch_name === 'string' && parsed.branch_name.length > 0);
+});

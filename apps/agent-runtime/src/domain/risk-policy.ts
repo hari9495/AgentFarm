@@ -58,6 +58,8 @@ export const HIGH_RISK_ACTIONS = new Set([
     'workspace_fsd_roadmap_tick',
     // Deep debug: GDB sessions on remote hosts via SSH can disrupt live processes
     'workspace_dev_gdb_session',
+    // Full issue→PR pipeline: pushes code and opens PRs autonomously
+    'autonomous_pr_loop',
 ]);
 
 export const MEDIUM_RISK_ACTIONS = new Set([

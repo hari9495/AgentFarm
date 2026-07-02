@@ -269,6 +269,7 @@ export type LocalWorkspaceActionType =
     | 'run_build'
     | 'run_tests'
     | 'autonomous_loop'
+    | 'autonomous_pr_loop'
     | 'workspace_cleanup'
     | 'workspace_diff'
     | 'workspace_memory_write'
@@ -1132,6 +1133,7 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'run_build',
     'run_tests',
     'autonomous_loop',
+    'autonomous_pr_loop',
     'workspace_cleanup',
     'workspace_diff',
     'workspace_memory_write',
@@ -4410,6 +4412,48 @@ export async function executeLocalWorkspaceAction(input: {
                     output: '',
                     errorOutput: String(err),
                 };
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // autonomous_pr_loop: full issue→branch→code→test→push→PR pipeline,
+        // with optional CI check feedback (poll check-runs, self-heal, re-push)
+        // and PR review-comment responses. payload mirrors AutonomousLoopInput.
+        // ------------------------------------------------------------------
+        case 'autonomous_pr_loop': {
+            try {
+                // Dynamic import: autonomous-coding-loop imports this module,
+                // so a static reverse import would create a cycle.
+                const { runAutonomousLoop } = await import('./autonomous-coding-loop.js');
+                const taskDescription = String(payload['task_description'] ?? '').trim();
+                if (!taskDescription) {
+                    return { ok: false, output: '', errorOutput: 'payload.task_description is required for autonomous_pr_loop.' };
+                }
+                const result = await runAutonomousLoop({
+                    task_description: taskDescription,
+                    repo: typeof payload['repo'] === 'string' ? payload['repo'] : undefined,
+                    issue_number: typeof payload['issue_number'] === 'number' ? payload['issue_number'] : undefined,
+                    target_files: Array.isArray(payload['target_files']) ? (payload['target_files'] as string[]) : undefined,
+                    file_edits: Array.isArray(payload['file_edits'])
+                        ? (payload['file_edits'] as Array<{ file: string; content: string }>)
+                        : undefined,
+                    tenantId: input.tenantId,
+                    botId: input.botId,
+                    workspace_key: input.taskId,
+                    max_fix_attempts: typeof payload['max_fix_attempts'] === 'number' ? payload['max_fix_attempts'] : undefined,
+                    dry_run: payload['dry_run'] === true,
+                    persona: (payload['_persona'] as AgentPersonaRecord | null | undefined) ?? null,
+                    pr_review_wait_mins: typeof payload['pr_review_wait_mins'] === 'number' ? payload['pr_review_wait_mins'] : undefined,
+                    ci_check_wait_mins: typeof payload['ci_check_wait_mins'] === 'number' ? payload['ci_check_wait_mins'] : undefined,
+                    max_ci_fix_attempts: typeof payload['max_ci_fix_attempts'] === 'number' ? payload['max_ci_fix_attempts'] : undefined,
+                });
+                return {
+                    ok: result.ok,
+                    output: JSON.stringify(result, null, 2),
+                    errorOutput: result.ok ? undefined : result.summary,
+                };
+            } catch (err) {
+                return { ok: false, output: '', errorOutput: String(err) };
             }
         }
 
@@ -7839,6 +7883,7 @@ export async function executeLocalWorkspaceAction(input: {
             const highRiskActions = new Set([
                 'git_push',
                 'run_shell_command',
+                'autonomous_pr_loop',
                 'workspace_repl_start',
                 'workspace_repl_execute',
                 'workspace_dry_run_with_approval_chain',

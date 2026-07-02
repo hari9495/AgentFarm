@@ -17,6 +17,7 @@ import { getRedisClient } from '@agentfarm/redis-client';
 import { getSkillHandler, analyzeIssueWithLLM, synthesizeCodeFixWithLLM, analyzeDiffWithLLM } from './skill-execution-engine.js';
 import { executeLocalWorkspaceAction } from './local-workspace-executor.js';
 import { signOutbound } from './outbound-signer.js';
+import { pollPrChecks, runCiFeedbackCycle, type CiCycleResult } from './ci-feedback.js';
 import type { AgentPersonaRecord } from '@agentfarm/shared-types';
 
 // ---------------------------------------------------------------------------
@@ -31,6 +32,7 @@ export type LoopStep =
     | 'fix_failures'
     | 'commit_push'
     | 'create_pr'
+    | 'ci_feedback'
     | 'done';
 
 export type LoopStepStatus = 'pending' | 'running' | 'success' | 'failed' | 'skipped';
@@ -74,6 +76,15 @@ export type AutonomousLoopInput = {
      * Value is in minutes; the loop polls every 30 seconds.
      */
     pr_review_wait_mins?: number;
+    /**
+     * How long to wait for CI check-runs on the opened PR, in minutes.
+     * Set to 0 (default) to skip CI feedback. When checks fail, the loop
+     * synthesizes a fix, pushes it to the PR branch, and re-polls — bounded
+     * by max_ci_fix_attempts.
+     */
+    ci_check_wait_mins?: number;
+    /** Maximum CI fix→push rounds before giving up (default 3). */
+    max_ci_fix_attempts?: number;
 };
 
 export type AutonomousLoopResult = {
@@ -857,6 +868,96 @@ async function runCreatePr(input: AutonomousLoopInput, branchName: string, steps
 }
 
 // ---------------------------------------------------------------------------
+// CI feedback step — after the PR opens, watch check-runs and self-heal
+// ---------------------------------------------------------------------------
+
+export async function runCiFeedbackForPr(
+    input: AutonomousLoopInput,
+    branchName: string,
+    workspaceKey: string,
+    deps?: { cycle?: () => Promise<CiCycleResult> },
+): Promise<LoopStepRecord> {
+    const record: LoopStepRecord = { step: 'ci_feedback', status: 'running', started_at: new Date().toISOString(), attempt: 1 };
+    const waitMins = input.ci_check_wait_mins ?? 0;
+
+    if (waitMins <= 0 || input.dry_run) {
+        return {
+            ...record,
+            status: 'skipped',
+            completed_at: new Date().toISOString(),
+            output: { note: input.dry_run ? 'Dry-run: CI feedback skipped.' : 'ci_check_wait_mins not set — CI feedback skipped.' },
+        };
+    }
+
+    let cycle = deps?.cycle;
+    if (!cycle) {
+        const token = process.env['GITHUB_TOKEN'] ?? '';
+        const owner = process.env['GITHUB_OWNER'] ?? '';
+        const repo = process.env['GITHUB_REPO'] ?? '';
+        if (!token || !owner || !repo) {
+            return {
+                ...record,
+                status: 'skipped',
+                completed_at: new Date().toISOString(),
+                output: { note: 'Missing GITHUB_TOKEN/GITHUB_OWNER/GITHUB_REPO — CI feedback skipped.' },
+            };
+        }
+        cycle = () =>
+            runCiFeedbackCycle({
+                poll: () =>
+                    pollPrChecks({
+                        githubToken: token,
+                        owner,
+                        repo,
+                        ref: branchName,
+                        timeoutMs: waitMins * 60_000,
+                    }),
+                fix: async (failureSummary, attempt) => {
+                    const fixRecord = await runFixFailures(
+                        input.task_description,
+                        `CI checks failed on PR branch ${branchName}:\n${failureSummary}`,
+                        attempt,
+                        input,
+                        workspaceKey,
+                    );
+                    return { ok: fixRecord.status === 'success', detail: fixRecord.output };
+                },
+                push: async () => {
+                    const pushRecord = await runCommitAndPush(input, branchName, workspaceKey);
+                    return { ok: pushRecord.status === 'success' };
+                },
+                maxAttempts: input.max_ci_fix_attempts ?? 3,
+            });
+    }
+
+    const result = await cycle();
+
+    if (result.outcome === 'green') {
+        return {
+            ...record,
+            status: 'success',
+            completed_at: new Date().toISOString(),
+            output: { outcome: result.outcome, attempts: result.attempts, history: result.history },
+        };
+    }
+    if (result.outcome === 'no_checks') {
+        return {
+            ...record,
+            status: 'skipped',
+            completed_at: new Date().toISOString(),
+            output: { outcome: result.outcome, note: 'No CI checks reported on the PR ref.' },
+        };
+    }
+    return {
+        ...record,
+        status: 'failed',
+        completed_at: new Date().toISOString(),
+        output: { outcome: result.outcome, attempts: result.attempts, history: result.history },
+        error: `CI feedback ended ${result.outcome} after ${result.attempts} fix attempt(s).`,
+    };
+}
+
+// ---------------------------------------------------------------------------
 // Main entry point
 // ---------------------------------------------------------------------------
 
@@ -930,7 +1031,16 @@ export async function runAutonomousLoop(input: AutonomousLoopInput): Promise<Aut
     // Step 6: Create PR
     const prIndex = steps.findIndex((s) => s.step === 'create_pr');
     steps[prIndex] = await runCreatePr(input, branchName, steps);
-    const checkpointFile = await saveCheckpoint(loopId, steps);
+    let checkpointFile = await saveCheckpoint(loopId, steps);
+
+    // Step 6b (optional): CI feedback — wait for check-runs, self-heal failures
+    if (steps[prIndex].status === 'success') {
+        const ciRecord = await runCiFeedbackForPr(input, branchName, workspaceKey);
+        if (ciRecord.status !== 'skipped' || (input.ci_check_wait_mins ?? 0) > 0) {
+            steps.push(ciRecord);
+            checkpointFile = await saveCheckpoint(loopId, steps);
+        }
+    }
 
     // Step 7 (optional): Poll PR for review comments and respond
     const prReviewMins = input.pr_review_wait_mins ?? 0;

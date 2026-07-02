@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
-import { runAutonomousLoop, resumeFromCheckpoint, createGitHubPR } from './autonomous-coding-loop.js';
+import test, { describe, it } from 'node:test';
+import { runAutonomousLoop, resumeFromCheckpoint, createGitHubPR, runCiFeedbackForPr } from './autonomous-coding-loop.js';
 
 // ── runAutonomousLoop ──────────────────────────────────────────────────────
 
@@ -287,3 +287,65 @@ describe('autonomous-coding-loop: file_edits field in AutonomousLoopInput', () =
     });
 });
 
+
+// ---------------------------------------------------------------------------
+// CI feedback step (Cluster 2 — issue→PR→green-CI)
+// ---------------------------------------------------------------------------
+
+test('runCiFeedbackForPr is skipped when ci_check_wait_mins is not set', async () => {
+    const record = await runCiFeedbackForPr(
+        { task_description: 'add feature', dry_run: true },
+        'feat/add-feature',
+        'ws-key-1',
+    );
+    assert.equal(record.step, 'ci_feedback');
+    assert.equal(record.status, 'skipped');
+});
+
+test('runCiFeedbackForPr reports success when injected cycle ends green', async () => {
+    const record = await runCiFeedbackForPr(
+        { task_description: 'add feature', ci_check_wait_mins: 5 },
+        'feat/add-feature',
+        'ws-key-1',
+        {
+            cycle: async () => ({
+                outcome: 'green',
+                attempts: 1,
+                history: [
+                    { attempt: 1, pollOutcome: 'failure', failing: [{ name: 'tests', summary: 'x' }], fixOk: true, pushOk: true },
+                    { attempt: 1, pollOutcome: 'success', failing: [] },
+                ],
+            }),
+        },
+    );
+    assert.equal(record.step, 'ci_feedback');
+    assert.equal(record.status, 'success');
+    const output = record.output as { outcome: string; attempts: number };
+    assert.equal(output.outcome, 'green');
+    assert.equal(output.attempts, 1);
+});
+
+test('runCiFeedbackForPr reports failed when fix attempts are exhausted', async () => {
+    const record = await runCiFeedbackForPr(
+        { task_description: 'add feature', ci_check_wait_mins: 5, max_ci_fix_attempts: 2 },
+        'feat/add-feature',
+        'ws-key-1',
+        {
+            cycle: async () => ({ outcome: 'exhausted', attempts: 2, history: [] }),
+        },
+    );
+    assert.equal(record.status, 'failed');
+    assert.ok(String(record.error).includes('exhausted'));
+});
+
+test('runCiFeedbackForPr treats no_checks as skipped (repo without CI)', async () => {
+    const record = await runCiFeedbackForPr(
+        { task_description: 'add feature', ci_check_wait_mins: 5 },
+        'feat/add-feature',
+        'ws-key-1',
+        {
+            cycle: async () => ({ outcome: 'no_checks', attempts: 0, history: [] }),
+        },
+    );
+    assert.equal(record.status, 'skipped');
+});
