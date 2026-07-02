@@ -28,7 +28,9 @@ type ConnectorType =
     | 'clickup'
     | 'azure_devops'
     | 'gmail'
-    | 'outlook';
+    | 'outlook'
+    | 'hubspot'
+    | 'salesforce';
 type ConnectorActionType =
     | 'read_task'
     | 'create_comment'
@@ -42,7 +44,12 @@ type ConnectorActionType =
     | 'list_emails'
     | 'read_email'
     | 'reply_email'
-    | 'read_thread';
+    | 'read_thread'
+    | 'get_record'
+    | 'search_records'
+    | 'create_record'
+    | 'update_record'
+    | 'log_activity';
 
 type ConnectorActionErrorCode =
     | 'rate_limit'
@@ -279,6 +286,8 @@ const SUPPORTED_CONNECTORS: ConnectorType[] = [
     'azure_devops',
     'gmail',
     'outlook',
+    'hubspot',
+    'salesforce',
 ];
 const SUPPORTED_ACTIONS: ConnectorActionType[] = [
     'read_task',
@@ -294,6 +303,11 @@ const SUPPORTED_ACTIONS: ConnectorActionType[] = [
     'read_email',
     'reply_email',
     'read_thread',
+    'get_record',
+    'search_records',
+    'create_record',
+    'update_record',
+    'log_activity',
 ];
 
 const CONTRACT_VERSION = 'v1.0';
@@ -312,6 +326,11 @@ const CONNECTOR_ACTION_RISK: Record<ConnectorActionType, 'low' | 'medium' | 'hig
     read_email: 'low',
     read_thread: 'low',
     reply_email: 'medium',
+    get_record: 'low',
+    search_records: 'low',
+    create_record: 'medium',
+    update_record: 'medium',
+    log_activity: 'medium',
     create_pr: 'high',
     merge_pr: 'high',
 };
@@ -346,6 +365,8 @@ const CONNECTOR_TOOL_ALIAS: Record<ConnectorType, ConnectorTool | null> = {
     azure_devops: 'azure_devops',
     gmail: 'gmail',
     outlook: 'outlook',
+    hubspot: 'hubspot',
+    salesforce: 'salesforce',
 };
 
 const ACTION_ALIAS: Record<ConnectorActionType, NormalizedActionType> = {
@@ -362,6 +383,11 @@ const ACTION_ALIAS: Record<ConnectorActionType, NormalizedActionType> = {
     read_email: 'read_email',
     reply_email: 'reply_email',
     read_thread: 'read_thread',
+    get_record: 'get_record',
+    search_records: 'search_records',
+    create_record: 'create_record',
+    update_record: 'update_record',
+    log_activity: 'log_activity',
 };
 
 const getPrisma = async () => {
@@ -1480,6 +1506,21 @@ export const registerConnectorActionRoutes = async (
         outlook: (c) => {
             if (typeof c['access_token'] !== 'string' || !c['access_token']) {
                 return 'outlook credentials must include access_token (string, Microsoft Graph OAuth access token)';
+            }
+            return null;
+        },
+        hubspot: (c) => {
+            if (typeof c['access_token'] !== 'string' || !c['access_token']) {
+                return 'hubspot credentials must include access_token (string, private-app token)';
+            }
+            return null;
+        },
+        salesforce: (c) => {
+            if (typeof c['access_token'] !== 'string' || !c['access_token']) {
+                return 'salesforce credentials must include access_token (string, OAuth access token)';
+            }
+            if (typeof c['instance_url'] !== 'string' || !c['instance_url']) {
+                return 'salesforce credentials must include instance_url (string, e.g. https://org.my.salesforce.com)';
             }
             return null;
         },

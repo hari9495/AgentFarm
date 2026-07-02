@@ -25,6 +25,8 @@ const FIRST_CLASS: ReadonlySet<ConnectorTool> = new Set([
     'azure_devops',
     'gmail',
     'outlook',
+    'hubspot',
+    'salesforce',
 ]);
 
 // Connectors that execute through the generic REST / SMTP escape hatch (custom_api / email

@@ -586,3 +586,11 @@ test('classifyRisk treats outbound mailbox actions as medium and mailbox reads a
     const thread = classifyRisk('read_thread', 0.9, {});
     assert.equal(thread.riskLevel, 'low');
 });
+
+test('classifyRisk treats CRM reads as low and CRM writes as medium', () => {
+    assert.equal(classifyRisk('get_record', 0.9, {}).riskLevel, 'low');
+    assert.equal(classifyRisk('search_records', 0.9, {}).riskLevel, 'low');
+    assert.equal(classifyRisk('create_record', 0.9, {}).riskLevel, 'medium');
+    assert.equal(classifyRisk('update_record', 0.9, {}).riskLevel, 'medium');
+    assert.equal(classifyRisk('log_activity', 0.9, {}).riskLevel, 'medium');
+});

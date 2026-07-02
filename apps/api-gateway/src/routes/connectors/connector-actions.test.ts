@@ -2873,3 +2873,155 @@ test('outlook executes list_emails (low risk) through the real executor and logs
         await app.close();
     }
 });
+
+// ---------------------------------------------------------------------------
+// HubSpot / Salesforce — native CRM connectors through the execute route
+// ---------------------------------------------------------------------------
+
+test('hubspot e2e: PUT access_token credentials → execute get_record via real executor → success logged', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    const store = createInMemorySecretStore({});
+
+    const connectorId = 'hubspot:tenant_1:ws_1';
+    repo.metadata.set(connectorId, {
+        connectorId,
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        connectorType: 'hubspot',
+        status: 'not_configured',
+        secretRefId: null,
+        scopeStatus: null,
+        lastErrorClass: null,
+    });
+
+    const hubspotFetcher = async () =>
+        new Response(JSON.stringify({ id: '501', properties: { email: 'ada@example.com' } }), { status: 200 }) as Response;
+    const providerExecutor = createRealProviderExecutor(store, hubspotFetcher as typeof fetch);
+
+    await registerConnectorActionRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+        secretStore: store,
+        providerExecutor,
+        sleep: async () => {},
+    });
+
+    try {
+        const putRes = await app.inject({
+            method: 'PUT',
+            url: `/v1/connectors/${connectorId}/credentials`,
+            payload: { credentials: { access_token: 'pat-na1-hubspot' } },
+        });
+        assert.equal(putRes.statusCode, 200);
+
+        const execRes = await app.inject({
+            method: 'POST',
+            url: '/v1/connectors/actions/execute',
+            payload: {
+                connector_type: 'hubspot',
+                workspace_id: 'ws_1',
+                bot_id: 'bot_1',
+                role_key: 'sales_rep',
+                action_type: 'get_record',
+                payload: { record_type: 'contacts', record_id: '501' },
+            },
+        });
+        assert.equal(execRes.statusCode, 200);
+        const execBody = execRes.json() as { status: string; result_summary: string };
+        assert.equal(execBody.status, 'success');
+        assert.ok(execBody.result_summary.includes('ada@example.com'));
+
+        assert.equal(repo.logs.length, 1);
+        assert.equal(repo.logs[0]!.connectorType, 'hubspot');
+        assert.equal(repo.logs[0]!.actionType, 'get_record');
+        assert.equal(repo.logs[0]!.resultStatus, 'success');
+    } finally {
+        await app.close();
+    }
+});
+
+test('PUT credentials returns 400 when salesforce credentials missing instance_url', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    const store = createInMemorySecretStore({});
+    const connectorId = 'salesforce:tenant_1:ws_1';
+    repo.metadata.set(connectorId, {
+        connectorId,
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        connectorType: 'salesforce',
+        status: 'not_configured',
+        secretRefId: null,
+        scopeStatus: null,
+        lastErrorClass: null,
+    });
+
+    await registerConnectorActionRoutes(app, { getSession: () => sessionContext(), repo, secretStore: store });
+
+    try {
+        const res = await app.inject({
+            method: 'PUT',
+            url: `/v1/connectors/${connectorId}/credentials`,
+            payload: { credentials: { access_token: 'sf-only-token' } },
+        });
+        assert.equal(res.statusCode, 400);
+    } finally {
+        await app.close();
+    }
+});
+
+test('salesforce executes search_records (low risk) through the real executor and logs it', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+
+    const secretRefId = 'kv://vault/secrets/salesforce-tenant1';
+    const store = createInMemorySecretStore({
+        [secretRefId]: JSON.stringify({ access_token: 'sf-token', instance_url: 'https://acme.my.salesforce.com' }),
+    });
+
+    const connectorId = 'salesforce:tenant_1:ws_1';
+    repo.metadata.set(connectorId, {
+        connectorId,
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        connectorType: 'salesforce',
+        status: 'connected',
+        secretRefId,
+        scopeStatus: 'full',
+        lastErrorClass: null,
+    });
+
+    const sfFetcher = async () =>
+        new Response(JSON.stringify({ totalSize: 1, records: [{ Id: '006xx' }] }), { status: 200 }) as Response;
+    const providerExecutor = createRealProviderExecutor(store, sfFetcher as typeof fetch);
+
+    await registerConnectorActionRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+        secretStore: store,
+        providerExecutor,
+        sleep: async () => {},
+    });
+
+    try {
+        const execRes = await app.inject({
+            method: 'POST',
+            url: '/v1/connectors/actions/execute',
+            payload: {
+                connector_type: 'salesforce',
+                workspace_id: 'ws_1',
+                bot_id: 'bot_1',
+                role_key: 'sales_rep',
+                action_type: 'search_records',
+                payload: { record_type: 'Opportunity', query: 'acme' },
+            },
+        });
+        assert.equal(execRes.statusCode, 200);
+        const execBody = execRes.json() as { status: string; result_summary: string };
+        assert.equal(execBody.status, 'success');
+        assert.ok(execBody.result_summary.includes('006xx'));
+    } finally {
+        await app.close();
+    }
+});

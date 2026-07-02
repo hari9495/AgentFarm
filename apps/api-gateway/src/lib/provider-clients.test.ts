@@ -1630,3 +1630,305 @@ test('health probe: outlook returns auth_failure when Graph /me returns 401', as
     assert.equal(result.outcome, 'auth_failure');
     assert.ok(calls[0]!.url.includes('graph.microsoft.com/v1.0/me'));
 });
+
+// ---------------------------------------------------------------------------
+// HubSpot / Salesforce native CRM connectors
+// ---------------------------------------------------------------------------
+
+const SECRET_REF_HUBSPOT = 'kv://vault/secrets/hubspot-connector';
+const SECRET_REF_SALESFORCE = 'kv://vault/secrets/salesforce-connector';
+
+const makeCrmStore = () =>
+    createInMemorySecretStore({
+        [SECRET_REF_HUBSPOT]: JSON.stringify({ access_token: 'pat-hub-1' }),
+        [SECRET_REF_SALESFORCE]: JSON.stringify({
+            access_token: 'sf-token-1',
+            instance_url: 'https://acme.my.salesforce.com',
+        }),
+    });
+
+// --- HubSpot ---
+
+test('hubspot get_record fetches a CRM object and summarizes its properties', async () => {
+    const { fetcher, calls } = makeFetch([
+        { status: 200, body: { id: '501', properties: { firstname: 'Ada', lastname: 'Lovelace', email: 'ada@example.com' } } },
+    ]);
+    const executor = createRealProviderExecutor(makeCrmStore(), fetcher);
+    const result = await executor({
+        connectorType: 'hubspot',
+        actionType: 'get_record',
+        payload: { record_type: 'contacts', record_id: '501' },
+        attempt: 1,
+        secretRefId: SECRET_REF_HUBSPOT,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('501'));
+    assert.ok(result.resultSummary.includes('ada@example.com'));
+    assert.ok(calls[0]!.url.includes('/crm/v3/objects/contacts/501'));
+    assert.equal(calls[0]!.headers!['Authorization'], 'Bearer pat-hub-1');
+});
+
+test('hubspot search_records posts a search query and returns total + ids', async () => {
+    const { fetcher, calls } = makeFetch([
+        { status: 200, body: { total: 2, results: [{ id: '501' }, { id: '502' }] } },
+    ]);
+    const executor = createRealProviderExecutor(makeCrmStore(), fetcher);
+    const result = await executor({
+        connectorType: 'hubspot',
+        actionType: 'search_records',
+        payload: { record_type: 'deals', query: 'acme renewal', limit: 5 },
+        attempt: 1,
+        secretRefId: SECRET_REF_HUBSPOT,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('2'));
+    assert.ok(result.resultSummary.includes('501'));
+    assert.equal(calls[0]!.method, 'POST');
+    assert.ok(calls[0]!.url.includes('/crm/v3/objects/deals/search'));
+    const body = calls[0]!.body as { query: string; limit: number };
+    assert.equal(body.query, 'acme renewal');
+    assert.equal(body.limit, 5);
+});
+
+test('hubspot create_record posts properties and returns the new id', async () => {
+    const { fetcher, calls } = makeFetch([
+        { status: 201, body: { id: '777', properties: { dealname: 'Acme renewal' } } },
+    ]);
+    const executor = createRealProviderExecutor(makeCrmStore(), fetcher);
+    const result = await executor({
+        connectorType: 'hubspot',
+        actionType: 'create_record',
+        payload: { record_type: 'deals', properties: { dealname: 'Acme renewal', amount: '4200' } },
+        attempt: 1,
+        secretRefId: SECRET_REF_HUBSPOT,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('777'));
+    assert.deepEqual(calls[0]!.body, { properties: { dealname: 'Acme renewal', amount: '4200' } });
+});
+
+test('hubspot update_record patches properties on an existing object', async () => {
+    const { fetcher, calls } = makeFetch([
+        { status: 200, body: { id: '777', properties: { dealstage: 'closedwon' } } },
+    ]);
+    const executor = createRealProviderExecutor(makeCrmStore(), fetcher);
+    const result = await executor({
+        connectorType: 'hubspot',
+        actionType: 'update_record',
+        payload: { record_type: 'deals', record_id: '777', properties: { dealstage: 'closedwon' } },
+        attempt: 1,
+        secretRefId: SECRET_REF_HUBSPOT,
+    });
+    assert.equal(result.ok, true);
+    assert.equal(calls[0]!.method, 'PATCH');
+    assert.ok(calls[0]!.url.includes('/crm/v3/objects/deals/777'));
+});
+
+test('hubspot log_activity creates a note associated with the record', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 201, body: { id: 'note-9' } }]);
+    const executor = createRealProviderExecutor(makeCrmStore(), fetcher);
+    const result = await executor({
+        connectorType: 'hubspot',
+        actionType: 'log_activity',
+        payload: { record_type: 'contacts', record_id: '501', body: 'Called Ada, follow up Friday.' },
+        attempt: 1,
+        secretRefId: SECRET_REF_HUBSPOT,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('note-9'));
+    assert.ok(calls[0]!.url.includes('/crm/v3/objects/notes'));
+    const body = calls[0]!.body as {
+        properties: { hs_note_body: string };
+        associations: Array<{ to: { id: string } }>;
+    };
+    assert.equal(body.properties.hs_note_body, 'Called Ada, follow up Friday.');
+    assert.equal(body.associations[0]!.to.id, '501');
+});
+
+test('hubspot get_record returns invalid_format when record_type or record_id missing', async () => {
+    const { fetcher } = makeFetch([]);
+    const executor = createRealProviderExecutor(makeCrmStore(), fetcher);
+    const result = await executor({
+        connectorType: 'hubspot',
+        actionType: 'get_record',
+        payload: { record_type: 'contacts' },
+        attempt: 1,
+        secretRefId: SECRET_REF_HUBSPOT,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'invalid_format');
+});
+
+test('hubspot search_records classifies 401 as permission_denied', async () => {
+    const { fetcher } = makeFetch([{ status: 401 }]);
+    const executor = createRealProviderExecutor(makeCrmStore(), fetcher);
+    const result = await executor({
+        connectorType: 'hubspot',
+        actionType: 'search_records',
+        payload: { record_type: 'contacts', query: 'x' },
+        attempt: 1,
+        secretRefId: SECRET_REF_HUBSPOT,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'permission_denied');
+});
+
+// --- Salesforce ---
+
+test('salesforce get_record fetches an sobject from the instance url', async () => {
+    const { fetcher, calls } = makeFetch([
+        { status: 200, body: { Id: '003xx', Name: 'Ada Lovelace', Email: 'ada@example.com' } },
+    ]);
+    const executor = createRealProviderExecutor(makeCrmStore(), fetcher);
+    const result = await executor({
+        connectorType: 'salesforce',
+        actionType: 'get_record',
+        payload: { record_type: 'Contact', record_id: '003xx' },
+        attempt: 1,
+        secretRefId: SECRET_REF_SALESFORCE,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('Ada Lovelace'));
+    assert.ok(calls[0]!.url.startsWith('https://acme.my.salesforce.com/services/data/'));
+    assert.ok(calls[0]!.url.includes('/sobjects/Contact/003xx'));
+    assert.equal(calls[0]!.headers!['Authorization'], 'Bearer sf-token-1');
+});
+
+test('salesforce search_records runs SOQL and escapes quotes in the query term', async () => {
+    const { fetcher, calls } = makeFetch([
+        { status: 200, body: { totalSize: 1, records: [{ Id: '006xx', Name: "O'Brien deal" }] } },
+    ]);
+    const executor = createRealProviderExecutor(makeCrmStore(), fetcher);
+    const result = await executor({
+        connectorType: 'salesforce',
+        actionType: 'search_records',
+        payload: { record_type: 'Opportunity', query: "O'Brien", limit: 10 },
+        attempt: 1,
+        secretRefId: SECRET_REF_SALESFORCE,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('1'));
+    assert.ok(result.resultSummary.includes('006xx'));
+    const url = decodeURIComponent(calls[0]!.url);
+    assert.ok(url.includes("O\\'Brien"), `SOQL term must be escaped, got: ${url}`);
+});
+
+test('salesforce search_records accepts a raw soql payload', async () => {
+    const { fetcher, calls } = makeFetch([
+        { status: 200, body: { totalSize: 3, records: [{ Id: 'a' }, { Id: 'b' }, { Id: 'c' }] } },
+    ]);
+    const executor = createRealProviderExecutor(makeCrmStore(), fetcher);
+    const result = await executor({
+        connectorType: 'salesforce',
+        actionType: 'search_records',
+        payload: { soql: "SELECT Id FROM Lead WHERE Status = 'Open' LIMIT 3" },
+        attempt: 1,
+        secretRefId: SECRET_REF_SALESFORCE,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('3'));
+    assert.ok(decodeURIComponent(calls[0]!.url).includes('SELECT Id FROM Lead'));
+});
+
+test('salesforce create_record posts fields to the sobject endpoint', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 201, body: { id: '00Qxx', success: true } }]);
+    const executor = createRealProviderExecutor(makeCrmStore(), fetcher);
+    const result = await executor({
+        connectorType: 'salesforce',
+        actionType: 'create_record',
+        payload: { record_type: 'Lead', fields: { LastName: 'Lovelace', Company: 'Analytical Engines' } },
+        attempt: 1,
+        secretRefId: SECRET_REF_SALESFORCE,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('00Qxx'));
+    assert.equal(calls[0]!.method, 'POST');
+    assert.deepEqual(calls[0]!.body, { LastName: 'Lovelace', Company: 'Analytical Engines' });
+});
+
+test('salesforce update_record PATCHes fields and succeeds on 204 no-content', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 204 }]);
+    const executor = createRealProviderExecutor(makeCrmStore(), fetcher);
+    const result = await executor({
+        connectorType: 'salesforce',
+        actionType: 'update_record',
+        payload: { record_type: 'Opportunity', record_id: '006xx', fields: { StageName: 'Closed Won' } },
+        attempt: 1,
+        secretRefId: SECRET_REF_SALESFORCE,
+    });
+    assert.equal(result.ok, true);
+    assert.equal(calls[0]!.method, 'PATCH');
+    assert.ok(calls[0]!.url.includes('/sobjects/Opportunity/006xx'));
+});
+
+test('salesforce log_activity creates a Task linked to the record', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 201, body: { id: '00Txx', success: true } }]);
+    const executor = createRealProviderExecutor(makeCrmStore(), fetcher);
+    const result = await executor({
+        connectorType: 'salesforce',
+        actionType: 'log_activity',
+        payload: { record_id: '006xx', body: 'Demo delivered, sending proposal.' },
+        attempt: 1,
+        secretRefId: SECRET_REF_SALESFORCE,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('00Txx'));
+    assert.ok(calls[0]!.url.includes('/sobjects/Task'));
+    const body = calls[0]!.body as { Description: string; WhatId: string };
+    assert.equal(body.Description, 'Demo delivered, sending proposal.');
+    assert.equal(body.WhatId, '006xx');
+});
+
+test('salesforce create_record classifies 429 as rate_limit transient', async () => {
+    const { fetcher } = makeFetch([{ status: 429 }]);
+    const executor = createRealProviderExecutor(makeCrmStore(), fetcher);
+    const result = await executor({
+        connectorType: 'salesforce',
+        actionType: 'create_record',
+        payload: { record_type: 'Lead', fields: { LastName: 'X' } },
+        attempt: 1,
+        secretRefId: SECRET_REF_SALESFORCE,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'rate_limit');
+    assert.equal(result.transient, true);
+});
+
+test('executor returns upgrade_required when salesforce instance_url missing', async () => {
+    const store = createInMemorySecretStore({ [SECRET_REF_SALESFORCE]: JSON.stringify({ access_token: 'x' }) });
+    const { fetcher } = makeFetch([]);
+    const executor = createRealProviderExecutor(store, fetcher);
+    const result = await executor({
+        connectorType: 'salesforce',
+        actionType: 'get_record',
+        payload: { record_type: 'Contact', record_id: '003xx' },
+        attempt: 1,
+        secretRefId: SECRET_REF_SALESFORCE,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'upgrade_required');
+});
+
+// --- CRM health probes ---
+
+test('health probe: hubspot returns ok when account-info returns 200', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 200, body: { portalId: 1 } }]);
+    const probe = createRealConnectorHealthProbe(makeCrmStore(), fetcher);
+    const result = await probe({
+        connectorType: 'hubspot',
+        metadata: { connectorId: 'hubspot:t:w', connectorType: 'hubspot', secretRefId: SECRET_REF_HUBSPOT, status: 'connected', scopeStatus: 'full', lastErrorClass: null },
+    });
+    assert.equal(result.outcome, 'ok');
+    assert.ok(calls[0]!.url.includes('account-info'));
+});
+
+test('health probe: salesforce returns auth_failure when limits endpoint returns 401', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 401 }]);
+    const probe = createRealConnectorHealthProbe(makeCrmStore(), fetcher);
+    const result = await probe({
+        connectorType: 'salesforce',
+        metadata: { connectorId: 'salesforce:t:w', connectorType: 'salesforce', secretRefId: SECRET_REF_SALESFORCE, status: 'connected', scopeStatus: 'full', lastErrorClass: null },
+    });
+    assert.equal(result.outcome, 'auth_failure');
+    assert.ok(calls[0]!.url.startsWith('https://acme.my.salesforce.com/'));
+});

@@ -294,7 +294,9 @@ type DispatchableConnectorType =
     | 'clickup'
     | 'azure_devops'
     | 'gmail'
-    | 'outlook';
+    | 'outlook'
+    | 'hubspot'
+    | 'salesforce';
 
 type DispatchableConnectorActionType =
     | 'read_task'
@@ -309,7 +311,12 @@ type DispatchableConnectorActionType =
     | 'list_emails'
     | 'read_email'
     | 'reply_email'
-    | 'read_thread';
+    | 'read_thread'
+    | 'get_record'
+    | 'search_records'
+    | 'create_record'
+    | 'update_record'
+    | 'log_activity';
 
 type ConnectorActionExecuteClient = (input: {
     baseUrl: string;
@@ -679,6 +686,11 @@ const CONNECTOR_ACTION_TYPES = new Set([
     'read_email',
     'reply_email',
     'read_thread',
+    'get_record',
+    'search_records',
+    'create_record',
+    'update_record',
+    'log_activity',
 ] as const);
 
 const collectConnectorsUsed = (task: TaskEnvelope, actionType: string): string[] => {
@@ -962,7 +974,12 @@ type RuntimeConnectorActionType =
     | 'list_emails'
     | 'read_email'
     | 'reply_email'
-    | 'read_thread';
+    | 'read_thread'
+    | 'get_record'
+    | 'search_records'
+    | 'create_record'
+    | 'update_record'
+    | 'log_activity';
 
 type RuntimeLocalWorkspaceActionType = LocalWorkspaceActionType;
 
@@ -996,6 +1013,8 @@ const CONNECTOR_ACTION_POLICY: Partial<Record<RuntimeConnectorType, RuntimeConne
     email: ['send_email'],
     gmail: ['send_email', 'list_emails', 'read_email', 'reply_email', 'read_thread'],
     outlook: ['send_email', 'list_emails', 'read_email', 'reply_email', 'read_thread'],
+    hubspot: ['get_record', 'search_records', 'create_record', 'update_record', 'log_activity'],
+    salesforce: ['get_record', 'search_records', 'create_record', 'update_record', 'log_activity'],
     // Action sets mirror the real gateway executors in provider-clients.ts.
     gitlab: ['read_task', 'create_comment', 'create_pr_comment', 'create_pr', 'merge_pr', 'list_prs'],
     linear: ['read_task', 'create_comment', 'update_status'],
@@ -1723,6 +1742,8 @@ const DISPATCHABLE_CONNECTOR_TYPES: ReadonlySet<string> = new Set<DispatchableCo
     'azure_devops',
     'gmail',
     'outlook',
+    'hubspot',
+    'salesforce',
 ]);
 
 const normalizeConnectorType = (value: unknown): DispatchableConnectorType | null => {

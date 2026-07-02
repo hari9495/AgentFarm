@@ -6,7 +6,8 @@ export type ConnectorCategory =
   | 'messaging'      // Teams, Slack, Discord, Google Chat
   | 'code'           // GitHub, GitLab, Bitbucket, Azure DevOps
   | 'email'          // Outlook (Graph), Gmail, Exchange
-  | 'telephony';     // Twilio, Vonage, Amazon Connect, Genesys, Generic
+  | 'telephony'      // Twilio, Vonage, Amazon Connect, Genesys, Generic
+  | 'crm';           // HubSpot, Salesforce
 
 // ─── Supported tool slugs per category ───────────────────────────────────
 export type TaskTrackerTool = 'jira' | 'linear' | 'asana' | 'monday' | 'trello' | 'clickup' | 'generic_rest';
@@ -14,7 +15,8 @@ export type MessagingTool = 'teams' | 'slack' | 'discord' | 'google_chat' | 'gen
 export type CodeTool = 'github' | 'gitlab' | 'bitbucket' | 'azure_devops' | 'generic_rest_code';
 export type EmailTool = 'outlook' | 'gmail' | 'exchange' | 'generic_smtp' | 'generic_rest_email';
 export type TelephonyTool = 'twilio' | 'vonage' | 'amazon_connect' | 'genesys' | 'generic_telephony';
-export type ConnectorTool = TaskTrackerTool | MessagingTool | CodeTool | EmailTool | TelephonyTool;
+export type CrmTool = 'hubspot' | 'salesforce';
+export type ConnectorTool = TaskTrackerTool | MessagingTool | CodeTool | EmailTool | TelephonyTool | CrmTool;
 
 // Legacy alias kept for back-compat with existing gateway code
 export type ConnectorId = ConnectorTool;
@@ -80,7 +82,13 @@ export type NormalizedActionType =
   | 'transfer_call'
   | 'get_call_status'
   | 'get_call_recording'
-  | 'send_dtmf';
+  | 'send_dtmf'
+  // crm (record = contact / deal / company / lead / opportunity …)
+  | 'get_record'
+  | 'search_records'
+  | 'create_record'
+  | 'update_record'
+  | 'log_activity';
 
 // ─── Connector definition (what the registry stores) ─────────────────────
 export interface ConnectorDefinition {
@@ -391,6 +399,28 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
     oauthScopes: ['https://www.googleapis.com/auth/gmail.send', 'https://www.googleapis.com/auth/gmail.readonly'],
     supportedActions: ['list_emails', 'read_email', 'send_email', 'reply_email', 'read_thread'],
     docsUrl: 'https://developers.google.com/gmail/api/auth/oauth-and-service-accounts',
+  },
+  // ── CRM ──────────────────────────────────────────────────────────────
+  {
+    tool: 'hubspot',
+    category: 'crm',
+    displayName: 'HubSpot',
+    logoUrl: '/icons/connectors/hubspot.svg',
+    authMethod: 'bearer_token',
+    allowedRoles: ['sales_rep', 'marketing_specialist', 'customer_support_executive', 'business_analyst'],
+    supportedActions: ['get_record', 'search_records', 'create_record', 'update_record', 'log_activity'],
+    docsUrl: 'https://developers.hubspot.com/docs/api/private-apps',
+  },
+  {
+    tool: 'salesforce',
+    category: 'crm',
+    displayName: 'Salesforce',
+    logoUrl: '/icons/connectors/salesforce.svg',
+    authMethod: 'oauth2',
+    allowedRoles: ['sales_rep', 'marketing_specialist', 'customer_support_executive', 'business_analyst'],
+    oauthScopes: ['api', 'refresh_token'],
+    supportedActions: ['get_record', 'search_records', 'create_record', 'update_record', 'log_activity'],
+    docsUrl: 'https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/',
   },
   // ── Generic REST (bring your own tool) ──────────────────────────────
   {

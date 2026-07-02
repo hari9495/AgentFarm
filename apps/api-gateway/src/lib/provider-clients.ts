@@ -19,6 +19,8 @@
  *   Slack:  { "botToken": "xoxb-...", "defaultChannel"?: "#general" }
  *   Gmail:  { "access_token": "..." }          (Google OAuth bearer)
  *   Outlook:{ "access_token": "..." }          (Microsoft Graph bearer)
+ *   HubSpot:{ "access_token": "..." }          (private-app token, Bearer)
+ *   Salesforce: { "access_token": "...", "instance_url": "https://org.my.salesforce.com" }
  *
  * All actions accept a typed payload object (see ActionPayload* below).
  */
@@ -44,7 +46,9 @@ export type ConnectorType =
     | 'clickup'
     | 'azure_devops'
     | 'gmail'
-    | 'outlook';
+    | 'outlook'
+    | 'hubspot'
+    | 'salesforce';
 export type ConnectorActionType =
     | 'read_task'
     | 'create_comment'
@@ -58,7 +62,12 @@ export type ConnectorActionType =
     | 'list_emails'
     | 'read_email'
     | 'reply_email'
-    | 'read_thread';
+    | 'read_thread'
+    | 'get_record'
+    | 'search_records'
+    | 'create_record'
+    | 'update_record'
+    | 'log_activity';
 
 export type ConnectorActionErrorCode =
     | 'rate_limit'
@@ -154,6 +163,8 @@ type ClickUpCredentials = { api_key: string };
 type AzureDevOpsCredentials = { access_token: string; organization: string };
 type GmailCredentials = { access_token: string };
 type OutlookCredentials = { access_token: string };
+type HubSpotCredentials = { access_token: string };
+type SalesforceCredentials = { access_token: string; instance_url: string };
 
 type FetchFn = (url: string | URL, init?: RequestInit) => Promise<Response>;
 
@@ -1819,6 +1830,325 @@ const executeOutlook = async (
 };
 
 // ---------------------------------------------------------------------------
+// HubSpot connector (CRM v3 objects API, private-app Bearer token)
+// ---------------------------------------------------------------------------
+
+const HUBSPOT_BASE = 'https://api.hubapi.com';
+
+// Note→record association type ids (HUBSPOT_DEFINED).
+const HUBSPOT_NOTE_ASSOCIATION: Record<string, number> = {
+    contacts: 202,
+    companies: 190,
+    deals: 214,
+    tickets: 228,
+};
+
+const executeHubSpot = async (
+    actionType: ConnectorActionType,
+    payload: Record<string, unknown>,
+    credentials: HubSpotCredentials,
+    fetcher: FetchFn,
+): Promise<ProviderExecutionResult> => {
+    const headers: Record<string, string> = {
+        Authorization: `Bearer ${credentials.access_token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+    };
+    const recordType = String(payload['record_type'] ?? '').trim().toLowerCase();
+    const recordId = String(payload['record_id'] ?? '').trim();
+
+    if (actionType === 'get_record') {
+        if (!recordType || !recordId) {
+            return missingFields('record_type, record_id', 'record_type and record_id are required for get_record.');
+        }
+        let res: Response;
+        try {
+            res = await fetcher(`${HUBSPOT_BASE}/crm/v3/objects/${encodeURIComponent(recordType)}/${encodeURIComponent(recordId)}`, { headers });
+        } catch (err) {
+            return networkError('HubSpot', 'api.hubapi.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `HubSpot returned ${res.status} for ${recordType}/${recordId}`);
+        const json = (await res.json()) as { id?: string; properties?: Record<string, unknown> };
+        const props = Object.entries(json.properties ?? {})
+            .filter(([, v]) => v !== null && v !== '')
+            .slice(0, 8)
+            .map(([k, v]) => `${k}=${String(v)}`)
+            .join(', ');
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `${recordType} ${json.id ?? recordId}: ${props || '(no properties)'}`,
+        };
+    }
+
+    if (actionType === 'search_records') {
+        const query = String(payload['query'] ?? '').trim();
+        if (!recordType || !query) {
+            return missingFields('record_type, query', 'record_type and query are required for search_records.');
+        }
+        const limit = Number(payload['limit'] ?? 10);
+        let res: Response;
+        try {
+            res = await fetcher(`${HUBSPOT_BASE}/crm/v3/objects/${encodeURIComponent(recordType)}/search`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ query, limit }),
+            });
+        } catch (err) {
+            return networkError('HubSpot', 'api.hubapi.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `HubSpot search failed with ${res.status}`);
+        const json = (await res.json()) as { total?: number; results?: Array<{ id?: string }> };
+        const ids = (json.results ?? []).map((r) => r.id ?? '').filter(Boolean);
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `${json.total ?? ids.length} ${recordType} matching "${query}": ${ids.join(', ') || '(none)'}`,
+        };
+    }
+
+    if (actionType === 'create_record') {
+        const properties = payload['properties'];
+        if (!recordType || !properties || typeof properties !== 'object') {
+            return missingFields('record_type, properties', 'record_type and properties are required for create_record.');
+        }
+        let res: Response;
+        try {
+            res = await fetcher(`${HUBSPOT_BASE}/crm/v3/objects/${encodeURIComponent(recordType)}`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ properties }),
+            });
+        } catch (err) {
+            return networkError('HubSpot', 'api.hubapi.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `HubSpot create failed with ${res.status}`);
+        const json = (await res.json()) as { id?: string };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Created ${recordType} ${json.id ?? '(id unknown)'}`,
+        };
+    }
+
+    if (actionType === 'update_record') {
+        const properties = payload['properties'];
+        if (!recordType || !recordId || !properties || typeof properties !== 'object') {
+            return missingFields('record_type, record_id, properties', 'record_type, record_id, and properties are required for update_record.');
+        }
+        let res: Response;
+        try {
+            res = await fetcher(`${HUBSPOT_BASE}/crm/v3/objects/${encodeURIComponent(recordType)}/${encodeURIComponent(recordId)}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify({ properties }),
+            });
+        } catch (err) {
+            return networkError('HubSpot', 'api.hubapi.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `HubSpot update failed with ${res.status} for ${recordType}/${recordId}`);
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Updated ${recordType} ${recordId}`,
+        };
+    }
+
+    if (actionType === 'log_activity') {
+        const body = String(payload['body'] ?? '').trim();
+        if (!recordType || !recordId || !body) {
+            return missingFields('record_type, record_id, body', 'record_type, record_id, and body are required for log_activity.');
+        }
+        const associationTypeId = HUBSPOT_NOTE_ASSOCIATION[recordType];
+        if (!associationTypeId) {
+            return missingFields('record_type', `log_activity supports record_type: ${Object.keys(HUBSPOT_NOTE_ASSOCIATION).join(', ')}.`);
+        }
+        let res: Response;
+        try {
+            res = await fetcher(`${HUBSPOT_BASE}/crm/v3/objects/notes`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    properties: { hs_note_body: body, hs_timestamp: new Date().toISOString() },
+                    associations: [
+                        {
+                            to: { id: recordId },
+                            types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId }],
+                        },
+                    ],
+                }),
+            });
+        } catch (err) {
+            return networkError('HubSpot', 'api.hubapi.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `HubSpot note creation failed with ${res.status}`);
+        const json = (await res.json()) as { id?: string };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Activity note ${json.id ?? 'created'} logged on ${recordType} ${recordId}`,
+        };
+    }
+
+    return unsupported('HubSpot', 'get_record, search_records, create_record, update_record, log_activity');
+};
+
+// ---------------------------------------------------------------------------
+// Salesforce connector (REST sobjects + SOQL, OAuth bearer + instance_url)
+// ---------------------------------------------------------------------------
+
+const SALESFORCE_API_VERSION = 'v61.0';
+
+const escapeSoqlLiteral = (value: string): string => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+const executeSalesforce = async (
+    actionType: ConnectorActionType,
+    payload: Record<string, unknown>,
+    credentials: SalesforceCredentials,
+    fetcher: FetchFn,
+): Promise<ProviderExecutionResult> => {
+    const base = `${credentials.instance_url.replace(/\/$/, '')}/services/data/${SALESFORCE_API_VERSION}`;
+    const headers: Record<string, string> = {
+        Authorization: `Bearer ${credentials.access_token}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+    };
+    const recordType = String(payload['record_type'] ?? '').trim();
+    const recordId = String(payload['record_id'] ?? '').trim();
+
+    if (actionType === 'get_record') {
+        if (!recordType || !recordId) {
+            return missingFields('record_type, record_id', 'record_type and record_id are required for get_record.');
+        }
+        let res: Response;
+        try {
+            res = await fetcher(`${base}/sobjects/${encodeURIComponent(recordType)}/${encodeURIComponent(recordId)}`, { headers });
+        } catch (err) {
+            return networkError('Salesforce', 'salesforce.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Salesforce returned ${res.status} for ${recordType}/${recordId}`);
+        const json = (await res.json()) as Record<string, unknown>;
+        const fields = Object.entries(json)
+            .filter(([k, v]) => k !== 'attributes' && v !== null && v !== '')
+            .slice(0, 8)
+            .map(([k, v]) => `${k}=${String(v)}`)
+            .join(', ');
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `${recordType} ${recordId}: ${fields || '(no fields)'}`,
+        };
+    }
+
+    if (actionType === 'search_records') {
+        const rawSoql = String(payload['soql'] ?? '').trim();
+        let soql = rawSoql;
+        if (!soql) {
+            const query = String(payload['query'] ?? '').trim();
+            if (!recordType || !query) {
+                return missingFields('record_type, query (or soql)', 'Provide soql, or record_type + query, for search_records.');
+            }
+            const limit = Number(payload['limit'] ?? 10);
+            soql = `SELECT Id, Name FROM ${recordType} WHERE Name LIKE '%${escapeSoqlLiteral(query)}%' LIMIT ${limit}`;
+        }
+        let res: Response;
+        try {
+            res = await fetcher(`${base}/query?q=${encodeURIComponent(soql)}`, { headers });
+        } catch (err) {
+            return networkError('Salesforce', 'salesforce.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Salesforce query failed with ${res.status}`);
+        const json = (await res.json()) as { totalSize?: number; records?: Array<{ Id?: string }> };
+        const ids = (json.records ?? []).map((r) => r.Id ?? '').filter(Boolean);
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `${json.totalSize ?? ids.length} record(s): ${ids.join(', ') || '(none)'}`,
+        };
+    }
+
+    if (actionType === 'create_record') {
+        const fields = payload['fields'];
+        if (!recordType || !fields || typeof fields !== 'object') {
+            return missingFields('record_type, fields', 'record_type and fields are required for create_record.');
+        }
+        let res: Response;
+        try {
+            res = await fetcher(`${base}/sobjects/${encodeURIComponent(recordType)}`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(fields),
+            });
+        } catch (err) {
+            return networkError('Salesforce', 'salesforce.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Salesforce create failed with ${res.status}`);
+        const json = (await res.json()) as { id?: string };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Created ${recordType} ${json.id ?? '(id unknown)'}`,
+        };
+    }
+
+    if (actionType === 'update_record') {
+        const fields = payload['fields'];
+        if (!recordType || !recordId || !fields || typeof fields !== 'object') {
+            return missingFields('record_type, record_id, fields', 'record_type, record_id, and fields are required for update_record.');
+        }
+        let res: Response;
+        try {
+            res = await fetcher(`${base}/sobjects/${encodeURIComponent(recordType)}/${encodeURIComponent(recordId)}`, {
+                method: 'PATCH',
+                headers,
+                body: JSON.stringify(fields),
+            });
+        } catch (err) {
+            return networkError('Salesforce', 'salesforce.com', err);
+        }
+        // Salesforce PATCH returns 204 No Content on success.
+        if (!res.ok) return failFromStatus(res.status, `Salesforce update failed with ${res.status} for ${recordType}/${recordId}`);
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Updated ${recordType} ${recordId}`,
+        };
+    }
+
+    if (actionType === 'log_activity') {
+        const body = String(payload['body'] ?? '').trim();
+        if (!recordId || !body) {
+            return missingFields('record_id, body', 'record_id and body are required for log_activity.');
+        }
+        const subject = String(payload['subject'] ?? '').trim() || 'Activity logged by AgentFarm';
+        let res: Response;
+        try {
+            res = await fetcher(`${base}/sobjects/Task`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    Subject: subject,
+                    Description: body,
+                    Status: 'Completed',
+                    WhatId: recordId,
+                }),
+            });
+        } catch (err) {
+            return networkError('Salesforce', 'salesforce.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Salesforce activity logging failed with ${res.status}`);
+        const json = (await res.json()) as { id?: string };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Activity task ${json.id ?? 'created'} logged on record ${recordId}`,
+        };
+    }
+
+    return unsupported('Salesforce', 'get_record, search_records, create_record, update_record, log_activity');
+};
+
+// ---------------------------------------------------------------------------
 // Email connector (SendGrid + SMTP fallback via nodemailer-style validation)
 // ---------------------------------------------------------------------------
 
@@ -2472,6 +2802,29 @@ const probeOutlook = async (credentials: OutlookCredentials, fetcher: FetchFn): 
     }
 };
 
+const probeHubSpot = async (credentials: HubSpotCredentials, fetcher: FetchFn): Promise<HealthProbeResult> => {
+    try {
+        const res = await fetcher(`${HUBSPOT_BASE}/account-info/v3/details`, {
+            headers: { Authorization: `Bearer ${credentials.access_token}`, Accept: 'application/json' },
+        });
+        return classifyProbeStatus('HubSpot', res.status);
+    } catch {
+        return { outcome: 'network_timeout', message: 'HubSpot unreachable' };
+    }
+};
+
+const probeSalesforce = async (credentials: SalesforceCredentials, fetcher: FetchFn): Promise<HealthProbeResult> => {
+    try {
+        const res = await fetcher(
+            `${credentials.instance_url.replace(/\/$/, '')}/services/data/${SALESFORCE_API_VERSION}/limits`,
+            { headers: { Authorization: `Bearer ${credentials.access_token}`, Accept: 'application/json' } },
+        );
+        return classifyProbeStatus('Salesforce', res.status);
+    } catch {
+        return { outcome: 'network_timeout', message: 'Salesforce unreachable' };
+    }
+};
+
 const probeWithoutCredentials = (connectorType: ConnectorType, metadata: ConnectorAuthMetadata): HealthProbeResult => {
     if (metadata.status === 'permission_invalid' || metadata.status === 'consent_pending') {
         return { outcome: 'auth_failure', message: `${connectorType} connector auth is invalid — re-authenticate required.` };
@@ -2726,6 +3079,36 @@ export const createRealProviderExecutor = (
         return executeOutlook(actionType, payload, creds, fetcher);
     }
 
+    if (connectorType === 'hubspot') {
+        const creds = parseCredentials<HubSpotCredentials>(rawSecret);
+        if (!creds?.access_token) {
+            return {
+                ok: false,
+                providerResponseCode: '401',
+                resultSummary: 'Invalid HubSpot credentials format',
+                errorCode: 'upgrade_required',
+                errorMessage: 'HubSpot credentials must include access_token.',
+                remediationHint: 'Re-configure the HubSpot connector with a valid private-app token.',
+            };
+        }
+        return executeHubSpot(actionType, payload, creds, fetcher);
+    }
+
+    if (connectorType === 'salesforce') {
+        const creds = parseCredentials<SalesforceCredentials>(rawSecret);
+        if (!creds?.access_token || !creds?.instance_url) {
+            return {
+                ok: false,
+                providerResponseCode: '401',
+                resultSummary: 'Invalid Salesforce credentials format',
+                errorCode: 'upgrade_required',
+                errorMessage: 'Salesforce credentials must include access_token and instance_url.',
+                remediationHint: 'Re-initiate the Salesforce OAuth flow for this connector.',
+            };
+        }
+        return executeSalesforce(actionType, payload, creds, fetcher);
+    }
+
     return {
         ok: false,
         providerResponseCode: '400',
@@ -2863,6 +3246,22 @@ export const createRealConnectorHealthProbe = (
             return { outcome: 'auth_failure', message: 'Outlook credentials missing access_token' };
         }
         return probeOutlook(creds, fetcher);
+    }
+
+    if (connectorType === 'hubspot') {
+        const creds = parseCredentials<HubSpotCredentials>(rawSecret);
+        if (!creds?.access_token) {
+            return { outcome: 'auth_failure', message: 'HubSpot credentials missing access_token' };
+        }
+        return probeHubSpot(creds, fetcher);
+    }
+
+    if (connectorType === 'salesforce') {
+        const creds = parseCredentials<SalesforceCredentials>(rawSecret);
+        if (!creds?.access_token || !creds?.instance_url) {
+            return { outcome: 'auth_failure', message: 'Salesforce credentials missing access_token or instance_url' };
+        }
+        return probeSalesforce(creds, fetcher);
     }
 
     return { outcome: 'ok', message: `No live probe implemented for ${connectorType}` };

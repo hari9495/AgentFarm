@@ -5918,3 +5918,64 @@ test('project manager tasks dispatch asana, trello, and clickup connector action
         await app.close();
     }
 });
+
+test('sales rep tasks dispatch hubspot and salesforce CRM actions to the execute client', async () => {
+    const connectorCalls: Array<{ connectorType: string; actionType: string }> = [];
+
+    const app = buildRuntimeServer({
+        env: {
+            ...baseEnv(),
+            AF_ROLE_PROFILE: 'Sales Rep',
+            AF_APPROVAL_API_URL: 'http://127.0.0.1:9',
+            AF_EVIDENCE_API_URL: 'http://127.0.0.1:9',
+        },
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        connectorActionExecuteClient: async (input) => {
+            connectorCalls.push({ connectorType: input.connectorType, actionType: input.actionType });
+            return { ok: true, statusCode: 200 };
+        },
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/startup' });
+
+        const targets: Array<{ taskId: string; connectorType: string }> = [
+            { taskId: 'crm-dispatch-hubspot', connectorType: 'hubspot' },
+            { taskId: 'crm-dispatch-salesforce', connectorType: 'salesforce' },
+        ];
+        for (const target of targets) {
+            const intakeRes = await app.inject({
+                method: 'POST',
+                url: '/tasks/intake',
+                payload: {
+                    task_id: target.taskId,
+                    payload: {
+                        action_type: 'get_record',
+                        connector_type: target.connectorType,
+                        summary: `Look up the current deal record in ${target.connectorType}`,
+                        target: 'deal-record-1',
+                        record_type: 'deals',
+                        record_id: '777',
+                    },
+                },
+            });
+            assert.equal(intakeRes.statusCode, 202);
+        }
+
+        const calls = await waitForValue(
+            () => (connectorCalls.length >= 2 ? connectorCalls : undefined),
+            { timeoutMs: 60_000, pollMs: 100 },
+        );
+        assert.ok(calls, 'expected two CRM connector dispatches');
+        for (const target of targets) {
+            assert.ok(
+                calls?.some((c) => c.connectorType === target.connectorType && c.actionType === 'get_record'),
+                `expected a get_record dispatch for ${target.connectorType}`,
+            );
+        }
+    } finally {
+        await app.close();
+    }
+});

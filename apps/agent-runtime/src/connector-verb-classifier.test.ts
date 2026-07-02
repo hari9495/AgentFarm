@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { isWriteVerb } from './connector-verb-classifier.js';
+import { isReadVerb, isWriteVerb } from './connector-verb-classifier.js';
 
 test('A1: known read verbs are not writes (both vocabularies)', () => {
     const reads = [
@@ -35,4 +35,12 @@ test('A2: known write verbs are writes (both vocabularies)', () => {
 test('A3: unknown verb is treated as a write (fail-safe for read-only mode)', () => {
     assert.equal(isWriteVerb('some_unknown_action'), true);
     assert.equal(isWriteVerb(''), true);
+});
+
+test('CRM verbs classify reads as read and writes as write (fail-safe)', () => {
+    assert.equal(isReadVerb('get_record'), true);
+    assert.equal(isReadVerb('search_records'), true);
+    assert.equal(isWriteVerb('create_record'), true);
+    assert.equal(isWriteVerb('update_record'), true);
+    assert.equal(isWriteVerb('log_activity'), true);
 });
