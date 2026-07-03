@@ -32,7 +32,8 @@ type ConnectorType =
     | 'hubspot'
     | 'salesforce'
     | 'greenhouse'
-    | 'wordpress';
+    | 'wordpress'
+    | 'azure';
 type ConnectorActionType =
     | 'read_task'
     | 'create_comment'
@@ -55,7 +56,10 @@ type ConnectorActionType =
     | 'get_content'
     | 'list_content'
     | 'publish_content'
-    | 'update_content';
+    | 'update_content'
+    | 'list_resources'
+    | 'get_resource'
+    | 'list_deployments';
 
 type ConnectorActionErrorCode =
     | 'rate_limit'
@@ -296,6 +300,7 @@ const SUPPORTED_CONNECTORS: ConnectorType[] = [
     'salesforce',
     'greenhouse',
     'wordpress',
+    'azure',
 ];
 const SUPPORTED_ACTIONS: ConnectorActionType[] = [
     'read_task',
@@ -320,6 +325,9 @@ const SUPPORTED_ACTIONS: ConnectorActionType[] = [
     'list_content',
     'publish_content',
     'update_content',
+    'list_resources',
+    'get_resource',
+    'list_deployments',
 ];
 
 const CONTRACT_VERSION = 'v1.0';
@@ -347,6 +355,9 @@ const CONNECTOR_ACTION_RISK: Record<ConnectorActionType, 'low' | 'medium' | 'hig
     list_content: 'low',
     publish_content: 'medium',
     update_content: 'medium',
+    list_resources: 'low',
+    get_resource: 'low',
+    list_deployments: 'low',
     create_pr: 'high',
     merge_pr: 'high',
 };
@@ -364,6 +375,7 @@ const SUPPORTED_ROLE_KEYS: AgentRoleKey[] = [
     'corporate_assistant',
     'customer_support_executive',
     'project_manager_product_owner_scrum_master',
+    'devops_engineer',
 ];
 
 const CONNECTOR_TOOL_ALIAS: Record<ConnectorType, ConnectorTool | null> = {
@@ -385,6 +397,7 @@ const CONNECTOR_TOOL_ALIAS: Record<ConnectorType, ConnectorTool | null> = {
     salesforce: 'salesforce',
     greenhouse: 'greenhouse',
     wordpress: 'wordpress',
+    azure: 'azure',
 };
 
 const ACTION_ALIAS: Record<ConnectorActionType, NormalizedActionType> = {
@@ -410,6 +423,9 @@ const ACTION_ALIAS: Record<ConnectorActionType, NormalizedActionType> = {
     list_content: 'list_content',
     publish_content: 'publish_content',
     update_content: 'update_content',
+    list_resources: 'list_resources',
+    get_resource: 'get_resource',
+    list_deployments: 'list_deployments',
 };
 
 const getPrisma = async () => {
@@ -1564,6 +1580,15 @@ export const registerConnectorActionRoutes = async (
             }
             if (typeof c['app_password'] !== 'string' || !c['app_password']) {
                 return 'wordpress credentials must include app_password (string, Application Password)';
+            }
+            return null;
+        },
+        azure: (c) => {
+            if (typeof c['access_token'] !== 'string' || !c['access_token']) {
+                return 'azure credentials must include access_token (string, ARM Bearer token)';
+            }
+            if (typeof c['subscription_id'] !== 'string' || !c['subscription_id']) {
+                return 'azure credentials must include subscription_id (string)';
             }
             return null;
         },

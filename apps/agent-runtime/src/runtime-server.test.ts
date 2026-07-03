@@ -6045,3 +6045,53 @@ test('recruiter and content writer tasks dispatch greenhouse and wordpress actio
         }
     }
 });
+
+test('devops tasks dispatch azure read-only cloud actions to the execute client', async () => {
+    const connectorCalls: Array<{ connectorType: string; actionType: string }> = [];
+
+    const app = buildRuntimeServer({
+        env: {
+            ...baseEnv(),
+            AF_ROLE_PROFILE: 'DevOps',
+            AF_APPROVAL_API_URL: 'http://127.0.0.1:9',
+            AF_EVIDENCE_API_URL: 'http://127.0.0.1:9',
+        },
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        connectorActionExecuteClient: async (input) => {
+            connectorCalls.push({ connectorType: input.connectorType, actionType: input.actionType });
+            return { ok: true, statusCode: 200 };
+        },
+    });
+
+    try {
+        await app.inject({ method: 'POST', url: '/startup' });
+        const intakeRes = await app.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'cloud-dispatch-azure-1',
+                payload: {
+                    action_type: 'list_resources',
+                    connector_type: 'azure',
+                    summary: 'List the Azure resources in the production subscription',
+                    target: 'prod-subscription',
+                    max_results: 10,
+                },
+            },
+        });
+        assert.equal(intakeRes.statusCode, 202);
+
+        const calls = await waitForValue(
+            () => (connectorCalls.length >= 1 ? connectorCalls : undefined),
+            { timeoutMs: 60_000, pollMs: 100 },
+        );
+        assert.ok(
+            calls?.some((c) => c.connectorType === 'azure' && c.actionType === 'list_resources'),
+            'expected a list_resources dispatch for azure',
+        );
+    } finally {
+        await app.close();
+    }
+});

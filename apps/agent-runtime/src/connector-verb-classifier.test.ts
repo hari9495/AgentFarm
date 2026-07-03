@@ -51,3 +51,9 @@ test('CMS verbs classify reads as read and publish/update as write', () => {
     assert.equal(isWriteVerb('publish_content'), true);
     assert.equal(isWriteVerb('update_content'), true);
 });
+
+test('cloud read-only verbs classify as reads', () => {
+    assert.equal(isReadVerb('list_resources'), true);
+    assert.equal(isReadVerb('get_resource'), true);
+    assert.equal(isReadVerb('list_deployments'), true);
+});

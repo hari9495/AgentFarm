@@ -2224,3 +2224,197 @@ test('health probe: wordpress returns auth_failure when users/me returns 401', a
     assert.equal(result.outcome, 'auth_failure');
     assert.ok(calls[0]!.url.includes('/wp-json/wp/v2/users/me'));
 });
+
+// ---------------------------------------------------------------------------
+// Azure native cloud connector (ARM REST, read-only tier)
+// ---------------------------------------------------------------------------
+
+const SECRET_REF_AZURE = 'kv://vault/secrets/azure-connector';
+
+const makeCloudStore = () =>
+    createInMemorySecretStore({
+        [SECRET_REF_AZURE]: JSON.stringify({
+            access_token: 'arm-bearer-1',
+            subscription_id: 'sub-1234',
+        }),
+    });
+
+test('azure list_resources lists subscription resources with names and types', async () => {
+    const { fetcher, calls } = makeFetch([
+        {
+            status: 200,
+            body: {
+                value: [
+                    { id: '/subscriptions/sub-1234/resourceGroups/rg1/providers/Microsoft.Compute/virtualMachines/vm-1', name: 'vm-1', type: 'Microsoft.Compute/virtualMachines', location: 'southindia' },
+                    { id: '/subscriptions/sub-1234/resourceGroups/rg1/providers/Microsoft.Storage/storageAccounts/store1', name: 'store1', type: 'Microsoft.Storage/storageAccounts', location: 'southindia' },
+                ],
+            },
+        },
+    ]);
+    const executor = createRealProviderExecutor(makeCloudStore(), fetcher);
+    const result = await executor({
+        connectorType: 'azure',
+        actionType: 'list_resources',
+        payload: { max_results: 20 },
+        attempt: 1,
+        secretRefId: SECRET_REF_AZURE,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('vm-1'));
+    assert.ok(result.resultSummary.includes('Microsoft.Compute/virtualMachines'));
+    assert.ok(calls[0]!.url.includes('management.azure.com/subscriptions/sub-1234/resources'));
+    assert.ok(calls[0]!.url.includes('%24top=20') || calls[0]!.url.includes('$top=20'));
+    assert.equal(calls[0]!.headers!['Authorization'], 'Bearer arm-bearer-1');
+});
+
+test('azure list_resources scopes to a resource group when provided', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 200, body: { value: [] } }]);
+    const executor = createRealProviderExecutor(makeCloudStore(), fetcher);
+    const result = await executor({
+        connectorType: 'azure',
+        actionType: 'list_resources',
+        payload: { resource_group: 'rg1' },
+        attempt: 1,
+        secretRefId: SECRET_REF_AZURE,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(calls[0]!.url.includes('/resourceGroups/rg1/resources'));
+});
+
+test('azure get_resource fetches a resource by full ARM id with api-version override', async () => {
+    const { fetcher, calls } = makeFetch([
+        {
+            status: 200,
+            body: {
+                name: 'vm-1',
+                type: 'Microsoft.Compute/virtualMachines',
+                location: 'southindia',
+                properties: { provisioningState: 'Succeeded' },
+            },
+        },
+    ]);
+    const executor = createRealProviderExecutor(makeCloudStore(), fetcher);
+    const result = await executor({
+        connectorType: 'azure',
+        actionType: 'get_resource',
+        payload: {
+            resource_id: '/subscriptions/sub-1234/resourceGroups/rg1/providers/Microsoft.Compute/virtualMachines/vm-1',
+            api_version: '2024-03-01',
+        },
+        attempt: 1,
+        secretRefId: SECRET_REF_AZURE,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('vm-1'));
+    assert.ok(result.resultSummary.includes('Succeeded'));
+    assert.ok(calls[0]!.url.includes('/virtualMachines/vm-1?api-version=2024-03-01'));
+});
+
+test('azure get_resource returns invalid_format when resource_id missing', async () => {
+    const { fetcher } = makeFetch([]);
+    const executor = createRealProviderExecutor(makeCloudStore(), fetcher);
+    const result = await executor({
+        connectorType: 'azure',
+        actionType: 'get_resource',
+        payload: {},
+        attempt: 1,
+        secretRefId: SECRET_REF_AZURE,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'invalid_format');
+});
+
+test('azure list_deployments reports deployment provisioning states for a resource group', async () => {
+    const { fetcher, calls } = makeFetch([
+        {
+            status: 200,
+            body: {
+                value: [
+                    { name: 'deploy-42', properties: { provisioningState: 'Succeeded', timestamp: '2026-07-02T10:00:00Z' } },
+                    { name: 'deploy-41', properties: { provisioningState: 'Failed', timestamp: '2026-07-01T10:00:00Z' } },
+                ],
+            },
+        },
+    ]);
+    const executor = createRealProviderExecutor(makeCloudStore(), fetcher);
+    const result = await executor({
+        connectorType: 'azure',
+        actionType: 'list_deployments',
+        payload: { resource_group: 'rg1' },
+        attempt: 1,
+        secretRefId: SECRET_REF_AZURE,
+    });
+    assert.equal(result.ok, true);
+    assert.ok(result.resultSummary.includes('deploy-42'));
+    assert.ok(result.resultSummary.includes('Succeeded'));
+    assert.ok(result.resultSummary.includes('Failed'));
+    assert.ok(calls[0]!.url.includes('/resourcegroups/rg1/providers/Microsoft.Resources/deployments'));
+});
+
+test('azure list_deployments returns invalid_format when resource_group missing', async () => {
+    const { fetcher } = makeFetch([]);
+    const executor = createRealProviderExecutor(makeCloudStore(), fetcher);
+    const result = await executor({
+        connectorType: 'azure',
+        actionType: 'list_deployments',
+        payload: {},
+        attempt: 1,
+        secretRefId: SECRET_REF_AZURE,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'invalid_format');
+});
+
+test('azure rejects write-style actions as unsupported (read-only tier)', async () => {
+    const { fetcher } = makeFetch([]);
+    const executor = createRealProviderExecutor(makeCloudStore(), fetcher);
+    const result = await executor({
+        connectorType: 'azure',
+        actionType: 'create_record',
+        payload: {},
+        attempt: 1,
+        secretRefId: SECRET_REF_AZURE,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'unsupported_action');
+});
+
+test('azure list_resources classifies 401 as permission_denied', async () => {
+    const { fetcher } = makeFetch([{ status: 401 }]);
+    const executor = createRealProviderExecutor(makeCloudStore(), fetcher);
+    const result = await executor({
+        connectorType: 'azure',
+        actionType: 'list_resources',
+        payload: {},
+        attempt: 1,
+        secretRefId: SECRET_REF_AZURE,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'permission_denied');
+});
+
+test('executor returns upgrade_required when azure subscription_id missing', async () => {
+    const store = createInMemorySecretStore({ [SECRET_REF_AZURE]: JSON.stringify({ access_token: 'x' }) });
+    const { fetcher } = makeFetch([]);
+    const executor = createRealProviderExecutor(store, fetcher);
+    const result = await executor({
+        connectorType: 'azure',
+        actionType: 'list_resources',
+        payload: {},
+        attempt: 1,
+        secretRefId: SECRET_REF_AZURE,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.errorCode, 'upgrade_required');
+});
+
+test('health probe: azure returns ok when subscription endpoint returns 200', async () => {
+    const { fetcher, calls } = makeFetch([{ status: 200, body: { subscriptionId: 'sub-1234' } }]);
+    const probe = createRealConnectorHealthProbe(makeCloudStore(), fetcher);
+    const result = await probe({
+        connectorType: 'azure',
+        metadata: { connectorId: 'azure:t:w', connectorType: 'azure', secretRefId: SECRET_REF_AZURE, status: 'connected', scopeStatus: 'full', lastErrorClass: null },
+    });
+    assert.equal(result.outcome, 'ok');
+    assert.ok(calls[0]!.url.includes('/subscriptions/sub-1234?api-version'));
+});

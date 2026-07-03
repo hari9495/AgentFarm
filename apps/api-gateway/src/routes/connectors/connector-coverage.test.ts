@@ -29,6 +29,7 @@ const FIRST_CLASS: ReadonlySet<ConnectorTool> = new Set([
     'salesforce',
     'greenhouse',
     'wordpress',
+    'azure',
 ]);
 
 // Connectors that execute through the generic REST / SMTP escape hatch (custom_api / email

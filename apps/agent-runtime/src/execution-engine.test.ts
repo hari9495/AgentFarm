@@ -601,3 +601,9 @@ test('classifyRisk treats CMS publishing as medium and CMS reads as low', () => 
     assert.equal(classifyRisk('get_content', 0.9, {}).riskLevel, 'low');
     assert.equal(classifyRisk('list_content', 0.9, {}).riskLevel, 'low');
 });
+
+test('classifyRisk treats cloud read-only actions as low', () => {
+    assert.equal(classifyRisk('list_resources', 0.9, {}).riskLevel, 'low');
+    assert.equal(classifyRisk('get_resource', 0.9, {}).riskLevel, 'low');
+    assert.equal(classifyRisk('list_deployments', 0.9, {}).riskLevel, 'low');
+});

@@ -9,7 +9,8 @@ export type ConnectorCategory =
   | 'telephony'      // Twilio, Vonage, Amazon Connect, Genesys, Generic
   | 'crm'            // HubSpot, Salesforce
   | 'ats'            // Greenhouse
-  | 'cms';           // WordPress
+  | 'cms'            // WordPress
+  | 'cloud';         // Azure (ARM, read-only tier)
 
 // ─── Supported tool slugs per category ───────────────────────────────────
 export type TaskTrackerTool = 'jira' | 'linear' | 'asana' | 'monday' | 'trello' | 'clickup' | 'generic_rest';
@@ -20,7 +21,8 @@ export type TelephonyTool = 'twilio' | 'vonage' | 'amazon_connect' | 'genesys' |
 export type CrmTool = 'hubspot' | 'salesforce';
 export type AtsTool = 'greenhouse';
 export type CmsTool = 'wordpress';
-export type ConnectorTool = TaskTrackerTool | MessagingTool | CodeTool | EmailTool | TelephonyTool | CrmTool | AtsTool | CmsTool;
+export type CloudTool = 'azure';
+export type ConnectorTool = TaskTrackerTool | MessagingTool | CodeTool | EmailTool | TelephonyTool | CrmTool | AtsTool | CmsTool | CloudTool;
 
 // Legacy alias kept for back-compat with existing gateway code
 export type ConnectorId = ConnectorTool;
@@ -97,7 +99,11 @@ export type NormalizedActionType =
   | 'get_content'
   | 'list_content'
   | 'publish_content'
-  | 'update_content';
+  | 'update_content'
+  // cloud (read-only tier)
+  | 'list_resources'
+  | 'get_resource'
+  | 'list_deployments';
 
 // ─── Connector definition (what the registry stores) ─────────────────────
 export interface ConnectorDefinition {
@@ -452,6 +458,18 @@ export const CONNECTOR_REGISTRY: ConnectorDefinition[] = [
     allowedRoles: ['content_writer', 'marketing_specialist', 'technical_writer'],
     supportedActions: ['get_content', 'list_content', 'publish_content', 'update_content'],
     docsUrl: 'https://developer.wordpress.org/rest-api/reference/posts/',
+  },
+  // ── Cloud (read-only tier) ───────────────────────────────────────────
+  {
+    tool: 'azure',
+    category: 'cloud',
+    displayName: 'Microsoft Azure',
+    logoUrl: '/icons/connectors/azure.svg',
+    authMethod: 'oauth2',
+    allowedRoles: ['devops_engineer', 'developer', 'fullstack_developer'],
+    oauthScopes: ['https://management.azure.com/.default'],
+    supportedActions: ['list_resources', 'get_resource', 'list_deployments'],
+    docsUrl: 'https://learn.microsoft.com/en-us/rest/api/resources/',
   },
   // ── Generic REST (bring your own tool) ──────────────────────────────
   {

@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 import PremiumIcon from "@/components/shared/PremiumIcon";
 
 // ── Types (mirrors /app/connectors/page.tsx) ──────────────────────────────
-type ConnectorCategory = "task_tracker" | "messaging" | "code" | "email" | "monitoring" | "crm" | "ats" | "cms";
+type ConnectorCategory = "task_tracker" | "messaging" | "code" | "email" | "monitoring" | "crm" | "ats" | "cms" | "cloud";
 type ConnectorAuthMethod = "oauth2" | "api_key" | "bearer_token" | "basic" | "generic_rest";
 type ConnectorStatus = "connected" | "disconnected" | "error" | "pending_auth";
 
@@ -80,9 +80,10 @@ const CATEGORY_LABELS: Record<ConnectorCategory, string> = {
     crm: "CRM",
     ats: "Recruiting (ATS)",
     cms: "Content (CMS)",
+    cloud: "Cloud",
 };
 
-const CATEGORY_ORDER: ConnectorCategory[] = ["task_tracker", "messaging", "code", "email", "monitoring", "crm", "ats", "cms"];
+const CATEGORY_ORDER: ConnectorCategory[] = ["task_tracker", "messaging", "code", "email", "monitoring", "crm", "ats", "cms", "cloud"];
 
 const STATUS_BADGE: Record<ConnectorStatus, string> = {
     connected: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300",
@@ -353,7 +354,7 @@ function ConnectorIcon({ tool, size = 32 }: { tool: string; size?: number }) {
         outlook: "📧", gmail: "📬", exchange: "📮", generic_smtp: "📨",
         pagerduty: "🚨", sentry: "🐛",
         hubspot: "🧲", salesforce: "☁️",
-        greenhouse: "🌱", wordpress: "📝",
+        greenhouse: "🌱", wordpress: "📝", azure: "🔷",
         generic_rest: "🔌", generic_rest_messaging: "🔌", generic_rest_code: "🔌",
         generic_rest_email: "🔌",
     };
@@ -834,7 +835,7 @@ export default function DashboardIntegrationsPage() {
         task_tracker: "generic_rest", messaging: "generic_rest_messaging",
         code: "generic_rest_code", email: "generic_rest_email",
         monitoring: "generic_rest", crm: "generic_rest",
-        ats: "generic_rest", cms: "generic_rest",
+        ats: "generic_rest", cms: "generic_rest", cloud: "generic_rest",
     };
 
     const getPreferredCustomConnector = (): AvailableConnector | undefined =>

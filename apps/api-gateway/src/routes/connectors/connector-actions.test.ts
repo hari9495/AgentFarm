@@ -3169,3 +3169,95 @@ test('PUT credentials returns 400 when wordpress credentials missing app_passwor
         await app.close();
     }
 });
+
+// ---------------------------------------------------------------------------
+// Azure — native cloud connector through the execute route (read-only tier)
+// ---------------------------------------------------------------------------
+
+test('azure executes list_resources (low risk) through the real executor for the devops role', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+
+    const secretRefId = 'kv://vault/secrets/azure-tenant1';
+    const store = createInMemorySecretStore({
+        [secretRefId]: JSON.stringify({ access_token: 'arm-tok', subscription_id: 'sub-1' }),
+    });
+
+    const connectorId = 'azure:tenant_1:ws_1';
+    repo.metadata.set(connectorId, {
+        connectorId,
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        connectorType: 'azure',
+        status: 'connected',
+        secretRefId,
+        scopeStatus: 'full',
+        lastErrorClass: null,
+    });
+
+    const armFetcher = async () =>
+        new Response(
+            JSON.stringify({ value: [{ name: 'vm-1', type: 'Microsoft.Compute/virtualMachines', location: 'southindia' }] }),
+            { status: 200 },
+        ) as Response;
+    const providerExecutor = createRealProviderExecutor(store, armFetcher as typeof fetch);
+
+    await registerConnectorActionRoutes(app, {
+        getSession: () => sessionContext(),
+        repo,
+        secretStore: store,
+        providerExecutor,
+        sleep: async () => {},
+    });
+
+    try {
+        const execRes = await app.inject({
+            method: 'POST',
+            url: '/v1/connectors/actions/execute',
+            payload: {
+                connector_type: 'azure',
+                workspace_id: 'ws_1',
+                bot_id: 'bot_1',
+                role_key: 'devops_engineer',
+                action_type: 'list_resources',
+                payload: { max_results: 5 },
+            },
+        });
+        assert.equal(execRes.statusCode, 200);
+        const execBody = execRes.json() as { status: string; result_summary: string };
+        assert.equal(execBody.status, 'success');
+        assert.ok(execBody.result_summary.includes('vm-1'));
+    } finally {
+        await app.close();
+    }
+});
+
+test('PUT credentials returns 400 when azure credentials missing subscription_id', async () => {
+    const app = Fastify();
+    const repo = createFakeRepo();
+    const store = createInMemorySecretStore({});
+    const connectorId = 'azure:tenant_1:ws_1';
+    repo.metadata.set(connectorId, {
+        connectorId,
+        tenantId: 'tenant_1',
+        workspaceId: 'ws_1',
+        connectorType: 'azure',
+        status: 'not_configured',
+        secretRefId: null,
+        scopeStatus: null,
+        lastErrorClass: null,
+    });
+
+    await registerConnectorActionRoutes(app, { getSession: () => sessionContext(), repo, secretStore: store });
+
+    try {
+        const res = await app.inject({
+            method: 'PUT',
+            url: `/v1/connectors/${connectorId}/credentials`,
+            payload: { credentials: { access_token: 'arm-only' } },
+        });
+        assert.equal(res.statusCode, 400);
+    } finally {
+        await app.close();
+    }
+});

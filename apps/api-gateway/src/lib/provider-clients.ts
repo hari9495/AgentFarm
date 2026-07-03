@@ -23,6 +23,7 @@
  *   Salesforce: { "access_token": "...", "instance_url": "https://org.my.salesforce.com" }
  *   Greenhouse: { "api_key": "...", "on_behalf_of"?: "<harvest user id, required for writes>" }
  *   WordPress: { "base_url": "https://blog.example.com", "username": "...", "app_password": "..." }
+ *   Azure:  { "access_token": "...", "subscription_id": "..." }  (ARM bearer, read-only tier)
  *
  * All actions accept a typed payload object (see ActionPayload* below).
  */
@@ -52,7 +53,8 @@ export type ConnectorType =
     | 'hubspot'
     | 'salesforce'
     | 'greenhouse'
-    | 'wordpress';
+    | 'wordpress'
+    | 'azure';
 export type ConnectorActionType =
     | 'read_task'
     | 'create_comment'
@@ -75,7 +77,10 @@ export type ConnectorActionType =
     | 'get_content'
     | 'list_content'
     | 'publish_content'
-    | 'update_content';
+    | 'update_content'
+    | 'list_resources'
+    | 'get_resource'
+    | 'list_deployments';
 
 export type ConnectorActionErrorCode =
     | 'rate_limit'
@@ -175,6 +180,7 @@ type HubSpotCredentials = { access_token: string };
 type SalesforceCredentials = { access_token: string; instance_url: string };
 type GreenhouseCredentials = { api_key: string; on_behalf_of?: string };
 type WordPressCredentials = { base_url: string; username: string; app_password: string };
+type AzureCredentials = { access_token: string; subscription_id: string };
 
 type FetchFn = (url: string | URL, init?: RequestInit) => Promise<Response>;
 
@@ -2439,6 +2445,98 @@ const executeWordPress = async (
 };
 
 // ---------------------------------------------------------------------------
+// Azure connector (ARM REST, Bearer token — read-only tier by design)
+// ---------------------------------------------------------------------------
+
+const AZURE_ARM_BASE = 'https://management.azure.com';
+const AZURE_ARM_API_VERSION = '2021-04-01';
+
+const executeAzure = async (
+    actionType: ConnectorActionType,
+    payload: Record<string, unknown>,
+    credentials: AzureCredentials,
+    fetcher: FetchFn,
+): Promise<ProviderExecutionResult> => {
+    const headers: Record<string, string> = {
+        Authorization: `Bearer ${credentials.access_token}`,
+        Accept: 'application/json',
+    };
+    const sub = encodeURIComponent(credentials.subscription_id);
+
+    if (actionType === 'list_resources') {
+        const resourceGroup = String(payload['resource_group'] ?? '').trim();
+        const limit = Number(payload['max_results'] ?? 25);
+        const scope = resourceGroup
+            ? `${AZURE_ARM_BASE}/subscriptions/${sub}/resourceGroups/${encodeURIComponent(resourceGroup)}/resources`
+            : `${AZURE_ARM_BASE}/subscriptions/${sub}/resources`;
+        let res: Response;
+        try {
+            res = await fetcher(`${scope}?api-version=${AZURE_ARM_API_VERSION}&$top=${limit}`, { headers });
+        } catch (err) {
+            return networkError('Azure', 'management.azure.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Azure resource listing failed with ${res.status}`);
+        const json = (await res.json()) as { value?: Array<{ name?: string; type?: string; location?: string }> };
+        const items = (json.value ?? []).map((r) => `${r.name} (${r.type}, ${r.location})`);
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `${items.length} resource(s)${resourceGroup ? ` in ${resourceGroup}` : ''}: ${items.join('; ') || '(none)'}`,
+        };
+    }
+
+    if (actionType === 'get_resource') {
+        const resourceId = String(payload['resource_id'] ?? '').trim();
+        if (!resourceId) return missingFields('resource_id', 'resource_id (full ARM id) is required for get_resource.');
+        // ARM api-version is provider-specific; callers may override.
+        const apiVersion = String(payload['api_version'] ?? '').trim() || AZURE_ARM_API_VERSION;
+        let res: Response;
+        try {
+            res = await fetcher(`${AZURE_ARM_BASE}${resourceId.startsWith('/') ? '' : '/'}${resourceId}?api-version=${encodeURIComponent(apiVersion)}`, { headers });
+        } catch (err) {
+            return networkError('Azure', 'management.azure.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Azure returned ${res.status} for ${resourceId}`);
+        const json = (await res.json()) as { name?: string; type?: string; location?: string; properties?: Record<string, unknown> };
+        const state = String(json.properties?.['provisioningState'] ?? 'unknown');
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `${json.name ?? resourceId} (${json.type ?? 'unknown type'}, ${json.location ?? 'unknown region'}) — provisioningState: ${state}`,
+        };
+    }
+
+    if (actionType === 'list_deployments') {
+        const resourceGroup = String(payload['resource_group'] ?? '').trim();
+        if (!resourceGroup) return missingFields('resource_group', 'resource_group is required for list_deployments.');
+        const limit = Number(payload['max_results'] ?? 10);
+        let res: Response;
+        try {
+            res = await fetcher(
+                `${AZURE_ARM_BASE}/subscriptions/${sub}/resourcegroups/${encodeURIComponent(resourceGroup)}/providers/Microsoft.Resources/deployments?api-version=${AZURE_ARM_API_VERSION}&$top=${limit}`,
+                { headers },
+            );
+        } catch (err) {
+            return networkError('Azure', 'management.azure.com', err);
+        }
+        if (!res.ok) return failFromStatus(res.status, `Azure deployment listing failed with ${res.status}`);
+        const json = (await res.json()) as {
+            value?: Array<{ name?: string; properties?: { provisioningState?: string; timestamp?: string } }>;
+        };
+        const items = (json.value ?? []).map(
+            (d) => `${d.name} [${d.properties?.provisioningState ?? 'unknown'}${d.properties?.timestamp ? ` @ ${d.properties.timestamp}` : ''}]`,
+        );
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `${items.length} deployment(s) in ${resourceGroup}: ${items.join('; ') || '(none)'}`,
+        };
+    }
+
+    return unsupported('Azure', 'list_resources, get_resource, list_deployments (read-only tier)');
+};
+
+// ---------------------------------------------------------------------------
 // Email connector (SendGrid + SMTP fallback via nodemailer-style validation)
 // ---------------------------------------------------------------------------
 
@@ -3143,6 +3241,18 @@ const probeWordPress = async (credentials: WordPressCredentials, fetcher: FetchF
     }
 };
 
+const probeAzure = async (credentials: AzureCredentials, fetcher: FetchFn): Promise<HealthProbeResult> => {
+    try {
+        const res = await fetcher(
+            `${AZURE_ARM_BASE}/subscriptions/${encodeURIComponent(credentials.subscription_id)}?api-version=${AZURE_ARM_API_VERSION}`,
+            { headers: { Authorization: `Bearer ${credentials.access_token}`, Accept: 'application/json' } },
+        );
+        return classifyProbeStatus('Azure', res.status);
+    } catch {
+        return { outcome: 'network_timeout', message: 'Azure unreachable' };
+    }
+};
+
 const probeWithoutCredentials = (connectorType: ConnectorType, metadata: ConnectorAuthMetadata): HealthProbeResult => {
     if (metadata.status === 'permission_invalid' || metadata.status === 'consent_pending') {
         return { outcome: 'auth_failure', message: `${connectorType} connector auth is invalid — re-authenticate required.` };
@@ -3457,6 +3567,21 @@ export const createRealProviderExecutor = (
         return executeWordPress(actionType, payload, creds, fetcher);
     }
 
+    if (connectorType === 'azure') {
+        const creds = parseCredentials<AzureCredentials>(rawSecret);
+        if (!creds?.access_token || !creds?.subscription_id) {
+            return {
+                ok: false,
+                providerResponseCode: '401',
+                resultSummary: 'Invalid Azure credentials format',
+                errorCode: 'upgrade_required',
+                errorMessage: 'Azure credentials must include access_token and subscription_id.',
+                remediationHint: 'Re-initiate the Azure OAuth flow (ARM scope) for this connector.',
+            };
+        }
+        return executeAzure(actionType, payload, creds, fetcher);
+    }
+
     return {
         ok: false,
         providerResponseCode: '400',
@@ -3626,6 +3751,14 @@ export const createRealConnectorHealthProbe = (
             return { outcome: 'auth_failure', message: 'WordPress credentials missing base_url, username, or app_password' };
         }
         return probeWordPress(creds, fetcher);
+    }
+
+    if (connectorType === 'azure') {
+        const creds = parseCredentials<AzureCredentials>(rawSecret);
+        if (!creds?.access_token || !creds?.subscription_id) {
+            return { outcome: 'auth_failure', message: 'Azure credentials missing access_token or subscription_id' };
+        }
+        return probeAzure(creds, fetcher);
     }
 
     return { outcome: 'ok', message: `No live probe implemented for ${connectorType}` };

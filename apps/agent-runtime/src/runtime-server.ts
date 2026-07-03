@@ -298,7 +298,8 @@ type DispatchableConnectorType =
     | 'hubspot'
     | 'salesforce'
     | 'greenhouse'
-    | 'wordpress';
+    | 'wordpress'
+    | 'azure';
 
 type DispatchableConnectorActionType =
     | 'read_task'
@@ -322,7 +323,10 @@ type DispatchableConnectorActionType =
     | 'get_content'
     | 'list_content'
     | 'publish_content'
-    | 'update_content';
+    | 'update_content'
+    | 'list_resources'
+    | 'get_resource'
+    | 'list_deployments';
 
 type ConnectorActionExecuteClient = (input: {
     baseUrl: string;
@@ -701,6 +705,9 @@ const CONNECTOR_ACTION_TYPES = new Set([
     'list_content',
     'publish_content',
     'update_content',
+    'list_resources',
+    'get_resource',
+    'list_deployments',
 ] as const);
 
 const collectConnectorsUsed = (task: TaskEnvelope, actionType: string): string[] => {
@@ -993,7 +1000,10 @@ type RuntimeConnectorActionType =
     | 'get_content'
     | 'list_content'
     | 'publish_content'
-    | 'update_content';
+    | 'update_content'
+    | 'list_resources'
+    | 'get_resource'
+    | 'list_deployments';
 
 type RuntimeLocalWorkspaceActionType = LocalWorkspaceActionType;
 
@@ -1031,6 +1041,8 @@ const CONNECTOR_ACTION_POLICY: Partial<Record<RuntimeConnectorType, RuntimeConne
     salesforce: ['get_record', 'search_records', 'create_record', 'update_record', 'log_activity'],
     greenhouse: ['get_record', 'search_records', 'create_record', 'update_record', 'log_activity'],
     wordpress: ['get_content', 'list_content', 'publish_content', 'update_content'],
+    // Read-only tier by design — write actions ship after live-env demand is proven.
+    azure: ['list_resources', 'get_resource', 'list_deployments'],
     // Action sets mirror the real gateway executors in provider-clients.ts.
     gitlab: ['read_task', 'create_comment', 'create_pr_comment', 'create_pr', 'merge_pr', 'list_prs'],
     linear: ['read_task', 'create_comment', 'update_status'],
@@ -1185,6 +1197,8 @@ const roleKeyFromRoleProfile = (roleProfile: string): RoleKey | null => {
         scrum_master: 'project_manager_product_owner_scrum_master',
         devops_engineer: 'devops_engineer',
         devops: 'devops_engineer',
+        // Normalization of the canonical displayName 'DevOps / Infrastructure Engineer'
+        devops_infrastructure_engineer: 'devops_engineer',
         sre: 'devops_engineer',
         site_reliability_engineer: 'devops_engineer',
         platform_engineer: 'devops_engineer',
@@ -1763,6 +1777,7 @@ const DISPATCHABLE_CONNECTOR_TYPES: ReadonlySet<string> = new Set<DispatchableCo
     'salesforce',
     'greenhouse',
     'wordpress',
+    'azure',
 ]);
 
 const normalizeConnectorType = (value: unknown): DispatchableConnectorType | null => {
