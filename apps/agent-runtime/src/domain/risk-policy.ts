@@ -78,6 +78,9 @@ export const MEDIUM_RISK_ACTIONS = new Set([
     // CMS publishing is outward-facing content — human-gated
     'publish_content',
     'update_content',
+    // Test-env orchestration mutates Docker state on the host
+    'workspace_test_env_up',
+    'workspace_test_env_down',
     // Local workspace: executing code or committing changes is medium-risk
     'code_edit',
     'code_edit_patch',

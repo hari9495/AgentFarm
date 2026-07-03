@@ -607,3 +607,10 @@ test('classifyRisk treats cloud read-only actions as low', () => {
     assert.equal(classifyRisk('get_resource', 0.9, {}).riskLevel, 'low');
     assert.equal(classifyRisk('list_deployments', 0.9, {}).riskLevel, 'low');
 });
+
+test('classifyRisk treats test-env mutations as medium and inspections as low', () => {
+    assert.equal(classifyRisk('workspace_test_env_up', 0.9, {}).riskLevel, 'medium');
+    assert.equal(classifyRisk('workspace_test_env_down', 0.9, {}).riskLevel, 'medium');
+    assert.equal(classifyRisk('workspace_test_env_status', 0.9, {}).riskLevel, 'low');
+    assert.equal(classifyRisk('workspace_test_env_logs', 0.9, {}).riskLevel, 'low');
+});

@@ -3806,3 +3806,27 @@ test('autonomous_pr_loop action runs the issue->PR pipeline in dry-run and repor
     assert.ok(stepNames.includes('create_pr'));
     assert.ok(typeof parsed.branch_name === 'string' && parsed.branch_name.length > 0);
 });
+
+test('workspace_test_env_up fails hard when the workspace has no compose file', async () => {
+    const result = await executeLocalWorkspaceAction({
+        tenantId: 'tenant_test',
+        botId: 'bot_test',
+        taskId: 'task-test-env-1',
+        actionType: 'workspace_test_env_up',
+        payload: {},
+    });
+    assert.equal(result.ok, false);
+    assert.match(result.errorOutput ?? '', /compose file/i);
+});
+
+test('workspace_test_env_logs fails hard when the workspace has no compose file', async () => {
+    const result = await executeLocalWorkspaceAction({
+        tenantId: 'tenant_test',
+        botId: 'bot_test',
+        taskId: 'task-test-env-2',
+        actionType: 'workspace_test_env_logs',
+        payload: { service: 'api' },
+    });
+    assert.equal(result.ok, false);
+    assert.match(result.errorOutput ?? '', /compose file/i);
+});

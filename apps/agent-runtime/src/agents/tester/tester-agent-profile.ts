@@ -44,6 +44,11 @@ export const TESTER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = [
     'workspace_git_blame',
     'workspace_search_docs',
     'workspace_package_lookup',
+    // ── Test environment orchestration (Docker Compose) ─────────────────
+    'workspace_test_env_up',
+    'workspace_test_env_status',
+    'workspace_test_env_logs',
+    'workspace_test_env_down',
     // ── Test authoring & analysis ─────────────────────────────────────────
     'workspace_generate_test',
     'workspace_fix_test_failures',

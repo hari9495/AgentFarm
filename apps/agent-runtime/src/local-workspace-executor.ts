@@ -270,6 +270,10 @@ export type LocalWorkspaceActionType =
     | 'run_tests'
     | 'autonomous_loop'
     | 'autonomous_pr_loop'
+    | 'workspace_test_env_up'
+    | 'workspace_test_env_status'
+    | 'workspace_test_env_logs'
+    | 'workspace_test_env_down'
     | 'workspace_cleanup'
     | 'workspace_diff'
     | 'workspace_memory_write'
@@ -1134,6 +1138,10 @@ export const LOCAL_WORKSPACE_ACTION_TYPES = new Set<LocalWorkspaceActionType>([
     'run_tests',
     'autonomous_loop',
     'autonomous_pr_loop',
+    'workspace_test_env_up',
+    'workspace_test_env_status',
+    'workspace_test_env_logs',
+    'workspace_test_env_down',
     'workspace_cleanup',
     'workspace_diff',
     'workspace_memory_write',
@@ -4455,6 +4463,50 @@ export async function executeLocalWorkspaceAction(input: {
             } catch (err) {
                 return { ok: false, output: '', errorOutput: String(err) };
             }
+        }
+
+        // ------------------------------------------------------------------
+        // workspace_test_env_*: Docker Compose test-environment orchestration
+        // for the tester agent — up (health-waited), status, logs, down.
+        // payload: { compose_file?, services?, service?, tail_lines? }
+        // ------------------------------------------------------------------
+        case 'workspace_test_env_up':
+        case 'workspace_test_env_status':
+        case 'workspace_test_env_logs':
+        case 'workspace_test_env_down': {
+            const { testEnvUp, testEnvStatus, testEnvLogs, testEnvDown } = await import('./test-env-orchestrator.js');
+            const base = {
+                workspaceDir,
+                run: runCommand,
+                fileExists: (p: string) => fs.existsSync(p),
+                composeFile: typeof payload['compose_file'] === 'string' ? payload['compose_file'] : undefined,
+            };
+            const envResult =
+                actionType === 'workspace_test_env_up'
+                    ? await testEnvUp({
+                        ...base,
+                        services: Array.isArray(payload['services']) ? (payload['services'] as string[]) : undefined,
+                    })
+                    : actionType === 'workspace_test_env_status'
+                        ? await testEnvStatus(base)
+                        : actionType === 'workspace_test_env_logs'
+                            ? await testEnvLogs({
+                                ...base,
+                                service: typeof payload['service'] === 'string' ? payload['service'] : undefined,
+                                tailLines: typeof payload['tail_lines'] === 'number' ? payload['tail_lines'] : undefined,
+                            })
+                            : await testEnvDown(base);
+
+            return envResult.ok
+                ? {
+                    ok: true,
+                    output: JSON.stringify(
+                        { summary: envResult.summary, services: envResult.services ?? [] },
+                        null,
+                        2,
+                    ),
+                }
+                : { ok: false, output: '', errorOutput: `${actionType}: ${envResult.error ?? 'unknown failure'}` };
         }
 
         // ------------------------------------------------------------------
@@ -7896,6 +7948,7 @@ export async function executeLocalWorkspaceAction(input: {
             ]);
             const mediumRiskActions = new Set([
                 'code_edit', 'code_edit_patch', 'code_search_replace', 'run_build', 'run_tests', 'git_commit', 'autonomous_loop',
+                'workspace_test_env_up', 'workspace_test_env_down',
                 'workspace_memory_write', 'git_stash', 'apply_patch', 'file_move', 'file_delete', 'run_linter', 'workspace_install_deps',
                 'workspace_checkpoint', 'workspace_rename_symbol', 'workspace_extract_function', 'workspace_analyze_imports',
                 'workspace_security_scan', 'workspace_bulk_refactor', 'workspace_atomic_edit_set', 'workspace_generate_from_template',
