@@ -36,6 +36,8 @@ import { maybeNotify, customerNotificationStore } from './notification-hook.js';
 import { loadNotificationConfigFromEnv } from './config/notification-config.js';
 import { customerCRMStore, crmService, loadCRMConfigFromEnv } from './crm-hook.js';
 import { customerERPStore, loadERPConfigFromEnv } from './erp-hook.js';
+import { createTaskQueueStore, type TaskQueueStore } from './task-queue-store.js';
+import { getRedisClient } from '@agentfarm/redis-client';
 import {
     createLlmDecisionResolver,
     createLlmDecisionResolverFromConfig,
@@ -406,6 +408,7 @@ type RuntimeServerOptions = {
     dependencyProbe?: (baseUrl: string) => Promise<boolean>;
     approvalIntakeClient?: ApprovalIntakeClient;
     connectorActionExecuteClient?: ConnectorActionExecuteClient;
+    taskQueueStore?: TaskQueueStore;
     approvalIntakeMaxAttempts?: number;
     approvalIntakeBackoffMs?: number;
     sleep?: (ms: number) => Promise<void>;
@@ -2094,6 +2097,10 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         ?? createDefaultTaskExecutionRecordWriter(env);
     const llmConfigFetcher = options.llmConfigFetcher ?? defaultLlmConfigFetcher;
     const workspaceSessionFetcher = options.workspaceSessionFetcher ?? defaultWorkspaceSessionFetcher;
+    // Durable queue: queued tasks are persisted on intake, removed on
+    // completion, restored at worker start — survives restarts (at-least-once).
+    const taskQueueStore = options.taskQueueStore ?? createTaskQueueStore({ redis: getRedisClient() });
+
     let llmDecisionResolver = options.llmDecisionResolver ?? createLlmDecisionResolver(env);
     let activeModelProvider = env.AF_MODEL_PROVIDER ?? env.AGENTFARM_MODEL_PROVIDER ?? 'agentfarm';
     let activeCodeGenFn: LlmCodeGenFn | undefined;
@@ -5637,6 +5644,27 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             return;
         }
 
+        // Restore tasks that were queued (not yet completed) when the previous
+        // process died — the durable-queue half of the restart-loss fix.
+        void (async () => {
+            try {
+                const restored = await taskQueueStore.loadAll(config.botId);
+                const known = new Set([
+                    ...workerLoop.queuedTasks.map((t) => t.taskId),
+                    ...workerLoop.activeTaskIds,
+                ]);
+                const toRequeue = restored.filter((t) => !known.has(t.taskId));
+                if (toRequeue.length > 0) {
+                    workerLoop.queuedTasks.push(...toRequeue);
+                    emitRuntimeEvent('runtime.task_queue_restored', config, {
+                        restored_count: toRequeue.length,
+                        task_ids: toRequeue.map((t) => t.taskId),
+                        queue_depth: workerLoop.queuedTasks.length,
+                    });
+                }
+            } catch { /* fail-safe: restore is best-effort */ }
+        })();
+
         // Purge stale output-verifier entries every 15 minutes.
         verifierPurgeHandle = setInterval(() => { purgeStalePendingEntries(); }, 15 * 60 * 1_000);
 
@@ -5663,11 +5691,15 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 }
                 if (isBudgetDenied(task)) {
                     void persistBudgetDenialRecord(task, config);
+                    void taskQueueStore.remove(config.botId, task.taskId);
                     continue;
                 }
                 workerLoop.activeTaskIds.add(task.taskId);
                 void processOneTask(task, config).finally(() => {
                     workerLoop.activeTaskIds.delete(task.taskId);
+                    // Processing reached a terminal record — clear the durable
+                    // entry so a later restart cannot double-run this task.
+                    void taskQueueStore.remove(config.botId, task.taskId);
                 });
             }
             if (workerLoop.activeTaskIds.size === 0) {
@@ -6430,11 +6462,13 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             });
         }
 
-        workerLoop.queuedTasks.push({
+        const queuedEnvelope = {
             taskId,
             payload: request.body?.payload ?? {},
             enqueuedAt: now(),
-        });
+        };
+        workerLoop.queuedTasks.push(queuedEnvelope);
+        if (configCache) await taskQueueStore.persist(configCache.botId, queuedEnvelope);
 
         emitRuntimeEvent('runtime.task_intake_queued', configCache, {
             task_id: taskId,
@@ -6514,7 +6548,9 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
             });
         }
 
-        workerLoop.queuedTasks.push({ taskId, payload, enqueuedAt: now() });
+        const queuedEnvelope = { taskId, payload, enqueuedAt: now() };
+        workerLoop.queuedTasks.push(queuedEnvelope);
+        if (configCache) await taskQueueStore.persist(configCache.botId, queuedEnvelope);
 
         emitRuntimeEvent('runtime.task_intake_queued', configCache, {
             task_id: taskId,

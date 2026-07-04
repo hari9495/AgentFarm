@@ -6095,3 +6095,95 @@ test('devops tasks dispatch azure read-only cloud actions to the execute client'
         await app.close();
     }
 });
+
+test('queued tasks survive a runtime restart via the durable task-queue store', async () => {
+    // Shared in-memory store standing in for Redis across two server instances.
+    const persisted = new Map<string, { taskId: string; payload: Record<string, unknown>; enqueuedAt: number }>();
+    const sharedStore = {
+        async persist(_botId: string, task: { taskId: string; payload: Record<string, unknown>; enqueuedAt: number }) {
+            persisted.set(task.taskId, task);
+        },
+        async remove(_botId: string, taskId: string) {
+            persisted.delete(taskId);
+        },
+        async loadAll(_botId: string) {
+            return [...persisted.values()];
+        },
+    };
+
+    // ── Instance A: intake a task but never process it (worker effectively idle) ──
+    const appA = buildRuntimeServer({
+        env: {
+            ...baseEnv(),
+            AF_APPROVAL_API_URL: 'http://127.0.0.1:9',
+            AF_EVIDENCE_API_URL: 'http://127.0.0.1:9',
+        },
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 3_600_000,
+        taskQueueStore: sharedStore,
+    });
+
+    try {
+        await appA.inject({ method: 'POST', url: '/startup' });
+        const intakeRes = await appA.inject({
+            method: 'POST',
+            url: '/tasks/intake',
+            payload: {
+                task_id: 'durable-task-1',
+                payload: {
+                    action_type: 'read_task',
+                    connector_type: 'jira',
+                    summary: 'Read the tracker item state before the restart',
+                    target: 'AF-1',
+                    issue_key: 'AF-1',
+                },
+            },
+        });
+        assert.equal(intakeRes.statusCode, 202);
+        assert.ok(persisted.has('durable-task-1'), 'intake must persist the queued task');
+    } finally {
+        await appA.close();
+    }
+
+    // ── Instance B: fresh process over the same store — task must be restored and processed ──
+    const connectorCalls: Array<{ connectorType: string; actionType: string }> = [];
+    const appB = buildRuntimeServer({
+        env: {
+            ...baseEnv(),
+            AF_APPROVAL_API_URL: 'http://127.0.0.1:9',
+            AF_EVIDENCE_API_URL: 'http://127.0.0.1:9',
+        },
+        closeOnKill: false,
+        dependencyProbe: async () => true,
+        workerPollMs: 10,
+        taskQueueStore: sharedStore,
+        connectorActionExecuteClient: async (input) => {
+            connectorCalls.push({ connectorType: input.connectorType, actionType: input.actionType });
+            return { ok: true, statusCode: 200 };
+        },
+    });
+
+    try {
+        await appB.inject({ method: 'POST', url: '/startup' });
+        const calls = await waitForValue(
+            () =>
+                connectorCalls.some((c) => c.connectorType === 'jira' && c.actionType === 'read_task')
+                    ? connectorCalls
+                    : undefined,
+            { timeoutMs: 60_000, pollMs: 100 },
+        );
+        assert.ok(
+            calls?.some((c) => c.connectorType === 'jira' && c.actionType === 'read_task'),
+            `restored task must be dispatched after restart (saw: ${JSON.stringify(connectorCalls)})`,
+        );
+        // Completion must clear the durable entry so it cannot double-run on the next restart.
+        await waitForValue(
+            () => (!persisted.has('durable-task-1') ? true : undefined),
+            { timeoutMs: 60_000, pollMs: 100 },
+        );
+        assert.ok(!persisted.has('durable-task-1'), 'completed task must be removed from the durable store');
+    } finally {
+        await appB.close();
+    }
+});
