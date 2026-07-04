@@ -109,6 +109,15 @@ case "$BACKUP_DESTINATION" in
     mkdir -p "$LOCAL_DIR"
     cp "$DUMP_FILE" "${LOCAL_DIR}/${DUMP_NAME}"
     log "Backup stored locally: ${LOCAL_DIR}/${DUMP_NAME}"
+
+    # Retention: keep the newest BACKUP_RETENTION_COUNT dumps (default 14).
+    RETENTION="${BACKUP_RETENTION_COUNT:-14}"
+    PRUNED=0
+    while IFS= read -r stale; do
+      rm -f "$stale" && PRUNED=$((PRUNED + 1))
+    done < <(ls -1t "$LOCAL_DIR"/agentfarm_*.dump 2>/dev/null | tail -n "+$((RETENTION + 1))")
+    [[ "$PRUNED" -gt 0 ]] && log "Retention: pruned $PRUNED dump(s) beyond the newest $RETENTION."
+
     log "WARNING: local backups do not satisfy offsite durability requirements."
     ;;
 

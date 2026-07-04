@@ -46,3 +46,6 @@ apps/website/.auth.sqlite-wal
 # Scratch / scriptable dumps (not source)
 read.md
 routes_raw.txt
+
+# Local Postgres backups (pg-backup sidecar)
+backups/

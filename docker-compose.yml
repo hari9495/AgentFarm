@@ -182,6 +182,46 @@
       - agentfarm
     restart: unless-stopped
 
+  # Scheduled Postgres backups + weekly restore drill. Opt-in:
+  #   docker compose --profile backup up -d pg-backup
+  # Dumps land in ./backups (BACKUP_RETENTION_COUNT newest kept, default 14).
+  # Every 7th cycle runs db-restore-drill.sh, proving the newest dump actually
+  # restores into a scratch database. For offsite durability, sync ./backups
+  # to Azure Blob (see docs/runbooks/backup-restore.md).
+  pg-backup:
+    image: pgvector/pgvector:pg16
+    container_name: agentfarm-pg-backup
+    profiles: [ backup ]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-agentfarm}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agentfarm}
+      BACKUP_DESTINATION: local
+      LOCAL_BACKUP_DIR: /backups
+      BACKUP_RETENTION_COUNT: ${BACKUP_RETENTION_COUNT:-14}
+      BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-24}
+      DRILL_MIN_TABLES: ${DRILL_MIN_TABLES:-50}
+    volumes:
+      - ./backups:/backups
+      - ./scripts/db-backup.sh:/usr/local/bin/db-backup.sh:ro
+      - ./scripts/db-restore-drill.sh:/usr/local/bin/db-restore-drill.sh:ro
+    entrypoint: [ 'bash', '-c' ]
+    command:
+      - |
+        cycle=0
+        while true; do
+          bash /usr/local/bin/db-backup.sh || echo "[pg-backup] backup FAILED (exit $$?)"
+          if [ $$((cycle % 7)) -eq 0 ]; then
+            bash /usr/local/bin/db-restore-drill.sh || echo "[pg-backup] restore drill FAILED (exit $$?)"
+          fi
+          cycle=$$((cycle + 1))
+          sleep $$((BACKUP_INTERVAL_HOURS * 3600))
+        done
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agentfarm
+    restart: unless-stopped
+
   worker-runner:
     build:
       context: .
