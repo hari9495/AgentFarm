@@ -10,6 +10,7 @@
  */
 
 import type { TaskEnvelope, ActionDecision, RiskLevel } from '../execution-engine.js';
+import { screenForInjection, INJECTION_RISK_FLOOR } from '../prompt-injection-screen.js';
 
 // ---------------------------------------------------------------------------
 // Risk tier sets
@@ -186,6 +187,29 @@ export function scoreConfidence(payload: Record<string, unknown>): number {
 
 /** Maps an action type + confidence to a risk level with a human-readable reason. */
 export function classifyRisk(
+    actionType: string,
+    confidence: number,
+    payload: Record<string, unknown>,
+): { riskLevel: RiskLevel; reason: string } {
+    const base = classifyRiskWithoutInjectionFloor(actionType, confidence, payload);
+
+    // Prompt-injection floor (pre-flight security P0): untrusted content that
+    // carries an override/exfiltration signature can never auto-execute — it is
+    // forced onto the human-approval path. Tighten-only, and applied AFTER the
+    // risk_hint override so a poisoned "risk_hint: low" cannot undo it.
+    if (base.riskLevel === 'low') {
+        const screen = screenForInjection(payload);
+        if (screen.flagged) {
+            return {
+                riskLevel: INJECTION_RISK_FLOOR,
+                reason: `Prompt-injection signature detected (${screen.patterns.join(', ')}) — routed to human approval.`,
+            };
+        }
+    }
+    return base;
+}
+
+function classifyRiskWithoutInjectionFloor(
     actionType: string,
     confidence: number,
     payload: Record<string, unknown>,
