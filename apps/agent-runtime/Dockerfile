@@ -53,6 +53,12 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
+# git is required by the developer agent's workspace actions (git_clone,
+# git_branch, git_commit, git_push) and the autonomous PR loop. openssh-client
+# provides ssh for any git-over-ssh remotes. Without these the loop hangs/fails
+# on clone.
+RUN apk add --no-cache git openssh-client
+
 # Copy node_modules (includes pnpm virtual store + workspace symlinks)
 COPY --from=builder /app/node_modules ./node_modules
 
