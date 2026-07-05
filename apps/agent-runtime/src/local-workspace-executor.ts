@@ -4454,6 +4454,12 @@ export async function executeLocalWorkspaceAction(input: {
                     pr_review_wait_mins: typeof payload['pr_review_wait_mins'] === 'number' ? payload['pr_review_wait_mins'] : undefined,
                     ci_check_wait_mins: typeof payload['ci_check_wait_mins'] === 'number' ? payload['ci_check_wait_mins'] : undefined,
                     max_ci_fix_attempts: typeof payload['max_ci_fix_attempts'] === 'number' ? payload['max_ci_fix_attempts'] : undefined,
+                    // GitHub config: explicit payload.github wins; otherwise the loop
+                    // falls back to the runtime env (GITHUB_TOKEN/OWNER/REPO). When
+                    // complete, the loop clones the repo into the workspace itself.
+                    github: (payload['github'] && typeof payload['github'] === 'object'
+                        ? (payload['github'] as { token?: string; owner?: string; repo?: string; baseBranch?: string })
+                        : undefined),
                 });
                 return {
                     ok: result.ok,

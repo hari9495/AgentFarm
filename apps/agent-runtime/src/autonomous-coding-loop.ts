@@ -18,6 +18,12 @@ import { getSkillHandler, analyzeIssueWithLLM, synthesizeCodeFixWithLLM, analyze
 import { executeLocalWorkspaceAction } from './local-workspace-executor.js';
 import { signOutbound } from './outbound-signer.js';
 import { pollPrChecks, runCiFeedbackCycle, type CiCycleResult } from './ci-feedback.js';
+import {
+    resolveGithubConfig,
+    buildAuthenticatedCloneUrl,
+    redactToken,
+    type GithubConfigInput,
+} from './github-repo-config.js';
 import type { AgentPersonaRecord } from '@agentfarm/shared-types';
 
 // ---------------------------------------------------------------------------
@@ -25,6 +31,7 @@ import type { AgentPersonaRecord } from '@agentfarm/shared-types';
 // ---------------------------------------------------------------------------
 
 export type LoopStep =
+    | 'clone_repo'
     | 'analyze_issue'
     | 'create_branch'
     | 'implement_changes'
@@ -85,6 +92,13 @@ export type AutonomousLoopInput = {
     ci_check_wait_mins?: number;
     /** Maximum CI fix→push rounds before giving up (default 3). */
     max_ci_fix_attempts?: number;
+    /**
+     * GitHub config (token/owner/repo/baseBranch) — preferred over env. When
+     * present with token+owner+repo, the loop clones the repo into the
+     * workspace before branching (self-contained in-runtime run) and uses this
+     * config to open the PR.
+     */
+    github?: GithubConfigInput;
 };
 
 export type AutonomousLoopResult = {
@@ -807,11 +821,12 @@ async function runCreatePr(input: AutonomousLoopInput, branchName: string, steps
         };
     }
 
-    // Live mode: call GitHub REST API
-    const token = process.env['GITHUB_TOKEN'] ?? '';
-    const owner = process.env['GITHUB_OWNER'] ?? '';
-    const repo = process.env['GITHUB_REPO'] ?? '';
-    const base = process.env['GITHUB_DEFAULT_BASE_BRANCH'] ?? 'main';
+    // Live mode: call GitHub REST API. Task-provided github config wins over env.
+    const gh = resolveGithubConfig(input.github, process.env);
+    const token = gh.token;
+    const owner = gh.owner;
+    const repo = gh.repo;
+    const base = gh.baseBranch;
 
     if (!token || !owner || !repo) {
         const msg = 'Missing GITHUB_TOKEN, GITHUB_OWNER, or GITHUB_REPO — PR creation skipped.';
@@ -891,9 +906,10 @@ export async function runCiFeedbackForPr(
 
     let cycle = deps?.cycle;
     if (!cycle) {
-        const token = process.env['GITHUB_TOKEN'] ?? '';
-        const owner = process.env['GITHUB_OWNER'] ?? '';
-        const repo = process.env['GITHUB_REPO'] ?? '';
+        const gh = resolveGithubConfig(input.github, process.env);
+        const token = gh.token;
+        const owner = gh.owner;
+        const repo = gh.repo;
         if (!token || !owner || !repo) {
             return {
                 ...record,
@@ -958,6 +974,61 @@ export async function runCiFeedbackForPr(
 }
 
 // ---------------------------------------------------------------------------
+// Clone step — seed the workspace with the repo (self-contained in-runtime run)
+// ---------------------------------------------------------------------------
+
+export async function runCloneRepo(
+    input: AutonomousLoopInput,
+    workspaceKey: string,
+): Promise<LoopStepRecord> {
+    const record: LoopStepRecord = { step: 'clone_repo', status: 'running', started_at: new Date().toISOString(), attempt: 1 };
+    const cfg = resolveGithubConfig(input.github, process.env);
+
+    // No GitHub config → assume the workspace is already seeded (provisioning /
+    // prior step). Backward-compatible: skip rather than fail.
+    if (!cfg.complete || input.dry_run) {
+        return {
+            ...record,
+            status: 'skipped',
+            completed_at: new Date().toISOString(),
+            output: {
+                note: input.dry_run
+                    ? 'Dry-run: clone skipped.'
+                    : 'No complete GitHub config (token+owner+repo) — assuming workspace is pre-seeded.',
+            },
+        };
+    }
+    if (!input.tenantId || !input.botId) {
+        return { ...record, status: 'failed', completed_at: new Date().toISOString(), error: 'tenantId and botId are required to clone into a workspace.' };
+    }
+
+    const cloneUrl = buildAuthenticatedCloneUrl({ token: cfg.token, owner: cfg.owner, repo: cfg.repo });
+    const result = await executeLocalWorkspaceAction({
+        tenantId: input.tenantId,
+        botId: input.botId,
+        taskId: workspaceKey,
+        actionType: 'git_clone',
+        payload: { workspace_key: workspaceKey, repo_url: cloneUrl, branch: cfg.baseBranch },
+    });
+
+    if (!result.ok) {
+        return {
+            ...record,
+            status: 'failed',
+            completed_at: new Date().toISOString(),
+            output: { repo: `${cfg.owner}/${cfg.repo}`, clone_url: redactToken(cloneUrl) },
+            error: `git clone failed: ${result.errorOutput ?? 'unknown error'}`,
+        };
+    }
+    return {
+        ...record,
+        status: 'success',
+        completed_at: new Date().toISOString(),
+        output: { repo: `${cfg.owner}/${cfg.repo}`, base_branch: cfg.baseBranch, clone_url: redactToken(cloneUrl) },
+    };
+}
+
+// ---------------------------------------------------------------------------
 // Main entry point
 // ---------------------------------------------------------------------------
 
@@ -977,22 +1048,38 @@ export async function runAutonomousLoop(input: AutonomousLoopInput): Promise<Aut
         stepRecord('create_pr'),
     ];
 
+    // Step 0: Clone the repo into the workspace (when GitHub config is complete;
+    // skipped when the workspace is pre-seeded by provisioning). Prepended so
+    // the branch/edit/push steps have a real git repo + authenticated origin.
+    const cloneRecord = await runCloneRepo(input, workspaceKey);
+    if (cloneRecord.status !== 'skipped') {
+        steps.unshift(cloneRecord);
+        await saveCheckpoint(loopId, steps);
+        if (cloneRecord.status === 'failed') {
+            return buildResult(input, steps, branchName, loopId, startTime, 'Repo clone failed — loop aborted.');
+        }
+    }
+
+    const analyzeIdx = steps.findIndex((s) => s.step === 'analyze_issue');
+
     // Step 1: Analyze issue (LLM-enhanced when ANTHROPIC_API_KEY available)
-    steps[0] = await runAnalyzeIssue(input);
+    steps[analyzeIdx] = await runAnalyzeIssue(input);
     await saveCheckpoint(loopId, steps);
-    if (steps[0].status === 'failed') {
+    if (steps[analyzeIdx].status === 'failed') {
         return buildResult(input, steps, branchName, loopId, startTime, 'Issue analysis failed — loop aborted.');
     }
 
     // Step 2: Create branch (executes real git checkout -b in live mode)
-    steps[1] = await executeCreateBranch(branchName, input, workspaceKey);
+    const branchIdx = steps.findIndex((s) => s.step === 'create_branch');
+    steps[branchIdx] = await executeCreateBranch(branchName, input, workspaceKey);
     await saveCheckpoint(loopId, steps);
-    if (steps[1].status === 'failed') {
+    if (steps[branchIdx].status === 'failed') {
         return buildResult(input, steps, branchName, loopId, startTime, 'Branch creation failed — loop aborted.');
     }
 
     // Step 3: Implement changes (calls code_edit in live mode)
-    steps[2] = await runImplementChanges(input, branchName, workspaceKey);
+    const implementIdx = steps.findIndex((s) => s.step === 'implement_changes');
+    steps[implementIdx] = await runImplementChanges(input, branchName, workspaceKey);
     await saveCheckpoint(loopId, steps);
 
     // Step 4: Run tests + self-heal loop (calls run_tests executor in live mode)

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test, { describe, it } from 'node:test';
-import { runAutonomousLoop, resumeFromCheckpoint, createGitHubPR, runCiFeedbackForPr } from './autonomous-coding-loop.js';
+import { runAutonomousLoop, resumeFromCheckpoint, createGitHubPR, runCiFeedbackForPr, runCloneRepo } from './autonomous-coding-loop.js';
 
 // ── runAutonomousLoop ──────────────────────────────────────────────────────
 
@@ -348,4 +348,31 @@ test('runCiFeedbackForPr treats no_checks as skipped (repo without CI)', async (
         },
     );
     assert.equal(record.status, 'skipped');
+});
+
+// ---------------------------------------------------------------------------
+// Clone step (self-contained in-runtime run)
+// ---------------------------------------------------------------------------
+
+test('runCloneRepo skips when no GitHub config is present (workspace pre-seeded)', async () => {
+    const rec = await runCloneRepo({ task_description: 'x' }, 'ws-1');
+    assert.equal(rec.step, 'clone_repo');
+    assert.equal(rec.status, 'skipped');
+});
+
+test('runCloneRepo skips in dry-run even with full github config', async () => {
+    const rec = await runCloneRepo(
+        { task_description: 'x', dry_run: true, tenantId: 't', botId: 'b', github: { token: 'tok', owner: 'o', repo: 'r' } },
+        'ws-1',
+    );
+    assert.equal(rec.status, 'skipped');
+});
+
+test('runCloneRepo fails clearly when github config is complete but tenant/bot missing', async () => {
+    const rec = await runCloneRepo(
+        { task_description: 'x', github: { token: 'tok', owner: 'o', repo: 'r' } },
+        'ws-1',
+    );
+    assert.equal(rec.status, 'failed');
+    assert.match(String(rec.error), /tenantId and botId/i);
 });
