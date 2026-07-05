@@ -1,3 +1,18 @@
+/**
+ * create-customer-user.mjs — seeds the WEBSITE account store (SQLite/D1).
+ *
+ * ⚠️  READ THIS BEFORE USING FOR "customer login": there are TWO auth surfaces
+ *     (see apps/website/AUTH.md). This script writes to the website's own
+ *     `users` table (SQLite local / Cloudflare D1 in prod), which backs signup,
+ *     the /admin console, onboarding, and `/api/auth/login`.
+ *
+ *     It does NOT create a customer-DASHBOARD (portal) login. The portal
+ *     dashboard at /dashboard authenticates via `/api/portal/auth/*` against
+ *     the gateway's Postgres `TenantPortalAccount`. To seed THAT, set a
+ *     password on a TenantPortalAccount row in Postgres (see AUTH.md).
+ *
+ * Despite the name, this is a website-account seeder, not a portal seeder.
+ */
 import { DatabaseSync } from 'node:sqlite';
 import { webcrypto } from 'node:crypto';
 
