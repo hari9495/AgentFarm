@@ -30,7 +30,7 @@
         "@opentelemetry/semantic-conventions": "^1.40.0"
     },
     "devDependencies": {
-        "@types/node": "^20.0.0",
+        "@types/node": "^20.19.43",
         "tsx": "^4.21.0",
         "typescript": "^5.7.2"
     }
