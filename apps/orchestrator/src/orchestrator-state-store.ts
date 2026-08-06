@@ -247,7 +247,8 @@ const parsePersistedState = (payload: string): OrchestratorPersistedState | null
 
 const loadPrismaClient = async (): Promise<PrismaClientLike> => {
     const mod = await import('@prisma/client');
-    const PrismaClientCtor = (mod as { PrismaClient: new () => PrismaClientLike }).PrismaClient;
+    const PrismaClientCtor = (mod as unknown as { PrismaClient: new () => PrismaClientLike })
+        .PrismaClient;
     return new PrismaClientCtor();
 };
 

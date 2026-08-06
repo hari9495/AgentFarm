@@ -247,8 +247,10 @@ export async function convertToMarkdown(buffer: Buffer, mimeType: string): Promi
             try {
                 return await markitdownConvert(buffer, '.pptx');
             } catch {
-                const { parseOfficeAsync } = await import('officeparser');
-                return parseOfficeAsync(buffer as unknown as string);
+                // officeparser v7: parseOffice returns an AST; `.to('text')` yields plain text.
+                const { parseOffice } = await import('officeparser');
+                const ast = await parseOffice(buffer);
+                return (await ast.to('text')).value;
             }
         }
 
