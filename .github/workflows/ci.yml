@@ -83,7 +83,10 @@ jobs:
 
   website-permissions:
     runs-on: ubuntu-latest
-    continue-on-error: true  # website session tests require Cloudflare D1 binding unavailable in next start
+    env:
+      # Both the server and the test process must read the same SQLite file:
+      # the test seeds users/sessions into it, the server authenticates against it.
+      WEBSITE_AUTH_DB_PATH: ${{ github.workspace }}/apps/website/.auth.sqlite
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -104,8 +107,12 @@ jobs:
       - name: Build website
         run: pnpm --filter @agentfarm/website build > /tmp/website-build.log 2>&1
 
+      # `next start` is plain Node, so getCloudflareContext() has no D1 binding and
+      # every authenticated route 500s. Inject the same D1-over-SQLite mock the tests
+      # already use (tests/cloudflare-setup.mts), which also applies migrations/*.sql.
       - name: Start website server
-        run: pnpm --filter @agentfarm/website start > /tmp/website-start.log 2>&1 &
+        working-directory: apps/website
+        run: NODE_OPTIONS="--import tsx --import ./tests/cloudflare-setup.mts" pnpm start > /tmp/website-start.log 2>&1 &
 
       - name: Wait for website
         run: |

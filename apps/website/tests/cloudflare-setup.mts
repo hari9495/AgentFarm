@@ -5,7 +5,7 @@
  * Imported via --import ./tests/cloudflare-setup.mts in every tsx --test command.
  */
 import { DatabaseSync } from "node:sqlite";
-import { existsSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -13,12 +13,27 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const DB_PATH =
     process.env["WEBSITE_AUTH_DB_PATH"] ?? resolve(__dirname, "../.auth.sqlite");
 
-if (!existsSync(DB_PATH)) {
-    console.error(`[cloudflare-setup] SQLite DB not found at ${DB_PATH}. Run migrations first.`);
-    // Allow tests to import; they will fail with a clear error from DatabaseSync
-}
+const _db = new DatabaseSync(DB_PATH);
 
-const _db = new DatabaseSync(DB_PATH, { open: existsSync(DB_PATH) });
+/**
+ * Apply migrations/*.sql so a fresh checkout (and CI, where .auth.sqlite is
+ * deliberately untracked) gets the schema instead of "no such table: users".
+ * 0001 is all CREATE ... IF NOT EXISTS; later files use bare ALTER TABLE ADD
+ * COLUMN, which throws on re-run — that specific error is the already-applied
+ * signal, so it is the only one swallowed.
+ */
+const migrationsDir = resolve(__dirname, "../migrations");
+for (const file of readdirSync(migrationsDir).filter((f) => f.endsWith(".sql")).sort()) {
+    const sql = readFileSync(resolve(migrationsDir, file), "utf8");
+    for (const statement of sql.split(";")) {
+        if (!statement.replace(/--[^\n]*/g, "").trim()) continue;
+        try {
+            _db.exec(statement);
+        } catch (err) {
+            if (!/duplicate column name/i.test((err as Error).message)) throw err;
+        }
+    }
+}
 
 /**
  * Creates a D1-compatible async wrapper around a DatabaseSync instance.

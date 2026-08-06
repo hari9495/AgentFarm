@@ -160,13 +160,15 @@ test("permission matrix for company portal and superadmin APIs", async () => {
 
         const customerSuperadminToken = (await createSession(superadmin.id)).sessionToken;
 
+        // /admin/* moved to portal_session auth in f651d8fb ("migrate /admin route
+        // to portal_session auth"). An operator agentfarm_session alone must be
+        // bounced to /login — it is no longer a credential for this surface.
         const customerTenantSuperadminPage = await request("/admin/superadmin", customerSuperadminToken);
-        if (![200, 307].includes(customerTenantSuperadminPage.status)) {
-            assert.fail(`Unexpected status for /admin/superadmin: ${customerTenantSuperadminPage.status}`);
-        }
-        if (customerTenantSuperadminPage.status === 307) {
-            assert.equal(customerTenantSuperadminPage.location, "/dashboard");
-        }
+        assert.equal(customerTenantSuperadminPage.status, 307);
+        assert.equal(
+            customerTenantSuperadminPage.location,
+            "/login?next=%2Fadmin%2Fsuperadmin",
+        );
 
         const customerCompanyPage = await request("/company", customerSuperadminToken);
         assert.equal(customerCompanyPage.status, 307);
