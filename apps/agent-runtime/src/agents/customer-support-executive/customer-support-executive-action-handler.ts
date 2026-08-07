@@ -19,7 +19,8 @@
  *   - Default case is exhaustive — TS compiler enforces coverage.
  */
 
-import type { LocalWorkspaceResult } from '../../local-workspace-executor.js';
+import type { LocalWorkspaceResult, LocalWorkspaceConnectorClient } from '../../local-workspace-executor.js';
+import { sendEmailViaConnector } from '../shared/connector-email.js';
 import {
     openTicket, updateTicket, closeTicket, mergeTickets, assignTicket,
 } from './ticket-manager.js';
@@ -155,9 +156,11 @@ export async function handleCustomerSupportExecutiveAction(params: {
     gatewayBaseUrl?: string;
     serviceToken?: string;
     workspaceId?: string;
+    /** Optional — dispatches native connector actions (e.g. gmail/outlook send_email). */
+    connectorActionExecuteClient?: LocalWorkspaceConnectorClient;
 }): Promise<LocalWorkspaceResult> {
     const { actionType, tenantId, botId, taskId, payload } = params;
-    const { gatewayBaseUrl, serviceToken, workspaceId } = params;
+    const { gatewayBaseUrl, serviceToken, workspaceId, connectorActionExecuteClient } = params;
 
     // RAG pre-flight — fetch prior resolved tickets, product knowledge, and support lessons
     let ragContextBlock = '';
@@ -328,7 +331,29 @@ export async function handleCustomerSupportExecutiveAction(params: {
                 followUpSla: str(payload['followUpSla']) || undefined,
             });
 
-            // Attempt to send via email MCP connector
+            // Preferred path: the workspace's native email connector (gmail/outlook/
+            // generic REST/SMTP) via the connector execute client.
+            const connectorSend = await sendEmailViaConnector({
+                connectorClient: connectorActionExecuteClient,
+                workspaceId,
+                gatewayBaseUrl,
+                serviceToken,
+                to: customerEmail,
+                subject: reply.subject,
+                body: reply.body,
+                inReplyTo: str(payload['ticketId']) || undefined,
+            });
+            if (connectorSend.sent) {
+                return ok({
+                    sent: true,
+                    via: connectorSend.connectorType,
+                    attempts: connectorSend.attempts,
+                    reply,
+                });
+            }
+
+            // Fallback: the legacy MCP email server. Kept so deployments already
+            // running on MCP_*_URL keep working while connectors are rolled out.
             const emailUrl =
                 process.env['MCP_GMAIL_URL'] ??
                 process.env['MCP_OUTLOOK_URL'] ??
@@ -356,7 +381,13 @@ export async function handleCustomerSupportExecutiveAction(params: {
                 }
             }
 
-            return ok({ sent: false, reason: 'No email MCP connector configured', reply });
+            // Both paths exhausted — return the composed reply for manual dispatch,
+            // naming the connector reason so the operator can see what to fix.
+            return ok({
+                sent: false,
+                reason: `Email not dispatched (connector: ${connectorSend.reason}; no MCP email server configured)`,
+                reply,
+            });
         }
 
         case 'workspace_cse_reply_followup': {

@@ -15394,6 +15394,7 @@ export async function executeLocalWorkspaceAction(input: {
                 gatewayBaseUrl: input.gatewayBaseUrl,
                 serviceToken: input.serviceToken,
                 workspaceId: input.workspaceId,
+                connectorActionExecuteClient,
             });
             const cseTitle =
                 typeof payload['subject'] === 'string' ? payload['subject'] :
