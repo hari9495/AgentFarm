@@ -24,7 +24,7 @@
  * Pattern mirrors technical-writer-action-handler.ts.
  */
 
-import type { LocalWorkspaceResult } from '../../local-workspace-executor.js';
+import type { LocalWorkspaceResult, LocalWorkspaceConnectorClient } from '../../local-workspace-executor.js';
 import type { ProseCallerFn } from './llm-prose-writer.js';
 import { researchContentTopic } from './content-research-service.js';
 import { writeProse, reviewAndRefineProse } from './llm-prose-writer.js';
@@ -143,6 +143,13 @@ export interface ContentWriterActionInput {
      * Provided by tests to avoid real API calls.
      */
     fetchFn?: CmsFetchFn;
+    /**
+     * Native connector dispatch client. When present and the CMS target is
+     * WordPress, workspace_cw_publish_cms routes through the workspace's
+     * connected WordPress connector (credentials from the token store) instead
+     * of the raw-fetch path that needs credentials supplied in the payload.
+     */
+    connectorActionExecuteClient?: LocalWorkspaceConnectorClient;
     /**
      * Injectable research fetch function (Wikipedia / HN / Reddit).
      * Used by workspace_cw_fact_check auto-research. Defaults to globalThis.fetch.
@@ -322,6 +329,27 @@ export async function handleContentWriterAction(
         case 'workspace_cw_publish_cms': {
             const target = payload['target'] as CmsTarget | undefined;
             if (!target) return fail('payload.target is required for workspace_cw_publish_cms');
+
+            // Preferred path: the workspace's connected WordPress connector, so
+            // credentials come from the token store rather than the payload.
+            // WordPress is the only CMS platform with a native publish_content
+            // executor; the others fall through to the raw-fetch path below.
+            // status='draft' preserves the draft-first safety publishToCms enforces —
+            // promotion to live remains the separate HIGH-risk workspace_cw_promote_draft.
+            if (target.platform === 'wordpress' && input.connectorActionExecuteClient) {
+                const title = str(payload['title']);
+                const body = str(payload['body']);
+                if (!title || !body) return fail('payload.title and payload.body are required for workspace_cw_publish_cms');
+                const conn = await input.connectorActionExecuteClient({
+                    connectorType: 'wordpress',
+                    actionType: 'publish_content',
+                    payload: { title, content: body, status: 'draft' },
+                });
+                return conn.ok
+                    ? jsonOut({ published: true, via: 'wordpress', status: 'draft', statusCode: conn.statusCode })
+                    : fail(conn.errorMessage ?? `WordPress connector failed with status ${conn.statusCode}`);
+            }
+
             const result = await publishToCms(
                 {
                     title: str(payload['title']),

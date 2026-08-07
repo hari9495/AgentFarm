@@ -14383,6 +14383,7 @@ export async function executeLocalWorkspaceAction(input: {
                 payload,
                 workspaceDir,
                 callerFn: input.callerFn ?? buildProseCallerFn(),
+                connectorActionExecuteClient,
             });
             // Record outcome in episodic memory so the agent remembers past content tasks
             const cwOutcome: TaskOutcome = cwResult.ok ? 'success' : 'failed';

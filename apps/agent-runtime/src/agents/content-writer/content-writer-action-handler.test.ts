@@ -324,3 +324,70 @@ describe('workspace_cw_brand_voice_learn', () => {
         assert.equal(parsed['sampleCount'], 2);
     });
 });
+
+// ---------------------------------------------------------------------------
+// workspace_cw_publish_cms — WordPress connector bridge
+// ---------------------------------------------------------------------------
+
+describe('workspace_cw_publish_cms connector bridge', () => {
+    const wpPayload = {
+        target: { platform: 'wordpress', baseUrl: 'https://blog.example.com', applicationPassword: 'x' },
+        title: 'Launch announcement',
+        body: '<p>We shipped it.</p>',
+    };
+
+    test('WordPress routes through the connector with publish_content + draft, ignoring payload creds', async () => {
+        const calls: Array<{ connectorType: string; actionType: string; payload: Record<string, unknown> }> = [];
+        const result = await handleContentWriterAction({
+            ...baseInput('workspace_cw_publish_cms', wpPayload),
+            connectorActionExecuteClient: async (i) => {
+                calls.push(i);
+                return { ok: true, statusCode: 201 };
+            },
+        });
+        assert.equal(result.ok, true);
+        assert.equal(calls.length, 1);
+        assert.equal(calls[0]!.connectorType, 'wordpress');
+        assert.equal(calls[0]!.actionType, 'publish_content');
+        assert.equal(calls[0]!.payload['status'], 'draft', 'must stay draft-first — promotion is a separate high-risk action');
+        assert.equal(calls[0]!.payload['title'], 'Launch announcement');
+        assert.equal(calls[0]!.payload['content'], '<p>We shipped it.</p>');
+    });
+
+    test('connector failure is surfaced, not swallowed', async () => {
+        const result = await handleContentWriterAction({
+            ...baseInput('workspace_cw_publish_cms', wpPayload),
+            connectorActionExecuteClient: async () => ({ ok: false, statusCode: 403, errorMessage: 'WordPress rejected app password' }),
+        });
+        assert.equal(result.ok, false);
+        assert.match(result.output ?? '', /WordPress rejected app password/);
+    });
+
+    test('WordPress with no connector client falls back to the raw-fetch path (payload creds)', async () => {
+        let rawFetchHit = false;
+        const result = await handleContentWriterAction({
+            ...baseInput('workspace_cw_publish_cms', wpPayload),
+            // no connectorActionExecuteClient
+            fetchFn: async () => {
+                rawFetchHit = true;
+                return { ok: true, status: 201, json: async () => ({ id: 5, link: 'https://blog.example.com/?p=5' }) };
+            },
+        });
+        assert.equal(rawFetchHit, true, 'without a connector client it must use the injected fetch path');
+        assert.equal(result.ok, true);
+    });
+
+    test('non-WordPress platform never routes through the connector', async () => {
+        let connectorHit = false;
+        await handleContentWriterAction({
+            ...baseInput('workspace_cw_publish_cms', {
+                target: { platform: 'contentful', spaceId: 's', environmentId: 'master', contentTypeId: 'blogPost', accessToken: 't', titleField: 'title', bodyField: 'body', locale: 'en-US' },
+                title: 'T',
+                body: 'B',
+            }),
+            connectorActionExecuteClient: async () => { connectorHit = true; return { ok: true, statusCode: 200 }; },
+            fetchFn: async () => ({ ok: true, status: 201, json: async () => ({ sys: { id: 'c1' } }) }),
+        });
+        assert.equal(connectorHit, false, 'contentful has no native executor — must not route through the connector');
+    });
+});
