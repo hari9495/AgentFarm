@@ -15224,6 +15224,25 @@ export async function executeLocalWorkspaceAction(input: {
                     : process.env['SERVICE_TOKEN'] ?? '',
                 workspaceDir,
                 callLlm: buildTwLlmCallerFn(),
+                // Adapt the connector execute client to the notification executor
+                // shape so async approval Slack/email notifications actually
+                // dispatch. Without this the BA handler ran with an undefined
+                // executor and every approval notification silently failed.
+                notificationExecutor: connectorActionExecuteClient
+                    ? async ({ connectorType, actionType: nActionType, payload: nPayload }) => {
+                          const r = await connectorActionExecuteClient({
+                              connectorType,
+                              actionType: nActionType,
+                              payload: nPayload,
+                          });
+                          return {
+                              ok: r.ok,
+                              resultSummary: r.ok
+                                  ? `dispatched via ${connectorType} (status ${r.statusCode})`
+                                  : r.errorMessage ?? `${connectorType} failed with status ${r.statusCode}`,
+                          };
+                      }
+                    : undefined,
                 executeAction: (aType, aPayload) =>
                     executeLocalWorkspaceAction({
                         tenantId,
