@@ -2,22 +2,24 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Brain, BookOpen, Layers, Network, Search } from 'lucide-react';
+import { Brain, BookOpen, Layers, Network, Search, FileText } from 'lucide-react';
 import MemoryBrowserPanel from '../components/memory-browser-panel';
 import AgentEpisodicMemoryPanel from '../components/agent-episodic-memory-panel';
 import WorkMemoryPanel from '../components/work-memory-panel';
 import AgentMemoryPatternFetcher from '../components/agent-memory-pattern-fetcher';
 import { KnowledgeGraphExplorer } from '../components/knowledge-graph-explorer';
+import KnowledgeBaseUploadPanel from '../components/knowledge-base-upload-panel';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Tab = 'episodic' | 'work' | 'patterns' | 'knowledge' | 'search';
+type Tab = 'episodic' | 'work' | 'patterns' | 'knowledge' | 'companyKnowledge' | 'search';
 
 const TABS: { key: Tab; label: string; icon: React.ElementType; desc: string }[] = [
     { key: 'episodic',  label: 'Episodic Memory',    icon: Brain,   desc: 'Long-term learned patterns per agent'        },
     { key: 'work',      label: 'Work Memory',         icon: Layers,  desc: 'Per-workspace short-term working memory'     },
     { key: 'patterns',  label: 'Memory Patterns',     icon: BookOpen,desc: 'High-confidence patterns + reinforce'        },
     { key: 'knowledge', label: 'Knowledge Graph',     icon: Network, desc: 'Symbols, relationships, snapshots'           },
+    { key: 'companyKnowledge', label: 'Company Knowledge', icon: FileText, desc: 'Upload documents agents ground their answers in' },
     { key: 'search',    label: 'Memory Search',       icon: Search,  desc: 'Full-text + semantic search across all stores'},
 ];
 
@@ -169,6 +171,18 @@ export default function MemoryHubClient({
                         description="Repository symbol index, call graph relationships, and semantic suggestions. Agents use this to understand codebases, navigate dependencies, and make architecture-aware decisions. Includes point-in-time snapshots."
                     >
                         <KnowledgeGraphExplorer />
+                    </TabShell>
+                )}
+
+                {/* Company Knowledge — documents/text agents retrieve into their prompts */}
+                {activeTab === 'companyKnowledge' && (
+                    <TabShell
+                        icon={FileText}
+                        title="Company Knowledge"
+                        description="Upload documents or paste text into AgentKnowledgeBase. Every role agent's RAG retriever searches this store before generating a response — this is what grounds agent answers in your company's actual docs instead of general knowledge."
+                    >
+                        <BotIdInput botId={botId} setBotId={setBotId} />
+                        <KnowledgeBaseUploadPanel botId={botId} />
                     </TabShell>
                 )}
 
