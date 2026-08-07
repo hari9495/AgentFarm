@@ -37,11 +37,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const to = searchParams.get('to') ?? new Date().toISOString();
     const from = searchParams.get('from') ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const botId = searchParams.get('botId') ?? '';
 
     let res: Response;
     try {
         res = await fetch(
-            `${getApiBaseUrl()}/v1/analytics/cost-summary?tenantId=${encodeURIComponent(tenantId)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+            `${getApiBaseUrl()}/v1/analytics/cost-summary?tenantId=${encodeURIComponent(tenantId)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}` +
+                (botId ? `&botId=${encodeURIComponent(botId)}` : ''),
             { headers: { Authorization: authHeader }, cache: 'no-store' },
         );
     } catch {

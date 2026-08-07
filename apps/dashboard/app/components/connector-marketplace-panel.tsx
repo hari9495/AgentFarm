@@ -253,18 +253,11 @@ const CATEGORY_LABELS: Record<ConnectorEntry['category'], string> = {
     testing: 'Testing & QA',
 };
 
-const STATUS_COLORS: Record<ConnectorStatus, string> = {
-    connected: 'text-green-400',
-    disconnected: 'text-yellow-400',
-    error: 'text-red-400',
-    unconfigured: 'text-zinc-500',
-};
-
-const STATUS_DOT: Record<ConnectorStatus, string> = {
-    connected: 'bg-green-400',
-    disconnected: 'bg-yellow-400',
-    error: 'bg-red-400',
-    unconfigured: 'bg-zinc-600',
+const STATUS_COLOR: Record<ConnectorStatus, string> = {
+    connected: 'var(--ok)',
+    disconnected: 'var(--warn)',
+    error: 'var(--danger)',
+    unconfigured: 'var(--ink-muted)',
 };
 
 // ── Connector field map (rich config for the install modal) ──────────────────
@@ -298,7 +291,10 @@ function InstallModal({ connector, onClose, onInstalled }: {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
 
-    const inputCls = 'w-full bg-zinc-700 border border-zinc-600 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500';
+    const inputStyle: React.CSSProperties = {
+        width: '100%', background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 8,
+        padding: '8px 12px', fontSize: 13, color: 'var(--ink)', outline: 'none', boxSizing: 'border-box',
+    };
 
     async function submit(e: React.FormEvent) {
         e.preventDefault();
@@ -319,27 +315,27 @@ function InstallModal({ connector, onClose, onInstalled }: {
     }
 
     return (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
             onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-            <div style={{ background: 'var(--bg-deep)', border: '1px solid #3f3f46', borderRadius: 16, width: '100%', maxWidth: 480, overflow: 'hidden' }}>
+            <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 16, width: '100%', maxWidth: 480, overflow: 'hidden', boxShadow: '0 24px 48px -12px rgba(0,0,0,0.18)' }}>
                 {/* Header */}
-                <div style={{ padding: '18px 20px', borderBottom: '1px solid #3f3f46', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
                         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--info)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>Install Connector</div>
-                        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--bg)' }}>{connector.name}</h2>
+                        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>{connector.name}</h2>
                         <p style={{ margin: 0, fontSize: 12, color: 'var(--ink-muted)', marginTop: 2 }}>{CATEGORY_LABELS[connector.category]}</p>
                     </div>
-                    <button onClick={onClose} style={{ background: 'var(--bg-deep)', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-muted)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                    <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-muted)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
                 </div>
 
                 {/* What agents can do */}
-                <div style={{ padding: '12px 20px', background: 'var(--bg-deep)', borderBottom: '1px solid #27272a' }}>
+                <div style={{ padding: '12px 20px', background: 'var(--bg)', borderBottom: '1px solid var(--line)' }}>
                     <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Your agents will be able to</p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                         {(connector as ConnectorEntry & { supportedActions?: string[] }).supportedActions?.slice(0, 6).map((a: string) => (
-                            <span key={a} style={{ padding: '2px 8px', borderRadius: 6, background: 'var(--bg-deep)', border: '1px solid #3f3f46', fontSize: 10, fontFamily: 'monospace', color: 'var(--ink-muted)' }}>{a}</span>
+                            <span key={a} style={{ padding: '2px 8px', borderRadius: 6, background: 'var(--card)', border: '1px solid var(--line)', fontSize: 10, fontFamily: 'monospace', color: 'var(--ink-muted)' }}>{a}</span>
                         )) ?? connector.requiredEnvVars.slice(0, 4).map(e => (
-                            <span key={e} style={{ padding: '2px 8px', borderRadius: 6, background: 'var(--bg-deep)', border: '1px solid #3f3f46', fontSize: 10, fontFamily: 'monospace', color: 'var(--ink-muted)' }}>{e}</span>
+                            <span key={e} style={{ padding: '2px 8px', borderRadius: 6, background: 'var(--card)', border: '1px solid var(--line)', fontSize: 10, fontFamily: 'monospace', color: 'var(--ink-muted)' }}>{e}</span>
                         ))}
                     </div>
                 </div>
@@ -355,7 +351,7 @@ function InstallModal({ connector, onClose, onInstalled }: {
                                 type={field.type === 'password' ? 'password' : field.type === 'url' ? 'url' : 'text'}
                                 value={values[field.key] ?? ''}
                                 onChange={e => setValues(v => ({ ...v, [field.key]: e.target.value }))}
-                                className={inputCls}
+                                style={inputStyle}
                                 placeholder={field.placeholder}
                                 required={field.required}
                             />
@@ -363,12 +359,12 @@ function InstallModal({ connector, onClose, onInstalled }: {
                         </div>
                     ))}
 
-                    {error && <div style={{ padding: '8px 12px', borderRadius: 9, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: 'var(--danger)', fontSize: 12 }}>⚠ {error}</div>}
-                    {success && <div style={{ padding: '8px 12px', borderRadius: 9, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: 'var(--ok)', fontSize: 12 }}>✓ {connector.name} installed successfully!</div>}
+                    {error && <div style={{ padding: '8px 12px', borderRadius: 9, background: 'var(--danger-bg, rgba(196,22,28,0.08))', border: '1px solid var(--danger)', color: 'var(--danger)', fontSize: 12 }}>⚠ {error}</div>}
+                    {success && <div style={{ padding: '8px 12px', borderRadius: 9, background: 'var(--ok-bg, rgba(26,122,74,0.08))', border: '1px solid var(--ok)', color: 'var(--ok)', fontSize: 12 }}>✓ {connector.name} installed successfully!</div>}
 
                     <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                        <button type="button" onClick={onClose} style={{ flex: 1, padding: '8px', borderRadius: 9, border: '1px solid #3f3f46', background: 'transparent', color: 'var(--ink-muted)', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-                        <button type="submit" disabled={saving || success} style={{ flex: 1, padding: '8px', borderRadius: 9, border: 'none', background: saving || success ? 'var(--info)' : 'var(--info)', color: 'var(--card)', fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+                        <button type="button" onClick={onClose} style={{ flex: 1, padding: '8px', borderRadius: 9, border: '1px solid var(--line)', background: 'transparent', color: 'var(--ink-muted)', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                        <button type="submit" disabled={saving || success} style={{ flex: 1, padding: '8px', borderRadius: 9, border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
                             {saving ? 'Installing…' : success ? '✓ Done' : `Install ${connector.name}`}
                         </button>
                     </div>
@@ -439,8 +435,20 @@ export function ConnectorMarketplacePanel({ agentRoles = [] }: ConnectorMarketpl
 
     const categories = Array.from(new Set(CONNECTOR_CATALOG.map((c) => c.category)));
 
+    const chipStyle = (active: boolean): React.CSSProperties => ({
+        padding: '5px 12px', borderRadius: 9999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+        border: active ? 'none' : '1px solid var(--line)',
+        background: active ? 'var(--accent)' : 'var(--card)',
+        color: active ? '#fff' : 'var(--ink-muted)',
+    });
+
+    const secondaryBtnStyle: React.CSSProperties = {
+        padding: '7px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+        border: '1px solid var(--line)', background: 'var(--bg)', color: 'var(--ink-soft)', textDecoration: 'none',
+    };
+
     return (
-        <div className="flex flex-col gap-6 p-6 bg-zinc-900 min-h-screen text-zinc-100">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: 4, color: 'var(--ink)' }}>
             {installing && (
                 <InstallModal
                     connector={installing}
@@ -453,103 +461,95 @@ export function ConnectorMarketplacePanel({ agentRoles = [] }: ConnectorMarketpl
                     }}
                 />
             )}
-            <div className="flex items-center justify-between">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Connector Marketplace</h1>
-                    <p className="text-zinc-400 text-sm mt-1">
+                    <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--ink)' }}>Connector Marketplace</h1>
+                    <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--ink-muted)' }}>
                         Browse, configure, and health-check external integrations
                     </p>
                 </div>
                 <button
                     onClick={testAll}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors"
+                    style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
                 >
                     Test All
                 </button>
             </div>
 
             {error && (
-                <div className="p-3 bg-red-900/40 border border-red-700 rounded-lg text-red-300 text-sm">
+                <div style={{ padding: 12, background: 'var(--danger-bg, rgba(196,22,28,0.08))', border: '1px solid var(--danger)', borderRadius: 8, color: 'var(--danger)', fontSize: 13 }}>
                     {error}
                 </div>
             )}
 
             {/* Category filter */}
-            <div className="flex gap-2 flex-wrap">
-                <button
-                    onClick={() => setFilter('all')}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
-                >
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button onClick={() => setFilter('all')} style={chipStyle(filter === 'all')}>
                     All ({connectors.length})
                 </button>
                 {categories.map((cat) => (
-                    <button
-                        key={cat}
-                        onClick={() => setFilter(cat)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${filter === cat ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
-                    >
+                    <button key={cat} onClick={() => setFilter(cat)} style={chipStyle(filter === cat)}>
                         {CATEGORY_LABELS[cat]} ({connectors.filter((c) => c.category === cat).length})
                     </button>
                 ))}
             </div>
 
             {/* Connector grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
                 {visible.map((connector) => (
                     <div
                         key={connector.id}
-                        className="bg-zinc-800 border border-zinc-700 rounded-xl p-4 flex flex-col gap-3 hover:border-zinc-500 transition-colors cursor-pointer"
                         onClick={() => setSelected(connector)}
+                        style={{
+                            background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 14,
+                            padding: 16, display: 'flex', flexDirection: 'column', gap: 10, cursor: 'pointer',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.04)', transition: 'border-color 0.15s',
+                        }}
                     >
-                        <div className="flex items-start justify-between">
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                             <div>
-                                <div className="flex items-center gap-2">
-                                    <span
-                                        className={`inline-block w-2 h-2 rounded-full ${STATUS_DOT[connector.status]}`}
-                                    />
-                                    <h3 className="font-semibold text-sm">{connector.name}</h3>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: STATUS_COLOR[connector.status], flexShrink: 0 }} />
+                                    <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{connector.name}</h3>
                                 </div>
-                                <span className="text-xs text-zinc-500 mt-0.5">
+                                <span style={{ fontSize: 11, color: 'var(--ink-muted)' }}>
                                     {CATEGORY_LABELS[connector.category]}
                                 </span>
                             </div>
-                            <span className={`text-xs font-medium ${STATUS_COLORS[connector.status]}`}>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: STATUS_COLOR[connector.status] }}>
                                 {connector.status}
                             </span>
                         </div>
 
-                        <p className="text-xs text-zinc-400 leading-relaxed">{connector.description}</p>
+                        <p style={{ margin: 0, fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.5 }}>{connector.description}</p>
 
-                        <div className="flex flex-wrap gap-1">
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                             {connector.requiredEnvVars.map((env) => (
-                                <span
-                                    key={env}
-                                    className="px-1.5 py-0.5 bg-zinc-700 rounded text-xs font-mono text-zinc-300"
-                                >
+                                <span key={env} style={{ padding: '2px 6px', background: 'var(--bg)', borderRadius: 5, fontSize: 10, fontFamily: 'monospace', color: 'var(--ink-soft)' }}>
                                     {env}
                                 </span>
                             ))}
                         </div>
 
                         {connector.latency_ms !== undefined && (
-                            <p className="text-xs text-zinc-500">
+                            <p style={{ margin: 0, fontSize: 11, color: 'var(--ink-muted)' }}>
                                 Last ping: {connector.latency_ms}ms ·{' '}
                                 {connector.last_checked ? new Date(connector.last_checked).toLocaleTimeString() : '—'}
                             </p>
                         )}
 
-                        <div className="flex gap-2 mt-auto">
+                        <div style={{ display: 'flex', gap: 6, marginTop: 'auto' }}>
                             {connector.status !== 'connected' ? (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setInstalling(connector); }}
-                                    className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-semibold transition-colors text-white"
+                                    style={{ flex: 1, padding: '6px 10px', borderRadius: 7, border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                                 >
                                     + Install
                                 </button>
                             ) : (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setInstalling(connector); }}
-                                    className="flex-1 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-xs font-medium transition-colors text-zinc-300"
+                                    style={{ ...secondaryBtnStyle, flex: 1 }}
                                 >
                                     Reconfigure
                                 </button>
@@ -557,7 +557,7 @@ export function ConnectorMarketplacePanel({ agentRoles = [] }: ConnectorMarketpl
                             <button
                                 onClick={(e) => { e.stopPropagation(); testConnector(connector); }}
                                 disabled={testing[connector.id]}
-                                className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 rounded-lg text-xs font-medium transition-colors"
+                                style={{ ...secondaryBtnStyle, opacity: testing[connector.id] ? 0.5 : 1 }}
                             >
                                 {testing[connector.id] ? '…' : 'Test'}
                             </button>
@@ -566,7 +566,7 @@ export function ConnectorMarketplacePanel({ agentRoles = [] }: ConnectorMarketpl
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-xs font-medium transition-colors"
+                                style={secondaryBtnStyle}
                             >
                                 Docs ↗
                             </a>
@@ -577,13 +577,13 @@ export function ConnectorMarketplacePanel({ agentRoles = [] }: ConnectorMarketpl
 
             {/* Testing connectors locked notice */}
             {!hasTesterRole && (
-                <div className="mt-4 flex items-start gap-3 rounded-xl border border-zinc-700 bg-zinc-800/50 p-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500">
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, borderRadius: 12, border: '1px solid var(--line)', background: 'var(--bg)', padding: 14 }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="var(--ink-muted)" style={{ marginTop: 2, width: 16, height: 16, flexShrink: 0 }}>
                         <path fillRule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clipRule="evenodd" />
                     </svg>
                     <div>
-                        <p className="text-sm font-medium text-zinc-300">Testing &amp; QA connectors are locked</p>
-                        <p className="mt-0.5 text-xs text-zinc-500">
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>Testing &amp; QA connectors are locked</p>
+                        <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--ink-muted)' }}>
                             14 integrations — Selenium, Playwright, Cypress, Appium, k6, JMeter, Postman, SoapUI, TestRail, Zephyr, OWASP ZAP, Burp Suite, Jenkins, CircleCI — are only available after the Tester agent is enabled for this workspace.
                         </p>
                     </div>
@@ -592,45 +592,42 @@ export function ConnectorMarketplacePanel({ agentRoles = [] }: ConnectorMarketpl
 
             {/* Detail drawer */}
             {selected && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+                <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }}
                         onClick={() => setSelected(null)}
                     />
-                    <div className="relative bg-zinc-900 border border-zinc-700 rounded-2xl p-6 w-full max-w-lg mx-4 flex flex-col gap-4">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-bold">{selected.name}</h2>
+                    <div style={{ position: 'relative', background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 480, margin: '0 16px', display: 'flex', flexDirection: 'column', gap: 14, boxShadow: '0 24px 48px -12px rgba(0,0,0,0.18)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>{selected.name}</h2>
                             <button
                                 onClick={() => setSelected(null)}
-                                className="text-zinc-500 hover:text-zinc-300 text-xl leading-none"
+                                style={{ background: 'none', border: 'none', color: 'var(--ink-muted)', fontSize: 18, lineHeight: 1, cursor: 'pointer' }}
                             >
                                 ×
                             </button>
                         </div>
-                        <p className="text-sm text-zinc-300">{selected.description}</p>
+                        <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-soft)' }}>{selected.description}</p>
                         <div>
-                            <p className="text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wide">
+                            <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                                 Required Environment Variables
                             </p>
-                            <div className="flex flex-col gap-1">
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                 {selected.requiredEnvVars.map((env) => (
-                                    <div
-                                        key={env}
-                                        className="flex items-center justify-between px-3 py-2 bg-zinc-800 rounded-lg"
-                                    >
-                                        <span className="font-mono text-sm text-zinc-200">{env}</span>
-                                        <span className="text-xs text-zinc-500">string</span>
+                                    <div key={env} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--bg)', borderRadius: 8 }}>
+                                        <span style={{ fontFamily: 'monospace', fontSize: 13, color: 'var(--ink)' }}>{env}</span>
+                                        <span style={{ fontSize: 11, color: 'var(--ink-muted)' }}>string</span>
                                     </div>
                                 ))}
                             </div>
                         </div>
-                        <div className="flex gap-3">
+                        <div style={{ display: 'flex', gap: 10 }}>
                             <button
                                 onClick={() => {
                                     testConnector(selected);
                                     setSelected(null);
                                 }}
-                                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors"
+                                style={{ flex: 1, padding: '9px 16px', borderRadius: 9, border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
                             >
                                 Run Health Check
                             </button>
@@ -638,7 +635,7 @@ export function ConnectorMarketplacePanel({ agentRoles = [] }: ConnectorMarketpl
                                 href={selected.docs_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-sm font-medium transition-colors"
+                                style={{ padding: '9px 16px', borderRadius: 9, border: '1px solid var(--line)', background: 'var(--bg)', color: 'var(--ink-soft)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}
                             >
                                 View Docs ↗
                             </a>

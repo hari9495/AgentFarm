@@ -56,7 +56,7 @@ const STEP_LABELS: Record<OrderedStep, string> = {
     completed: 'Completed',
 };
 
-const API_BASE = process.env['API_GATEWAY_URL'] ?? 'http://localhost:3000';
+const API_BASE = process.env['DASHBOARD_API_BASE_URL'] ?? 'http://localhost:3000';
 
 async function fetchJob(jobId: string, token: string): Promise<ProvisioningJob | null> {
     try {

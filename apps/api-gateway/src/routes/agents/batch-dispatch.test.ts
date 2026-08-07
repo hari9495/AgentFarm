@@ -270,7 +270,15 @@ describe('GET /v1/agents/batch-dispatch', () => {
         await app.inject({ method: 'POST', url: '/v1/agents/batch-dispatch', payload: minPayload() });
         const res = await app.inject({ method: 'GET', url: '/v1/agents/batch-dispatch' });
         assert.equal(res.statusCode, 200);
-        assert.equal(res.json().batches.length, 1);
+        const batches = res.json().batches;
+        assert.equal(batches.length, 1);
+        // Must match the dashboard client's BatchResult shape (batch_id/dispatched_at/etc),
+        // not raw OrchestrationRun field names (id/startedAt) — regression test for a bug
+        // where the list endpoint returned unmapped Prisma fields and the UI showed "Invalid Date".
+        assert.ok(typeof batches[0].batch_id === 'string', 'batch_id must be present');
+        assert.ok(typeof batches[0].dispatched_at === 'string' && !Number.isNaN(Date.parse(batches[0].dispatched_at)), 'dispatched_at must be a valid ISO date string');
+        assert.ok(typeof batches[0].batch_name === 'string', 'batch_name must be present');
+        assert.ok(typeof batches[0].total === 'number', 'total must be present');
     });
 
     it('returns 403 when filtering by out-of-scope workspace', async () => {

@@ -25,7 +25,7 @@ EXIT_CODE=0
 for pkg_json in apps/*/package.json packages/*/package.json; do
     full_path="$ROOT_DIR/$pkg_json"
     if [ -f "$full_path" ] && grep -q '"test:db-smoke"' "$full_path"; then
-        pkg_name=$(node -e "const fs=require('fs'); console.log(JSON.parse(fs.readFileSync('$full_path','utf8')).name)")
+        pkg_name=$(node -e "console.log(require(process.argv[1]).name)" "$full_path")
         echo "  --> Running test:db-smoke for $pkg_name..."
         pnpm --filter "$pkg_name" test:db-smoke || EXIT_CODE=$?
     fi

@@ -1,6 +1,6 @@
 services:
   postgres-test:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: agentfarm_test
       POSTGRES_PASSWORD: agentfarm_test

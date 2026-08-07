@@ -12,7 +12,7 @@ type ConnectorSummary = {
     remediation: string;
 };
 
-const API_BASE = process.env['API_GATEWAY_URL'] ?? 'http://localhost:3000';
+const API_BASE = process.env['DASHBOARD_API_BASE_URL'] ?? 'http://localhost:3000';
 
 const FALLBACK_CONNECTORS: ConnectorSummary[] = [
     { connector_id: 'con_jira_001',    connector_type: 'jira',       status: 'connected',    scope_status: 'full', last_error_class: null, last_healthcheck_at: new Date(Date.now() - 5 * 60_000).toISOString(), remediation: 'none' },

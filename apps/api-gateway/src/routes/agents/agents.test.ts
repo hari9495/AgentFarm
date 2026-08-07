@@ -175,14 +175,14 @@ describe('POST /v1/agents', () => {
         assert.equal(res.json().error, 'workspace_not_found');
     });
 
-    it('returns 409 when a bot already exists in the workspace', async () => {
-        const app = buildApp([makeBot({ workspaceId: 'ws_1' })]);
+    it('allows a second bot in a workspace that already has one (multi-agent teams)', async () => {
+        const app = buildApp([makeBot({ workspaceId: 'ws_1', role: 'developer' })]);
         const res = await app.inject({
             method: 'POST', url: '/v1/agents',
-            payload: { workspaceId: 'ws_1', role: 'developer' },
+            payload: { workspaceId: 'ws_1', role: 'recruiter' },
         });
-        assert.equal(res.statusCode, 409);
-        assert.equal(res.json().error, 'bot_already_exists');
+        assert.equal(res.statusCode, 201);
+        assert.equal(res.json().bot.role, 'recruiter');
     });
 
     it('creates a bot and returns 201', async () => {

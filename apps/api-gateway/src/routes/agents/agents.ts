@@ -112,12 +112,6 @@ export const registerAgentsRoutes = async (
             return reply.code(404).send({ error: 'workspace_not_found' });
         }
 
-        // Only one bot per workspace
-        const existing = await db.bot.findFirst({ where: { workspaceId } });
-        if (existing) {
-            return reply.code(409).send({ error: 'bot_already_exists', botId: existing.id });
-        }
-
         const bot = await db.bot.create({
             data: { workspaceId, role },
         });

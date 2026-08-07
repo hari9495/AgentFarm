@@ -372,6 +372,15 @@
       # Meeting-agent live controls (join, stop, transcript, chat)
       MEETING_AGENT_URL: http://meeting-agent:7799
       MEETING_AGENT_TOKEN: ${MEETING_AGENT_TOKEN:-}
+      # Used by the /infra-monitoring health panel to probe these services
+      # directly by container DNS name (was defaulting to localhost, which
+      # never resolves to another container — always showed "unreachable").
+      AGENT_RUNTIME_BASE_URL: http://agent-runtime:4000
+      TRIGGER_SERVICE_BASE_URL: http://trigger-service:3002
+      # Orchestrator has no Dockerfile/compose service yet — it only runs via
+      # `pnpm --filter @agentfarm/orchestrator dev` on the host. host.docker.internal
+      # is Docker Desktop's route from a container back to the host machine.
+      ORCHESTRATOR_API_BASE_URL: http://host.docker.internal:3011
     depends_on:
       api-gateway:
         condition: service_healthy

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 
 type CommunicationStyle = 'professional' | 'friendly' | 'concise' | 'formal';
+type ApprovalPolicy = 'all' | 'medium-high' | 'high-only';
 
 type PersonaFormState = {
     displayName: string;
@@ -15,6 +16,11 @@ type PersonaFormState = {
     employeeId: string;
     department: string;
     managerId: string;
+    approvalPolicy: ApprovalPolicy;
+    shiftEnabled: boolean;
+    shiftStart: string;
+    shiftEnd: string;
+    shiftDays: number[];
 };
 
 const DEFAULT_FORM: PersonaFormState = {
@@ -28,9 +34,22 @@ const DEFAULT_FORM: PersonaFormState = {
     employeeId: '',
     department: '',
     managerId: '',
+    approvalPolicy: 'high-only',
+    shiftEnabled: false,
+    shiftStart: '09:00',
+    shiftEnd: '18:00',
+    shiftDays: [1, 2, 3, 4, 5],
 };
 
 const COMMUNICATION_STYLES: CommunicationStyle[] = ['professional', 'friendly', 'concise', 'formal'];
+
+const APPROVAL_POLICIES: { value: ApprovalPolicy; label: string; description: string }[] = [
+    { value: 'high-only', label: 'High-only (relaxed)', description: 'Low and medium-risk actions auto-execute. Only high-risk actions require approval.' },
+    { value: 'medium-high', label: 'Medium & high (strict)', description: 'Low-risk actions auto-execute. Medium and high-risk actions require approval.' },
+    { value: 'all', label: 'All actions', description: 'Every action this agent takes — regardless of risk — requires human approval.' },
+];
+
+const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const LANGUAGES: { code: string; label: string }[] = [
     { code: 'en', label: 'English' },
@@ -85,9 +104,15 @@ export default function AgentPersonaPanel({ botId }: AgentPersonaPanelProps) {
                     return;
                 }
                 if (res.ok) {
-                    const data = (await res.json()) as { persona: PersonaFormState & { avatarUrl?: string | null } };
+                    const data = (await res.json()) as {
+                        persona: PersonaFormState & {
+                            avatarUrl?: string | null;
+                            workingHours?: { start: string; end: string; days: number[] } | null;
+                        };
+                    };
                     if (!cancelled) {
                         setExists(true);
+                        const wh = data.persona.workingHours ?? null;
                         setForm({
                             displayName: data.persona.displayName ?? '',
                             emailAddress: data.persona.emailAddress ?? '',
@@ -99,6 +124,11 @@ export default function AgentPersonaPanel({ botId }: AgentPersonaPanelProps) {
                             employeeId: (data.persona as { employeeId?: string | null }).employeeId ?? '',
                             department: (data.persona as { department?: string | null }).department ?? '',
                             managerId: (data.persona as { managerId?: string | null }).managerId ?? '',
+                            approvalPolicy: (data.persona.approvalPolicy as ApprovalPolicy) ?? 'high-only',
+                            shiftEnabled: wh !== null,
+                            shiftStart: wh?.start ?? DEFAULT_FORM.shiftStart,
+                            shiftEnd: wh?.end ?? DEFAULT_FORM.shiftEnd,
+                            shiftDays: wh?.days ?? DEFAULT_FORM.shiftDays,
                         });
                     }
                 }
@@ -133,6 +163,11 @@ export default function AgentPersonaPanel({ botId }: AgentPersonaPanelProps) {
         payload['employeeId'] = form.employeeId.trim() || null;
         payload['department'] = form.department.trim() || null;
         payload['managerId'] = form.managerId.trim() || null;
+
+        payload['approvalPolicy'] = form.approvalPolicy;
+        payload['workingHours'] = form.shiftEnabled
+            ? { start: form.shiftStart, end: form.shiftEnd, days: form.shiftDays }
+            : null;
 
         try {
             const method = exists ? 'PATCH' : 'POST';
@@ -326,6 +361,87 @@ export default function AgentPersonaPanel({ botId }: AgentPersonaPanelProps) {
                             onChange={(e) => setForm((f) => ({ ...f, managerId: e.target.value }))}
                         />
                     </div>
+                </div>
+
+                <div style={fieldStyle}>
+                    <label htmlFor="persona-approvalPolicy" style={labelStyle}>Approval Policy</label>
+                    <select
+                        id="persona-approvalPolicy"
+                        style={inputStyle}
+                        value={form.approvalPolicy}
+                        onChange={(e) => setForm((f) => ({ ...f, approvalPolicy: e.target.value as ApprovalPolicy }))}
+                    >
+                        {APPROVAL_POLICIES.map((p) => (
+                            <option key={p.value} value={p.value}>{p.label}</option>
+                        ))}
+                    </select>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginTop: '0.25rem' }}>
+                        {APPROVAL_POLICIES.find((p) => p.value === form.approvalPolicy)?.description}
+                    </p>
+                </div>
+
+                <div style={fieldStyle}>
+                    <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '0.5rem', textTransform: 'none', letterSpacing: 'normal' }}>
+                        <input
+                            type="checkbox"
+                            checked={form.shiftEnabled}
+                            onChange={(e) => setForm((f) => ({ ...f, shiftEnabled: e.target.checked }))}
+                        />
+                        Restrict to working hours (unchecked = always on, 24/7)
+                    </label>
+                    {form.shiftEnabled && (
+                        <div style={{ marginTop: '0.6rem' }}>
+                            <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.6rem' }}>
+                                <div style={{ flex: 1 }}>
+                                    <label htmlFor="persona-shiftStart" style={labelStyle}>Start</label>
+                                    <input
+                                        id="persona-shiftStart"
+                                        type="time"
+                                        style={inputStyle}
+                                        value={form.shiftStart}
+                                        onChange={(e) => setForm((f) => ({ ...f, shiftStart: e.target.value }))}
+                                    />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <label htmlFor="persona-shiftEnd" style={labelStyle}>End</label>
+                                    <input
+                                        id="persona-shiftEnd"
+                                        type="time"
+                                        style={inputStyle}
+                                        value={form.shiftEnd}
+                                        onChange={(e) => setForm((f) => ({ ...f, shiftEnd: e.target.value }))}
+                                    />
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                {WEEKDAY_LABELS.map((label, day) => {
+                                    const active = form.shiftDays.includes(day);
+                                    return (
+                                        <button
+                                            key={day}
+                                            type="button"
+                                            onClick={() => setForm((f) => ({
+                                                ...f,
+                                                shiftDays: active ? f.shiftDays.filter((d) => d !== day) : [...f.shiftDays, day].sort(),
+                                            }))}
+                                            style={{
+                                                padding: '0.3rem 0.65rem',
+                                                borderRadius: '99px',
+                                                fontSize: '0.78rem',
+                                                fontWeight: 500,
+                                                border: '1px solid var(--border, #d1d5db)',
+                                                background: active ? 'var(--accent, #2563eb)' : 'transparent',
+                                                color: active ? '#fff' : 'var(--ink)',
+                                                cursor: 'pointer',
+                                            }}
+                                        >
+                                            {label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {saveError && (

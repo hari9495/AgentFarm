@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 
 type InAppItem = {
@@ -43,6 +44,9 @@ export function NotificationBell({ workspaceId }: { workspaceId?: string }) {
     const [items, setItems] = useState<InAppItem[]>([]);
     const [readIds, setReadIds] = useState<Set<string>>(new Set());
     const [open, setOpen] = useState(false);
+    const [panelPos, setPanelPos] = useState<{ top: number; left: number } | null>(null);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
     const panelRef = useRef<HTMLDivElement>(null);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -69,16 +73,36 @@ export function NotificationBell({ workspaceId }: { workspaceId?: string }) {
         return () => { if (timerRef.current) clearInterval(timerRef.current); };
     }, [fetchItems]);
 
-    // Close on outside click
+    // Close on outside click (panel is portaled, so check both the trigger and the portaled panel)
     useEffect(() => {
         if (!open) return;
         const handler = (e: MouseEvent) => {
-            if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-                setOpen(false);
-            }
+            const target = e.target as Node;
+            if (wrapperRef.current?.contains(target)) return;
+            if (panelRef.current?.contains(target)) return;
+            setOpen(false);
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
+    }, [open]);
+
+    // Position the portaled panel relative to the bell button, clamped to the viewport
+    // (the sidebar it lives in has overflow:hidden, so an in-flow absolute panel gets clipped)
+    useEffect(() => {
+        if (!open || !buttonRef.current) return;
+        const PANEL_WIDTH = 320;
+        const updatePosition = () => {
+            const rect = buttonRef.current!.getBoundingClientRect();
+            const left = Math.max(8, Math.min(rect.right - PANEL_WIDTH, window.innerWidth - PANEL_WIDTH - 8));
+            setPanelPos({ top: rect.bottom + 8, left });
+        };
+        updatePosition();
+        window.addEventListener('resize', updatePosition);
+        window.addEventListener('scroll', updatePosition, true);
+        return () => {
+            window.removeEventListener('resize', updatePosition);
+            window.removeEventListener('scroll', updatePosition, true);
+        };
     }, [open]);
 
     const unreadCount = items.filter((i) => !readIds.has(i.id)).length;
@@ -98,9 +122,10 @@ export function NotificationBell({ workspaceId }: { workspaceId?: string }) {
     };
 
     return (
-        <div style={{ position: 'relative' }} ref={panelRef}>
+        <div style={{ position: 'relative' }} ref={wrapperRef}>
             {/* Bell button */}
             <button
+                ref={buttonRef}
                 type="button"
                 onClick={handleOpen}
                 aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
@@ -125,10 +150,10 @@ export function NotificationBell({ workspaceId }: { workspaceId?: string }) {
                 )}
             </button>
 
-            {/* Dropdown panel */}
-            {open && (
-                <div style={{
-                    position: 'absolute', top: '110%', right: 0,
+            {/* Dropdown panel — portaled to <body> so it isn't clipped by the sidebar's overflow:hidden */}
+            {open && panelPos && createPortal(
+                <div ref={panelRef} style={{
+                    position: 'fixed', top: panelPos.top, left: panelPos.left,
                     width: 'min(320px, 90vw)',
                     background: 'var(--card)',
                     borderRadius: '0.6rem',
@@ -199,7 +224,8 @@ export function NotificationBell({ workspaceId }: { workspaceId?: string }) {
                             View delivery log →
                         </Link>
                     </div>
-                </div>
+                </div>,
+                document.body,
             )}
         </div>
     );

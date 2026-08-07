@@ -224,7 +224,20 @@ export const registerBatchDispatchRoutes = async (
                 },
             });
 
-            return reply.send({ batches: runs });
+            // Match the response shape returned by POST /v1/agents/batch-dispatch
+            // (batch_id/batch_name/total/dispatched_at) — the dashboard client only
+            // understands that shape, not raw OrchestrationRun field names.
+            return reply.send({
+                batches: runs.map((r) => ({
+                    batch_id: r.id,
+                    batch_name: r.goal,
+                    to_agent_id: r.coordinatorBotId,
+                    workspace_id: r.workspaceId,
+                    total: r.subTaskCount,
+                    status: r.status,
+                    dispatched_at: r.startedAt.toISOString(),
+                })),
+            });
         },
     );
 

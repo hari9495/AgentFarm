@@ -7,11 +7,11 @@
 import { getRedisClient } from '@agentfarm/redis-client';
 
 /** Primary display domain (used in UI messages). */
-export const INTERNAL_DOMAIN = process.env.DASHBOARD_PRIMARY_DOMAIN ?? 'agentfarms.in';
+export const INTERNAL_DOMAIN = process.env.DASHBOARD_PRIMARY_DOMAIN || 'agentfarms.in';
 
 /** All domains allowed to request OTP / magic-link. Read fresh each call so env changes take effect. */
 export function isAllowedEmail(email: string): boolean {
-    const raw = process.env.DASHBOARD_ALLOWED_DOMAINS ?? INTERNAL_DOMAIN;
+    const raw = process.env.DASHBOARD_ALLOWED_DOMAINS || INTERNAL_DOMAIN;
     const allowed = raw
         .split(',')
         .map((d) => d.trim().toLowerCase())

@@ -26,13 +26,15 @@ export async function GET(request: NextRequest) {
     const from = searchParams.get('from') ?? '';
     const to = searchParams.get('to') ?? '';
     const workspaceId = searchParams.get('workspaceId') ?? '';
+    const botId = searchParams.get('botId') ?? '';
 
     const upstreamUrl =
         `${getApiBaseUrl()}/v1/analytics/agent-performance` +
         `?tenantId=${encodeURIComponent(tenantId)}` +
         `&from=${encodeURIComponent(from)}` +
         `&to=${encodeURIComponent(to)}` +
-        (workspaceId ? `&workspaceId=${encodeURIComponent(workspaceId)}` : '');
+        (workspaceId ? `&workspaceId=${encodeURIComponent(workspaceId)}` : '') +
+        (botId ? `&botId=${encodeURIComponent(botId)}` : '');
 
     let res: Response;
     try {

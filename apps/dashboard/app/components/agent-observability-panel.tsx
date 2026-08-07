@@ -10,13 +10,12 @@ type AgentStatus = {
     tenantId: string;
 };
 
+// Matches the shape actually returned by /api/analytics/cost-summary (shared with
+// usage-summary-card.tsx / cost-dashboard-panel.tsx / analytics/page.tsx).
 type CostSummary = {
-    taskCount: number;
-    totalCostUsd: number;
-    avgCostUsd: number | null;
-    successRate: number | null;
-    from: string;
-    to: string;
+    total_invocations: number;
+    total_cost_usd: number;
+    success_rate: number | null;
 };
 
 type AgentPerformance = {
@@ -221,7 +220,7 @@ export default function AgentObservabilityPanel({ botId }: AgentObservabilityPan
             setCostLoading(true);
             setCostError(null);
             try {
-                const res = await fetch(`/api/analytics/cost-summary`, { cache: 'no-store' });
+                const res = await fetch(`/api/analytics/cost-summary?botId=${encodeURIComponent(botId)}`, { cache: 'no-store' });
                 if (!res.ok) {
                     const e = (await res.json().catch(() => ({}))) as { message?: string };
                     setCostError(e.message ?? `HTTP ${res.status}`);
@@ -241,7 +240,7 @@ export default function AgentObservabilityPanel({ botId }: AgentObservabilityPan
             setPerfLoading(true);
             setPerfError(null);
             try {
-                const res = await fetch(`/api/analytics/agent-performance`, { cache: 'no-store' });
+                const res = await fetch(`/api/analytics/agent-performance?botId=${encodeURIComponent(botId)}`, { cache: 'no-store' });
                 if (!res.ok) {
                     const e = (await res.json().catch(() => ({}))) as { message?: string };
                     setPerfError(e.message ?? `HTTP ${res.status}`);
@@ -424,11 +423,14 @@ export default function AgentObservabilityPanel({ botId }: AgentObservabilityPan
                         {costData && (
                             <>
                                 <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--ink)', marginBottom: '8px' }}>
-                                    {fmtUsd(costData.totalCostUsd)}
+                                    {fmtUsd(costData.total_cost_usd)}
                                 </div>
-                                <StatRow label="Avg / task" value={fmtUsd(costData.avgCostUsd)} />
-                                <StatRow label="Tasks" value={(costData.taskCount ?? 0).toLocaleString()} />
-                                <StatRow label="Success rate" value={fmtPct(costData.successRate)} />
+                                <StatRow
+                                    label="Avg / task"
+                                    value={fmtUsd(costData.total_invocations > 0 ? costData.total_cost_usd / costData.total_invocations : null)}
+                                />
+                                <StatRow label="Tasks" value={(costData.total_invocations ?? 0).toLocaleString()} />
+                                <StatRow label="Success rate" value={fmtPct(costData.success_rate)} />
                             </>
                         )}
                     </MetricCard>

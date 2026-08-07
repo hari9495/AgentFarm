@@ -362,7 +362,7 @@ export default function AgentDetailPanel({ agent, onStatusChange }: AgentDetailP
                     {rateLimitLoading ? (
                         <p style={{ color: 'var(--ink-muted)', fontSize: '13px' }}>Loading…</p>
                     ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '14px' }}>
                             <div>
                                 <label style={{ fontSize: '12px', color: 'var(--ink-muted)', display: 'block', marginBottom: '4px' }}>
                                     Requests per minute

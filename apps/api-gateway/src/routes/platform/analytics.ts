@@ -25,12 +25,14 @@ type AgentPerfQuery = {
     from?: string;
     to?: string;
     workspaceId?: string;
+    botId?: string;
 };
 
 type CostSummaryQuery = {
     tenantId?: string;
     from?: string;
     to?: string;
+    botId?: string;
 };
 
 type TasksQuery = {
@@ -153,12 +155,14 @@ export const registerAnalyticsRoutes = async (
         }
 
         const workspaceId = request.query.workspaceId;
+        const botId = request.query.botId;
         const db = await resolvePrisma();
 
         const where = {
             tenantId,
             executedAt: { gte: fromDate, lte: toDate },
             ...(workspaceId ? { workspaceId } : {}),
+            ...(botId ? { botId } : {}),
         };
 
         const records = await db.taskExecutionRecord.findMany({
@@ -269,12 +273,14 @@ export const registerAnalyticsRoutes = async (
             });
         }
 
+        const botId = request.query.botId;
         const db = await resolvePrisma();
 
         const records = await db.taskExecutionRecord.findMany({
             where: {
                 tenantId,
                 executedAt: { gte: fromDate, lte: toDate },
+                ...(botId ? { botId } : {}),
             },
             select: {
                 outcome: true,
