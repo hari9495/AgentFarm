@@ -12,6 +12,7 @@ import type { PrismaClient } from '@prisma/client';
 import { getEmailProvider } from '@agentfarm/agent-runtime/sales/email-provider-factory.js';
 import type { EmailProviderConfig } from '@agentfarm/agent-runtime/sales/email-provider.js';
 import type { SalesEmailProvider } from '@agentfarm/shared-types';
+import { decryptSalesConfigFields } from './routes/sales/sales-config.js';
 
 const PROPOSAL_DIR = '/tmp/proposals';
 
@@ -60,9 +61,9 @@ export async function generateProposalPdf(
         let prospect: Record<string, unknown> | null = null;
 
         if (booking?.['botId']) {
-            config = await db.salesAgentConfig.findFirst({
+            config = decryptSalesConfigFields(await db.salesAgentConfig.findFirst({
                 where: { tenantId, botId: String(booking['botId']) },
-            });
+            }));
         }
         if (booking?.['prospectId']) {
             prospect = await db.prospect.findFirst({
@@ -165,7 +166,7 @@ export async function sendProposalEmail(
         });
         if (!booking?.['prospectId'] || !booking?.['botId']) return false;
 
-        const [config, prospect] = await Promise.all([
+        const [configRow, prospect] = await Promise.all([
             db.salesAgentConfig.findFirst({
                 where: { tenantId, botId: String(booking['botId']) },
             }),
@@ -173,6 +174,7 @@ export async function sendProposalEmail(
                 where: { id: String(booking['prospectId']), tenantId },
             }),
         ]);
+        const config = decryptSalesConfigFields(configRow);
 
         if (!prospect?.['email'] || !config) return false;
 

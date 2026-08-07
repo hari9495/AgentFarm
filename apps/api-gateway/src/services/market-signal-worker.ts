@@ -14,6 +14,7 @@
 
 import type { PrismaClient } from '@prisma/client';
 import { prisma as defaultPrisma } from '../lib/db.js';
+import { decryptSalesConfigFields } from '../routes/sales/sales-config.js';
 
 const NEWS_API_URL = 'https://newsapi.org/v2/everything';
 
@@ -59,9 +60,9 @@ export async function runMarketSignalSweep(
 ): Promise<{ processed: number; signalsFound: number }> {
     const db = prisma as unknown as PrismaWithMarket;
 
-    const configs = await db.salesAgentConfig.findMany({
+    const configs = (await db.salesAgentConfig.findMany({
         where: { active: true, marketResearchEnabled: true },
-    });
+    })).map((c) => decryptSalesConfigFields(c as unknown as Record<string, unknown>) as unknown as ActiveConfig);
 
     let processed = 0;
     let signalsFound = 0;

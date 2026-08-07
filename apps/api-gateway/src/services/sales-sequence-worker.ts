@@ -24,6 +24,7 @@ import {
     sendOutreachEmail,
     type OutreachParams,
 } from '@agentfarm/agent-runtime/sales/outreach.js';
+import { decryptSalesConfigFields } from '../routes/sales/sales-config.js';
 
 // ---------------------------------------------------------------------------
 // Prisma stub types — avoid full generated client coupling
@@ -172,9 +173,9 @@ export async function runSalesSequenceSweep(
         }
 
         // (c) Load config
-        const config = await db.salesAgentConfig.findFirst({
+        const config = decryptSalesConfigFields(await db.salesAgentConfig.findFirst({
             where: { botId: entry.botId, tenantId: entry.tenantId },
-        });
+        }));
         if (!config) {
             await db.salesSequenceEntry.update({
                 where: { id: entry.id },

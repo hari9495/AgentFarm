@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import type { BrowserTaskRecord, BrowserTaskRequest, SalesAgentConfigRecord } from '@agentfarm/shared-types';
 import { runBrowserTask } from '@agentfarm/agent-runtime/sales/browser-executor.js';
+import { decryptSalesConfigFields } from './sales-config.js';
 
 type SessionContext = {
     userId: string;
@@ -101,9 +102,9 @@ export async function registerBrowserTasksRoutes(
             const db = prisma as unknown as PrismaWithBrowser;
 
             // Load config — required for domain allowlist + enabled gate
-            const configRow = await db.salesAgentConfig.findFirst({
+            const configRow = decryptSalesConfigFields(await db.salesAgentConfig.findFirst({
                 where: { tenantId: session.tenantId, botId },
-            });
+            }));
             if (!configRow) {
                 return reply.code(404).send({ error: 'SalesAgentConfig not found for botId' });
             }

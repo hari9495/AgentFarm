@@ -7,6 +7,7 @@ import {
 import {
     sendContractInvite,
 } from '@agentfarm/agent-runtime/sales/contract-sender.js';
+import { decryptSalesConfigFields } from './sales-config.js';
 
 type SessionContext = {
     userId: string;
@@ -91,9 +92,9 @@ export async function registerDealsRoutes(
             if (!deal) return reply.status(404).send({ code: 'DEAL_NOT_FOUND' });
             if (String(deal['tenantId']) !== session.tenantId) return reply.status(403).send({ code: 'FORBIDDEN' });
 
-            const config = await db.salesAgentConfig.findFirst({
+            const config = decryptSalesConfigFields(await db.salesAgentConfig.findFirst({
                 where: { tenantId: session.tenantId, botId: request.body.botId },
-            });
+            }));
 
             await doCloseDealLost(
                 request.params.id,
@@ -157,9 +158,9 @@ export async function registerDealsRoutes(
 
             // If advancing to negotiation and contractUrl is set, trigger contract invite
             if (newStage === 'negotiation') {
-                const config = await db.salesAgentConfig.findFirst({
+                const config = decryptSalesConfigFields(await db.salesAgentConfig.findFirst({
                     where: { tenantId: session.tenantId, botId: String(deal['botId'] ?? request.body.botId) },
-                });
+                }));
                 if (config?.['contractUrl']) {
                     doSendContractInvite(
                         String(deal['prospectId']),

@@ -10,6 +10,7 @@
 
 import type { SalesAgentConfigRecord } from '@agentfarm/shared-types';
 import type { LocalWorkspaceResult } from '../../local-workspace-executor.js';
+import { decryptSalesConfigFields } from '../../sales-config-decrypt.js';
 import { findAndSaveProspects, type LeadSearchParams } from './prospect-finder.js';
 import { scoreProspect } from './icp-scorer.js';
 import { personaliseEmail } from './email-personaliser.js';
@@ -134,7 +135,7 @@ async function loadSalesConfig(
     prisma: PrismaWithSalesConfig,
 ): Promise<SalesAgentConfigRecord | null> {
     const row = await prisma.salesAgentConfig.findFirst({ where: { botId, tenantId } });
-    return row as unknown as SalesAgentConfigRecord | null;
+    return decryptSalesConfigFields(row) as unknown as SalesAgentConfigRecord | null;
 }
 
 function requireConfig(config: SalesAgentConfigRecord | null, botId: string): SalesAgentConfigRecord {

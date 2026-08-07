@@ -6,6 +6,7 @@ import {
     type FindProspectsResult,
 } from '@agentfarm/agent-runtime/sales/prospect-finder.js';
 import type { LeadSearchParams } from '@agentfarm/agent-runtime/sales/prospect-finder.js';
+import { decryptSalesConfigFields } from './sales-config.js';
 
 type SessionContext = {
     userId: string;
@@ -111,13 +112,13 @@ export async function registerProspectsRoutes(
 
             const prisma = await resolvePrisma();
 
-            const config = await (prisma as never as {
+            const config = decryptSalesConfigFields(await (prisma as never as {
                 salesAgentConfig: {
                     findFirst: (args: unknown) => Promise<Record<string, unknown> | null>;
                 };
             }).salesAgentConfig.findFirst({
                 where: { botId: body.botId, tenantId: session.tenantId, active: true },
-            });
+            }));
 
             if (!config) {
                 return reply.code(404).send({ error: 'No active SalesAgentConfig found for this bot' });

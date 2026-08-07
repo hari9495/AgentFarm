@@ -6,6 +6,7 @@ import {
     closeDealLost,
 } from '@agentfarm/agent-runtime/sales/deal-closer.js';
 import type { SalesAgentConfigRecord } from '@agentfarm/shared-types';
+import { decryptSalesConfigFields } from './sales-config.js';
 
 type PrismaWithContract = {
     salesAgentConfig: {
@@ -67,7 +68,7 @@ export async function registerContractWebhookRoutes(
         // Load config — per-tenant secret takes priority; server-level env var is the
         // mandatory fallback. Fail closed: if ANY secret is configured, a valid
         // signature is required. No secret → reject (not configured = not safe).
-        const salesConfig = await db.salesAgentConfig.findFirst({ where: { tenantId } });
+        const salesConfig = decryptSalesConfigFields(await db.salesAgentConfig.findFirst({ where: { tenantId } }));
         const secret = salesConfig?.['contractWebhookSecret']
             ? String(salesConfig['contractWebhookSecret'])
             : (process.env['CONTRACT_WEBHOOK_SECRET'] ?? '');

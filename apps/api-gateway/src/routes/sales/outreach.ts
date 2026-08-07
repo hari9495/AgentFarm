@@ -19,6 +19,7 @@ import {
 import {
     sendContractInvite,
 } from '@agentfarm/agent-runtime/sales/contract-sender.js';
+import { decryptSalesConfigFields } from './sales-config.js';
 
 type SessionContext = {
     userId: string;
@@ -121,9 +122,9 @@ export async function registerOutreachRoutes(
         const db = prisma as unknown as PrismaWithSales;
         const body = request.body;
 
-        const config = await db.salesAgentConfig.findFirst({
+        const config = decryptSalesConfigFields(await db.salesAgentConfig.findFirst({
             where: { botId: body.botId, tenantId: session.tenantId },
-        });
+        }));
         if (!config) {
             return reply.status(404).send({ code: 'CONFIG_NOT_FOUND' });
         }
@@ -214,9 +215,9 @@ export async function registerOutreachRoutes(
 
         // When prospect is interested and a booking URL is configured, send invite
         if (result.intent === 'interested') {
-            const salesConfig = await db.salesAgentConfig.findFirst({
+            const salesConfig = decryptSalesConfigFields(await db.salesAgentConfig.findFirst({
                 where: { tenantId: session.tenantId, botId: prospect.botId },
-            });
+            }));
             if (salesConfig?.['bookingUrl']) {
                 const prismaForInvite = await resolvePrisma();
                 doSendBookingInvite(
@@ -265,9 +266,9 @@ export async function registerOutreachRoutes(
                         updatedAt: new Date(),
                     },
                 });
-                const salesConfigForContract = await db.salesAgentConfig.findFirst({
+                const salesConfigForContract = decryptSalesConfigFields(await db.salesAgentConfig.findFirst({
                     where: { tenantId: session.tenantId, botId: prospect.botId },
-                });
+                }));
                 if (salesConfigForContract?.['contractUrl']) {
                     doSendContractInvite(
                         body.prospectId,

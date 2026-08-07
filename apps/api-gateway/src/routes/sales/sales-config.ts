@@ -17,6 +17,9 @@ const SENSITIVE_SALES_FIELDS = [
     'newsApiKey',
     'hubspotAccessToken',
     'salesforceAccessToken',
+    'bookingWebhookSecret',
+    'contractWebhookSecret',
+    'winNotificationSecret',
 ] as const;
 
 function encryptSalesConfigFields(data: Record<string, unknown>): Record<string, unknown> {
@@ -29,7 +32,16 @@ function encryptSalesConfigFields(data: Record<string, unknown>): Record<string,
     return out;
 }
 
-function decryptSalesConfigFields(config: Record<string, unknown>): Record<string, unknown> {
+/**
+ * Decrypts the sensitive SalesAgentConfig columns on a row loaded elsewhere.
+ * Every other read site (crm-sync-worker, market-signal-worker, booking/contract
+ * webhooks, deals/outreach/prospects routes, proposal-generator, sales-sequence-worker)
+ * must pipe its salesAgentConfig.findFirst/findUnique result through this before
+ * using any sensitive field — otherwise, once FIELD_ENCRYPTION_KEY is set, those
+ * callers silently receive ciphertext instead of the real credential.
+ */
+export function decryptSalesConfigFields<T extends Record<string, unknown> | null>(config: T): T {
+    if (!config) return config;
     const out = { ...config };
     for (const field of SENSITIVE_SALES_FIELDS) {
         if (typeof out[field] === 'string' && out[field]) {
@@ -38,7 +50,7 @@ function decryptSalesConfigFields(config: Record<string, unknown>): Record<strin
             } catch { /* non-fatal — return ciphertext as-is if key unavailable */ }
         }
     }
-    return out;
+    return out as T;
 }
 
 type SessionContext = {

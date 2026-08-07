@@ -4,6 +4,7 @@ import { verifyHmacSha256 } from '../../lib/webhook-verify.js';
 import {
     scheduleMeetingResearch,
 } from '@agentfarm/agent-runtime/sales/pre-meeting-research.js';
+import { decryptSalesConfigFields } from './sales-config.js';
 
 type PrismaWithBooking = {
     bookingEvent: {
@@ -70,9 +71,9 @@ export async function registerBookingWebhookRoutes(
         // Verify HMAC signature — fail closed: if a secret is configured, a valid
         // signature MUST be present. Requests without a signature are rejected when
         // a secret is configured to prevent unsigned forgeries.
-        const salesConfig = await db.salesAgentConfig.findFirst({
+        const salesConfig = decryptSalesConfigFields(await db.salesAgentConfig.findFirst({
             where: { tenantId },
-        });
+        }));
         const secret = salesConfig?.['bookingWebhookSecret']
             ? String(salesConfig['bookingWebhookSecret'])
             : (process.env['BOOKING_WEBHOOK_SECRET'] ?? '');

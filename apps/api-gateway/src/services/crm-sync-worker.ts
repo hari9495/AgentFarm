@@ -20,6 +20,7 @@
 import type { PrismaClient } from '@prisma/client';
 import { prisma as defaultPrisma } from '../lib/db.js';
 import { syncToCrm } from '@agentfarm/agent-runtime/sales/crm-sync-handler.js';
+import { decryptSalesConfigFields } from '../routes/sales/sales-config.js';
 
 // ---------------------------------------------------------------------------
 // Structural types
@@ -71,9 +72,9 @@ export async function runCrmSyncSweep(
     const lookbackMs = parseInt(process.env['CRM_SYNC_LOOKBACK_MS'] ?? '86400000', 10) || 86_400_000;
     const since = new Date(Date.now() - lookbackMs);
 
-    const configs = await db.salesAgentConfig.findMany({
+    const configs = (await db.salesAgentConfig.findMany({
         where: { crmSyncEnabled: true, active: true },
-    });
+    })).map((c) => decryptSalesConfigFields(c) as ConfigRow);
 
     let synced = 0;
     let skipped = 0;
