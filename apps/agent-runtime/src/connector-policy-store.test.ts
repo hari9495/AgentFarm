@@ -12,28 +12,39 @@ import {
  * (scope, scopeRef) in the where clause — lets us model a tenant policy and a
  * role policy independently.
  */
+// getActivePoliciesForScopes (policy-engine) queries with findMany + an OR of
+// {scope, scopeRef} selectors, so the fake models that. Keyed by "scope:scopeRef".
 function fakePrisma(byScope: Record<string, unknown[]>): any {
+    const rowFor = (scope: string, scopeRef: string, tenantId: string, rules: unknown[]) => {
+        const key = `${scope}:${scopeRef}`;
+        return {
+            id: `pol_${key}`,
+            tenantId,
+            scope,
+            scopeRef,
+            version: 1,
+            status: 'active',
+            name: key,
+            description: null,
+            rulesJson: rules,
+            createdBy: 'u',
+            updatedBy: 'u',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        };
+    };
     return {
         governancePolicy: {
-            findFirst: async ({ where }: { where: any }) => {
-                const key = `${where.scope}:${where.scopeRef}`;
-                const rules = byScope[key];
-                if (!rules) return null;
-                return {
-                    id: `pol_${key}`,
-                    tenantId: where.tenantId,
-                    scope: where.scope,
-                    scopeRef: where.scopeRef,
-                    version: 1,
-                    status: 'active',
-                    name: key,
-                    description: null,
-                    rulesJson: rules,
-                    createdBy: 'u',
-                    updatedBy: 'u',
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                };
+            findMany: async ({ where }: { where: any }) => {
+                const selectors = Array.isArray(where.OR)
+                    ? where.OR
+                    : [{ scope: where.scope, scopeRef: where.scopeRef }];
+                const rows: unknown[] = [];
+                for (const sel of selectors) {
+                    const rules = byScope[`${sel.scope}:${sel.scopeRef}`];
+                    if (rules) rows.push(rowFor(sel.scope, sel.scopeRef, where.tenantId, rules));
+                }
+                return rows;
             },
         },
     };
@@ -76,7 +87,7 @@ test('B4: no active policy → empty policy (fail-safe)', async () => {
 });
 
 test('B4b: prisma error → empty policy (never weakens)', async () => {
-    const prisma: any = { governancePolicy: { findFirst: async () => { throw new Error('db down'); } } };
+    const prisma: any = { governancePolicy: { findMany: async () => { throw new Error('db down'); } } };
     const policy = await getActiveConnectorPolicy(prisma, 'tenant-x', 'developer');
     assert.equal(policy.perConnector.size, 0);
 });

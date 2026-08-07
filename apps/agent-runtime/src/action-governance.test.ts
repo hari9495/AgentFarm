@@ -36,13 +36,27 @@ test('B4: isActionTimeDenied — outside window for a matching action', () => {
     assert.equal(isActionTimeDenied(scoped, { actionType: 'other', now: outside }), null);
 });
 
+// getActivePoliciesForScopes (policy-engine) queries with findMany + an OR of
+// {scope, scopeRef} selectors, so the fake models that. Keyed by "scope:scopeRef"
+// (tenant scopeRef is '', matching TENANT_SCOPE_REF).
 function fakePrisma(byScope: Record<string, unknown[]>): any {
+    const rowFor = (scope: string, scopeRef: string, tenantId: string, rules: unknown[]) => ({
+        id: `pol_${scope}:${scopeRef}`, tenantId, scope, scopeRef, version: 1, status: 'active',
+        name: `${scope}:${scopeRef}`, description: null, rulesJson: rules,
+        createdBy: 'u', updatedBy: 'u', createdAt: new Date(), updatedAt: new Date(),
+    });
     return {
         governancePolicy: {
-            findFirst: async ({ where }: { where: any }) => {
-                const rules = byScope[`${where.scope}:${where.scopeRef}`];
-                if (!rules) return null;
-                return { id: 'p', tenantId: where.tenantId, scope: where.scope, scopeRef: where.scopeRef, version: 1, status: 'active', name: 'n', description: null, rulesJson: rules, createdBy: 'u', updatedBy: 'u', createdAt: new Date(), updatedAt: new Date() };
+            findMany: async ({ where }: { where: any }) => {
+                const selectors = Array.isArray(where.OR)
+                    ? where.OR
+                    : [{ scope: where.scope, scopeRef: where.scopeRef }];
+                const rows: unknown[] = [];
+                for (const sel of selectors) {
+                    const rules = byScope[`${sel.scope}:${sel.scopeRef}`];
+                    if (rules) rows.push(rowFor(sel.scope, sel.scopeRef, where.tenantId, rules));
+                }
+                return rows;
             },
         },
     };
@@ -58,7 +72,7 @@ test('B3: getActiveGovernanceRules merges tenant + role active rules', async () 
 });
 
 test('B3b: DB error → empty rules (fail-safe)', async () => {
-    const prisma: any = { governancePolicy: { findFirst: async () => { throw new Error('db'); } } };
+    const prisma: any = { governancePolicy: { findMany: async () => { throw new Error('db'); } } };
     const rules = await getActiveGovernanceRules(prisma, 'tenant-x', 'developer');
     assert.deepEqual(rules, []);
 });
