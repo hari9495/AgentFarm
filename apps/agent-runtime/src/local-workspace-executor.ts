@@ -14020,7 +14020,7 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_ca_escalate':
         case 'workspace_ca_message_send':
         case 'workspace_ca_standup_report': {
-            return handleCorporateAssistantAction({ actionType, tenantId, botId, taskId, payload, gatewayBaseUrl: input.gatewayBaseUrl, serviceToken: input.serviceToken, workspaceId: input.workspaceId });
+            return handleCorporateAssistantAction({ actionType, tenantId, botId, taskId, payload, gatewayBaseUrl: input.gatewayBaseUrl, serviceToken: input.serviceToken, workspaceId: input.workspaceId, connectorActionExecuteClient });
         }
 
         // ====================================================================

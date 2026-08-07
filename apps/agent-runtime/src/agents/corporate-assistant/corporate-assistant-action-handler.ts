@@ -17,7 +17,8 @@
 
 import type { AgentPersonaRecord } from '@agentfarm/shared-types';
 import type { SalesEmailProvider } from '@agentfarm/shared-types';
-import type { LocalWorkspaceResult } from '../../local-workspace-executor.js';
+import type { LocalWorkspaceResult, LocalWorkspaceConnectorClient } from '../../local-workspace-executor.js';
+import { sendEmailViaConnector } from '../shared/connector-email.js';
 import {
     composeDraftEmail,
     sendComposedEmail,
@@ -120,9 +121,11 @@ export async function handleCorporateAssistantAction(params: {
     gatewayBaseUrl?: string;
     serviceToken?: string;
     workspaceId?: string;
+    /** Optional — dispatches native connector actions (e.g. gmail/outlook send_email). */
+    connectorActionExecuteClient?: LocalWorkspaceConnectorClient;
 }): Promise<LocalWorkspaceResult> {
     const { actionType, tenantId, botId, taskId, payload } = params;
-    const { gatewayBaseUrl, serviceToken, workspaceId } = params;
+    const { gatewayBaseUrl, serviceToken, workspaceId, connectorActionExecuteClient } = params;
 
     // RAG pre-flight — fetch prior approved communications and lessons for context
     let ragContextBlock = '';
@@ -204,7 +207,38 @@ export async function handleCorporateAssistantAction(params: {
                 if (!to) return { ok: false, output: '', errorOutput: 'payload.to (recipient email) is required.' };
                 if (!subject) return { ok: false, output: '', errorOutput: 'payload.subject is required.' };
                 if (!body) return { ok: false, output: '', errorOutput: 'payload.body is required.' };
-                if (!providerName) return { ok: false, output: '', errorOutput: 'payload.providerName is required (e.g. "sendgrid", "smtp").' };
+
+                // Preferred path: the workspace's native email connector
+                // (gmail/outlook/generic REST/SMTP). Unlike the provider path below
+                // it needs no providerName or CA_*/SALES_* env vars — the token
+                // lives with the connector.
+                const connectorSend = await sendEmailViaConnector({
+                    connectorClient: connectorActionExecuteClient,
+                    workspaceId,
+                    gatewayBaseUrl,
+                    serviceToken,
+                    to,
+                    subject,
+                    body,
+                });
+                if (connectorSend.sent) {
+                    return safeJsonResult({
+                        sent: true,
+                        via: connectorSend.connectorType,
+                        attempts: connectorSend.attempts,
+                    });
+                }
+
+                // Fallback: the env-configured SalesEmailProvider (SendGrid/SMTP).
+                // Requires providerName; kept so deployments already using it keep
+                // working while connectors are rolled out.
+                if (!providerName) {
+                    return {
+                        ok: false,
+                        output: '',
+                        errorOutput: `Email not dispatched (connector: ${connectorSend.reason}). To use the provider fallback, set payload.providerName (e.g. "sendgrid", "smtp").`,
+                    };
+                }
 
                 const result = await sendComposedEmail({ to, subject, body, persona, providerName });
                 return safeJsonResult(result);

@@ -103,9 +103,10 @@ describe('workspace_ca_email_send', () => {
         assert.ok(result.errorOutput?.includes('_persona'), `expected _persona mention, got: ${result.errorOutput}`);
     });
 
-    it('returns ok:false when providerName is missing', async () => {
+    it('returns ok:false with providerName guidance when neither a connector nor providerName is available', async () => {
         const { handleCorporateAssistantAction } = await import('./corporate-assistant-action-handler.js');
 
+        // No connectorActionExecuteClient and no providerName → both paths unavailable.
         const result = await handleCorporateAssistantAction({
             ...BASE,
             actionType: 'workspace_ca_email_send',
@@ -119,6 +120,51 @@ describe('workspace_ca_email_send', () => {
 
         assert.equal(result.ok, false);
         assert.ok(result.errorOutput?.includes('providerName'), `expected providerName mention, got: ${result.errorOutput}`);
+    });
+
+    it('dispatches through the native connector when one is configured — no providerName needed', async () => {
+        const originalFetch = globalThis.fetch;
+        // Stub the gateway token lookup so gmail resolves as configured.
+        globalThis.fetch = (async (url: string | URL | Request) => {
+            const href = typeof url === 'string' ? url : url.toString();
+            if (href.includes('gmail')) {
+                return new Response(JSON.stringify({ credentials: { accessToken: 'a' } }), {
+                    status: 200, headers: { 'content-type': 'application/json' },
+                });
+            }
+            return new Response(null, { status: 404 });
+        }) as typeof globalThis.fetch;
+
+        try {
+            const { handleCorporateAssistantAction } = await import('./corporate-assistant-action-handler.js');
+            const sent: Array<{ connectorType: string; actionType: string }> = [];
+
+            const result = await handleCorporateAssistantAction({
+                ...BASE,
+                actionType: 'workspace_ca_email_send',
+                gatewayBaseUrl: 'http://gateway',
+                serviceToken: 'tok',
+                workspaceId: 'ws-1',
+                connectorActionExecuteClient: async (i) => {
+                    sent.push({ connectorType: i.connectorType, actionType: i.actionType });
+                    return { ok: true, statusCode: 200, attempts: 1 };
+                },
+                payload: {
+                    to: 'user@example.com',
+                    subject: 'Welcome',
+                    body: 'Hello.',
+                    _persona: PERSONA, // note: no providerName
+                },
+            });
+
+            assert.equal(result.ok, true);
+            const parsed = JSON.parse(result.output) as Record<string, unknown>;
+            assert.equal(parsed['sent'], true);
+            assert.equal(parsed['via'], 'gmail');
+            assert.deepEqual(sent, [{ connectorType: 'gmail', actionType: 'send_email' }]);
+        } finally {
+            globalThis.fetch = originalFetch;
+        }
     });
 });
 
