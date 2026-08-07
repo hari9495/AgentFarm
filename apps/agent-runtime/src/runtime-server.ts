@@ -131,6 +131,7 @@ import {
 import { estimateCostUsd } from './cost-calculator.js';
 import { globalScheduler } from './skill-scheduler.js';
 import { loadPersonaForBot, loadPersonaForBotWithFallback } from './persona-context-loader.js';
+import { checkAgentShift } from './shift-gate.js';
 import { applyDisclosureToConnectorPayload } from './outbound-disclosure.js';
 import type { AgentPersonaRecord } from '@agentfarm/shared-types';
 import { buildTesterEpisodicPattern, buildTesterEpisodicSummary } from './agents/tester/tester-episodic-hooks.js';
@@ -5669,7 +5670,7 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
         verifierPurgeHandle = setInterval(() => { purgeStalePendingEntries(); }, 15 * 60 * 1_000);
 
         workerLoop.running = true;
-        workerLoop.handle = setInterval(() => {
+        workerLoop.handle = setInterval(async () => {
             if (!workerLoop.running || killSwitchEngaged) {
                 return;
             }
@@ -5691,6 +5692,24 @@ export function buildRuntimeServer(options: RuntimeServerOptions = {}): FastifyI
                 }
                 if (isBudgetDenied(task)) {
                     void persistBudgetDenialRecord(task, config);
+                    void taskQueueStore.remove(config.botId, task.taskId);
+                    continue;
+                }
+                // Shift gate (F4): off-shift tasks are parked as DeferredTask and
+                // released by deferred-task-sweep once the agent's shift opens.
+                // Covers every intake path (webhook/email/schedule/direct API) —
+                // not just the trigger-service tracker-poller path.
+                const shiftGate = await checkAgentShift(
+                    config.botId,
+                    config.tenantId,
+                    task.taskId,
+                    task.payload,
+                ).catch(() => ({ available: true as const }));
+                if (!shiftGate.available) {
+                    emitRuntimeEvent('runtime.task_deferred_shift_closed', config, {
+                        task_id: task.taskId,
+                        deferred_task_id: shiftGate.deferredTaskId,
+                    });
                     void taskQueueStore.remove(config.botId, task.taskId);
                     continue;
                 }

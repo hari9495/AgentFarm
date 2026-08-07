@@ -27,6 +27,7 @@ export async function runDeferredTaskSweep(
         '',
     );
     const runTaskUrl = `${runtimeUrl}/run-task`;
+    const tasksIntakeUrl = `${runtimeUrl}/tasks/intake`;
 
     let released = 0;
     let failed = 0;
@@ -45,10 +46,21 @@ export async function runDeferredTaskSweep(
 
     for (const task of due) {
         try {
-            const res = await fetcher(runTaskUrl, {
+            // Rows deferred by agent-runtime's own worker-loop shift gate carry a
+            // { __deferredKind: 'runtime_intake', task_id, payload } envelope and
+            // replay via /tasks/intake (same taskId, same payload). Everything
+            // else (tracker-poller, schedule-sweep) keeps the original /run-task shape.
+            const raw = task.payload as { __deferredKind?: string; task_id?: string; payload?: unknown } | null;
+            const isRuntimeIntake = !!raw && raw.__deferredKind === 'runtime_intake';
+            const url = isRuntimeIntake ? tasksIntakeUrl : runTaskUrl;
+            const body = isRuntimeIntake
+                ? JSON.stringify({ task_id: raw!.task_id, payload: raw!.payload ?? {} })
+                : JSON.stringify(task.payload ?? {});
+
+            const res = await fetcher(url, {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
-                body: JSON.stringify(task.payload ?? {}),
+                body,
             });
             if (!res.ok) {
                 const body = await res.text().catch(() => '');
