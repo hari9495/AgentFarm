@@ -10,9 +10,14 @@ import type { CleanupStats } from './types.js';
  */
 export class RetentionCleanupJob {
     private prisma: PrismaClient;
-    private storage: AzureBlobAuditStorage;
+    private storage: AzureBlobAuditStorage | null;
 
-    constructor(prismaClient: PrismaClient, auditStorage: AzureBlobAuditStorage) {
+    /**
+     * @param auditStorage Optional — without it, session/artifact deletion is
+     *   skipped (there's no blob store to point deletions at) but the
+     *   short-term-memory sweep still runs every call.
+     */
+    constructor(prismaClient: PrismaClient, auditStorage: AzureBlobAuditStorage | null = null) {
         this.prisma = prismaClient;
         this.storage = auditStorage;
     }
@@ -39,8 +44,9 @@ export class RetentionCleanupJob {
         let failedDeletions = 0;
 
         try {
-            // Find all sessions eligible for cleanup
-            const expiredSessions = await this.prisma.agentSession.findMany({
+            // No blob storage configured — nothing to point artifact deletions at.
+            // Skip the session scan entirely; the memory sweep below still runs.
+            const expiredSessions = !this.storage ? [] : await this.prisma.agentSession.findMany({
                 where: {
                     ...(tenantId ? { tenantId } : {}),
                     retentionExpiresAt: {
@@ -63,6 +69,10 @@ export class RetentionCleanupJob {
 
             sessionsScanned = expiredSessions.length;
 
+            // Non-null within this loop: expiredSessions is only non-empty when
+            // this.storage was truthy above.
+            const storage = this.storage;
+
             // Process each expired session
             for (const session of expiredSessions) {
                 try {
@@ -79,11 +89,11 @@ export class RetentionCleanupJob {
                     for (const action of session.actions) {
                         try {
                             if (action.screenshotBeforeUrl) {
-                                await this.storage.deleteArtifact(action.screenshotBeforeUrl);
+                                await storage!.deleteArtifact(action.screenshotBeforeUrl);
                                 artifactsDeleted++;
                             }
                             if (action.screenshotAfterUrl) {
-                                await this.storage.deleteArtifact(action.screenshotAfterUrl);
+                                await storage!.deleteArtifact(action.screenshotAfterUrl);
                                 artifactsDeleted++;
                             }
                         } catch (error) {
@@ -96,7 +106,7 @@ export class RetentionCleanupJob {
                     // Delete recording
                     if (session.recordingUrl) {
                         try {
-                            await this.storage.deleteArtifact(session.recordingUrl);
+                            await storage!.deleteArtifact(session.recordingUrl);
                             artifactsDeleted++;
                         } catch (error) {
                             failedDeletions++;
@@ -203,6 +213,17 @@ export class RetentionCleanupJob {
         let totalBytesFreed = 0;
         let failedDeletions = 0;
 
+        if (!this.storage) {
+            errors.push('Audit storage not configured (AZURE_AUDIT_STORAGE_* env vars) — cannot delete artifacts.');
+            const completedAt = new Date();
+            return {
+                jobId, tenantId, sessionsScanned, sessionsDeleted, artifactsDeleted, totalBytesFreed, failedDeletions,
+                errors, startedAt: startedAt.toISOString(), completedAt: completedAt.toISOString(),
+                durationMs: completedAt.getTime() - startedAt.getTime(),
+            };
+        }
+        const storage = this.storage;
+
         try {
             // Only fetch sessions that have already expired — manual_delete means
             // "wait for a human to pull the trigger", not "skip expiry entirely".
@@ -242,11 +263,11 @@ export class RetentionCleanupJob {
                     for (const action of session.actions) {
                         try {
                             if (action.screenshotBeforeUrl) {
-                                await this.storage.deleteArtifact(action.screenshotBeforeUrl);
+                                await storage.deleteArtifact(action.screenshotBeforeUrl);
                                 artifactsDeleted++;
                             }
                             if (action.screenshotAfterUrl) {
-                                await this.storage.deleteArtifact(action.screenshotAfterUrl);
+                                await storage.deleteArtifact(action.screenshotAfterUrl);
                                 artifactsDeleted++;
                             }
                         } catch (error) {
@@ -259,7 +280,7 @@ export class RetentionCleanupJob {
                     // Delete recording
                     if (session.recordingUrl) {
                         try {
-                            await this.storage.deleteArtifact(session.recordingUrl);
+                            await storage.deleteArtifact(session.recordingUrl);
                             artifactsDeleted++;
                         } catch (error) {
                             failedDeletions++;

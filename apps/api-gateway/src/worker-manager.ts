@@ -43,6 +43,7 @@ export class WorkerManager {
             { startDrainSweep, stopDrainSweep },
             { startMemoryConsolidationWorker, stopMemoryConsolidationWorker },
             { startShiftVmWorker, stopShiftVmWorker },
+            { startRetentionSweepWorker, stopRetentionSweepWorker },
         ] = await Promise.all([
             import('./services/provisioning-worker.js'),
             import('./services/connector-token-lifecycle-worker.js'),
@@ -56,6 +57,7 @@ export class WorkerManager {
             import('./lib/task-queue.js'),
             import('./services/memory-consolidation-worker.js'),
             import('./services/shift-vm-worker.js'),
+            import('./services/retention-sweep-worker.js'),
         ]);
 
         startProvisioningWorker(log);
@@ -102,6 +104,9 @@ export class WorkerManager {
         } else {
             log.info('shift VM worker not started — set AZURE_SUBSCRIPTION_ID to enable shift-driven VM power');
         }
+
+        startRetentionSweepWorker(prisma);
+        this.stopFns.push(stopRetentionSweepWorker);
     }
 
     stopAll(): void {
