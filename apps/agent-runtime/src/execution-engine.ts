@@ -167,6 +167,38 @@ export function applyPolicyDecision(
     return { decision, denied: false };
 }
 
+const APPROVAL_POLICY_MIN_RISK: Record<string, RiskLevel> = {
+    all: 'low',
+    'medium-high': 'medium',
+    'high-only': 'high',
+};
+
+/**
+ * Applies the agent persona's approvalPolicy threshold (F1) — 'all' routes every
+ * action to approval, 'medium-high' routes medium+high, 'high-only' (default)
+ * routes only high. Tighten-only, same convention as applyPolicyDecision: never
+ * downgrades a decision the OPA policy or safety net already routed to approval.
+ * Pure function — no I/O.
+ */
+export function applyApprovalPolicyThreshold(
+    decision: ActionDecision,
+    approvalPolicy: string | null | undefined,
+): ActionDecision {
+    if (decision.route === 'approval') return decision;
+    if (!approvalPolicy) return decision; // no persona/value → fail-safe, no extra restriction
+    const minRisk = APPROVAL_POLICY_MIN_RISK[approvalPolicy];
+    if (!minRisk) return decision; // unrecognized value — fail-safe, no extra restriction
+
+    const order: RiskLevel[] = ['low', 'medium', 'high'];
+    if (order.indexOf(decision.riskLevel) < order.indexOf(minRisk)) return decision;
+
+    return {
+        ...decision,
+        route: 'approval',
+        reason: `${decision.reason} [approval-policy: '${approvalPolicy}' requires approval at ${decision.riskLevel} risk]`,
+    };
+}
+
 /** Builds the policy evaluation input from a settled decision + task payload. */
 export function buildPolicyEvaluationInput(
     payload: Record<string, unknown>,
@@ -947,6 +979,14 @@ async function processDeveloperTaskInner(
                 llmExecution = { ...llmExecution, fallbackReason: 'policy_eval_failed' };
             }
         }
+    }
+
+    // F1 — agent persona's approvalPolicy threshold (attached to the task payload
+    // as _persona by runtime-server before dispatch). Tighten-only, same as the
+    // OPA merge above.
+    const personaForApproval = taskWithAuditContext.payload['_persona'] as { approvalPolicy?: string } | undefined;
+    if (personaForApproval?.approvalPolicy) {
+        decision = applyApprovalPolicyThreshold(decision, personaForApproval.approvalPolicy);
     }
 
     if (decision.route === 'approval') {

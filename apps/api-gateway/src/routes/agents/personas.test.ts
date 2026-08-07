@@ -15,6 +15,7 @@ type StoredPersona = {
     language: string;
     timezone: string;
     workingHours: unknown;
+    approvalPolicy: string;
     employeeId: string | null;
     department: string | null;
     managerId: string | null;
@@ -78,6 +79,7 @@ function buildPrismaStub() {
                         language: data.language ?? 'en',
                         timezone: data.timezone ?? 'UTC',
                         workingHours: data.workingHours ?? null,
+                        approvalPolicy: data.approvalPolicy ?? 'high-only',
                         employeeId: data.employeeId ?? null,
                         department: data.department ?? null,
                         managerId: data.managerId ?? null,
@@ -287,6 +289,53 @@ test('PATCH updates org identity fields', async () => {
     assert.equal(patch.statusCode, 200);
     assert.equal(patch.json().persona.department, 'Sales');
     assert.equal(patch.json().persona.managerId, 'bot_mgr');
+});
+
+// ---------------------------------------------------------------------------
+// Approval policy (F1) — enforced at runtime by execution-engine.ts's
+// applyApprovalPolicyThreshold, reading this field off the persona attached
+// to the task payload.
+// ---------------------------------------------------------------------------
+
+test('POST persona defaults approvalPolicy to high-only', async () => {
+    const { app } = buildApp();
+    const res = await app.inject({
+        method: 'POST',
+        url: `/v1/personas/${BOT_ID}`,
+        payload: { displayName: 'Alex', emailAddress: 'alex@agentfarm.ai' },
+    });
+    assert.equal(res.json().persona.approvalPolicy, 'high-only');
+});
+
+test('PATCH updates approvalPolicy and reflects in GET', async () => {
+    const { app } = buildApp();
+    await app.inject({
+        method: 'POST',
+        url: `/v1/personas/${BOT_ID}`,
+        payload: { displayName: 'Alex', emailAddress: 'alex@agentfarm.ai' },
+    });
+    const patch = await app.inject({
+        method: 'PATCH',
+        url: `/v1/personas/${BOT_ID}`,
+        payload: { approvalPolicy: 'medium-high' },
+    });
+    assert.equal(patch.statusCode, 200);
+    assert.equal(patch.json().persona.approvalPolicy, 'medium-high');
+});
+
+test('PATCH rejects an unrecognized approvalPolicy value', async () => {
+    const { app } = buildApp();
+    await app.inject({
+        method: 'POST',
+        url: `/v1/personas/${BOT_ID}`,
+        payload: { displayName: 'Alex', emailAddress: 'alex@agentfarm.ai' },
+    });
+    const patch = await app.inject({
+        method: 'PATCH',
+        url: `/v1/personas/${BOT_ID}`,
+        payload: { approvalPolicy: 'nonsense' },
+    });
+    assert.equal(patch.statusCode, 400);
 });
 
 // ---------------------------------------------------------------------------

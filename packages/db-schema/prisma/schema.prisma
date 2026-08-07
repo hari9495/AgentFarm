@@ -114,6 +114,10 @@ model AgentPersona {
   language            String   @default("en")
   timezone            String   @default("UTC")
   workingHours        Json?
+  // Approval-policy threshold (F1) — which risk levels require human approval
+  // before execution. 'all' = every action; 'medium-high' = medium+high risk;
+  // 'high-only' = only high risk. Enforced in agent-runtime/execution-engine.ts.
+  approvalPolicy      String   @default("high-only")
   // Org identity (H2) — lets agents sit in the org chart like human staff.
   employeeId          String?  @db.VarChar(64)
   department          String?  @db.VarChar(100)

@@ -326,6 +326,17 @@ export const registerSetupWizardRoutes = async (
                 },
             });
 
+            // F5 — apply the approval-rules step onto the real AgentPersona so the
+            // runtime actually enforces it (execution-engine.ts:applyApprovalPolicyThreshold).
+            // Wizard collects two risk-level checkboxes; AgentPersona stores the
+            // resulting threshold. 'all' isn't expressible via the wizard's checkboxes,
+            // so the safe floor is 'high-only' when neither/only-high is checked.
+            const wizardApprovalPolicy = row.approvalPolicy as { mediumRiskRequiresApproval?: boolean } | null;
+            await (db.agentPersona as any).update({
+                where: { botId: row.botId },
+                data: { approvalPolicy: wizardApprovalPolicy?.mediumRiskRequiresApproval ? 'medium-high' : 'high-only' },
+            }).catch(() => { /* best-effort — persona was already created in configure_persona step */ });
+
             const completionPayload: WizardCompletionPayload = {
                 sessionId,
                 tenantId: session.tenantId,

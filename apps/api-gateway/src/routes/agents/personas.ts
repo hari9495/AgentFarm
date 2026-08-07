@@ -25,6 +25,7 @@ export type RegisterPersonaRoutesOptions = {
 type BotIdParams = { botId: string };
 
 const VALID_COMMUNICATION_STYLES = ['professional', 'friendly', 'concise', 'formal'] as const;
+const VALID_APPROVAL_POLICIES = ['all', 'medium-high', 'high-only'] as const;
 
 /** Verify the bot exists and belongs to the requesting tenant. Returns the botId or null. */
 async function resolveBotForTenant(
@@ -51,6 +52,7 @@ function toPersonaRecord(persona: {
     language: string;
     timezone: string;
     workingHours: unknown;
+    approvalPolicy: string;
     employeeId?: string | null;
     department?: string | null;
     managerId?: string | null;
@@ -69,6 +71,7 @@ function toPersonaRecord(persona: {
         language: persona.language,
         timezone: persona.timezone,
         workingHours: (persona.workingHours as AgentPersonaRecord['workingHours']) ?? null,
+        approvalPolicy: (persona.approvalPolicy as AgentPersonaRecord['approvalPolicy']) ?? 'high-only',
         employeeId: persona.employeeId ?? null,
         department: persona.department ?? null,
         managerId: persona.managerId ?? null,
@@ -141,6 +144,9 @@ export const registerPersonaRoutes = async (
             if (body.communicationStyle && !VALID_COMMUNICATION_STYLES.includes(body.communicationStyle as typeof VALID_COMMUNICATION_STYLES[number])) {
                 return reply.code(400).send({ error: 'invalid_communication_style', valid: VALID_COMMUNICATION_STYLES });
             }
+            if (body.approvalPolicy && !VALID_APPROVAL_POLICIES.includes(body.approvalPolicy as typeof VALID_APPROVAL_POLICIES[number])) {
+                return reply.code(400).send({ error: 'invalid_approval_policy', valid: VALID_APPROVAL_POLICIES });
+            }
 
             const db = await resolvePrisma();
 
@@ -168,6 +174,7 @@ export const registerPersonaRoutes = async (
                     workingHours: body.workingHours !== undefined
                         ? (body.workingHours as unknown as import('@prisma/client').Prisma.InputJsonValue)
                         : undefined,
+                    approvalPolicy: body.approvalPolicy ?? 'high-only',
                     employeeId: body.employeeId ?? null,
                     department: body.department ?? null,
                     managerId: body.managerId ?? null,
@@ -203,6 +210,12 @@ export const registerPersonaRoutes = async (
             ) {
                 return reply.code(400).send({ error: 'invalid_communication_style', valid: VALID_COMMUNICATION_STYLES });
             }
+            if (
+                body.approvalPolicy !== undefined &&
+                !VALID_APPROVAL_POLICIES.includes(body.approvalPolicy as typeof VALID_APPROVAL_POLICIES[number])
+            ) {
+                return reply.code(400).send({ error: 'invalid_approval_policy', valid: VALID_APPROVAL_POLICIES });
+            }
 
             const db = await resolvePrisma();
 
@@ -225,6 +238,7 @@ export const registerPersonaRoutes = async (
             if (body.language !== undefined) updateData['language'] = body.language;
             if (body.timezone !== undefined) updateData['timezone'] = body.timezone;
             if (body.workingHours !== undefined) updateData['workingHours'] = body.workingHours;
+            if (body.approvalPolicy !== undefined) updateData['approvalPolicy'] = body.approvalPolicy;
             if (body.employeeId !== undefined) updateData['employeeId'] = body.employeeId;
             if (body.department !== undefined) updateData['department'] = body.department;
             if (body.managerId !== undefined) updateData['managerId'] = body.managerId;

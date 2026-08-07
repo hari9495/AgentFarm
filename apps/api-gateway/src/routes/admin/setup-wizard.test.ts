@@ -32,6 +32,7 @@ function buildPrismaStub() {
 
     const stub = {
         sessions,
+        personas,
         workspace: {
             findFirst: async ({ where }: { where: { tenantId: string } }) => {
                 return { id: `workspace_${where.tenantId}`, tenantId: where.tenantId };
@@ -49,6 +50,13 @@ function buildPrismaStub() {
                 const persona = { id: `persona_${++seq}`, ...data };
                 personas.set(String(data.botId), persona);
                 return persona;
+            },
+            update: async ({ where, data }: { where: { botId: string }; data: Record<string, unknown> }) => {
+                const existing = personas.get(where.botId);
+                if (!existing) throw new Error('persona not found');
+                const updated = { ...existing, ...data };
+                personas.set(where.botId, updated);
+                return updated;
             },
         },
         setupWizardSession: {
@@ -225,7 +233,7 @@ test('PATCH step — rejects non-sequential step transitions', async () => {
 });
 
 test('POST /v1/setup-wizard/:sessionId/complete — completes wizard after all steps', async () => {
-    const { app } = await buildApp();
+    const { app, stub } = await buildApp();
     const { session } = (await app.inject({ method: 'POST', url: '/v1/setup-wizard' })).json() as {
         session: { id: string };
     };
@@ -276,9 +284,14 @@ test('POST /v1/setup-wizard/:sessionId/complete — completes wizard after all s
     });
 
     assert.equal(completeRes.statusCode, 200);
-    const body = completeRes.json() as { session: { status: string }; provisioning: { roleKey: string } };
+    const body = completeRes.json() as { session: { status: string }; provisioning: { roleKey: string; botId: string } };
     assert.equal(body.session.status, 'completed');
     assert.equal(body.provisioning.roleKey, 'developer');
+
+    // F5 — the approval-rules step must actually land on the real AgentPersona,
+    // not just sit unread on the wizard session row.
+    const persona = stub.personas.get(body.provisioning.botId) as { approvalPolicy?: string };
+    assert.equal(persona.approvalPolicy, 'high-only');
 });
 
 test('POST complete — returns 422 when steps are incomplete', async () => {

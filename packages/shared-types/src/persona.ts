@@ -5,6 +5,12 @@
 /** Communication tone style for the agent persona. */
 export type CommunicationStyle = 'professional' | 'friendly' | 'concise' | 'formal';
 
+/**
+ * Which risk levels require human approval before execution.
+ * 'all' = every action; 'medium-high' = medium+high risk; 'high-only' = only high risk.
+ */
+export type ApprovalPolicy = 'all' | 'medium-high' | 'high-only';
+
 /** Working hours window with days-of-week (0=Sun … 6=Sat). */
 export interface WorkingHours {
     /** 24h time string, e.g. "09:00" */
@@ -36,6 +42,8 @@ export interface AgentPersonaRecord {
     /** IANA timezone, e.g. "America/New_York" */
     timezone: string;
     workingHours?: WorkingHours | null;
+    /** Which risk levels require human approval before execution. Default 'high-only'. */
+    approvalPolicy?: ApprovalPolicy;
     /** Org identity — places the agent in the org chart like a human employee. */
     employeeId?: string | null;
     department?: string | null;
