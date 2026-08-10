@@ -201,7 +201,7 @@
         "test:coverage": "pnpm exec c8 --reporter=text-summary --reporter=json-summary --exclude=src/**/*.test.ts tsx --test src/**/*.test.ts && node ../../scripts/coverage-threshold-check.mjs coverage/coverage-summary.json 80 lines src/runtime-server.ts src/execution-engine.ts src/action-result-writer.ts"
     },
     "devDependencies": {
-        "@types/nodemailer": "^6.4.17",
+        "@types/nodemailer": "^6.4.24",
         "ts-node": "^10.9.2",
         "tsx": "^4.20.6",
         "typescript": "^5.7.2"

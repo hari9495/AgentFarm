@@ -11,7 +11,7 @@
         "test": "tsx --test src/**/*.test.ts"
     },
     "devDependencies": {
-        "@types/nodemailer": "^6.4.17",
+        "@types/nodemailer": "^6.4.24",
         "ts-node": "^10.9.2",
         "tsx": "^4.19.2",
         "typescript": "^5.7.2"

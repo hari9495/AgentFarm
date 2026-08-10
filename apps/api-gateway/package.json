@@ -43,9 +43,9 @@
         "otplib": "^13.4.1",
         "pdfkit": "^0.18.0",
         "qrcode": "^1.5.4",
-        "razorpay": "^2.9.6",
+        "razorpay": "^2.9.8",
         "stripe": "^22.1.1",
-        "ws": "^8.21.0"
+        "ws": "^8.21.2"
     },
     "devDependencies": {
         "@types/pdfkit": "^0.17.6",
