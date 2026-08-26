@@ -261,15 +261,15 @@ export default async function AgentsIndexPage({
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
                 {/* Dark hero */}
-                <section className="relative overflow-hidden rounded-2xl bg-slate-950">
+                <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-50 via-white to-white">
                     <div className="absolute inset-0 pointer-events-none">
-                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(14,165,233,0.18)_0%,transparent_60%)]" />
-                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.12)_0%,transparent_60%)]" />
-                        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.07)_0%,transparent_60%)]" />
+                        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle, rgba(37,99,235,1) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center gap-2 rounded-xl bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-400">
+                            <div className="flex items-center gap-2 rounded-xl bg-blue-50 border border-blue-200 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-700">
                                 <Cpu className="w-3.5 h-3.5" />
                                 Agents
                             </div>
@@ -278,8 +278,8 @@ export default async function AgentsIndexPage({
                         </div>
                         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
                             <div>
-                                <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">AI Workers</h1>
-                                <p className="mt-2 text-slate-400 text-base max-w-lg">Inspect each worker's task history, quality, and approvals.</p>
+                                <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">AI Workers</h1>
+                                <p className="mt-2 text-slate-600 text-base max-w-lg">Inspect each worker's task history, quality, and approvals.</p>
                             </div>
                         </div>
 
@@ -367,7 +367,7 @@ export default async function AgentsIndexPage({
                         </p>
                         <Link
                             href="/dashboard/deployments"
-                            className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-white/90 transition-colors"
+                            className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900 hover:bg-blue-700 dark:hover:bg-white/90 transition-colors"
                         >
                             Go to Deployments
                             <ArrowRight className="h-3.5 w-3.5" />
@@ -485,7 +485,7 @@ export default async function AgentsIndexPage({
                                 <div className="mt-4 flex gap-2">
                                     <Link
                                         href={`/dashboard/agents/${agent.slug}`}
-                                        className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2.5 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-white/90 transition-colors"
+                                        className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2.5 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900 hover:bg-blue-700 dark:hover:bg-white/90 transition-colors"
                                     >
                                         View details
                                         <ArrowRight className="h-3.5 w-3.5" />
