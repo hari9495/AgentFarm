@@ -1420,11 +1420,32 @@ export async function handleFsdAction(
                 ));
             }
 
+            const spokenText = llmEnhancement || summary.spokenText;
+
+            // Post path: publish the standup to the team channel instead of just
+            // returning it. Routine → no gate. Fail-safe: a post failure still
+            // returns the report.
+            if (payload['post'] === true) {
+                const channel = str(payload['channel']).trim();
+                if (!channel) {
+                    return safeJson({ posted: false, reason: 'post=true requires payload.channel', summary, ceremony_context: ceremonyCtx, frontend_health: frontendHealth, spoken_text: spokenText });
+                }
+                const postRes = await executeAction('workspace_slack_notify', { channel, message: spokenText });
+                return safeJson({
+                    posted: postRes.ok,
+                    ...(postRes.ok ? { channel } : { reason: postRes.errorOutput ?? 'slack post failed' }),
+                    summary,
+                    ceremony_context: ceremonyCtx,
+                    frontend_health:  frontendHealth,
+                    spoken_text:      spokenText,
+                });
+            }
+
             return safeJson({
                 summary,
                 ceremony_context: ceremonyCtx,
                 frontend_health:  frontendHealth,
-                spoken_text:      llmEnhancement || summary.spokenText,
+                spoken_text:      spokenText,
             });
         }
 
