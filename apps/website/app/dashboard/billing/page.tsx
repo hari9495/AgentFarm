@@ -201,7 +201,7 @@ export default async function BillingPage() {
 
                     <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
                         <div className="flex items-center justify-between mb-4">
-                            <PremiumIcon icon={Users} tone="sky" containerClassName="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-900/50 text-sky-600 dark:text-sky-400" iconClassName="w-5 h-5" />
+                            <PremiumIcon icon={Users} tone="sky" containerClassName="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400" iconClassName="w-5 h-5" />
                             {seatPct !== null && (
                                 <span className="text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 rounded-full px-2.5 py-1">
                                     {seatPct}% used
@@ -224,7 +224,7 @@ export default async function BillingPage() {
                         )}
                     </div>
 
-                    <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800/50 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/20 p-5">
+                    <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800/50 bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-950/30 dark:to-blue-950/20 p-5">
                         <div className="flex items-center justify-between mb-4">
                             <PremiumIcon icon={Zap} tone="emerald" containerClassName="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400" iconClassName="w-5 h-5" />
                             {subscription && subscription.status && subscription.status !== "none" && (

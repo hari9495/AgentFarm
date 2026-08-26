@@ -37,8 +37,8 @@ export default async function DeploymentsPage() {
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         {/* Breadcrumb */}
                         <div className="flex items-center gap-2 mb-5">
-                            <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-sky-400">
-                                <PremiumIcon icon={Rocket} tone="sky" containerClassName="w-4 h-4 rounded bg-sky-400/20 text-sky-300" iconClassName="w-2.5 h-2.5" />
+                            <div className="flex items-center gap-2 rounded-xl bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-400">
+                                <PremiumIcon icon={Rocket} tone="sky" containerClassName="w-4 h-4 rounded bg-blue-400/20 text-blue-300" iconClassName="w-2.5 h-2.5" />
                                 Deployments
                             </div>
                             <ChevronRight className="w-3.5 h-3.5 text-slate-600" />

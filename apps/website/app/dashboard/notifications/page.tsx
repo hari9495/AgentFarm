@@ -35,8 +35,8 @@ const levelStyle: Record<NotificationLevel, { container: string; dot: string }> 
         dot: "bg-emerald-500",
     },
     info: {
-        container: "border-l-4 border-l-sky-400 bg-white dark:bg-slate-900",
-        dot: "bg-sky-400",
+        container: "border-l-4 border-l-blue-400 bg-white dark:bg-slate-900",
+        dot: "bg-blue-400",
     },
 };
 
@@ -94,7 +94,7 @@ export default async function DashboardNotificationsPage() {
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-sky-400">
+                            <div className="flex items-center gap-2 rounded-xl bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-400">
                                 <Bell className="w-3.5 h-3.5" />
                                 Notifications
                             </div>

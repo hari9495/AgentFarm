@@ -85,13 +85,13 @@ function KpiSection({ data, loading }: { data: KpiData | null; loading: boolean 
                         icon: Clock, label: "P95 Approval Latency", why: "Agent wait time",
                         value: n(data?.approvals?.p95_latency_ms) === 0 ? "—" : `${(n(data?.approvals?.p95_latency_ms) / 1000).toFixed(1)}s`,
                         sub: n(data?.approvals?.p95_latency_ms) < 5000 ? "Within SLA" : "Above target — bottleneck risk",
-                        color: "text-sky-500", bg: "from-sky-500/10 to-sky-500/5 border-sky-500/20",
+                        color: "text-blue-500", bg: "from-blue-500/10 to-blue-500/5 border-blue-500/20",
                     },
                     {
                         icon: Zap, label: "Auto-approved", why: "Efficiency signal",
                         value: pct(data?.approvals?.auto_approved_pct),
                         sub: n(data?.approvals?.auto_approved_pct) >= 70 ? "Good — humans on high-risk only" : "Low — many manual decisions",
-                        color: "text-violet-500", bg: "from-violet-500/10 to-violet-500/5 border-violet-500/20",
+                        color: "text-blue-500", bg: "from-blue-500/10 to-blue-500/5 border-blue-500/20",
                     },
                     {
                         icon: TrendingUp, label: "Escalation rate", why: "Operators empowered?",
@@ -159,10 +159,10 @@ function WorkflowTemplateForm({ onSave, onCancel }: { onSave: (t: Partial<Workfl
         finally { setSaving(false); }
     };
 
-    const inputCls = "w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500/40 focus:border-violet-500";
+    const inputCls = "w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500";
 
     return (
-        <div className="rounded-2xl border border-violet-500/30 bg-violet-50/50 dark:bg-violet-950/10 p-6">
+        <div className="rounded-2xl border border-blue-500/30 bg-blue-50/50 dark:bg-blue-950/10 p-6">
             <div className="flex items-center justify-between mb-5">
                 <div>
                     <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">New Approval Workflow</h3>
@@ -181,7 +181,7 @@ function WorkflowTemplateForm({ onSave, onCancel }: { onSave: (t: Partial<Workfl
                 <div>
                     <div className="flex items-center justify-between mb-2">
                         <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Approval Stages</label>
-                        <button type="button" onClick={addStage} className="flex items-center gap-1 text-xs font-bold text-violet-600 dark:text-violet-400 hover:text-violet-700 transition-colors">
+                        <button type="button" onClick={addStage} className="flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 transition-colors">
                             <Plus className="w-3.5 h-3.5" /> Add stage
                         </button>
                     </div>
@@ -190,7 +190,7 @@ function WorkflowTemplateForm({ onSave, onCancel }: { onSave: (t: Partial<Workfl
                         {stages.map((stage, i) => (
                             <div key={i} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 p-4">
                                 <div className="flex items-center gap-2 mb-3">
-                                    <div className="w-6 h-6 rounded-full bg-violet-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">{i + 1}</div>
+                                    <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">{i + 1}</div>
                                     <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Stage {i + 1}</span>
                                     {stages.length > 1 && (
                                         <button type="button" onClick={() => removeStage(i)} className="ml-auto text-slate-300 dark:text-slate-600 hover:text-rose-500 transition-colors">
@@ -245,7 +245,7 @@ function WorkflowTemplateForm({ onSave, onCancel }: { onSave: (t: Partial<Workfl
                             {stages.map((st, i) => (
                                 <>
                                     <ChevronRight key={`arr-${i}`} className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                                    <span key={`st-${i}`} className="text-xs font-semibold text-violet-700 dark:text-violet-300 bg-violet-100 dark:bg-violet-900/30 rounded-lg px-2 py-1 border border-violet-200 dark:border-violet-800/50">
+                                    <span key={`st-${i}`} className="text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/30 rounded-lg px-2 py-1 border border-blue-200 dark:border-blue-800/50">
                                         {st.name || `Stage ${i + 1}`} ({st.role}, {Math.round(st.sla_seconds / 60)}m SLA)
                                     </span>
                                 </>
@@ -262,7 +262,7 @@ function WorkflowTemplateForm({ onSave, onCancel }: { onSave: (t: Partial<Workfl
                     <button type="button" onClick={onCancel} className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 py-2.5 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                         Cancel
                     </button>
-                    <button type="submit" disabled={saving} className="flex-1 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white py-2.5 text-sm font-bold transition-colors">
+                    <button type="submit" disabled={saving} className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white py-2.5 text-sm font-bold transition-colors">
                         {saving ? "Saving…" : "Create Workflow"}
                     </button>
                 </div>
@@ -311,7 +311,7 @@ function WorkflowsSection() {
                     </p>
                 </div>
                 <button onClick={() => setShowForm(true)}
-                    className="flex items-center gap-1.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 text-sm font-bold transition-colors flex-shrink-0">
+                    className="flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-bold transition-colors flex-shrink-0">
                     <Plus className="w-4 h-4" /> New workflow
                 </button>
             </div>
@@ -320,15 +320,15 @@ function WorkflowsSection() {
 
             {templates.length === 0 && !showForm ? (
                 <div className="rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 p-12 text-center">
-                    <div className="w-14 h-14 rounded-2xl bg-violet-500/10 flex items-center justify-center mx-auto mb-4">
-                        <GitBranch className="w-7 h-7 text-violet-500" />
+                    <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
+                        <GitBranch className="w-7 h-7 text-blue-500" />
                     </div>
                     <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">No workflows yet</h3>
                     <p className="text-sm text-slate-400 dark:text-slate-500 max-w-sm mx-auto mb-5">
                         Without workflows, all approvals are flat single-person decisions.
                         Create a template to enforce multi-stage reviews for high-stakes actions.
                     </p>
-                    <button onClick={() => setShowForm(true)} className="rounded-xl bg-violet-600 hover:bg-violet-700 text-white px-5 py-2.5 text-sm font-bold transition-colors">
+                    <button onClick={() => setShowForm(true)} className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 text-sm font-bold transition-colors">
                         Create your first workflow
                     </button>
                 </div>
@@ -338,8 +338,8 @@ function WorkflowsSection() {
                         <div key={t.id} className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
                             <div className="flex items-start justify-between gap-3">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center flex-shrink-0">
-                                        <GitBranch className="w-5 h-5 text-violet-500" />
+                                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                                        <GitBranch className="w-5 h-5 text-blue-500" />
                                     </div>
                                     <div>
                                         <p className="font-bold text-slate-900 dark:text-slate-100">{t.name}</p>
@@ -430,7 +430,7 @@ function PluginsSection() {
     const categoryLabel = (c: Plugin["category"]) =>
         ({ compliance: "Compliance", security: "Security", audit: "Audit", custom: "Custom" }[c]);
     const categoryColor = (c: Plugin["category"]) =>
-        ({ compliance: "text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-900/40", security: "text-amber-600 bg-amber-100 dark:text-amber-300 dark:bg-amber-900/40", audit: "text-violet-600 bg-violet-100 dark:text-violet-300 dark:bg-violet-900/40", custom: "text-slate-600 bg-slate-100 dark:text-slate-300 dark:bg-slate-800" }[c]);
+        ({ compliance: "text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-900/40", security: "text-amber-600 bg-amber-100 dark:text-amber-300 dark:bg-amber-900/40", audit: "text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-900/40", custom: "text-slate-600 bg-slate-100 dark:text-slate-300 dark:bg-slate-800" }[c]);
 
     const enabledCount = plugins.filter(p => p.enabled).length;
 
@@ -460,13 +460,13 @@ function PluginsSection() {
             ) : (
                 <div className="space-y-3">
                     {plugins.map(plugin => (
-                        <div key={plugin.key} className={`rounded-2xl border ${plugin.enabled ? "border-violet-500/30 bg-violet-50/30 dark:bg-violet-950/10" : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"} p-5 transition-colors`}>
+                        <div key={plugin.key} className={`rounded-2xl border ${plugin.enabled ? "border-blue-500/30 bg-blue-50/30 dark:bg-blue-950/10" : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"} p-5 transition-colors`}>
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex items-start gap-3 flex-1 min-w-0">
-                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${plugin.enabled ? "bg-violet-500/15" : "bg-slate-100 dark:bg-slate-800"}`}>
-                                        {plugin.category === "compliance" ? <Shield className={`w-4.5 h-4.5 ${plugin.enabled ? "text-violet-500" : "text-slate-400"}`} /> :
-                                         plugin.category === "security" ? <Zap className={`w-4.5 h-4.5 ${plugin.enabled ? "text-violet-500" : "text-slate-400"}`} /> :
-                                         <Eye className={`w-4.5 h-4.5 ${plugin.enabled ? "text-violet-500" : "text-slate-400"}`} />}
+                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${plugin.enabled ? "bg-blue-500/15" : "bg-slate-100 dark:bg-slate-800"}`}>
+                                        {plugin.category === "compliance" ? <Shield className={`w-4.5 h-4.5 ${plugin.enabled ? "text-blue-500" : "text-slate-400"}`} /> :
+                                         plugin.category === "security" ? <Zap className={`w-4.5 h-4.5 ${plugin.enabled ? "text-blue-500" : "text-slate-400"}`} /> :
+                                         <Eye className={`w-4.5 h-4.5 ${plugin.enabled ? "text-blue-500" : "text-slate-400"}`} />}
                                     </div>
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-2 flex-wrap">
@@ -489,7 +489,7 @@ function PluginsSection() {
                                     {toggling === plugin.key ? (
                                         <div className="w-10 h-6 rounded-full bg-slate-300 dark:bg-slate-600 animate-pulse" />
                                     ) : plugin.enabled ? (
-                                        <ToggleRight className="w-8 h-8 text-violet-500" />
+                                        <ToggleRight className="w-8 h-8 text-blue-500" />
                                     ) : (
                                         <ToggleLeft className="w-8 h-8 text-slate-300 dark:text-slate-600" />
                                     )}

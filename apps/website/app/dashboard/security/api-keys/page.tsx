@@ -32,8 +32,8 @@ const ROLES: ApiKeyRole[] = ["viewer", "operator", "admin"];
 
 const ROLE_BADGE: Record<ApiKeyRole, string> = {
     viewer: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300",
-    operator: "bg-sky-50 dark:bg-sky-950/30 text-sky-700 dark:text-sky-400",
-    admin: "bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-400",
+    operator: "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400",
+    admin: "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400",
 };
 
 function formatDate(iso: string | null): string {
@@ -42,7 +42,7 @@ function formatDate(iso: string | null): string {
 }
 
 const inputClass =
-    "w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400/40";
+    "w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400/40";
 
 export default function ApiKeysPage() {
     const [keys, setKeys] = useState<ApiKey[]>([]);
@@ -170,8 +170,8 @@ export default function ApiKeysPage() {
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
                         <div>
-                            <div className="flex items-center gap-2 rounded-xl bg-violet-500/10 border border-violet-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-violet-300 w-fit mb-4">
-                                <PremiumIcon icon={KeyRound} tone="violet" containerClassName="w-4 h-4 rounded bg-violet-400/20 text-violet-300" iconClassName="w-2.5 h-2.5" />
+                            <div className="flex items-center gap-2 rounded-xl bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-300 w-fit mb-4">
+                                <PremiumIcon icon={KeyRound} tone="violet" containerClassName="w-4 h-4 rounded bg-blue-400/20 text-blue-300" iconClassName="w-2.5 h-2.5" />
                                 API Keys
                             </div>
                             <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">Programmatic access</h1>
@@ -292,7 +292,7 @@ export default function ApiKeysPage() {
                                         <tr key={key.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                                             <td className="px-5 py-3.5">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 shrink-0">
+                                                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 shrink-0">
                                                         <KeyRound className="w-3.5 h-3.5" />
                                                     </span>
                                                     <span className="font-semibold text-slate-800 dark:text-slate-100">{key.name}</span>

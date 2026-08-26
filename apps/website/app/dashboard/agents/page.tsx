@@ -180,19 +180,19 @@ function heatCellClass(seed: number, idx: number, fromDate: Date, active: boolea
 // ── Tone / status ──────────────────────────────────────────────────────────────
 
 const toneClass: Record<string, string> = {
-    sky:    "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
-    violet: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+    sky:    "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+    violet: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
     amber:  "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
     rose:   "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
 };
 
 const toneDot: Record<string, string> = {
-    sky: "bg-sky-500", violet: "bg-violet-500", amber: "bg-amber-500", rose: "bg-rose-500",
+    sky: "bg-blue-500", violet: "bg-blue-500", amber: "bg-amber-500", rose: "bg-rose-500",
 };
 
 const statusConfig: Record<string, { dot: string; text: string; pulse: boolean }> = {
     "Active":       { dot: "bg-emerald-400", text: "text-emerald-600 dark:text-emerald-400", pulse: true  },
-    "Provisioning": { dot: "bg-sky-400",     text: "text-sky-600 dark:text-sky-400",         pulse: true  },
+    "Provisioning": { dot: "bg-blue-400",     text: "text-blue-600 dark:text-blue-400",         pulse: true  },
     "Needs review": { dot: "bg-rose-400",    text: "text-rose-600 dark:text-rose-400",       pulse: false },
     "Paused":       { dot: "bg-amber-400",   text: "text-amber-600 dark:text-amber-400",     pulse: false },
     "Maintenance":  { dot: "bg-slate-400",   text: "text-slate-500 dark:text-slate-400",     pulse: false },
@@ -269,7 +269,7 @@ export default async function AgentsIndexPage({
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-sky-400">
+                            <div className="flex items-center gap-2 rounded-xl bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-400">
                                 <Cpu className="w-3.5 h-3.5" />
                                 Agents
                             </div>
@@ -326,7 +326,7 @@ export default async function AgentsIndexPage({
                         {!isLatest && (
                             <Link
                                 href={`?from=${toDateStr(addDays(today, -(DEFAULT_RANGE - 1)))}&to=${toDateStr(today)}`}
-                                className="inline-flex items-center gap-1 rounded-full bg-sky-50 dark:bg-sky-900/30 border border-sky-200 dark:border-sky-800 px-2 py-0.5 text-[10px] font-semibold text-sky-600 dark:text-sky-400 hover:bg-sky-100 transition-colors"
+                                className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 px-2 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-colors"
                             >
                                 <RotateCcw className="h-2.5 w-2.5" />
                                 Today
@@ -395,7 +395,7 @@ export default async function AgentsIndexPage({
                                 </div>
 
                                 {/* Name */}
-                                <h2 className="mt-3 text-base font-bold text-slate-900 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                                <h2 className="mt-3 text-base font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                                     {agent.name}
                                 </h2>
 
@@ -462,8 +462,8 @@ export default async function AgentsIndexPage({
                                 {/* Stats */}
                                 <div className="mt-4 grid grid-cols-2 gap-2">
                                     <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/50 px-3 py-2.5 flex items-center gap-2.5">
-                                        <div className="h-7 w-7 rounded-lg bg-sky-100 dark:bg-sky-900/40 flex items-center justify-center shrink-0">
-                                            <ClipboardCheck className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
+                                        <div className="h-7 w-7 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0">
+                                            <ClipboardCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                                         </div>
                                         <div>
                                             <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">{agent.tasks}</p>

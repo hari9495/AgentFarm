@@ -50,7 +50,7 @@ const roleRows: RoleRow[] = [
         key: "admin",
         name: "Org Admin",
         description: "Manages the workspace day-to-day — billing, roster, security policy, and integrations.",
-        badgeClassName: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+        badgeClassName: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
         icon: Shield,
         values: ["Full", "Full", "Full", "Full", "Approve", "Full", "Full"],
     },
@@ -58,7 +58,7 @@ const roleRows: RoleRow[] = [
         key: "superadmin",
         name: "Super Admin",
         description: "Highest level of access — everything an Org Admin can do, plus admin role assignment.",
-        badgeClassName: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/40 dark:text-fuchsia-300",
+        badgeClassName: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
         icon: ShieldCheck,
         values: ["Full", "Full", "Full", "Full", "Approve", "Full", "Full"],
     },
@@ -66,7 +66,7 @@ const roleRows: RoleRow[] = [
 
 const classFor = (value: string) => {
     if (value === "Full") return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300";
-    if (value === "Approve") return "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300";
+    if (value === "Approve") return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300";
     if (value === "Run") return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
     if (value === "Request") return "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
     if (value.startsWith("View")) return "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300";
@@ -102,8 +102,8 @@ export default async function RolesPermissionsPage() {
 
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-5">
-                            <div className="flex items-center gap-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-indigo-400">
-                                <PremiumIcon icon={Lock} tone="indigo" containerClassName="w-4 h-4 rounded bg-indigo-400/20 text-indigo-300" iconClassName="w-2.5 h-2.5" />
+                            <div className="flex items-center gap-2 rounded-xl bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-400">
+                                <PremiumIcon icon={Lock} tone="indigo" containerClassName="w-4 h-4 rounded bg-blue-400/20 text-blue-300" iconClassName="w-2.5 h-2.5" />
                                 Access
                             </div>
                             <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
@@ -154,7 +154,7 @@ export default async function RolesPermissionsPage() {
                                 key={role.key}
                                 className={`rounded-2xl border bg-white dark:bg-slate-900 p-5 transition-colors ${
                                     isYou
-                                        ? "border-indigo-300 dark:border-indigo-700 ring-1 ring-indigo-200 dark:ring-indigo-900/50"
+                                        ? "border-blue-300 dark:border-blue-700 ring-1 ring-blue-200 dark:ring-blue-900/50"
                                         : "border-slate-200 dark:border-slate-800"
                                 }`}
                             >
@@ -164,7 +164,7 @@ export default async function RolesPermissionsPage() {
                                         {role.name}
                                     </span>
                                     {isYou && (
-                                        <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+                                        <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
                                             You
                                         </span>
                                     )}
@@ -179,7 +179,7 @@ export default async function RolesPermissionsPage() {
                 <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
                     <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                         <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 inline-flex items-center gap-1.5">
-                            <PremiumIcon icon={Lock} tone="indigo" containerClassName="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400" iconClassName="w-3.5 h-3.5" />
+                            <PremiumIcon icon={Lock} tone="indigo" containerClassName="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" iconClassName="w-3.5 h-3.5" />
                             Permission matrix
                         </h2>
                         <span className="text-xs text-slate-400 dark:text-slate-500">Read-only — assigned by your org admins</span>
@@ -189,7 +189,7 @@ export default async function RolesPermissionsPage() {
                     <div className="px-5 py-2.5 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-3">
                         {[
                             { label: "Full", cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" },
-                            { label: "Approve", cls: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300" },
+                            { label: "Approve", cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" },
                             { label: "Run", cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" },
                             { label: "Request", cls: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
                             { label: "View", cls: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300" },
@@ -211,12 +211,12 @@ export default async function RolesPermissionsPage() {
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
                                 {roleRows.map((role) => (
-                                    <tr key={role.key} className="hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-colors group">
-                                        <td className="px-5 py-3 font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap sticky left-0 bg-white dark:bg-slate-900 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/10 z-10 transition-colors">
+                                    <tr key={role.key} className="hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors group">
+                                        <td className="px-5 py-3 font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap sticky left-0 bg-white dark:bg-slate-900 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/10 z-10 transition-colors">
                                             <span className="inline-flex items-center gap-1.5">
                                                 {role.name}
                                                 {role.key === displayRole && (
-                                                    <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+                                                    <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
                                                         You
                                                     </span>
                                                 )}
@@ -237,12 +237,12 @@ export default async function RolesPermissionsPage() {
                 {/* ── Footnote ────────────────────────────────────────── */}
                 <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
                     <div className="flex items-center gap-2 mb-2">
-                        <PremiumIcon icon={CheckSquare} tone="indigo" containerClassName="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400" iconClassName="w-3.5 h-3.5" />
+                        <PremiumIcon icon={CheckSquare} tone="indigo" containerClassName="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" iconClassName="w-3.5 h-3.5" />
                         <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">About roles in your workspace</h3>
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                         {canManageMembers
-                            ? <>Roles are assigned from the <a href="/dashboard/team" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Team page</a> — promote or demote members between Member and Org Admin there. Super Admin is reserved for workspace owners.</>
+                            ? <>Roles are assigned from the <a href="/dashboard/team" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">Team page</a> — promote or demote members between Member and Org Admin there. Super Admin is reserved for workspace owners.</>
                             : "Your role determines what you can see and do across billing, team, security, and agent operations. If you need broader access, ask an org admin to update your role from the Team page."}
                     </p>
                 </div>

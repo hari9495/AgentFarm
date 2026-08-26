@@ -78,7 +78,7 @@ export default async function SettingsPage() {
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-sky-400">
+                            <div className="flex items-center gap-2 rounded-xl bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-400">
                                 <Settings className="w-3.5 h-3.5" />
                                 Settings
                             </div>
@@ -98,7 +98,7 @@ export default async function SettingsPage() {
                 {/* Shift configuration */}
                 <section>
                     <div className="flex items-center gap-2 mb-4">
-                        <PremiumIcon icon={Clock3} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-3.5 h-3.5" />
+                        <PremiumIcon icon={Clock3} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" iconClassName="w-3.5 h-3.5" />
                         <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wide">Shift Schedule</h2>
                     </div>
                     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
@@ -109,7 +109,7 @@ export default async function SettingsPage() {
                 {/* Policy presets */}
                 <section>
                     <div className="flex items-center gap-2 mb-4">
-                        <PremiumIcon icon={Shield} tone="violet" containerClassName="w-6 h-6 rounded-lg bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400" iconClassName="w-3.5 h-3.5" />
+                        <PremiumIcon icon={Shield} tone="violet" containerClassName="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" iconClassName="w-3.5 h-3.5" />
                         <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wide">Policy Presets</h2>
                     </div>
                     <div className="grid sm:grid-cols-2 gap-4">
@@ -182,11 +182,11 @@ export default async function SettingsPage() {
                 {/* Integrations */}
                 <section>
                     <div className="flex items-center gap-2 mb-4">
-                        <PremiumIcon icon={Zap} tone="violet" containerClassName="w-6 h-6 rounded-lg bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400" iconClassName="w-3.5 h-3.5" />
+                        <PremiumIcon icon={Zap} tone="violet" containerClassName="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" iconClassName="w-3.5 h-3.5" />
                         <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wide">Integrations</h2>
                     </div>
                     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 flex items-center gap-4">
-                        <PremiumIcon icon={Link2} tone="violet" containerClassName="h-10 w-10 rounded-xl bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400 shrink-0" iconClassName="w-5 h-5" />
+                        <PremiumIcon icon={Link2} tone="violet" containerClassName="h-10 w-10 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 shrink-0" iconClassName="w-5 h-5" />
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Connect tools your agents use</p>
                             <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">

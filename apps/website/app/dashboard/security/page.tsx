@@ -92,7 +92,7 @@ export default async function SecurityPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
                         <div className="flex items-center gap-3 mb-4">
-                            <PremiumIcon icon={Mail} tone="sky" containerClassName="h-9 w-9 rounded-xl bg-sky-100 dark:bg-sky-900/40 shrink-0 text-sky-600 dark:text-sky-400" iconClassName="w-5 h-5" />
+                            <PremiumIcon icon={Mail} tone="sky" containerClassName="h-9 w-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 shrink-0 text-blue-600 dark:text-blue-400" iconClassName="w-5 h-5" />
                             <div>
                                 <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Sign-in method</p>
                                 <p className="text-xs text-slate-500 dark:text-slate-400">How you access your account</p>
