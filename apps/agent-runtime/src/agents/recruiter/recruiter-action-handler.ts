@@ -734,11 +734,63 @@ export async function handleRecruiterAction(
         case 'workspace_rec_manage_pipeline': {
             const jobTitle = str(payload['jobTitle']);
             const recruiterName = str(payload['recruiterName']);
+
+            // Act path: move a candidate's application to a new stage in the ATS.
+            // This is a write, so it works with the connector client (which
+            // returns ok/status). Advancing a candidate is routine — no gate;
+            // rejection has its own gated action (compose_rejection).
+            const applicationId = str(payload['applicationId']).trim();
+            const toStageId = payload['toStageId'];
+            const hasStageMove = applicationId !== '' &&
+                (typeof toStageId === 'number' || (typeof toStageId === 'string' && toStageId.trim() !== ''));
+            if (hasStageMove) {
+                const cap = await resolveActionCapability({
+                    nativeConnectors: ['greenhouse'],
+                    workspaceId, gatewayBaseUrl, serviceToken,
+                });
+                const fromStageId = payload['fromStageId'];
+                const numId = (v: unknown) => (typeof v === 'string' ? Number(v) : v);
+                if (cap.tier === 'native' && connectorActionExecuteClient) {
+                    const res = await connectorActionExecuteClient({
+                        connectorType: cap.connectorType,
+                        actionType: 'update_record',
+                        payload: {
+                            record_type: 'applications',
+                            record_id: applicationId,
+                            fields: {
+                                to_stage_id: numId(toStageId),
+                                ...(fromStageId != null ? { from_stage_id: numId(fromStageId) } : {}),
+                            },
+                        },
+                    });
+                    return jsonOut(res.ok
+                        ? { moved: true, via: cap.connectorType, applicationId, toStageId }
+                        : { moved: false, reason: res.errorMessage ?? `ATS returned ${res.statusCode}`, applicationId, toStageId });
+                }
+                // No native ATS connector → move the candidate by hand in the ATS UI.
+                return jsonOut({
+                    moved: false,
+                    capability: {
+                        tier: 'browser' as const,
+                        reason: cap.tier === 'browser' ? cap.reason : 'no connector client available',
+                        target: str(payload['atsUrl']) || 'the ATS pipeline board',
+                        steps: [
+                            { action: 'workspace_web_navigate', to: str(payload['atsUrl']) || 'the ATS' },
+                            { action: 'workspace_web_login', note: 'use the agent workspace session (no payload credentials)' },
+                            { action: 'workspace_web_click', target: `candidate application ${applicationId}` },
+                            { action: 'workspace_web_click', target: `move to stage ${String(toStageId)}` },
+                            { action: 'workspace_web_read_page', note: 'confirm the stage change' },
+                        ],
+                    },
+                });
+            }
+
+            // Report mode (default): build a pipeline status report from data.
             const candidates = payload['candidates'] as PipelineCandidate[] | undefined;
 
             if (!jobTitle) return fail('payload.jobTitle is required');
             if (!recruiterName) return fail('payload.recruiterName is required');
-            if (!candidates) return fail('payload.candidates array is required');
+            if (!candidates) return fail('payload.candidates array is required (or provide applicationId + toStageId to move a candidate)');
 
             const pipelineInput: PipelineReportInput = {
                 jobTitle,

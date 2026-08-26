@@ -245,3 +245,78 @@ describe('workspace_rec_schedule_interview — browser booking + email send', ()
         }
     });
 });
+
+describe('workspace_rec_manage_pipeline — ATS stage move (write)', () => {
+    it('moves a candidate through the Greenhouse ATS when connected', async () => {
+        const originalFetch = globalThis.fetch;
+        globalThis.fetch = (async (url: string | URL | Request) => {
+            const href = typeof url === 'string' ? url : url.toString();
+            if (href.includes('greenhouse')) {
+                return new Response(JSON.stringify({ credentials: { api_key: 'k' } }), {
+                    status: 200, headers: { 'content-type': 'application/json' },
+                });
+            }
+            return new Response(null, { status: 404 });
+        }) as typeof globalThis.fetch;
+
+        try {
+            const calls: Array<{ connectorType: string; actionType: string; payload: Record<string, unknown> }> = [];
+            const result = await handleRecruiterAction({
+                ...BASE,
+                actionType: 'workspace_rec_manage_pipeline',
+                gatewayBaseUrl: 'http://gateway',
+                serviceToken: 'tok',
+                workspaceId: 'ws-1',
+                connectorActionExecuteClient: async (i) => {
+                    calls.push({ connectorType: i.connectorType, actionType: i.actionType, payload: i.payload });
+                    return { ok: true, statusCode: 200, attempts: 1 };
+                },
+                payload: { jobTitle: 'Staff Engineer', recruiterName: 'Alex', applicationId: '98765', toStageId: 42, fromStageId: 41 },
+            });
+
+            assert.equal(result.ok, true);
+            const parsed = JSON.parse(result.output) as Record<string, unknown>;
+            assert.equal(parsed['moved'], true);
+            assert.equal(parsed['via'], 'greenhouse');
+            assert.equal(calls.length, 1);
+            assert.equal(calls[0]!.actionType, 'update_record');
+            assert.deepEqual(calls[0]!.payload, {
+                record_type: 'applications',
+                record_id: '98765',
+                fields: { to_stage_id: 42, from_stage_id: 41 },
+            });
+        } finally {
+            globalThis.fetch = originalFetch;
+        }
+    });
+
+    it('falls back to a browser plan when no ATS connector is configured', async () => {
+        const result = await handleRecruiterAction({
+            ...BASE,
+            actionType: 'workspace_rec_manage_pipeline',
+            // no gateway creds / connector → resolver returns browser
+            payload: { jobTitle: 'Staff Engineer', recruiterName: 'Alex', applicationId: '98765', toStageId: 42 },
+        });
+        assert.equal(result.ok, true);
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['moved'], false);
+        const cap = parsed['capability'] as { tier: string; steps: Array<Record<string, unknown>> };
+        assert.equal(cap.tier, 'browser');
+        assert.ok(cap.steps.some((s) => s['action'] === 'workspace_web_navigate'));
+    });
+
+    it('still builds a pipeline report when no move is requested', async () => {
+        const result = await handleRecruiterAction({
+            ...BASE,
+            actionType: 'workspace_rec_manage_pipeline',
+            payload: {
+                jobTitle: 'Staff Engineer',
+                recruiterName: 'Alex',
+                candidates: [{ id: 'c1', fullName: 'Jordan Lee', currentStage: 'phone_screen', lastActivityDate: '2026-08-01' }],
+            },
+        });
+        assert.equal(result.ok, true);
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['moved'], undefined, 'report mode must not report a move');
+    });
+});
