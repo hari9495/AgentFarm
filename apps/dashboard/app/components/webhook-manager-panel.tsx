@@ -39,7 +39,7 @@ const PROVIDER_COLORS: Record<WebhookProvider, string> = {
     github: 'bg-zinc-700 text-zinc-200',
     gitlab: 'bg-orange-900/40 text-orange-300',
     jira: 'bg-blue-900/40 text-blue-300',
-    linear: 'bg-purple-900/40 text-purple-300',
+    linear: 'bg-blue-900/40 text-blue-300',
     pagerduty: 'bg-green-900/40 text-green-300',
     sentry: 'bg-red-900/40 text-red-300',
     custom: 'bg-zinc-700 text-zinc-400',

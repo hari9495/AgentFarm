@@ -131,7 +131,7 @@ export function DisclosureSettingsPanel({ botId }: Props) {
                     rows={3}
                     value={draftStatement}
                     onChange={(e) => setDraftStatement(e.target.value)}
-                    className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
                 {saveError && (
                     <p className="text-xs text-red-600">{saveError}</p>
@@ -143,7 +143,7 @@ export function DisclosureSettingsPanel({ botId }: Props) {
                     <button
                         onClick={handleSave}
                         disabled={saving || draftStatement === config?.disclosureStatement}
-                        className="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {saving ? 'Saving…' : 'Save'}
                     </button>

@@ -246,7 +246,7 @@ export function InternalSidebar({
                             <select
                                 value={workspaceId}
                                 onChange={(e) => handleWorkspaceChange(e.target.value)}
-                                className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-2 pr-8 text-xs font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-400 cursor-pointer"
+                                className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-2 pr-8 text-xs font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer"
                             >
                                 {workspaces.map((ws) => (
                                     <option key={ws.workspaceId} value={ws.workspaceId}>
@@ -407,7 +407,7 @@ export function InternalSidebar({
             <div className="border-t border-slate-200 px-3 py-3 space-y-0.5 shrink-0">
                 {workspaces.length <= 1 && (
                     <div className="flex items-center gap-3 px-3 py-2 rounded-lg">
-                        <div className="h-7 w-7 rounded-full bg-sky-100 flex items-center justify-center text-[10px] font-bold text-sky-600 shrink-0">
+                        <div className="h-7 w-7 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600 shrink-0">
                             {workspaceName.slice(0, 2).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">

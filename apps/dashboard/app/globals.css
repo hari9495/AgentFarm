@@ -2,10 +2,10 @@
 
 :root {
     /* Brand — Apple Action Blue (matches website) */
-    --brand: #0066cc;
-    --brand-dark: #0055aa;
-    --brand-light: #e8f0fb;
-    --brand-glow: rgba(0, 102, 204, 0.10);
+    --brand: #2563eb;
+    --brand-dark: #1d4ed8;
+    --brand-light: #e9f1fe;
+    --brand-glow: rgba(37, 99, 235, 0.10);
 
     /* Backgrounds — white / parchment (matches website) */
     --bg: #f5f5f7;
@@ -31,9 +31,9 @@
     --danger: #c4161c;
     --danger-bg: rgba(196, 22, 28, 0.07);
     --danger-border: rgba(196, 22, 28, 0.2);
-    --info: #0066cc;
-    --info-bg: rgba(0, 102, 204, 0.07);
-    --info-border: rgba(0, 102, 204, 0.2);
+    --info: #2563eb;
+    --info-bg: rgba(37, 99, 235, 0.07);
+    --info-border: rgba(37, 99, 235, 0.2);
 
     /* Sidebar — clean white with parchment tones */
     --sidebar-bg: #ffffff;
@@ -41,19 +41,19 @@
     --sidebar-border: rgba(0, 0, 0, 0.06);
     --sidebar-text: #1d1d1f;
     --sidebar-muted: #6e6e73;
-    --sidebar-active-bg: rgba(0, 102, 204, 0.07);
-    --sidebar-active-border: #0066cc;
+    --sidebar-active-bg: rgba(37, 99, 235, 0.07);
+    --sidebar-active-border: #2563eb;
     --sidebar-hover-bg: rgba(0, 0, 0, 0.04);
 
     /* Shadows — subtle Apple-style */
     --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
     --shadow-md: 0 4px 16px -4px rgba(0, 0, 0, 0.08), 0 2px 6px -2px rgba(0, 0, 0, 0.05);
     --shadow-lg: 0 10px 32px -6px rgba(0, 0, 0, 0.10), 0 4px 12px -4px rgba(0, 0, 0, 0.05);
-    --shadow-brand: 0 4px 16px -4px rgba(0, 102, 204, 0.25);
+    --shadow-brand: 0 4px 16px -4px rgba(37, 99, 235, 0.25);
 
     /* Legacy aliases */
-    --accent: #0066cc;
-    --accent-soft: #e8f0fb;
+    --accent: #2563eb;
+    --accent-soft: #e9f1fe;
     --soft: #f5f5f7;
     --card-shadow: var(--shadow-md);
     --card-shadow-hover: var(--shadow-lg);
@@ -66,14 +66,14 @@
     --glass-blur-sm: 8px;
     --glass-blur-md: 16px;
     --glass-blur-lg: 28px;
-    --glow-sky: 0 0 24px rgba(0, 102, 204, 0.2);
+    --glow-sky: 0 0 24px rgba(37, 99, 235, 0.2);
     --glow-emerald: 0 0 24px rgba(26, 122, 74, 0.18);
-    --glow-brand: 0 0 24px rgba(0, 102, 204, 0.2);
+    --glow-brand: 0 0 24px rgba(37, 99, 235, 0.2);
     --depth-0: 0 1px 2px rgba(0, 0, 0, 0.05);
     --depth-1: 0 4px 12px -2px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
     --depth-2: 0 12px 28px -6px rgba(0, 0, 0, 0.08), 0 4px 10px -3px rgba(0, 0, 0, 0.05);
-    --depth-3: 0 24px 48px -10px rgba(0, 0, 0, 0.10), 0 8px 20px -6px rgba(0, 102, 204, 0.05);
-    --depth-float: 0 32px 64px -14px rgba(0, 0, 0, 0.12), 0 12px 28px -8px rgba(0, 102, 204, 0.06), 0 0 0 1px rgba(0, 102, 204, 0.06);
+    --depth-3: 0 24px 48px -10px rgba(0, 0, 0, 0.10), 0 8px 20px -6px rgba(37, 99, 235, 0.05);
+    --depth-float: 0 32px 64px -14px rgba(0, 0, 0, 0.12), 0 12px 28px -8px rgba(37, 99, 235, 0.06), 0 0 0 1px rgba(37, 99, 235, 0.06);
 
     /* Website-style radius tokens */
     --radius-sm: 8px;
@@ -263,8 +263,8 @@ body {
     }
 
     22% {
-        color: #0284c7;
-        text-shadow: 0 0 20px rgba(14, 165, 233, 0.55);
+        color: #2563eb;
+        text-shadow: 0 0 20px rgba(37, 99, 235, 0.55);
     }
 
     100% {
@@ -436,8 +436,8 @@ body {
 
 .sidebar-link.active {
     background: var(--sidebar-active-bg);
-    border-color: rgba(0, 102, 204, 0.2);
-    color: #0066cc;
+    border-color: rgba(37, 99, 235, 0.2);
+    color: #2563eb;
 }
 
 .sidebar-link.active::before {
@@ -446,7 +446,7 @@ body {
     left: 0.75rem;
     width: 3px;
     height: 1.2rem;
-    background: #0066cc;
+    background: #2563eb;
     border-radius: 2px;
 }
 
@@ -634,10 +634,10 @@ body {
 
 .mission-mini-nav-pill {
     position: absolute;
-    background: rgba(14, 165, 233, 0.15);
-    border: 1px solid rgba(14, 165, 233, 0.3);
+    background: rgba(37, 99, 235, 0.15);
+    border: 1px solid rgba(37, 99, 235, 0.3);
     border-radius: 999px;
-    box-shadow: 0 4px 12px -6px rgba(14, 165, 233, 0.3);
+    box-shadow: 0 4px 12px -6px rgba(37, 99, 235, 0.3);
     transition:
         transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1),
         width 260ms cubic-bezier(0.34, 1.56, 0.64, 1),
@@ -667,11 +667,11 @@ body {
 
 .mission-mini-nav-link:hover {
     color: var(--ink);
-    border-color: rgba(14, 165, 233, 0.25);
+    border-color: rgba(37, 99, 235, 0.25);
 }
 
 .mission-mini-nav-link.active {
-    color: #0284c7;
+    color: #2563eb;
     font-weight: 800;
 }
 
@@ -693,7 +693,7 @@ body {
     left: 0;
     right: 0;
     height: 1px;
-    background: linear-gradient(90deg, rgba(0, 102, 204, 0), rgba(0, 102, 204, 0.3), rgba(0, 102, 204, 0));
+    background: linear-gradient(90deg, rgba(37, 99, 235, 0), rgba(37, 99, 235, 0.3), rgba(37, 99, 235, 0));
 }
 
 .mission-section-label {
@@ -795,9 +795,9 @@ body {
 }
 
 .tab-link.active {
-    color: #0066cc;
-    border-color: rgba(0, 102, 204, 0.2);
-    background: rgba(0, 102, 204, 0.07);
+    color: #2563eb;
+    border-color: rgba(37, 99, 235, 0.2);
+    background: rgba(37, 99, 235, 0.07);
     box-shadow: none;
 }
 
@@ -895,7 +895,7 @@ body {
 }
 
 .metric-row .metric-card:nth-child(2) .metric-card-icon {
-    background: rgba(14, 165, 233, 0.12);
+    background: rgba(37, 99, 235, 0.12);
     color: #0ea5e9;
 }
 
@@ -1153,7 +1153,7 @@ body {
 }
 
 .signal-bar-fill.info {
-    background: linear-gradient(90deg, #38bdf8, #0284c7);
+    background: linear-gradient(90deg, #38bdf8, #2563eb);
 }
 
 .signal-bar-fill.warn {
@@ -3189,7 +3189,7 @@ textarea {
     width: 80%;
     height: 200px;
     border-radius: 50%;
-    background: radial-gradient(ellipse at 50% 0%, rgba(14, 165, 233, 0.065) 0%, transparent 72%);
+    background: radial-gradient(ellipse at 50% 0%, rgba(37, 99, 235, 0.065) 0%, transparent 72%);
     pointer-events: none;
     z-index: -1;
     animation: section-sweep-pulse 7s ease-in-out infinite alternate;
@@ -3218,8 +3218,8 @@ textarea {
     box-shadow:
         0 24px 40px -28px rgba(15, 23, 42, 0.42),
         0 14px 24px -18px rgba(14, 116, 144, 0.3),
-        0 0 0 1.5px rgba(14, 165, 233, 0.35),
-        0 0 24px rgba(14, 165, 233, 0.12);
+        0 0 0 1.5px rgba(37, 99, 235, 0.35),
+        0 0 24px rgba(37, 99, 235, 0.12);
 }
 
 .metric-row .metric-card:nth-child(3):hover {
@@ -3250,7 +3250,7 @@ textarea {
     box-shadow:
         0 24px 42px -30px rgba(15, 23, 42, 0.4),
         0 14px 22px -18px rgba(14, 116, 144, 0.28),
-        0 0 0 1.5px rgba(14, 165, 233, 0.18);
+        0 0 0 1.5px rgba(37, 99, 235, 0.18);
 }
 
 /* ─── Status badge & pill transitions ────────────────────────────────── */
@@ -3274,7 +3274,7 @@ textarea {
     right: 0.75rem;
     height: 2px;
     border-radius: 999px;
-    background: rgba(14, 165, 233, 0.13);
+    background: rgba(37, 99, 235, 0.13);
     overflow: hidden;
 }
 
@@ -3414,7 +3414,7 @@ textarea {
 .cmd-palette-item:hover,
 .cmd-palette-item.focused {
     background: var(--bg);
-    border-color: rgba(14, 165, 233, 0.28);
+    border-color: rgba(37, 99, 235, 0.28);
 }
 
 .cmd-palette-item-icon {
@@ -3622,9 +3622,9 @@ textarea {
 
 :root {
     /* Aurora palette — toned to website Action Blue */
-    --m-aurora-1: #0066cc;
+    --m-aurora-1: #2563eb;
     --m-aurora-2: #3399ff;
-    --m-aurora-3: #0055aa;
+    --m-aurora-3: #1d4ed8;
     --m-aurora-4: #66aaff;
     --m-aurora-5: #0071e3;
     --m-aurora-6: #2997ff;
@@ -3992,7 +3992,7 @@ textarea {
 /* ─── HOLOGRAPHIC TEXT ────────────────────────────────────────────────── */
 
 .holo-text {
-    background: linear-gradient(120deg, #0066cc 0%, #2997ff 45%, #0071e3 80%, #0066cc 100%);
+    background: linear-gradient(120deg, #2563eb 0%, #2997ff 45%, #0071e3 80%, #2563eb 100%);
     background-size: 250% 250%;
     -webkit-background-clip: text;
     background-clip: text;
@@ -4001,7 +4001,7 @@ textarea {
 }
 
 .holo-text-tight {
-    background: linear-gradient(120deg, #0066cc 0%, #2997ff 50%, #0071e3 100%);
+    background: linear-gradient(120deg, #2563eb 0%, #2997ff 50%, #0071e3 100%);
     background-size: 250% 250%;
     -webkit-background-clip: text;
     background-clip: text;
@@ -4038,9 +4038,9 @@ textarea {
 
 /* All chip variants unified to website blue palette */
 .neon-chip-cyan {
-    color: #0066cc;
-    border-color: rgba(0, 102, 204, 0.3);
-    background: rgba(0, 102, 204, 0.06);
+    color: #2563eb;
+    border-color: rgba(37, 99, 235, 0.3);
+    background: rgba(37, 99, 235, 0.06);
     box-shadow: none;
 }
 
@@ -4049,9 +4049,9 @@ textarea {
 }
 
 .neon-chip-violet {
-    color: #0066cc;
-    border-color: rgba(0, 102, 204, 0.3);
-    background: rgba(0, 102, 204, 0.06);
+    color: #2563eb;
+    border-color: rgba(37, 99, 235, 0.3);
+    background: rgba(37, 99, 235, 0.06);
     box-shadow: none;
 }
 

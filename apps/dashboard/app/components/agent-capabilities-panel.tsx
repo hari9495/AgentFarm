@@ -36,10 +36,10 @@ type CapabilitiesResponse = {
 
 const AUTH_BADGE: Record<string, string> = {
     oauth2: 'bg-blue-900/60 text-blue-300',
-    api_key: 'bg-violet-900/60 text-violet-300',
-    bearer_token: 'bg-indigo-900/60 text-indigo-300',
+    api_key: 'bg-blue-900/60 text-blue-300',
+    bearer_token: 'bg-blue-900/60 text-blue-300',
     basic: 'bg-zinc-700 text-zinc-300',
-    generic_rest: 'bg-teal-900/60 text-teal-300',
+    generic_rest: 'bg-blue-900/60 text-blue-300',
 };
 
 const AUTH_LABEL: Record<string, string> = {
