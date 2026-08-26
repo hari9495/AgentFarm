@@ -107,7 +107,7 @@ export default function SupportStatsPanel() {
                     label="Resolved this week"
                     value={loading ? '—' : stats.thisWeek}
                     icon={TrendingUp}
-                    accent="#0066cc"
+                    accent="#2563eb"
                 />
                 <StatCard
                     label="Resolved this month"
@@ -119,7 +119,7 @@ export default function SupportStatsPanel() {
                     label="Total resolved"
                     value={loading ? '—' : stats.totalResolved}
                     icon={Bot}
-                    accent="#7c3aed"
+                    accent="#1d4ed8"
                     sub="all time"
                 />
                 <StatCard
@@ -141,7 +141,7 @@ export default function SupportStatsPanel() {
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         <TierBar label="Tier 1" count={stats.tierBreakdown[1]} total={tierTotal} color="var(--accent)" />
-                        <TierBar label="Tier 2" count={stats.tierBreakdown[2]} total={tierTotal} color="#7c3aed" />
+                        <TierBar label="Tier 2" count={stats.tierBreakdown[2]} total={tierTotal} color="#1d4ed8" />
                         <TierBar label="Tier 3" count={stats.tierBreakdown[3]} total={tierTotal} color="#d97706" />
                         <TierBar label="Tier 4" count={stats.tierBreakdown[4]} total={tierTotal} color="var(--danger)" />
                     </div>

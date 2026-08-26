@@ -58,7 +58,7 @@ const STATUS_COLOR: Record<string, string> = {
     joining: 'var(--warn)',
     joined: 'var(--ok)',
     listening: 'var(--info)',
-    speaking: '#8b5cf6',
+    speaking: '#2563eb',
     paused: 'var(--warn)',
     escalation_required: 'var(--danger)',
     completed: 'var(--ink-muted)',
@@ -67,7 +67,7 @@ const STATUS_COLOR: Record<string, string> = {
 
 const SOURCE_STYLE: Record<string, { color: string; label: string }> = {
     participant: { color: 'var(--info)', label: 'Participant' },
-    agent: { color: '#8b5cf6', label: 'Agent' },
+    agent: { color: '#2563eb', label: 'Agent' },
     system: { color: 'var(--ink-muted)', label: 'System' },
 };
 

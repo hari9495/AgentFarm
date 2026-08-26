@@ -24,7 +24,7 @@ type Suggestion = { skill_id: string; confidence: number; rationale: string };
 
 const KIND_BADGE: Record<GraphSymbol['kind'], { bg: string; color: string; border: string }> = {
     function:  { bg: 'rgba(0,102,204,0.08)',   color: 'var(--accent)', border: 'rgba(0,102,204,0.2)'   },
-    class:     { bg: 'rgba(124,45,146,0.08)',  color: '#7c2d92', border: 'rgba(124,45,146,0.2)'  },
+    class:     { bg: 'rgba(124,45,146,0.08)',  color: '#1d4ed8', border: 'rgba(124,45,146,0.2)'  },
     interface: { bg: 'rgba(0,155,199,0.08)',   color: 'var(--info)', border: 'rgba(0,155,199,0.2)'   },
     type:      { bg: 'rgba(26,122,74,0.08)',   color: 'var(--ok)', border: 'rgba(26,122,74,0.2)'   },
     variable:  { bg: 'rgba(110,110,115,0.08)', color: 'var(--ink-muted)', border: 'rgba(110,110,115,0.2)' },
@@ -32,7 +32,7 @@ const KIND_BADGE: Record<GraphSymbol['kind'], { bg: string; color: string; borde
 };
 
 const KIND_TEXT: Record<GraphSymbol['kind'], string> = {
-    function: 'var(--accent)', class: '#7c2d92', interface: 'var(--info)',
+    function: 'var(--accent)', class: '#1d4ed8', interface: 'var(--info)',
     type: 'var(--ok)', variable: 'var(--ink-muted)', unknown: 'var(--ink-muted)',
 };
 

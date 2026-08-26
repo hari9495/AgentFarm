@@ -220,7 +220,7 @@ export function SupportIssueFeed() {
                             style={{
                                 padding: '0.75rem 1rem',
                                 borderBottom: '1px solid var(--line)',
-                                borderLeft: isSelected ? '3px solid #0066cc' : '3px solid transparent',
+                                borderLeft: isSelected ? '3px solid #2563eb' : '3px solid transparent',
                                 cursor: 'pointer',
                                 background: isSelected ? 'rgba(0,102,204,0.04)' : undefined,
                             }}
