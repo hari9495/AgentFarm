@@ -42,6 +42,9 @@ declare global {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
+const fieldCls =
+    "w-full rounded-lg border bg-white px-3.5 py-2.5 text-[14px] text-[color:var(--op-ink)] placeholder:text-[color:var(--op-muted)] outline-none focus:ring-2 transition border-[color:var(--op-line)] focus:border-[color:var(--op-indigo)] focus:ring-[color:var(--op-indigo)]";
+
 function loadRazorpayScript(): Promise<void> {
     return new Promise((resolve, reject) => {
         if (typeof window !== "undefined" && window.Razorpay) {
@@ -126,10 +129,10 @@ function BillingCheckoutContent() {
             const card = elements.create("card", {
                 style: {
                     base: {
-                        color: "#1e293b",
+                        color: "#16181d",
                         fontFamily: "system-ui, sans-serif",
-                        fontSize: "16px",
-                        "::placeholder": { color: "#94a3b8" },
+                        fontSize: "15px",
+                        "::placeholder": { color: "#697586" },
                     },
                 },
             });
@@ -272,42 +275,41 @@ function BillingCheckoutContent() {
         : null;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex items-center justify-center px-4 py-12">
-            <div className="w-full max-w-lg">
+        <div className="relative min-h-screen flex items-center justify-center px-4 py-12 overflow-hidden" style={{ background: "var(--op-paper-2)", color: "var(--op-ink)" }}>
+            <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(45% 40% at 50% 0%, var(--op-indigo-soft), transparent 70%)" }} />
+            <div className="relative op-rise w-full max-w-lg">
 
                 {/* Header */}
                 <div className="mb-8 text-center">
-                    <h1 className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+                    <h1 className="font-display font-bold" style={{ fontSize: "2rem", letterSpacing: "-0.02em" }}>
                         Complete your order
                     </h1>
-                    <p className="mt-2 text-slate-500 dark:text-slate-400 text-sm">
-                        Secure checkout powered by Stripe &amp; Razorpay
+                    <p className="mt-2 text-[13px]" style={{ fontFamily: "var(--font-mono)", color: "var(--op-muted)" }}>
+                        Secure checkout · Stripe &amp; Razorpay
                     </p>
                 </div>
 
                 {/* Plan summary */}
                 {planLoading ? (
-                    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 mb-6 animate-pulse">
-                        <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/3 mb-3" />
-                        <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-1/4" />
+                    <div className="rounded-2xl bg-white p-5 mb-6 animate-pulse" style={{ border: "1px solid var(--op-line)" }}>
+                        <div className="h-4 rounded w-1/3 mb-3" style={{ background: "var(--op-paper-3)" }} />
+                        <div className="h-8 rounded w-1/4" style={{ background: "var(--op-paper-3)" }} />
                     </div>
                 ) : planError ? (
-                    <div className="rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 p-5 mb-6 text-red-700 dark:text-red-400 text-sm">
+                    <div className="rounded-2xl p-5 mb-6 text-[14px]" style={{ border: "1px solid var(--op-blocked)", background: "#fdecea", color: "var(--op-blocked)" }}>
                         {planError}
                     </div>
                 ) : plan ? (
-                    <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 p-5 mb-6 flex items-center justify-between">
+                    <div className="rounded-2xl bg-white p-5 mb-6 flex items-center justify-between" style={{ border: "1px solid var(--op-line)", boxShadow: "0 1px 2px rgba(16,24,40,0.04)" }}>
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-1">
-                                Selected plan
-                            </p>
-                            <p className="text-xl font-extrabold text-slate-900 dark:text-slate-100">{plan.name}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            <p className="op-eyebrow mb-1">Selected plan</p>
+                            <p className="font-display font-bold" style={{ fontSize: "1.25rem", color: "var(--op-ink)" }}>{plan.name}</p>
+                            <p className="text-[12px] mt-0.5" style={{ color: "var(--op-muted)" }}>
                                 {plan.agentSlots} agent slots
                             </p>
                         </div>
                         <div className="text-right">
-                            <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
+                            <p className="font-bold" style={{ fontSize: "1.5rem", fontFamily: "var(--font-mono)", color: "var(--op-indigo)" }}>
                                 {priceDisplay}
                             </p>
                         </div>
@@ -315,15 +317,12 @@ function BillingCheckoutContent() {
                 ) : null}
 
                 {/* Form */}
-                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+                <div className="rounded-2xl bg-white p-6" style={{ border: "1px solid var(--op-line)", boxShadow: "0 10px 40px rgba(16,24,40,0.08)" }}>
                     <form onSubmit={handleSubmit} noValidate className="space-y-5">
 
                         {/* Full name */}
                         <div>
-                            <label
-                                htmlFor="checkout-name"
-                                className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5"
-                            >
+                            <label htmlFor="checkout-name" className="block text-[13px] font-medium mb-1.5" style={{ color: "var(--op-ink-soft)" }}>
                                 Full name
                             </label>
                             <input
@@ -334,16 +333,13 @@ function BillingCheckoutContent() {
                                 value={fullName}
                                 onChange={(e) => setFullName(e.target.value)}
                                 placeholder="Jane Smith"
-                                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                                className={fieldCls}
                             />
                         </div>
 
                         {/* Email */}
                         <div>
-                            <label
-                                htmlFor="checkout-email"
-                                className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5"
-                            >
+                            <label htmlFor="checkout-email" className="block text-[13px] font-medium mb-1.5" style={{ color: "var(--op-ink-soft)" }}>
                                 Email address
                             </label>
                             <input
@@ -354,29 +350,26 @@ function BillingCheckoutContent() {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="jane@company.com"
-                                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                                className={fieldCls}
                             />
                         </div>
 
                         {/* Country */}
                         <div>
-                            <label
-                                htmlFor="checkout-country"
-                                className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5"
-                            >
+                            <label htmlFor="checkout-country" className="block text-[13px] font-medium mb-1.5" style={{ color: "var(--op-ink-soft)" }}>
                                 Country
                             </label>
                             <select
                                 id="checkout-country"
                                 value={country}
                                 onChange={(e) => setCountry(e.target.value as "IN" | "OTHER")}
-                                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                                className={fieldCls}
                             >
                                 <option value="IN">India</option>
                                 <option value="OTHER">Other</option>
                             </select>
                             {plan && (
-                                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                                <p className="mt-1.5 text-[12px]" style={{ color: "var(--op-muted)" }}>
                                     {isIndia
                                         ? `Charged ₹${plan.priceInr.toLocaleString("en-IN")} / month via Razorpay`
                                         : `Charged $${plan.priceUsd} / month via Stripe`}
@@ -387,19 +380,20 @@ function BillingCheckoutContent() {
                         {/* Stripe card element — only for non-India */}
                         {!isIndia && (
                             <div>
-                                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                                <label className="block text-[13px] font-medium mb-1.5" style={{ color: "var(--op-ink-soft)" }}>
                                     Card details
                                 </label>
                                 <div
                                     ref={cardMountRef}
-                                    className="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3.5 min-h-[46px]"
+                                    className="rounded-lg bg-white px-3.5 py-3.5 min-h-[46px]"
+                                    style={{ border: "1px solid var(--op-line)" }}
                                 />
                             </div>
                         )}
 
                         {/* Error */}
                         {formError && (
-                            <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm text-red-700 dark:text-red-400">
+                            <div className="rounded-lg px-4 py-3 text-[13px]" style={{ border: "1px solid var(--op-blocked)", background: "#fdecea", color: "var(--op-blocked)" }}>
                                 {formError}
                             </div>
                         )}
@@ -408,7 +402,8 @@ function BillingCheckoutContent() {
                         <button
                             type="submit"
                             disabled={submitting || planLoading || !!planError}
-                            className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-bold py-3.5 text-sm transition-colors flex items-center justify-center gap-2"
+                            className="w-full rounded-lg text-white font-semibold py-3 text-[14px] shadow-sm transition-transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2"
+                            style={{ background: "var(--op-indigo)" }}
                         >
                             {submitting ? (
                                 <>
@@ -428,9 +423,9 @@ function BillingCheckoutContent() {
                     </form>
                 </div>
 
-                <p className="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">
+                <p className="mt-6 text-center text-[12px]" style={{ color: "var(--op-muted)" }}>
                     By completing this payment you agree to the AgentFarms{" "}
-                    <a href="/terms" className="underline hover:text-slate-600 dark:hover:text-slate-300">
+                    <a href="/terms" className="underline hover:text-[color:var(--op-ink)]">
                         Terms of Service
                     </a>
                     .
@@ -447,8 +442,8 @@ export default function BillingCheckoutPage() {
     return (
         <Suspense
             fallback={
-                <div className="min-h-screen flex items-center justify-center">
-                    <p className="text-slate-400 text-sm animate-pulse">Loading checkout…</p>
+                <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--op-paper-2)" }}>
+                    <p className="text-[14px] animate-pulse" style={{ fontFamily: "var(--font-mono)", color: "var(--op-muted)" }}>Loading checkout…</p>
                 </div>
             }
         >

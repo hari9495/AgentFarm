@@ -1,43 +1,35 @@
 "use client";
 
 import Link from "next/link";
+import { Check } from "lucide-react";
 
 export default function BillingSuccessPage() {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex items-center justify-center px-4">
-            <div className="w-full max-w-md text-center">
+        <div className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden" style={{ background: "var(--op-paper-2)", color: "var(--op-ink)" }}>
+            <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(45% 40% at 50% 0%, var(--op-approved-soft), transparent 70%)" }} />
 
-                {/* Checkmark */}
-                <div className="mx-auto mb-6 flex items-center justify-center w-20 h-20 rounded-full bg-emerald-100 dark:bg-emerald-900/40">
-                    <svg
-                        className="w-10 h-10 text-emerald-600 dark:text-emerald-400"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={2.5}
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
+            <div className="relative op-rise w-full max-w-md text-center">
+                <div className="mx-auto mb-6 flex items-center justify-center w-16 h-16 rounded-full" style={{ background: "var(--op-approved-soft)" }}>
+                    <Check className="w-8 h-8" style={{ color: "var(--op-approved)" }} strokeWidth={2.5} />
                 </div>
 
-                <h1 className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-                    Payment successful!
+                <h1 className="font-display font-bold" style={{ fontSize: "2rem", letterSpacing: "-0.02em", lineHeight: 1.1 }}>
+                    Payment successful
                 </h1>
 
-                <p className="mt-3 text-slate-500 dark:text-slate-400 text-base leading-relaxed max-w-sm mx-auto">
+                <p className="mt-3 text-[1.0625rem] leading-relaxed max-w-sm mx-auto" style={{ color: "var(--op-muted)" }}>
                     Your contract will be sent to your email shortly.
                 </p>
 
                 <div className="mt-8">
                     <Link
                         href="/admin"
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-3.5 text-sm transition-colors"
+                        className="inline-flex items-center justify-center gap-2 rounded-lg px-8 py-3 text-[14px] font-semibold text-white shadow-sm transition-transform hover:-translate-y-0.5"
+                        style={{ background: "var(--op-indigo)" }}
                     >
-                        Go to Dashboard
+                        Go to dashboard
                     </Link>
                 </div>
-
             </div>
         </div>
     );
