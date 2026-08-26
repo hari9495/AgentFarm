@@ -320,3 +320,61 @@ describe('workspace_rec_manage_pipeline — ATS stage move (write)', () => {
         assert.equal(parsed['moved'], undefined, 'report mode must not report a move');
     });
 });
+
+describe('workspace_rec_source_candidates — ATS read (search_records → data)', () => {
+    it('returns candidate records read back from the ATS', async () => {
+        const originalFetch = globalThis.fetch;
+        globalThis.fetch = (async (url: string | URL | Request) => {
+            const href = typeof url === 'string' ? url : url.toString();
+            if (href.includes('greenhouse')) {
+                return new Response(JSON.stringify({ credentials: { api_key: 'k' } }), {
+                    status: 200, headers: { 'content-type': 'application/json' },
+                });
+            }
+            return new Response(null, { status: 404 });
+        }) as typeof globalThis.fetch;
+
+        try {
+            const result = await handleRecruiterAction({
+                ...BASE,
+                actionType: 'workspace_rec_source_candidates',
+                gatewayBaseUrl: 'http://gateway',
+                serviceToken: 'tok',
+                workspaceId: 'ws-1',
+                // The client now surfaces response bodies — simulate the ATS returning records.
+                connectorActionExecuteClient: async (i) => {
+                    assert.equal(i.actionType, 'search_records');
+                    assert.equal(i.payload['record_type'], 'candidates');
+                    return {
+                        ok: true, statusCode: 200, attempts: 1,
+                        data: { count: 1, records: [{ id: 55, name: 'Jordan Lee', title: 'Engineer' }] },
+                    };
+                },
+                payload: { atsQuery: 'jordan@example.com' },
+            });
+
+            assert.equal(result.ok, true);
+            const parsed = JSON.parse(result.output) as Record<string, unknown>;
+            assert.equal(parsed['source'], 'ats');
+            assert.equal(parsed['via'], 'greenhouse');
+            assert.equal(parsed['count'], 1);
+            assert.deepEqual(parsed['records'], [{ id: 55, name: 'Jordan Lee', title: 'Engineer' }]);
+        } finally {
+            globalThis.fetch = originalFetch;
+        }
+    });
+
+    it('falls back to a browser search plan when no ATS connector is configured', async () => {
+        const result = await handleRecruiterAction({
+            ...BASE,
+            actionType: 'workspace_rec_source_candidates',
+            payload: { atsQuery: 'jordan@example.com' },
+        });
+        assert.equal(result.ok, true);
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['source'], 'browser');
+        const cap = parsed['capability'] as { tier: string; steps: Array<Record<string, unknown>> };
+        assert.equal(cap.tier, 'browser');
+        assert.ok(cap.steps.some((s) => s['action'] === 'workspace_web_extract_data'));
+    });
+});

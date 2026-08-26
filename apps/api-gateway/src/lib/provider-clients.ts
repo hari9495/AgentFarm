@@ -95,6 +95,8 @@ export type ProviderExecutionResult = {
     ok: boolean;
     providerResponseCode: string;
     resultSummary: string;
+    /** Structured response body for read actions (get_record, search_records, …). */
+    data?: unknown;
     transient?: boolean;
     errorCode?: ConnectorActionErrorCode;
     errorMessage?: string;
@@ -2213,6 +2215,7 @@ const executeGreenhouse = async (
             ok: true,
             providerResponseCode: String(res.status),
             resultSummary: `${recordType} ${recordId}: ${name || '(unnamed)'}${json['title'] ? ` — ${String(json['title'])}` : ''}`,
+            data: json,
         };
     }
 
@@ -2234,11 +2237,21 @@ const executeGreenhouse = async (
         }
         if (!res.ok) return failFromStatus(res.status, `Greenhouse search failed with ${res.status}`);
         const json = (await res.json()) as Array<Record<string, unknown>>;
-        const items = (json ?? []).map((r) => `${String(r['id'] ?? '?')} (${[r['first_name'], r['last_name']].filter(Boolean).join(' ') || '(unnamed)'})`);
+        const records = json ?? [];
+        const items = records.map((r) => `${String(r['id'] ?? '?')} (${[r['first_name'], r['last_name']].filter(Boolean).join(' ') || '(unnamed)'})`);
         return {
             ok: true,
             providerResponseCode: String(res.status),
             resultSummary: `${items.length} ${recordType} matching "${query}": ${items.join(', ') || '(none)'}`,
+            data: {
+                count: records.length,
+                records: records.map((r) => ({
+                    id: r['id'] ?? null,
+                    name: [r['first_name'], r['last_name']].filter(Boolean).join(' ') || (r['name'] as string | undefined) || null,
+                    title: r['title'] ?? null,
+                    emails: r['email_addresses'] ?? r['emails'] ?? null,
+                })),
+            },
         };
     }
 

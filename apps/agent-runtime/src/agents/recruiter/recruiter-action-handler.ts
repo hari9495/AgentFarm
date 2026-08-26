@@ -434,6 +434,47 @@ export async function handleRecruiterAction(
         // payload: SourcingCriteria fields
         // ----------------------------------------------------------------
         case 'workspace_rec_source_candidates': {
+            // ATS read path: look up existing candidates already in the ATS.
+            // Uses search_records and returns the structured result body (now
+            // that the connector client surfaces response data). No jobTitle
+            // needed — a recruiter searches by email or candidate id here.
+            const atsQuery = str(payload['atsQuery']).trim();
+            if (atsQuery) {
+                const cap = await resolveActionCapability({
+                    nativeConnectors: ['greenhouse'],
+                    workspaceId, gatewayBaseUrl, serviceToken,
+                });
+                if (cap.tier === 'native' && connectorActionExecuteClient) {
+                    const res = await connectorActionExecuteClient({
+                        connectorType: cap.connectorType,
+                        actionType: 'search_records',
+                        payload: {
+                            record_type: 'candidates',
+                            query: atsQuery,
+                            limit: typeof payload['limit'] === 'number' ? payload['limit'] : 10,
+                        },
+                    });
+                    if (!res.ok) return fail(res.errorMessage ?? `ATS search failed (${res.statusCode})`);
+                    const body = (res.data && typeof res.data === 'object') ? res.data as Record<string, unknown> : { count: 0, records: [] };
+                    return jsonOut({ source: 'ats', via: cap.connectorType, query: atsQuery, ...body });
+                }
+                // No native ATS connector → search the ATS/board by hand.
+                return jsonOut({
+                    source: 'browser',
+                    capability: {
+                        tier: 'browser' as const,
+                        reason: cap.tier === 'browser' ? cap.reason : 'no connector client available',
+                        target: str(payload['atsUrl']) || 'the ATS candidate search',
+                        steps: [
+                            { action: 'workspace_web_navigate', to: str(payload['atsUrl']) || 'the ATS' },
+                            { action: 'workspace_web_login', note: 'use the agent workspace session (no payload credentials)' },
+                            { action: 'workspace_web_type', target: 'candidate search box', text: atsQuery },
+                            { action: 'workspace_web_extract_data', note: 'read the matching candidate rows (id, name, title)' },
+                        ],
+                    },
+                });
+            }
+
             const jobTitle = str(payload['jobTitle']);
             const requiredSkills = strArr(payload['requiredSkills']);
             if (!jobTitle) return fail('payload.jobTitle is required');

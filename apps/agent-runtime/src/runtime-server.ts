@@ -357,6 +357,7 @@ type ConnectorActionExecuteClient = (input: {
     statusCode: number;
     attempts?: number;
     errorMessage?: string;
+    data?: unknown;
 }>;
 
 type CapabilitySnapshotPersistenceClient = {
@@ -1821,10 +1822,12 @@ const defaultConnectorActionExecuteClient: ConnectorActionExecuteClient = async 
 
         let attempts: number | undefined;
         let errorMessage: string | undefined;
+        let data: unknown;
         try {
-            const parsed = await response.json() as { attempts?: number; message?: string; error?: string };
+            const parsed = await response.json() as { attempts?: number; message?: string; error?: string; data?: unknown };
             attempts = parsed.attempts;
             errorMessage = parsed.message ?? parsed.error;
+            data = parsed.data;
         } catch {
             errorMessage = undefined;
         }
@@ -1834,6 +1837,7 @@ const defaultConnectorActionExecuteClient: ConnectorActionExecuteClient = async 
             statusCode: response.status,
             attempts,
             errorMessage,
+            data,
         };
     } catch (err: unknown) {
         return {

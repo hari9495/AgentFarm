@@ -718,7 +718,7 @@ export type LocalWorkspaceConnectorClient = (input: {
     connectorType: string;
     actionType: string;
     payload: Record<string, unknown>;
-}) => Promise<{ ok: boolean; statusCode: number; errorMessage?: string; attempts?: number }>;
+}) => Promise<{ ok: boolean; statusCode: number; errorMessage?: string; attempts?: number; data?: unknown }>;
 
 export type LocalWorkspaceMemoryMirrorRecord = {
     tenantId: string;

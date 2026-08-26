@@ -204,6 +204,8 @@ type ProviderExecutionResult = {
     ok: boolean;
     providerResponseCode: string;
     resultSummary: string;
+    /** Structured response body for read actions (get_record, search_records, …). */
+    data?: unknown;
     transient?: boolean;
     errorCode?: ConnectorActionErrorCode;
     errorMessage?: string;
@@ -1141,6 +1143,7 @@ export const registerConnectorActionRoutes = async (
                 contract_version: CONTRACT_VERSION,
                 provider_response_code: finalResult?.providerResponseCode ?? '200',
                 result_summary: finalResult?.resultSummary ?? 'Action executed successfully.',
+                data: finalResult?.data ?? null,
             };
         }
 
