@@ -193,3 +193,24 @@ export function buildPhoneScreenGuide(input: PhoneScreenInput): PhoneScreenGuide
         postCallActions,
     };
 }
+
+/**
+ * Convert a phone-screen guide into a runnable interview protocol — the ordered
+ * questions the agent will actually ask when it joins the call, driven by the
+ * generic interview engine. Each scorecard dimension becomes one question.
+ */
+export function buildPhoneScreenProtocol(
+    guide: PhoneScreenGuide,
+): { opening: string; closing: string; protocol: Array<{ id: string; question: string; required: boolean }> } {
+    const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    return {
+        opening: `Hi ${guide.candidateName}, thanks for making the time. I'd like to walk through a few questions about the ${guide.jobTitle} role — is now still good?`,
+        closing: `That's everything from my side — thank you. We'll follow up with next steps shortly.`,
+        protocol: guide.scorecard.map((d, i) => ({
+            id: slug(d.dimension) || `q${i + 1}`,
+            question: d.question,
+            // Fit-signal dimensions matter most; treat all as required by default.
+            required: true,
+        })),
+    };
+}

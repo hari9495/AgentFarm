@@ -447,4 +447,46 @@ describe('workspace_rec_conduct_phone_screen — presence (join the call)', () =
         assert.equal(parsed['joined'], false);
         assert.ok(String(parsed['reason']).includes('desktop-agent unreachable'));
     });
+
+    it('exposes the runnable protocol even in the draft path', async () => {
+        const result = await handleRecruiterAction({
+            ...BASE,
+            actionType: 'workspace_rec_conduct_phone_screen',
+            payload: { ...SCREEN_PAYLOAD },
+        });
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        const protocol = parsed['protocol'] as Array<{ id: string; question: string }>;
+        assert.ok(Array.isArray(protocol) && protocol.length > 0);
+        assert.ok(protocol.every((q) => typeof q.id === 'string' && typeof q.question === 'string'));
+    });
+
+    it('runs a protocol-driven interview when a protocol client is injected', async () => {
+        let receivedProtocolLen = 0;
+        const result = await handleRecruiterAction({
+            ...BASE,
+            workspaceId: 'ws-1',
+            actionType: 'workspace_rec_conduct_phone_screen',
+            // protocol client takes precedence over the generic one
+            meetingParticipationClient: async () => { throw new Error('should not be called'); },
+            protocolInterviewClient: async (i) => {
+                receivedProtocolLen = i.protocol.length;
+                return {
+                    meetingSessionId: 'mtg-9',
+                    completed: true,
+                    totalTurns: i.protocol.length,
+                    transcript: [{ speaker: 'agent', text: i.opening ?? '' }],
+                    results: i.protocol.map((q) => ({ id: q.id, question: q.question, status: 'answered' as const, answer: 'ok', probes: 0 })),
+                };
+            },
+            payload: { ...SCREEN_PAYLOAD, join: true, desktopSessionId: 'ds-1', meetingUrl: 'https://zoom.us/j/1', platform: 'zoom' },
+        });
+        assert.equal(result.ok, true);
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['joined'], true);
+        assert.equal(parsed['mode'], 'protocol');
+        assert.equal(parsed['meetingSessionId'], 'mtg-9');
+        assert.equal(parsed['completed'], true);
+        assert.ok(receivedProtocolLen > 0, 'the derived protocol was passed to the client');
+        assert.ok(Array.isArray(parsed['results']));
+    });
 });

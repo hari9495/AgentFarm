@@ -56,8 +56,9 @@ import type {
     InterviewSlot,
 } from './interview-scheduler.js';
 
-import { buildPhoneScreenGuide } from './phone-screen-guide.js';
+import { buildPhoneScreenGuide, buildPhoneScreenProtocol } from './phone-screen-guide.js';
 import type { PhoneScreenInput } from './phone-screen-guide.js';
+import type { InterviewQuestionSpec, ProtocolInterviewResult } from '../shared/interview-engine.js';
 
 import { collectAndSummariseFeedback } from './feedback-collector.js';
 import type { FeedbackCollectorInput, InterviewerFeedback, FeedbackRating } from './feedback-collector.js';
@@ -273,9 +274,29 @@ export interface RecruiterActionInput {
     workspaceId?: string;
     /** Optional — dispatches native connector actions (e.g. gmail/outlook send_email for candidate outreach). */
     connectorActionExecuteClient?: LocalWorkspaceConnectorClient;
-    /** Optional — joins a live meeting and participates (phone screens / interviews). */
+    /** Optional — joins a live meeting and participates generically (phone screens / interviews). */
     meetingParticipationClient?: RecruiterMeetingClient;
+    /** Optional — joins a meeting and runs a protocol-driven interview (asks the agent's own questions, scored). */
+    protocolInterviewClient?: RecruiterProtocolInterviewClient;
 }
+
+/**
+ * Joins a meeting and runs the generic interview engine over a protocol (the
+ * agent's own ordered questions), returning the scored transcript. Backed by the
+ * live meeting IO adapter; unit tests inject a fake.
+ */
+export type RecruiterProtocolInterviewClient = (input: {
+    tenantId: string;
+    workspaceId: string;
+    agentId: string;
+    desktopSessionId: string;
+    meetingUrl: string;
+    platform: string;
+    protocol: InterviewQuestionSpec[];
+    opening?: string;
+    closing?: string;
+    language?: string;
+}) => Promise<ProtocolInterviewResult & { meetingSessionId?: string }>;
 
 /**
  * Joins a meeting via the desktop-agent and runs the capture→respond→speak
@@ -314,7 +335,7 @@ export async function handleRecruiterAction(
     input: RecruiterActionInput,
 ): Promise<LocalWorkspaceResult> {
     const { actionType, payload } = input;
-    const { tenantId, botId, gatewayBaseUrl, serviceToken, workspaceId, connectorActionExecuteClient, meetingParticipationClient } = input;
+    const { tenantId, botId, gatewayBaseUrl, serviceToken, workspaceId, connectorActionExecuteClient, meetingParticipationClient, protocolInterviewClient } = input;
 
     // RAG pre-flight — fetch prior approved hiring artifacts, templates, and recruiter lessons
     let ragContextBlock = '';
@@ -748,39 +769,60 @@ export async function handleRecruiterAction(
             };
 
             const guide = buildPhoneScreenGuide(screenInput);
+            // The runnable protocol (ordered questions) the agent will ask on the
+            // call. Exposed even for the draft/generic path so the questions are
+            // always available.
+            const { opening, closing, protocol } = buildPhoneScreenProtocol(guide);
 
-            // Presence path: actually join the call and run the screen. The
-            // generated guide is the agent's brief; the meeting session id lets
-            // gather_feedback pull the transcript afterwards. Fail-safe — any
-            // problem returns the guide so the work is never lost.
+            // Presence path: actually join the call and run the screen. Fail-safe —
+            // any problem returns the guide so the work is never lost.
             if (payload['join'] === true) {
                 const desktopSessionId = str(payload['desktopSessionId']).trim();
                 const meetingUrl = str(payload['meetingUrl']).trim();
                 const platform = str(payload['platform']).trim();
                 if (!desktopSessionId || !meetingUrl || !platform || !workspaceId) {
-                    return jsonOut({ joined: false, reason: 'join=true requires desktopSessionId, meetingUrl, platform and a workspace', ...guide });
+                    return jsonOut({ joined: false, reason: 'join=true requires desktopSessionId, meetingUrl, platform and a workspace', protocol, ...guide });
                 }
-                if (!meetingParticipationClient) {
-                    return jsonOut({ joined: false, reason: 'no meeting participation client available', ...guide });
+                const language = typeof payload['language'] === 'string' ? payload['language'] : undefined;
+
+                // Preferred: protocol-driven — the agent asks its own scored
+                // questions. Falls back to generic participation when only that
+                // client is available.
+                if (protocolInterviewClient) {
+                    try {
+                        const res = await protocolInterviewClient({
+                            tenantId, workspaceId, agentId: botId,
+                            desktopSessionId, meetingUrl, platform, protocol, opening, closing, language,
+                        });
+                        return jsonOut({
+                            joined: true,
+                            mode: 'protocol',
+                            meetingSessionId: res.meetingSessionId,
+                            completed: res.completed,
+                            results: res.results,
+                            totalTurns: res.totalTurns,
+                            ...guide,
+                        });
+                    } catch (err) {
+                        return jsonOut({ joined: false, reason: err instanceof Error ? err.message : String(err), protocol, ...guide });
+                    }
                 }
-                try {
-                    const res = await meetingParticipationClient({
-                        tenantId,
-                        workspaceId,
-                        agentId: botId,
-                        desktopSessionId,
-                        meetingUrl,
-                        platform,
-                        language: typeof payload['language'] === 'string' ? payload['language'] : undefined,
-                        maxTurns: typeof payload['maxTurns'] === 'number' ? payload['maxTurns'] : undefined,
-                    });
-                    return jsonOut({ joined: true, meetingSessionId: res.meetingSessionId, ...guide });
-                } catch (err) {
-                    return jsonOut({ joined: false, reason: err instanceof Error ? err.message : String(err), ...guide });
+                if (meetingParticipationClient) {
+                    try {
+                        const res = await meetingParticipationClient({
+                            tenantId, workspaceId, agentId: botId,
+                            desktopSessionId, meetingUrl, platform, language,
+                            maxTurns: typeof payload['maxTurns'] === 'number' ? payload['maxTurns'] : undefined,
+                        });
+                        return jsonOut({ joined: true, mode: 'generic', meetingSessionId: res.meetingSessionId, protocol, ...guide });
+                    } catch (err) {
+                        return jsonOut({ joined: false, reason: err instanceof Error ? err.message : String(err), protocol, ...guide });
+                    }
                 }
+                return jsonOut({ joined: false, reason: 'no meeting client available', protocol, ...guide });
             }
 
-            return jsonOut(guide);
+            return jsonOut({ ...guide, protocol });
         }
 
         // ----------------------------------------------------------------
