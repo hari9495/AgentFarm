@@ -5,7 +5,7 @@ import MarketplaceGrid from "@/components/marketplace/MarketplaceGrid";
 import { marketplaceItemListSchema, aggregateRatingSchema, breadcrumbSchema } from "@/lib/seo-schemas";
 
 export const metadata: Metadata = {
-    title: "AI Worker Marketplace — 12 Specialist Roles | AgentFarms",
+    title: "AI Worker Marketplace — 13 Specialist Roles | AgentFarms",
     description:
         "Browse and hire AI workers across 13 specialist roles — Backend Developer, QA Engineer, Sales Rep, Customer Support, Project Manager, and more. Deploy in under 10 minutes.",
     keywords: [
@@ -16,15 +16,15 @@ export const metadata: Metadata = {
     ],
     alternates: { canonical: "https://agentfarms.in/marketplace" },
     openGraph: {
-        title: "AI Worker Marketplace — 12 Specialist Roles | AgentFarms",
-        description: "Browse 12 governed AI worker roles. Deploy in under 10 minutes with human approval gates.",
+        title: "AI Worker Marketplace — 13 Specialist Roles | AgentFarms",
+        description: "Browse 13 governed AI worker roles. Deploy in under 10 minutes with human approval gates.",
         url: "https://agentfarms.in/marketplace",
         type: "website",
     },
 };
 
 const stats = [
-    { label: "AI worker roles", value: "12" },
+    { label: "AI worker roles", value: "13" },
     { label: "Avg hire time", value: "< 10 min" },
     { label: "Actions audited", value: "100%" },
     { label: "Departments covered", value: "8" },
