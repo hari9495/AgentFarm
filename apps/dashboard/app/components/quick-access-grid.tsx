@@ -18,7 +18,7 @@ const CATEGORIES: ToolCategory[] = [
     {
         id: 'monitoring',
         title: 'Monitoring',
-        color: 'bg-sky-100 text-sky-700',
+        color: 'bg-blue-100 text-blue-700',
         tools: [
             { label: 'Live Feed', href: '/live', icon: '📡', description: 'Real-time event stream' },
             { label: 'Health & Status', href: '/health', icon: '💚', description: 'Service health overview' },
@@ -33,7 +33,7 @@ const CATEGORIES: ToolCategory[] = [
     {
         id: 'agents',
         title: 'Agents & Tasks',
-        color: 'bg-violet-100 text-violet-700',
+        color: 'bg-blue-100 text-blue-700',
         tools: [
             { label: 'Agents', href: '/agents', icon: '🤖', description: 'Manage all agents' },
             { label: 'Task History', href: '/tasks', icon: '📝', description: 'All task records' },
@@ -98,7 +98,7 @@ const CATEGORIES: ToolCategory[] = [
     {
         id: 'memory',
         title: 'Memory & Context',
-        color: 'bg-purple-100 text-purple-700',
+        color: 'bg-blue-100 text-blue-700',
         tools: [
             { label: 'Work Memory', href: '/work-memory', icon: '💾', description: 'Agent working memory' },
             { label: 'Memory', href: '/memory', icon: '🗄️', description: 'Persistent memory' },
