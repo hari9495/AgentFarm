@@ -298,19 +298,19 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
             <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
                 {/* Header */}
-                <section className="relative overflow-hidden rounded-2xl bg-slate-950">
+                <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-50 via-white to-white">
                     <div className="absolute inset-0 pointer-events-none">
-                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(14,165,233,0.18)_0%,transparent_60%)]" />
-                        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
+                        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle, rgba(37,99,235,1) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
                     </div>
                     <div className="relative px-6 py-6">
                         <div className="flex items-center gap-2 mb-3">
-                            <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-sky-400">
+                            <div className="flex items-center gap-2 rounded-xl bg-blue-50 border border-blue-200 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-700">
                                 <Play className="w-3.5 h-3.5" />
                                 Tasks
                             </div>
                         </div>
-                        <h1 className="text-3xl font-extrabold text-white tracking-tight">Submit a Task</h1>
+                        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Submit a Task</h1>
                         <p className="mt-2 text-slate-400 text-sm max-w-xl">
                             Run any AI agent on demand. Pick an agent, describe the goal, and optionally wire a connector action.
                         </p>
@@ -340,7 +340,7 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                                         <select
                                             value={selectedBotId}
                                             onChange={(e) => setSelectedBotId(e.target.value)}
-                                            className="w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2.5 pr-8 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                                            className="w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2.5 pr-8 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         >
                                             {agents.map((a) => (
                                                 <option key={a.id} value={a.id}>
@@ -367,7 +367,7 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                                         onChange={(e) => setPrompt(e.target.value)}
                                         rows={4}
                                         placeholder="Describe what you want the agent to do…"
-                                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none"
+                                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                                     />
                                 </div>
 
@@ -380,7 +380,7 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                                         <select
                                             value={connectorType}
                                             onChange={(e) => handleConnectorChange(e.target.value)}
-                                            className="w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2.5 pr-8 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                            className="w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2.5 pr-8 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         >
                                             {CONNECTOR_OPTIONS.map((o) => (
                                                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -400,7 +400,7 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                                             <select
                                                 value={actionType}
                                                 onChange={(e) => setActionType(e.target.value)}
-                                                className="w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2.5 pr-8 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                                className="w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2.5 pr-8 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             >
                                                 <option value="">Select action…</option>
                                                 {availableActions.map((a) => (
@@ -423,7 +423,7 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                                             onChange={(e) => setConnectorParams(e.target.value)}
                                             rows={3}
                                             placeholder={'{"owner":"org","repo":"repo-name"}'}
-                                            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2.5 text-sm font-mono text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none"
+                                            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2.5 text-sm font-mono text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                                         />
                                     </div>
                                 )}
@@ -443,7 +443,7 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                                 <button
                                     type="submit"
                                     disabled={submitting || (!prompt.trim() && !actionType)}
-                                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-sky-600 hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2.5 text-sm font-semibold text-white transition-colors"
+                                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2.5 text-sm font-semibold text-white transition-colors"
                                 >
                                     {submitting ? (
                                         <><Loader2 className="h-4 w-4 animate-spin" /> Running…</>

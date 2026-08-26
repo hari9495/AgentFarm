@@ -133,9 +133,9 @@ export default function BillingOrdersPanel({ canProvision }: { canProvision: boo
                                                 href={order.invoice.pdfUrl}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-200 transition-colors"
+                                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors"
                                             >
-                                                <PremiumIcon icon={Download} tone="sky" containerClassName="w-5 h-5 rounded-md bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-3 h-3" />
+                                                <PremiumIcon icon={Download} tone="sky" containerClassName="w-5 h-5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" iconClassName="w-3 h-3" />
                                                 Download
                                             </a>
                                         ) : (

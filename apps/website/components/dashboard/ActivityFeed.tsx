@@ -23,11 +23,11 @@ const iconForType: Record<string, LucideIcon> = {
 };
 
 const styleForType: Record<string, string> = {
-    code: "text-sky-600 dark:text-sky-400 bg-sky-100 dark:bg-sky-900/40",
+    code: "text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40",
     security: "text-rose-600 dark:text-rose-400 bg-rose-100 dark:bg-rose-900/40",
     qa: "text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40",
     ops: "text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40",
-    approval: "text-violet-600 dark:text-violet-400 bg-violet-100 dark:bg-violet-900/40",
+    approval: "text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40",
 };
 
 const approvalBadgeStyle: Record<"requested" | "approved" | "rejected", string> = {
@@ -120,7 +120,7 @@ export default function ActivityFeed() {
                             key={f.key}
                             onClick={() => setActiveFilter(f.key)}
                             className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${activeFilter === f.key
-                                    ? "bg-sky-600 text-white"
+                                    ? "bg-blue-600 text-white"
                                     : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
                                 }`}
                         >

@@ -153,7 +153,7 @@ export default function ProvisioningOpsPanel() {
             <div className="flex items-start justify-between gap-3">
                 <div>
                     <p className="text-base font-bold text-slate-900 dark:text-slate-100 inline-flex items-center gap-2">
-                        <PremiumIcon icon={Wrench} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-3.5 h-3.5" />
+                        <PremiumIcon icon={Wrench} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" iconClassName="w-3.5 h-3.5" />
                         Provisioning Operations
                     </p>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Tenant runtime provisioning controls and diagnostics.</p>
@@ -201,7 +201,7 @@ export default function ProvisioningOpsPanel() {
                             <button
                                 onClick={() => void processNow()}
                                 disabled={actionPending !== null}
-                                className="inline-flex rounded-lg border border-sky-200 dark:border-sky-700 px-2.5 py-1.5 text-xs font-semibold text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-900/20 disabled:opacity-60"
+                                className="inline-flex rounded-lg border border-blue-200 dark:border-blue-700 px-2.5 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-60"
                             >
                                 {actionPending === "process" ? "Processing..." : "Process queue now"}
                             </button>
