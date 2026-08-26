@@ -225,3 +225,60 @@ describe('workspace_ba_elicit_requirements — live interview', () => {
         assert.equal(called, false);
     });
 });
+
+// ── workspace_ba_stakeholder_update — send (deliver to stakeholders) ────────────
+
+describe('workspace_ba_stakeholder_update — send', () => {
+    it('delivers via Slack when send=true with a channel', async () => {
+        const { handleBaAction } = await import('./business-analyst-action-handler.js');
+        const calls: Array<{ action: string; payload: Record<string, unknown> }> = [];
+        const result = await handleBaAction({
+            ...BASE,
+            actionType: 'workspace_ba_stakeholder_update',
+            payload: { title: 'Sprint 4 status', audience: 'internal', send: true, channel: '#stakeholders' },
+            callLlm: async () => 'Sprint 4 is on track; billing epic complete.',
+            executeAction: async (action: string, payload: Record<string, unknown>) => { calls.push({ action, payload }); return { ok: true, output: '{}' }; },
+        } as Parameters<typeof handleBaAction>[0]);
+
+        const delivery = (result as Record<string, unknown>)['stakeholderDelivery'] as Record<string, unknown> | undefined;
+        assert.ok(delivery, 'stakeholderDelivery present');
+        assert.equal(delivery!['sent'], true);
+        assert.equal(delivery!['via'], 'slack');
+        const slack = calls.find((c) => c.action === 'workspace_slack_notify');
+        assert.ok(slack, 'slack_notify called');
+        assert.equal(slack!.payload['channel'], '#stakeholders');
+    });
+
+    it('delivers via email when send=true with a stakeholder_email', async () => {
+        const { handleBaAction } = await import('./business-analyst-action-handler.js');
+        const sent: Array<{ connectorType: string; actionType: string; to: unknown }> = [];
+        const result = await handleBaAction({
+            ...BASE,
+            actionType: 'workspace_ba_stakeholder_update',
+            payload: { title: 'Sprint 4 status', audience: 'internal', send: true, stakeholder_email: 'client@acme.com' },
+            callLlm: async () => 'Sprint 4 is on track.',
+            notificationExecutor: async (i: { connectorType: string; actionType: string; payload: Record<string, unknown> }) => {
+                sent.push({ connectorType: i.connectorType, actionType: i.actionType, to: i.payload['to'] });
+                return { ok: true, resultSummary: 'sent' };
+            },
+        } as Parameters<typeof handleBaAction>[0]);
+
+        const delivery = (result as Record<string, unknown>)['stakeholderDelivery'] as Record<string, unknown> | undefined;
+        assert.ok(delivery && delivery['sent'] === true && delivery['via'] === 'email');
+        assert.deepEqual(sent, [{ connectorType: 'gmail', actionType: 'send_email', to: 'client@acme.com' }]);
+    });
+
+    it('does not deliver without send=true', async () => {
+        const { handleBaAction } = await import('./business-analyst-action-handler.js');
+        let called = false;
+        const result = await handleBaAction({
+            ...BASE,
+            actionType: 'workspace_ba_stakeholder_update',
+            payload: { title: 'Sprint 4 status', audience: 'internal' },
+            callLlm: async () => 'Sprint 4 is on track.',
+            executeAction: async () => { called = true; return { ok: true, output: '{}' }; },
+        } as Parameters<typeof handleBaAction>[0]);
+        assert.equal((result as Record<string, unknown>)['stakeholderDelivery'], undefined);
+        assert.equal(called, false);
+    });
+});

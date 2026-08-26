@@ -1119,6 +1119,30 @@ async function _handleBaActionCore(params: BaActionParams): Promise<BaActionResu
             }
         }
 
+        // stakeholder_update: deliver the approved communication to the
+        // stakeholder — Slack channel or email. Draft→act; only sends on this
+        // approved path. Fail-safe: a delivery failure never drops the content.
+        let stakeholderDelivery: Record<string, unknown> | undefined;
+        if (actionType === 'workspace_ba_stakeholder_update' && payload['send'] === true && versionedContent) {
+            const channel = str(payload['channel']).trim();
+            const email = str(payload['stakeholder_email']).trim() || (stakeholderProfile?.email ?? '');
+            if (channel && executeAction) {
+                const r = await executeAction('workspace_slack_notify', { channel, message: versionedContent });
+                stakeholderDelivery = r.ok ? { sent: true, via: 'slack', channel } : { sent: false, via: 'slack', reason: r.errorOutput ?? 'slack post failed' };
+            } else if (email && notificationExecutor) {
+                const r = await notificationExecutor({
+                    connectorType: str(payload['email_provider'], 'gmail'),
+                    actionType: 'send_email',
+                    payload: { to: email, subject: `Update: ${projectTitle}`, body: versionedContent },
+                    attempt: 1,
+                    secretRefId: null,
+                });
+                stakeholderDelivery = r.ok ? { sent: true, via: 'email', to: email } : { sent: false, via: 'email', reason: r.resultSummary };
+            } else {
+                stakeholderDelivery = { sent: false, reason: 'no channel or stakeholder_email available to deliver the update' };
+            }
+        }
+
         await writeEpisodicMemory({
             tenantId,
             workspaceId,
@@ -1138,6 +1162,7 @@ async function _handleBaActionCore(params: BaActionParams): Promise<BaActionResu
             approvalStatus: 'auto_approved',
             ragContextUsed: !!ragResult.contextBlock,
             ...(dorReady !== undefined ? { dorReady, dorBlockers, dorWarnings } : {}),
+            ...(stakeholderDelivery ? { stakeholderDelivery } : {}),
         };
     }
 
