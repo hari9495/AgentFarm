@@ -137,21 +137,21 @@ function NavLink({
                 group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm
                 font-medium transition-all duration-150 select-none
                 ${active
-                    ? "bg-sky-50 text-sky-700"
+                    ? "bg-blue-50 text-blue-700"
                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                 }
             `}
         >
             {/* Left accent bar */}
             {active && (
-                <span className="absolute left-0 inset-y-[6px] w-[3px] rounded-r-full bg-sky-500" />
+                <span className="absolute left-0 inset-y-[6px] w-[3px] rounded-r-full bg-blue-600" />
             )}
 
             {/* Icon container */}
             <span className={`
                 flex items-center justify-center w-8 h-8 rounded-lg shrink-0 transition-all duration-150
                 ${active
-                    ? "bg-sky-100 text-sky-600"
+                    ? "bg-blue-100 text-blue-600"
                     : "text-slate-400 group-hover:text-slate-600 group-hover:bg-slate-200/70"
                 }
             `}>
@@ -230,11 +230,14 @@ function SidebarContent({
                     onClick={onClose}
                     className="flex items-center gap-3 group flex-1 min-w-0"
                 >
-                    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 via-blue-600 to-emerald-500 shadow-md shadow-sky-500/20">
-                        <Bot className="w-4 h-4 text-white" />
+                    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 shadow-md shadow-blue-600/20">
+                        <svg width="16" height="16" viewBox="0 0 12 12" fill="none" aria-hidden>
+                            <circle cx="6" cy="6" r="5" stroke="white" strokeWidth="1.5" />
+                            <path d="M4 6h4M6 4v4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                        </svg>
                     </span>
                     <div className="min-w-0">
-                        <span className="block text-[15px] font-bold text-slate-900 tracking-tight group-hover:text-sky-600 transition-colors truncate leading-tight">
+                        <span className="block text-[15px] font-bold text-slate-900 tracking-tight group-hover:text-blue-600 transition-colors truncate leading-tight">
                             AgentFarms
                         </span>
                         <span className="block text-[10px] text-slate-400 uppercase tracking-widest font-semibold leading-tight mt-0.5">
@@ -330,9 +333,9 @@ function SidebarContent({
                                 <Link
                                     href="/company"
                                     onClick={onClose}
-                                    className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-fuchsia-600 hover:bg-fuchsia-50 hover:text-fuchsia-700 transition-all"
+                                    className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-all"
                                 >
-                                    <span className="flex items-center justify-center w-8 h-8 rounded-lg text-fuchsia-500 group-hover:bg-fuchsia-100 transition-all">
+                                    <span className="flex items-center justify-center w-8 h-8 rounded-lg text-blue-500 group-hover:bg-blue-100 transition-all">
                                         <ShieldCheck className="w-[17px] h-[17px]" />
                                     </span>
                                     <span className="flex-1 truncate tracking-[-0.01em]">Company Portal</span>
@@ -349,7 +352,7 @@ function SidebarContent({
 
                 {/* User identity row */}
                 <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors cursor-default">
-                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-sky-500 to-emerald-500 flex items-center justify-center text-[12px] font-bold text-white shrink-0 shadow-sm shadow-sky-500/20 ring-2 ring-slate-200">
+                    <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-[12px] font-bold text-white shrink-0 shadow-sm shadow-blue-600/20 ring-2 ring-slate-200">
                         {initials}
                     </div>
                     <div className="flex-1 min-w-0">
