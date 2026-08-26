@@ -178,3 +178,50 @@ describe('workspace_ba_rtm_generate', () => {
         assert.ok(typeof result.coveragePercent === 'number');
     });
 });
+
+// ── workspace_ba_elicit_requirements — live interview (presence) ───────────────
+
+describe('workspace_ba_elicit_requirements — live interview', () => {
+    it('conducts the interview and feeds the transcript into requirements when join=true', async () => {
+        const { handleBaAction } = await import('./business-analyst-action-handler.js');
+        const prompts: string[] = [];
+        let clientCalled: { protocolLen: number } | null = null;
+
+        await handleBaAction({
+            ...BASE,
+            actionType: 'workspace_ba_elicit_requirements',
+            payload: { title: 'Billing revamp', join: true, desktopSessionId: 'ds-1', meetingUrl: 'https://meet/x', platform: 'zoom' },
+            callLlm: async (prompt: string) => { prompts.push(prompt); return 'REQ-1: The system shall bill monthly.'; },
+            protocolInterviewClient: async (m) => {
+                clientCalled = { protocolLen: m.protocol.length };
+                return {
+                    meetingSessionId: 'mtg-ba-1',
+                    completed: true,
+                    totalTurns: 2,
+                    transcript: [
+                        { speaker: 'agent', text: 'What problem are we solving?' },
+                        { speaker: 'interviewee', text: 'Customers cannot self-serve billing.' },
+                    ],
+                    results: [{ id: 'q1', question: 'What problem?', status: 'answered', answer: 'self-serve billing', probes: 0 }],
+                };
+            },
+        });
+
+        assert.ok(clientCalled, 'the interview client was called');
+        assert.ok((clientCalled as { protocolLen: number }).protocolLen > 0, 'a non-empty BA protocol was passed');
+        assert.ok(prompts.some((p) => p.includes('Customers cannot self-serve billing')), 'the transcript reached the requirements LLM prompt');
+    });
+
+    it('does not run the interview without join=true (notes-based path)', async () => {
+        const { handleBaAction } = await import('./business-analyst-action-handler.js');
+        let called = false;
+        await handleBaAction({
+            ...BASE,
+            actionType: 'workspace_ba_elicit_requirements',
+            payload: { title: 'Billing revamp', description: 'notes here' },
+            callLlm: async () => 'REQ-1',
+            protocolInterviewClient: async () => { called = true; return { meetingSessionId: 'x', completed: true, totalTurns: 0, transcript: [], results: [] }; },
+        });
+        assert.equal(called, false);
+    });
+});

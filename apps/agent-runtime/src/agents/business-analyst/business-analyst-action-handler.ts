@@ -24,6 +24,8 @@
  */
 
 import type { MeetingProviderExecutor } from '../meeting-agent/meeting-transcription.js';
+import type { MeetingProtocolInterviewClient } from '../shared/meeting-interview-adapter.js';
+import { INTERVIEW_PROTOCOL, INTERVIEW_OPENING } from './business-analyst-interview-protocol.js';
 import {
     buildBaRagContext,
     ingestApprovedDocument,
@@ -188,6 +190,13 @@ export interface BaActionParams {
      * Defaults to `<taskId>-<documentType>` when not provided.
      */
     documentId?: string;
+    /**
+     * Runs a live protocol interview (requirements elicitation). When provided
+     * and elicit_requirements is called with join=true, the BA conducts the
+     * stakeholder interview itself and structures the transcript into
+     * requirements. Executor defaults it to runMeetingProtocolInterview.
+     */
+    protocolInterviewClient?: MeetingProtocolInterviewClient;
 }
 
 export interface BaActionResult {
@@ -763,6 +772,7 @@ async function _handleBaActionCore(params: BaActionParams): Promise<BaActionResu
         executeAction,
         workspaceDir,
         documentId,
+        protocolInterviewClient,
     } = params;
 
     // -------------------------------------------------------------------------
@@ -786,6 +796,38 @@ async function _handleBaActionCore(params: BaActionParams): Promise<BaActionResu
     }
     if (actionType === 'workspace_ba_proactive_epic_check') {
         return handleProactiveEpicCheck(params);
+    }
+
+    // -------------------------------------------------------------------------
+    // Presence: for elicit_requirements with join=true, the BA actually CONDUCTS
+    // the stakeholder interview (shared interview engine over live meeting audio)
+    // and structures the transcript into requirements — instead of only
+    // converting notes a human already captured. Fail-safe: any problem falls
+    // through to the notes-based path so the work is never lost.
+    // -------------------------------------------------------------------------
+    let interviewTranscript = '';
+    if (actionType === 'workspace_ba_elicit_requirements' && payload['join'] === true && protocolInterviewClient) {
+        const desktopSessionId = str(payload['desktopSessionId']).trim();
+        const meetingUrl = str(payload['meetingUrl']).trim();
+        const platform = str(payload['platform']).trim();
+        if (desktopSessionId && meetingUrl && platform && workspaceId) {
+            try {
+                const protocol = INTERVIEW_PROTOCOL.map((q) => ({
+                    id: q.id,
+                    question: q.text,
+                    required: q.isRequired,
+                    maxProbes: q.probes.length,
+                }));
+                const res = await protocolInterviewClient({
+                    tenantId, workspaceId, agentId: botId,
+                    desktopSessionId, meetingUrl, platform,
+                    protocol,
+                    opening: INTERVIEW_OPENING,
+                    language: str(payload['language']) || undefined,
+                });
+                interviewTranscript = res.transcript.map((t) => `${t.speaker}: ${t.text}`).join('\n');
+            } catch { /* fall through to notes-based elicitation */ }
+        }
     }
 
     const audience = (str(payload['audience'], 'internal')) as DocumentAudience;
@@ -840,7 +882,10 @@ async function _handleBaActionCore(params: BaActionParams): Promise<BaActionResu
         toneHint: toneHint || undefined,
     });
 
-    const userPrompt = buildUserPrompt(actionType, payload);
+    let userPrompt = buildUserPrompt(actionType, payload);
+    if (interviewTranscript) {
+        userPrompt += `\n\n### Live Interview Transcript\n${interviewTranscript}`;
+    }
     let generatedContent = await callLlmSafe(callLlm, userPrompt, systemPrompt);
 
     // If stakeholder profile exists and we generated content, adapt prose tone

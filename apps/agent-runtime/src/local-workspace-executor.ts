@@ -15256,6 +15256,19 @@ export async function executeLocalWorkspaceAction(input: {
                         payload: aPayload,
                         connectorActionExecuteClient,
                     }),
+                protocolInterviewClient: async (m) =>
+                    runMeetingProtocolInterview({
+                        tenantId: m.tenantId,
+                        workspaceId: m.workspaceId,
+                        agentId: m.agentId,
+                        desktopSessionId: m.desktopSessionId,
+                        meetingUrl: m.meetingUrl,
+                        platform: m.platform as MeetingPlatform,
+                        protocol: m.protocol,
+                        ...(m.opening ? { opening: m.opening } : {}),
+                        ...(m.closing ? { closing: m.closing } : {}),
+                        ...(m.language ? { language: m.language } : {}),
+                    }),
             });
             const baTitle =
                 typeof payload['title'] === 'string' ? payload['title'] :

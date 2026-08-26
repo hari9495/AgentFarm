@@ -25,6 +25,24 @@ import {
     type ProtocolInterviewResult,
 } from './interview-engine.js';
 
+/**
+ * Injected client an agent action calls to run a protocol interview over a live
+ * meeting. The executor defaults it to runMeetingProtocolInterview; tests pass a
+ * fake. Shared by recruiter (phone screen) and BA (requirements elicitation).
+ */
+export type MeetingProtocolInterviewClient = (input: {
+    tenantId: string;
+    workspaceId: string;
+    agentId: string;
+    desktopSessionId: string;
+    meetingUrl: string;
+    platform: string;
+    protocol: InterviewQuestionSpec[];
+    opening?: string;
+    closing?: string;
+    language?: string;
+}) => Promise<ProtocolInterviewResult & { meetingSessionId?: string }>;
+
 export interface MeetingProtocolInterviewParams {
     tenantId: string;
     workspaceId: string;
