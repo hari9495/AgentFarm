@@ -31,7 +31,8 @@
  *   workspace_rec_dashboard_request     — emit structured requests to dashboard (API config, doc upload, approval)
  */
 
-import type { LocalWorkspaceResult } from '../../local-workspace-executor.js';
+import type { LocalWorkspaceResult, LocalWorkspaceConnectorClient } from '../../local-workspace-executor.js';
+import { sendEmailViaConnector } from '../shared/connector-email.js';
 
 import { buildJobDescription } from './jd-builder.js';
 import type { RoleBrief, EmploymentType, WorkArrangement, ExperienceLevel } from './jd-builder.js';
@@ -269,6 +270,8 @@ export interface RecruiterActionInput {
     gatewayBaseUrl?: string;
     serviceToken?: string;
     workspaceId?: string;
+    /** Optional — dispatches native connector actions (e.g. gmail/outlook send_email for candidate outreach). */
+    connectorActionExecuteClient?: LocalWorkspaceConnectorClient;
 }
 
 // ---------------------------------------------------------------------------
@@ -292,7 +295,7 @@ export async function handleRecruiterAction(
     input: RecruiterActionInput,
 ): Promise<LocalWorkspaceResult> {
     const { actionType, payload } = input;
-    const { tenantId, botId, gatewayBaseUrl, serviceToken, workspaceId } = input;
+    const { tenantId, botId, gatewayBaseUrl, serviceToken, workspaceId, connectorActionExecuteClient } = input;
 
     // RAG pre-flight — fetch prior approved hiring artifacts, templates, and recruiter lessons
     let ragContextBlock = '';
@@ -489,9 +492,37 @@ export async function handleRecruiterAction(
             };
 
             const buildSequence = payload['buildSequence'] === true;
-            return buildSequence
-                ? jsonOut(buildOutreachSequence(spec))
-                : jsonOut(composeOutreach(spec));
+            if (buildSequence) return jsonOut(buildOutreachSequence(spec));
+
+            const message = composeOutreach(spec);
+
+            // Replace-the-human path: when send=true and it's an email, actually
+            // dispatch through the workspace's native email connector instead of
+            // handing the draft back for a person to send. Non-email channels
+            // (linkedin_inmail/sms) have no native executor, so they stay drafts.
+            const wantsSend = payload['send'] === true;
+            const candidateEmail = str(payload['candidateEmail']).trim();
+            if (wantsSend && spec.channel === 'email' && message.subject) {
+                if (!candidateEmail) return fail('payload.candidateEmail is required to send outreach (send=true)');
+                const dispatch = await sendEmailViaConnector({
+                    connectorClient: connectorActionExecuteClient,
+                    workspaceId,
+                    gatewayBaseUrl,
+                    serviceToken,
+                    to: candidateEmail,
+                    subject: message.subject,
+                    body: message.body,
+                });
+                // Fail-safe: never lose the composed message to a dispatch failure —
+                // return the draft plus the reason so a human can send it manually.
+                return jsonOut(
+                    dispatch.sent
+                        ? { sent: true, via: dispatch.connectorType, to: candidateEmail, ...message }
+                        : { sent: false, dispatch_reason: dispatch.reason, ...message },
+                );
+            }
+
+            return jsonOut(message);
         }
 
         // ----------------------------------------------------------------
