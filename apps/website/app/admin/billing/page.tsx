@@ -125,23 +125,24 @@ export default function AdminBillingPage() {
         <div className="site-shell min-h-screen">
 
             {/* Page header */}
-            <section className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-emerald-600 via-emerald-700 to-blue-700">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-                    <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-emerald-200 mb-4">
-                        <PremiumIcon icon={CreditCard} tone="emerald" containerClassName="w-5 h-5 rounded-md bg-emerald-300/15 text-emerald-200 border-emerald-200/30" iconClassName="w-3 h-3" />
+            <section className="relative overflow-hidden border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-blue-50 via-white to-white dark:from-slate-900 dark:to-slate-950">
+                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_55%_90%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
+                <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                    <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-700 dark:text-blue-300 mb-4">
+                        <PremiumIcon icon={CreditCard} tone="sky" containerClassName="w-5 h-5 rounded-md bg-blue-100 text-blue-600" iconClassName="w-3 h-3" />
                         Admin Billing
                     </div>
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight max-w-xl">
+                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight leading-tight max-w-xl">
                         Plan, seats, and invoice management
                     </h1>
-                    <p className="mt-2 text-emerald-200 max-w-lg">
+                    <p className="mt-2 text-slate-600 dark:text-slate-400 max-w-lg">
                         Monitor spend, right-size worker seats, and keep procurement and finance aligned.
                     </p>
                     <div className="mt-5 flex flex-wrap gap-3">
-                        <ButtonLink href="/book-demo" size="sm" className="!bg-white !text-emerald-700 hover:!brightness-95">
+                        <ButtonLink href="/book-demo" size="sm">
                             Talk to Sales
                         </ButtonLink>
-                        <ButtonLink href="/admin" variant="outline" size="sm" className="!bg-white/10 !text-white !border-white/30 hover:!bg-white/20">
+                        <ButtonLink href="/admin" variant="outline" size="sm" className="!bg-white !text-slate-900 !border-slate-200 hover:!bg-slate-50">
                             Back to Admin
                         </ButtonLink>
                     </div>
