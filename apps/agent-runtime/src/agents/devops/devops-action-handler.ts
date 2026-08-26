@@ -1513,12 +1513,26 @@ export async function handleDevopsAction(params: DevopsActionParams): Promise<De
                 ``,
                 `Format: Yesterday | Today | Blockers | Infrastructure health`,
             ].filter(Boolean).join('\n');
-            const spokenText = await callLlmSafe(callLlm, prompt, 'You are a DevOps agent reporting status. Be concise and data-driven.');
+            const spokenText = (await callLlmSafe(callLlm, prompt, 'You are a DevOps agent reporting status. Be concise and data-driven.'))
+                || `${botName} standup: ${deployments.length} deployment(s), ${incidents.length} incident(s).`;
+            // Post the standup to the team channel when requested. Routine → no
+            // gate; fail-safe (a post failure still returns the summary).
+            let posted: { posted: boolean; channel?: string; reason?: string } | undefined;
+            if (payload['post'] === true) {
+                const channel = str(payload['channel']).trim();
+                if (!channel) {
+                    posted = { posted: false, reason: 'post=true requires payload.channel' };
+                } else {
+                    const r = await executeAction('workspace_slack_notify', { channel, message: spokenText });
+                    posted = r.ok ? { posted: true, channel } : { posted: false, reason: r.errorOutput ?? 'slack post failed' };
+                }
+            }
             return safeJson({
                 bot_name: botName, team_name: teamName,
                 deployments, incidents, pipeline_pass_rate: passRate,
-                spoken_text: spokenText || `${botName} standup: ${deployments.length} deployment(s), ${incidents.length} incident(s).`,
+                spoken_text: spokenText,
                 summary: `DevOps standup generated for ${teamName}.`,
+                ...(posted ? { posted } : {}),
             });
         }
 
