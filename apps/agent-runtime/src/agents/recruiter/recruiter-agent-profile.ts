@@ -81,6 +81,7 @@ export const RECRUITER_ROLE_ALLOWED_LOCAL_ACTIONS: LocalWorkspaceActionType[] = 
     'workspace_rec_conduct_phone_screen',
     'workspace_rec_gather_feedback',
     'workspace_rec_manage_pipeline',
+    'workspace_rec_metrics',
     'workspace_rec_generate_offer',
     'workspace_rec_market_intelligence',
     'workspace_rec_request_human_gate',

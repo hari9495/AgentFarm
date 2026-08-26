@@ -668,3 +668,38 @@ describe('workspace_rec_screen_resume — ATS pull', () => {
         assert.ok(typeof parsed['overallScore'] === 'number');
     });
 });
+
+describe('workspace_rec_metrics', () => {
+    it('returns computed recruiting metrics for a candidate snapshot', async () => {
+        const result = await handleRecruiterAction({
+            ...BASE,
+            actionType: 'workspace_rec_metrics',
+            payload: {
+                jobTitle: 'Staff Engineer',
+                asOfDate: '2026-08-26',
+                openedDate: '2026-07-01',
+                candidates: [
+                    { stage: 'sourced', source: 'linkedin' },
+                    { stage: 'interview', source: 'referral' },
+                    { stage: 'hired', source: 'referral', hired: true },
+                ],
+            },
+        });
+        assert.equal(result.ok, true);
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['totalCandidates'], 3);
+        assert.equal(parsed['hires'], 1);
+        assert.ok(Array.isArray(parsed['funnel']));
+        assert.equal(parsed['daysOpen'], 56);
+    });
+
+    it('requires a candidates array', async () => {
+        const result = await handleRecruiterAction({
+            ...BASE,
+            actionType: 'workspace_rec_metrics',
+            payload: { jobTitle: 'Staff Engineer' },
+        });
+        assert.equal(result.ok, false);
+        assert.ok(result.output.includes('candidates'));
+    });
+});

@@ -669,6 +669,7 @@ export type LocalWorkspaceActionType =
     | 'workspace_rec_advise_jd_compliance'
     | 'workspace_rec_international'
     | 'workspace_rec_campus_recruiting'
+    | 'workspace_rec_metrics'
     | 'workspace_rec_dashboard_request'
     // Tier 48 (Customer Support Executive domain actions)
     | 'workspace_cse_ticket_open'
@@ -15342,6 +15343,7 @@ export async function executeLocalWorkspaceAction(input: {
         case 'workspace_rec_advise_jd_compliance':
         case 'workspace_rec_international':
         case 'workspace_rec_campus_recruiting':
+        case 'workspace_rec_metrics':
         case 'workspace_rec_dashboard_request': {
             if (!isRecruiterActionType(actionType)) {
                 return { ok: false, output: '', errorOutput: `Unrecognised Recruiter action: ${actionType}` };

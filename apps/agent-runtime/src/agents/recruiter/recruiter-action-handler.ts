@@ -42,6 +42,7 @@ import { sourceCandidates } from './candidate-sourcer.js';
 import type { SourcingCriteria } from './candidate-sourcer.js';
 
 import { screenResume, extractCandidateFromAtsRecord } from './resume-screener.js';
+import { computeRecruitingMetrics, type MetricsCandidate } from './recruiter-metrics.js';
 import type { ResumeScreenInput } from './resume-screener.js';
 
 import { composeOutreach, buildOutreachSequence } from './outreach-composer.js';
@@ -228,6 +229,7 @@ export type RecruiterActionType =
     | 'workspace_rec_advise_jd_compliance'
     | 'workspace_rec_international'
     | 'workspace_rec_campus_recruiting'
+    | 'workspace_rec_metrics'
     | 'workspace_rec_dashboard_request';
 
 export function isRecruiterActionType(t: string): t is RecruiterActionType {
@@ -257,6 +259,7 @@ export function isRecruiterActionType(t: string): t is RecruiterActionType {
         t === 'workspace_rec_advise_jd_compliance' ||
         t === 'workspace_rec_international' ||
         t === 'workspace_rec_campus_recruiting' ||
+        t === 'workspace_rec_metrics' ||
         t === 'workspace_rec_dashboard_request'
     );
 }
@@ -887,6 +890,26 @@ export async function handleRecruiterAction(
             }
 
             return jsonOut({ ...guide, protocol });
+        }
+
+        // ----------------------------------------------------------------
+        // workspace_rec_metrics — recruiting metrics (funnel, time-to-fill,
+        // aging, source effectiveness) over a candidate snapshot.
+        // ----------------------------------------------------------------
+        case 'workspace_rec_metrics': {
+            const candidates = payload['candidates'];
+            if (!Array.isArray(candidates)) {
+                return fail('payload.candidates array is required (each: { stage, source?, enteredStageDate?, hired?, rejected? })');
+            }
+            const asOfDate = str(payload['asOfDate']) || new Date().toISOString();
+            return jsonOut(computeRecruitingMetrics({
+                asOfDate,
+                jobTitle: typeof payload['jobTitle'] === 'string' ? payload['jobTitle'] : undefined,
+                openedDate: typeof payload['openedDate'] === 'string' ? payload['openedDate'] : undefined,
+                filledDate: typeof payload['filledDate'] === 'string' ? payload['filledDate'] : undefined,
+                staleThresholdDays: typeof payload['staleThresholdDays'] === 'number' ? payload['staleThresholdDays'] : undefined,
+                candidates: candidates as MetricsCandidate[],
+            }));
         }
 
         // ----------------------------------------------------------------

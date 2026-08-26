@@ -166,6 +166,20 @@ const RECRUITER_CAPABILITIES: AgentCapability[] = [
     },
 
     {
+        id: 'recruiting-metrics',
+        actionId: 'workspace_rec_metrics',
+        name: 'Recruiting Metrics',
+        description:
+            'Computes funnel conversion, time-to-fill, days-open, pipeline aging (stale candidates), ' +
+            'and source effectiveness over a candidate snapshot.',
+        tier: 'core',
+        visibility: 'visible',
+        icon: 'chart-bar',
+        exampleUseCase:
+            'Report time-to-fill and stage-by-stage conversion for the open Staff Engineer requisition.',
+    },
+
+    {
         id: 'generate-offer',
         actionId: 'workspace_rec_generate_offer',
         name: 'Offer Letter Generation',
