@@ -219,7 +219,7 @@ export function MissionHero({
                     label="Active Agents"
                     value={activeBots}
                     sub={activeBots === 0 ? "No agents running" : `${activeBots} agent${activeBots !== 1 ? "s" : ""} online`}
-                    accent="#0066cc"
+                    accent="#2563eb"
                     href="/agents"
                     delay={0.05}
                 />
