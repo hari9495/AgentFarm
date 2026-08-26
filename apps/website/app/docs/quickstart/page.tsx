@@ -16,13 +16,13 @@ export default function QuickstartPage() {
             <Lead>Deploy your first governed AI worker in under 10 minutes.</Lead>
 
             <Callout type="note">
-                This guide assumes you have an AgentFarms account. If you don&apos;t, <Link href="/get-started" className="text-[#0066cc] hover:underline font-medium">start your free trial</Link> — no credit card required.
+                This guide assumes you have an AgentFarms account. If you don&apos;t, <Link href="/get-started" className="text-[var(--op-indigo)] hover:underline font-medium">start your free trial</Link> — no credit card required.
             </Callout>
 
             {/* Prerequisites */}
             <H2 id="prerequisites">Prerequisites</H2>
             <P>Before you begin, make sure you have:</P>
-            <ul className="list-disc pl-6 my-4 space-y-1.5 text-[15px] text-[#424245]">
+            <ul className="list-disc pl-6 my-4 space-y-1.5 text-[15px] text-[var(--op-ink-soft)]">
                 <li>An AgentFarms account (Starter+ or above)</li>
                 <li>At least one connected tool — GitHub, Jira, or Slack (you can add these during setup)</li>
                 <li>Your <InlineCode>af_live_</InlineCode> API key from the workspace settings</li>
@@ -32,7 +32,7 @@ export default function QuickstartPage() {
             <H2 id="steps">Deployment steps</H2>
             <Steps>
                 <Step n={1} title="Create your account and choose a starting role">
-                    <P>Sign up with a work email at <Link href="/get-started" className="text-[#0066cc] hover:underline">agentfarms.in/get-started</Link>. During onboarding you&apos;ll be asked to choose your first worker role.</P>
+                    <P>Sign up with a work email at <Link href="/get-started" className="text-[var(--op-indigo)] hover:underline">agentfarms.in/get-started</Link>. During onboarding you&apos;ll be asked to choose your first worker role.</P>
                     <P>Available roles include Backend Developer, QA Engineer, Technical Writer, Sales Rep, Customer Support Agent, Project Manager, and more. If you&apos;re unsure, start with <strong>AI Backend Developer</strong> — it&apos;s the fastest to prove value.</P>
                     <Callout type="tip">Choose the role that maps to the workflow costing your team the most time this week. You can add more workers after the first one proves itself.</Callout>
                 </Step>
@@ -48,7 +48,7 @@ export default function QuickstartPage() {
 # Tip: keep scope as narrow as possible
 # You can update access at any time from GitHub App settings`}</Code>
                     <P>AgentFarms uses OAuth 2.0 with automatic token refresh. The worker only accesses repositories you explicitly authorize.</P>
-                    <Callout type="note">Other available connectors: Jira, Linear, Slack, Microsoft Teams, Gmail, Outlook, Salesforce, HubSpot, Zendesk, and more. See the <Link href="/docs/connectors" className="text-[#0066cc] hover:underline">full connector list</Link>.</Callout>
+                    <Callout type="note">Other available connectors: Jira, Linear, Slack, Microsoft Teams, Gmail, Outlook, Salesforce, HubSpot, Zendesk, and more. See the <Link href="/docs/connectors" className="text-[var(--op-indigo)] hover:underline">full connector list</Link>.</Callout>
                 </Step>
 
                 <Step n={3} title="Set identity and approval policy">
@@ -64,13 +64,13 @@ Content-Type: application/json
   "approvalThreshold": "medium"
 }`}</Code>
                     <P>The <InlineCode>approvalThreshold</InlineCode> controls when the worker pauses for human review:</P>
-                    <div className="overflow-hidden rounded-[11px] my-4" style={{ border: "1px solid #d2d2d7" }}>
+                    <div className="overflow-hidden rounded-[11px] my-4" style={{ border: "1px solid var(--op-line)" }}>
                         <table className="w-full text-[13px]">
                             <thead>
-                                <tr style={{ background: "#f5f5f7", borderBottom: "1px solid #d2d2d7" }}>
-                                    <th className="px-4 py-2.5 text-left font-semibold text-[#1d1d1f]">Threshold</th>
-                                    <th className="px-4 py-2.5 text-left font-semibold text-[#1d1d1f]">Behaviour</th>
-                                    <th className="px-4 py-2.5 text-left font-semibold text-[#1d1d1f]">Best for</th>
+                                <tr style={{ background: "var(--op-paper-2)", borderBottom: "1px solid var(--op-line)" }}>
+                                    <th className="px-4 py-2.5 text-left font-semibold text-[var(--op-ink)]">Threshold</th>
+                                    <th className="px-4 py-2.5 text-left font-semibold text-[var(--op-ink)]">Behaviour</th>
+                                    <th className="px-4 py-2.5 text-left font-semibold text-[var(--op-ink)]">Best for</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -79,10 +79,10 @@ Content-Type: application/json
                                     { t: "medium", b: "High and medium-risk actions pause. Low-risk actions proceed automatically.", bf: "Recommended starting point" },
                                     { t: "high", b: "All actions pause for approval, including low-risk ones.", bf: "Initial evaluation or sensitive environments" },
                                 ].map((r, i) => (
-                                    <tr key={r.t} style={{ borderBottom: i < 2 ? "1px solid #e8e8ed" : "none" }}>
+                                    <tr key={r.t} style={{ borderBottom: i < 2 ? "1px solid var(--op-line)" : "none" }}>
                                         <td className="px-4 py-3"><code className="font-mono text-[#5856d6]">{r.t}</code></td>
-                                        <td className="px-4 py-3 text-[#6e6e73]">{r.b}</td>
-                                        <td className="px-4 py-3 text-[#6e6e73]">{r.bf}</td>
+                                        <td className="px-4 py-3 text-[var(--op-muted)]">{r.b}</td>
+                                        <td className="px-4 py-3 text-[var(--op-muted)]">{r.bf}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -181,8 +181,8 @@ Authorization: Bearer af_live_xxxxxxxxxxxxxxxxxxxx`}</Code>
                     <Link
                         key={l.href}
                         href={l.href}
-                        className="flex items-center gap-2 px-4 py-3 rounded-[11px] text-[14px] font-medium text-[#0066cc] hover:text-[#0071e3] transition-colors"
-                        style={{ border: "1px solid #d2d2d7" }}
+                        className="flex items-center gap-2 px-4 py-3 rounded-[11px] text-[14px] font-medium text-[var(--op-indigo)] hover:text-[var(--op-indigo-ink)] transition-colors"
+                        style={{ border: "1px solid var(--op-line)" }}
                     >
                         {l.label} →
                     </Link>

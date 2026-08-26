@@ -74,12 +74,12 @@ function SidebarSection({ section, pathname }: { section: NavSection; pathname: 
                 onClick={() => setOpen(!open)}
                 className="w-full flex items-center justify-between px-3 py-1.5 rounded cursor-pointer"
             >
-                <span className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "#6e6e73" }}>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: "var(--op-muted)" }}>
                     {section.heading}
                 </span>
                 <ChevronDown
                     className="w-3.5 h-3.5 transition-transform"
-                    style={{ color: "#aeaeb2", transform: open ? "rotate(0deg)" : "rotate(-90deg)" }}
+                    style={{ color: "var(--op-muted)", transform: open ? "rotate(0deg)" : "rotate(-90deg)" }}
                 />
             </button>
 
@@ -93,8 +93,8 @@ function SidebarSection({ section, pathname }: { section: NavSection; pathname: 
                                     href={href}
                                     className="flex items-center justify-between px-3 py-1.5 rounded-[8px] text-[13px] transition-colors"
                                     style={{
-                                        background: active ? "rgba(0,102,204,0.08)" : "transparent",
-                                        color: active ? "#0066cc" : "#424245",
+                                        background: active ? "rgba(37,99,235,0.08)" : "transparent",
+                                        color: active ? "var(--op-indigo)" : "var(--op-ink-soft)",
                                         fontWeight: active ? 600 : 400,
                                     }}
                                 >
@@ -102,7 +102,7 @@ function SidebarSection({ section, pathname }: { section: NavSection; pathname: 
                                     {badge && (
                                         <span
                                             className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                                            style={{ background: "rgba(0,102,204,0.1)", color: "#0066cc" }}
+                                            style={{ background: "rgba(37,99,235,0.1)", color: "var(--op-indigo)" }}
                                         >
                                             {badge}
                                         </span>
@@ -126,7 +126,7 @@ export default function DocsSidebar() {
     return (
         <aside
             className="hidden lg:block shrink-0 border-r"
-            style={{ width: 240, minWidth: 240, borderColor: "#e8e8ed", background: "#fafafa" }}
+            style={{ width: 240, minWidth: 240, borderColor: "var(--op-line)", background: "var(--op-paper-2)" }}
         >
             <nav
                 className="sticky flex flex-col gap-1 py-6 px-3 overflow-y-auto"
@@ -136,17 +136,17 @@ export default function DocsSidebar() {
                 <div className="px-3 mb-4 flex items-center gap-2">
                     <div
                         className="w-5 h-5 rounded flex items-center justify-center shrink-0"
-                        style={{ background: "#0066cc" }}
+                        style={{ background: "var(--op-indigo)" }}
                     >
                         <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                             <circle cx="5" cy="5" r="4" stroke="white" strokeWidth="1.5" />
                             <path d="M3 5h4M5 3v4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
                         </svg>
                     </div>
-                    <span className="text-[13px] font-semibold text-[#1d1d1f]">AgentFarms</span>
+                    <span className="text-[13px] font-semibold text-[var(--op-ink)]">AgentFarms</span>
                     <span
                         className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                        style={{ background: "rgba(0,102,204,0.1)", color: "#0066cc" }}
+                        style={{ background: "rgba(37,99,235,0.1)", color: "var(--op-indigo)" }}
                     >
                         Docs
                     </span>
@@ -160,15 +160,15 @@ export default function DocsSidebar() {
                 </div>
 
                 {/* External links */}
-                <div className="mt-4 pt-4 border-t border-[#e8e8ed]">
-                    <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#aeaeb2] mb-1.5">
+                <div className="mt-4 pt-4 border-t border-[var(--op-line)]">
+                    <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--op-muted)] mb-1.5">
                         Resources
                     </p>
                     {EXTERNAL.map((l) => (
                         <a
                             key={l.label}
                             href={l.href}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] text-[13px] text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[rgba(0,0,0,0.03)] transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] text-[13px] text-[var(--op-muted)] hover:text-[var(--op-ink)] hover:bg-[rgba(0,0,0,0.03)] transition-colors"
                         >
                             {l.label}
                             <ExternalLink className="w-3 h-3 opacity-50" />

@@ -271,11 +271,11 @@ Content-Type: application/json
                     <a
                         key={w.id}
                         href={`#${w.id}`}
-                        className="flex items-center justify-between px-4 py-3 rounded-[11px] text-[14px] transition-colors hover:bg-[rgba(0,102,204,0.04)]"
-                        style={{ border: "1px solid #d2d2d7" }}
+                        className="flex items-center justify-between px-4 py-3 rounded-[11px] text-[14px] transition-colors hover:bg-[rgba(37,99,235,0.04)]"
+                        style={{ border: "1px solid var(--op-line)" }}
                     >
-                        <span className="font-medium text-[#1d1d1f]">{w.name.replace("AI ", "")}</span>
-                        <span className="text-[12px] text-[#6e6e73]">{w.price}</span>
+                        <span className="font-medium text-[var(--op-ink)]">{w.name.replace("AI ", "")}</span>
+                        <span className="text-[12px] text-[var(--op-muted)]">{w.price}</span>
                     </a>
                 ))}
             </div>
@@ -287,44 +287,44 @@ Content-Type: application/json
                 <div key={w.id}>
                     <H2 id={w.id}>{w.name}</H2>
                     <div className="flex flex-wrap items-center gap-2 mb-4">
-                        <span className="text-[12px] font-semibold px-2.5 py-1 rounded-full" style={{ background: "rgba(0,102,204,0.08)", color: "#0066cc" }}>
+                        <span className="text-[12px] font-semibold px-2.5 py-1 rounded-full" style={{ background: "rgba(37,99,235,0.08)", color: "var(--op-indigo)" }}>
                             {w.department}
                         </span>
                         <span className="text-[12px] font-semibold px-2.5 py-1 rounded-full" style={{ background: "rgba(52,199,89,0.08)", color: "#1a7a4a" }}>
                             {w.plan}
                         </span>
-                        <span className="text-[12px] text-[#6e6e73]">{w.price}</span>
+                        <span className="text-[12px] text-[var(--op-muted)]">{w.price}</span>
                     </div>
                     <P>{w.description}</P>
 
                     <div className="grid sm:grid-cols-3 gap-4 my-4 text-[13px]">
                         <div>
-                            <p className="font-semibold text-[#1d1d1f] mb-2">Skills</p>
+                            <p className="font-semibold text-[var(--op-ink)] mb-2">Skills</p>
                             <ul className="space-y-1">
                                 {w.skills.map((s) => (
-                                    <li key={s} className="flex items-center gap-1.5 text-[#6e6e73]">
-                                        <span className="w-1 h-1 rounded-full bg-[#0066cc] shrink-0" />
+                                    <li key={s} className="flex items-center gap-1.5 text-[var(--op-muted)]">
+                                        <span className="w-1 h-1 rounded-full bg-[var(--op-indigo)] shrink-0" />
                                         {s}
                                     </li>
                                 ))}
                             </ul>
                         </div>
                         <div>
-                            <p className="font-semibold text-[#1d1d1f] mb-2">Integrations</p>
+                            <p className="font-semibold text-[var(--op-ink)] mb-2">Integrations</p>
                             <ul className="space-y-1">
                                 {w.integrations.map((i) => (
-                                    <li key={i} className="flex items-center gap-1.5 text-[#6e6e73]">
-                                        <span className="w-1 h-1 rounded-full bg-[#6e6e73] shrink-0" />
+                                    <li key={i} className="flex items-center gap-1.5 text-[var(--op-muted)]">
+                                        <span className="w-1 h-1 rounded-full bg-[var(--op-muted)] shrink-0" />
                                         {i}
                                     </li>
                                 ))}
                             </ul>
                         </div>
                         <div>
-                            <p className="font-semibold text-[#1d1d1f] mb-2">Common use cases</p>
+                            <p className="font-semibold text-[var(--op-ink)] mb-2">Common use cases</p>
                             <ul className="space-y-1">
                                 {w.useCases.map((u) => (
-                                    <li key={u} className="text-[#6e6e73]" style={{ lineHeight: 1.5 }}>
+                                    <li key={u} className="text-[var(--op-muted)]" style={{ lineHeight: 1.5 }}>
                                         {u}
                                     </li>
                                 ))}
@@ -337,7 +337,7 @@ POST https://api.agentfarms.in/v1/workers
 Authorization: Bearer af_live_xxxxxxxxxxxxxxxxxxxx
 
 { "name": "My worker", "role": "${w.id}" }`}</Code>
-                    <div style={{ borderBottom: "1px solid #e8e8ed" }} className="my-8" />
+                    <div style={{ borderBottom: "1px solid var(--op-line)" }} className="my-8" />
                 </div>
             ))}
 
