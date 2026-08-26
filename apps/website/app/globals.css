@@ -77,12 +77,29 @@
 }
 .op-card:hover, .op-lift:hover {
   transform: translateY(-4px);
-  box-shadow: 0 14px 34px rgba(16, 24, 40, 0.12);
+  /* deepen shadow + a soft blue ring (works even when border-color is set inline) */
+  box-shadow: 0 14px 34px rgba(16, 24, 40, 0.12),
+              0 0 0 1px color-mix(in srgb, var(--op-indigo) 45%, transparent);
   border-color: color-mix(in srgb, var(--op-indigo) 35%, var(--op-line));
 }
+
+/* Hero entrance — one orchestrated load sequence */
+@keyframes opRise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.op-rise { opacity: 0; animation: opRise 0.62s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.op-d1 { animation-delay: 0.04s; }
+.op-d2 { animation-delay: 0.12s; }
+.op-d3 { animation-delay: 0.20s; }
+.op-d4 { animation-delay: 0.28s; }
+.op-d5 { animation-delay: 0.36s; }
+.op-d6 { animation-delay: 0.16s; }
+
 @media (prefers-reduced-motion: reduce) {
   .op-card, .op-lift { transition: none; }
   .op-card:hover, .op-lift:hover { transform: none; }
+  .op-rise { opacity: 1; animation: none; }
 }
 .op-mono { font-family: var(--font-mono); }
 

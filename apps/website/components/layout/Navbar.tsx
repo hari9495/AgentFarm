@@ -74,10 +74,26 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  // Subtle depth once the page is scrolled.
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
     <header
       className="sticky top-0 z-50"
-      style={{ background: "rgba(255,255,255,0.9)", borderBottom: "1px solid var(--op-line)", backdropFilter: "saturate(180%) blur(20px)", WebkitBackdropFilter: "saturate(180%) blur(20px)" }}
+      style={{
+        background: scrolled ? "rgba(255,255,255,0.82)" : "rgba(255,255,255,0.9)",
+        borderBottom: "1px solid var(--op-line)",
+        boxShadow: scrolled ? "0 6px 20px rgba(16,24,40,0.06)" : "none",
+        backdropFilter: "saturate(180%) blur(20px)",
+        WebkitBackdropFilter: "saturate(180%) blur(20px)",
+        transition: "box-shadow 0.2s ease, background 0.2s ease",
+      }}
     >
       <nav ref={ref} className="max-w-[1200px] mx-auto px-5 h-11 flex items-center justify-between gap-4">
 

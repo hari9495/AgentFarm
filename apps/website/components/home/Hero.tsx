@@ -83,7 +83,7 @@ export default function Hero() {
                 {/* ── Left: the thesis ── */}
                 <div>
                     <p
-                        className="mb-6 inline-flex items-center gap-2 rounded-full border bg-white px-3 py-1 text-[12px] font-medium uppercase tracking-[0.14em]"
+                        className="op-rise op-d1 mb-6 inline-flex items-center gap-2 rounded-full border bg-white px-3 py-1 text-[12px] font-medium uppercase tracking-[0.14em]"
                         style={{ borderColor: "var(--op-line)", color: "var(--op-ink-soft)", fontFamily: "var(--font-mono)" }}
                     >
                         <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--op-approved)" }} />
@@ -91,7 +91,7 @@ export default function Hero() {
                     </p>
 
                     <h1
-                        className="font-display font-extrabold"
+                        className="op-rise op-d2 font-display font-extrabold"
                         style={{ fontSize: "clamp(2.7rem, 5.4vw, 4.2rem)", lineHeight: 1.03, letterSpacing: "-0.03em" }}
                     >
                         Hire AI workers that ship —
@@ -99,13 +99,13 @@ export default function Hero() {
                         <span style={{ color: "var(--op-indigo)" }}>behind your approval.</span>
                     </h1>
 
-                    <p className="mt-6 max-w-[46ch] text-[1.075rem] leading-relaxed" style={{ color: "var(--op-muted)" }}>
+                    <p className="op-rise op-d3 mt-6 max-w-[46ch] text-[1.075rem] leading-relaxed" style={{ color: "var(--op-muted)" }}>
                         Thirteen specialist workers that do the real work — write the code, send the
                         outreach, run the interview, close the deal — and stop at an approval gate
                         before anything risky reaches your customers, code, or production.
                     </p>
 
-                    <div className="mt-9 flex flex-wrap items-center gap-3">
+                    <div className="op-rise op-d4 mt-9 flex flex-wrap items-center gap-3">
                         <Link
                             href="/get-started"
                             className="rounded-lg px-5 py-3 text-[15px] font-semibold text-white shadow-sm transition-transform hover:-translate-y-0.5"
@@ -122,7 +122,7 @@ export default function Hero() {
                         </Link>
                     </div>
 
-                    <dl className="mt-10 flex flex-wrap gap-x-8 gap-y-3" style={{ fontFamily: "var(--font-mono)" }}>
+                    <dl className="op-rise op-d5 mt-10 flex flex-wrap gap-x-8 gap-y-3" style={{ fontFamily: "var(--font-mono)" }}>
                         {[
                             ["13", "specialist workers"],
                             ["100%", "actions audit-covered"],
@@ -137,7 +137,7 @@ export default function Hero() {
                 </div>
 
                 {/* ── Right: the signature — live approval-gate card (light) ── */}
-                <div className="relative">
+                <div className="op-rise op-d6 relative">
                     <div className="rounded-2xl border bg-white p-1.5 shadow-xl" style={{ borderColor: "var(--op-line)" }}>
                         {/* window chrome */}
                         <div className="flex items-center justify-between px-3 py-2" style={{ fontFamily: "var(--font-mono)" }}>
