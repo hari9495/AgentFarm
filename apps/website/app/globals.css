@@ -5,7 +5,31 @@
 
 @theme inline {
   --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
-  --font-display: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Operations Console — redesign token system (additive)
+   State-mapped palette: the accent colors MEAN something —
+   approved / pending / blocked map to the product's own states.
+   ═══════════════════════════════════════════════════════ */
+:root {
+  --op-ink: #0e1116;          /* near-black, cool */
+  --op-ink-2: #1a1f27;        /* raised ink surface */
+  --op-ink-3: #232a34;        /* hairline on ink */
+  --op-paper: #faf9f6;        /* warm off-white */
+  --op-paper-2: #f1efe9;      /* recessed paper */
+  --op-line: #e4e1d8;         /* hairline on paper */
+  --op-muted: #6b7280;        /* secondary text */
+
+  --op-indigo: #4f46e5;       /* brand / primary action */
+  --op-indigo-ink: #3730a3;
+
+  --op-approved: #12b76a;     /* state: approved / shipped */
+  --op-pending: #f59e0b;      /* state: awaiting approval */
+  --op-blocked: #e1483d;      /* state: blocked / rejected */
+  --op-evidence: #475569;     /* state: audit / evidence */
 }
 
 /* ═══════════════════════════════════════════════════════
