@@ -79,7 +79,7 @@ import {
     buildRecruiterGateImpactScope,
     buildRecruiterGateRiskReason,
 } from './human-gate-requests.js';
-import type { RecruiterGateInput } from './human-gate-requests.js';
+import type { RecruiterGateInput, RecruiterGateRecord } from './human-gate-requests.js';
 
 import { initiateBgcWorkflow, buildAdverseAction } from './background-check.js';
 import type { BgcInitiateInput, AdverseActionInput, BgcPackage, BgcProvider } from './background-check.js';
@@ -325,6 +325,25 @@ function str(v: unknown, fallback = ''): string { return typeof v === 'string' ?
 function num(v: unknown, fallback: number): number { return typeof v === 'number' ? v : fallback; }
 function strArr(v: unknown): string[] {
     return Array.isArray(v) ? v.map(x => String(x)) : typeof v === 'string' ? [v] : [];
+}
+
+/** True when the operator/runtime has approved this gated action for execution. */
+function isApprovalGranted(payload: Record<string, unknown>): boolean {
+    return payload['approved'] === true ||
+        (typeof payload['approvalActionId'] === 'string' && (payload['approvalActionId'] as string).trim() !== '');
+}
+
+/** Render a gate record into the standard AWAITING_APPROVAL response block. */
+function gateBlock(gate: RecruiterGateRecord): Record<string, unknown> {
+    return {
+        gateType: gate.gateType,
+        riskLevel: gate.riskLevel,
+        question: gate.question,
+        requiresApproverRole: gate.requiresApproverRole,
+        approval_summary: buildRecruiterGateApprovalSummary(gate),
+        impacted_scope: buildRecruiterGateImpactScope(gate),
+        risk_reason: buildRecruiterGateRiskReason(gate),
+    };
 }
 
 // ---------------------------------------------------------------------------
@@ -1006,33 +1025,35 @@ export async function handleRecruiterAction(
 
             const offerResult = generateOffer(offerInput);
 
-            // If over budget, wrap in a human gate before returning
-            if (!offerResult.validation.withinBudget) {
-                const gateInput: RecruiterGateInput = {
-                    gateType: 'extend_offer_above_budget',
-                    jobTitle,
-                    candidateName,
-                    offerAmount: compensation.baseSalary,
-                    currency: compensation.currency,
-                    approvedBudgetMax: offerInput.approvedBudgetMax,
-                };
-                const gate = buildRecruiterGateRecord(gateInput);
-                return jsonOut({
-                    status: 'BLOCKED_PENDING_APPROVAL',
-                    gate: {
-                        gateType: gate.gateType,
-                        riskLevel: gate.riskLevel,
-                        question: gate.question,
-                        requiresApproverRole: gate.requiresApproverRole,
-                        approval_summary: buildRecruiterGateApprovalSummary(gate),
-                        impacted_scope: buildRecruiterGateImpactScope(gate),
-                        risk_reason: buildRecruiterGateRiskReason(gate),
-                    },
-                    offerDraft: offerResult,
-                });
+            // Sending an offer is a legally binding, CRITICAL action — always
+            // gated. Over-budget escalates to the finance/CHRO gate. The offer is
+            // only dispatched once approval is granted (payload.approved /
+            // approvalActionId set by the operator/runtime on resume).
+            const offerGate = buildRecruiterGateRecord(
+                offerResult.validation.withinBudget
+                    ? { gateType: 'send_offer', jobTitle, candidateName, offerAmount: compensation.baseSalary, currency: compensation.currency }
+                    : { gateType: 'extend_offer_above_budget', jobTitle, candidateName, offerAmount: compensation.baseSalary, currency: compensation.currency, approvedBudgetMax: offerInput.approvedBudgetMax },
+            );
+
+            if (!isApprovalGranted(payload)) {
+                return jsonOut({ status: 'AWAITING_APPROVAL', gate: gateBlock(offerGate), offerDraft: offerResult });
             }
 
-            return jsonOut(offerResult);
+            // Approved → send the offer letter via the workspace email connector.
+            const offerEmail = str(payload['candidateEmail']).trim();
+            if (!offerEmail) {
+                return jsonOut({ status: 'APPROVED', sent: false, reason: 'payload.candidateEmail is required to send the approved offer', offer: offerResult });
+            }
+            const offerDispatch = await sendEmailViaConnector({
+                connectorClient: connectorActionExecuteClient,
+                workspaceId, gatewayBaseUrl, serviceToken,
+                to: offerEmail,
+                subject: `Your offer from ${companyName} — ${jobTitle}`,
+                body: offerResult.offerLetterText,
+            });
+            return jsonOut(offerDispatch.sent
+                ? { status: 'SENT', sent: true, via: offerDispatch.connectorType, to: offerEmail, offer: offerResult }
+                : { status: 'APPROVED', sent: false, dispatch_reason: offerDispatch.reason, offer: offerResult });
         }
 
         // ----------------------------------------------------------------
@@ -1197,7 +1218,59 @@ export async function handleRecruiterAction(
                 companyCareerPageUrl: typeof payload['companyCareerPageUrl'] === 'string' ? payload['companyCareerPageUrl'] : undefined,
             };
 
-            return jsonOut(composeRejection(rejInput));
+            const rejection = composeRejection(rejInput);
+
+            // Sending a rejection is not easily reversible — gated (medium) to the
+            // recruiter. Dispatched only once approved.
+            const rejGate = buildRecruiterGateRecord({ gateType: 'reject_candidate', jobTitle, candidateName });
+            if (!isApprovalGranted(payload)) {
+                return jsonOut({ status: 'AWAITING_APPROVAL', gate: gateBlock(rejGate), rejectionDraft: rejection });
+            }
+
+            const rejEmail = str(payload['candidateEmail']).trim();
+            if (!rejEmail) {
+                return jsonOut({ status: 'APPROVED', sent: false, reason: 'payload.candidateEmail is required to send the approved rejection', rejection });
+            }
+            const rejDispatch = await sendEmailViaConnector({
+                connectorClient: connectorActionExecuteClient,
+                workspaceId, gatewayBaseUrl, serviceToken,
+                to: rejEmail,
+                subject: rejection.subject,
+                body: rejection.body,
+            });
+
+            // Optionally reflect the rejection in the ATS (move the application to
+            // a rejected stage) when the caller supplies the ids.
+            let atsRejected: Record<string, unknown> | undefined;
+            const rejApplicationId = str(payload['applicationId']).trim();
+            const rejectedStageId = payload['rejectedStageId'];
+            const hasAtsReject = rejApplicationId !== '' &&
+                (typeof rejectedStageId === 'number' || (typeof rejectedStageId === 'string' && rejectedStageId.trim() !== ''));
+            if (hasAtsReject) {
+                const cap = await resolveActionCapability({ nativeConnectors: ['greenhouse'], workspaceId, gatewayBaseUrl, serviceToken });
+                const numId = (v: unknown) => (typeof v === 'string' ? Number(v) : v);
+                if (cap.tier === 'native' && connectorActionExecuteClient) {
+                    const r = await connectorActionExecuteClient({
+                        connectorType: cap.connectorType,
+                        actionType: 'update_record',
+                        payload: {
+                            record_type: 'applications',
+                            record_id: rejApplicationId,
+                            fields: {
+                                to_stage_id: numId(rejectedStageId),
+                                ...(payload['fromStageId'] != null ? { from_stage_id: numId(payload['fromStageId']) } : {}),
+                            },
+                        },
+                    });
+                    atsRejected = r.ok ? { moved: true, via: cap.connectorType } : { moved: false, reason: r.errorMessage ?? `ATS returned ${r.statusCode}` };
+                } else {
+                    atsRejected = { moved: false, reason: cap.tier === 'browser' ? cap.reason : 'no connector client' };
+                }
+            }
+
+            return jsonOut(rejDispatch.sent
+                ? { status: 'SENT', sent: true, via: rejDispatch.connectorType, to: rejEmail, ...(atsRejected ? { atsRejected } : {}), rejection }
+                : { status: 'APPROVED', sent: false, dispatch_reason: rejDispatch.reason, ...(atsRejected ? { atsRejected } : {}), rejection });
         }
 
         // ----------------------------------------------------------------

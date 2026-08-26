@@ -490,3 +490,104 @@ describe('workspace_rec_conduct_phone_screen — presence (join the call)', () =
         assert.ok(Array.isArray(parsed['results']));
     });
 });
+
+describe('workspace_rec_generate_offer — gated send', () => {
+    const OFFER_PAYLOAD = {
+        candidateName: 'Jordan Lee', jobTitle: 'Staff Engineer', companyName: 'Acme',
+        hiringManagerName: 'Sam', department: 'Engineering', startDate: '2026-10-01',
+        compensation: { baseSalary: 200000, currency: 'USD' },
+        approvedBudgetMax: 250000,
+    };
+
+    it('returns AWAITING_APPROVAL with the critical gate and does not send without approval', async () => {
+        let called = false;
+        const result = await handleRecruiterAction({
+            ...BASE, workspaceId: 'ws-1',
+            actionType: 'workspace_rec_generate_offer',
+            connectorActionExecuteClient: async () => { called = true; return { ok: true, statusCode: 200, attempts: 1 }; },
+            payload: { ...OFFER_PAYLOAD, candidateEmail: 'jordan@example.com' },
+        });
+        assert.equal(result.ok, true);
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['status'], 'AWAITING_APPROVAL');
+        assert.equal((parsed['gate'] as Record<string, unknown>)['gateType'], 'send_offer');
+        assert.equal((parsed['gate'] as Record<string, unknown>)['riskLevel'], 'critical');
+        assert.equal(called, false, 'must not send before approval');
+    });
+
+    it('escalates to the budget gate when over budget', async () => {
+        const result = await handleRecruiterAction({
+            ...BASE, workspaceId: 'ws-1',
+            actionType: 'workspace_rec_generate_offer',
+            payload: { ...OFFER_PAYLOAD, compensation: { baseSalary: 300000, currency: 'USD' }, approvedBudgetMax: 250000 },
+        });
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal((parsed['gate'] as Record<string, unknown>)['gateType'], 'extend_offer_above_budget');
+    });
+
+    it('sends the offer via the email connector once approved', async () => {
+        const originalFetch = globalThis.fetch;
+        globalThis.fetch = (async (url: string | URL | Request) => {
+            const href = typeof url === 'string' ? url : url.toString();
+            if (href.includes('gmail')) return new Response(JSON.stringify({ credentials: { accessToken: 'a' } }), { status: 200, headers: { 'content-type': 'application/json' } });
+            return new Response(null, { status: 404 });
+        }) as typeof fetch;
+        try {
+            const sent: Array<{ to: unknown; actionType: string }> = [];
+            const result = await handleRecruiterAction({
+                ...BASE, workspaceId: 'ws-1', gatewayBaseUrl: 'http://gateway', serviceToken: 'tok',
+                actionType: 'workspace_rec_generate_offer',
+                connectorActionExecuteClient: async (i) => { sent.push({ to: i.payload['to'], actionType: i.actionType }); return { ok: true, statusCode: 200, attempts: 1 }; },
+                payload: { ...OFFER_PAYLOAD, candidateEmail: 'jordan@example.com', approved: true },
+            });
+            const parsed = JSON.parse(result.output) as Record<string, unknown>;
+            assert.equal(parsed['status'], 'SENT');
+            assert.equal(parsed['sent'], true);
+            assert.equal(parsed['via'], 'gmail');
+            assert.deepEqual(sent, [{ to: 'jordan@example.com', actionType: 'send_email' }]);
+        } finally { globalThis.fetch = originalFetch; }
+    });
+});
+
+describe('workspace_rec_compose_rejection — gated send + ATS reject', () => {
+    const REJ_PAYLOAD = {
+        candidateName: 'Jordan Lee', jobTitle: 'Staff Engineer', companyName: 'Acme',
+        recruiterName: 'Alex', stage: 'post_interview_reject',
+    };
+
+    it('returns AWAITING_APPROVAL (medium) without approval', async () => {
+        const result = await handleRecruiterAction({
+            ...BASE, workspaceId: 'ws-1',
+            actionType: 'workspace_rec_compose_rejection',
+            payload: { ...REJ_PAYLOAD, candidateEmail: 'jordan@example.com' },
+        });
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['status'], 'AWAITING_APPROVAL');
+        assert.equal((parsed['gate'] as Record<string, unknown>)['gateType'], 'reject_candidate');
+        assert.equal((parsed['gate'] as Record<string, unknown>)['riskLevel'], 'medium');
+    });
+
+    it('sends the rejection and moves the ATS application when approved', async () => {
+        const originalFetch = globalThis.fetch;
+        globalThis.fetch = (async (url: string | URL | Request) => {
+            const href = typeof url === 'string' ? url : url.toString();
+            if (href.includes('gmail') || href.includes('greenhouse')) return new Response(JSON.stringify({ credentials: { accessToken: 'a', api_key: 'k' } }), { status: 200, headers: { 'content-type': 'application/json' } });
+            return new Response(null, { status: 404 });
+        }) as typeof fetch;
+        try {
+            const calls: string[] = [];
+            const result = await handleRecruiterAction({
+                ...BASE, workspaceId: 'ws-1', gatewayBaseUrl: 'http://gateway', serviceToken: 'tok',
+                actionType: 'workspace_rec_compose_rejection',
+                connectorActionExecuteClient: async (i) => { calls.push(`${i.connectorType}:${i.actionType}`); return { ok: true, statusCode: 200, attempts: 1 }; },
+                payload: { ...REJ_PAYLOAD, candidateEmail: 'jordan@example.com', approved: true, applicationId: '77', rejectedStageId: 9 },
+            });
+            const parsed = JSON.parse(result.output) as Record<string, unknown>;
+            assert.equal(parsed['status'], 'SENT');
+            assert.equal(parsed['sent'], true);
+            assert.deepEqual(parsed['atsRejected'], { moved: true, via: 'greenhouse' });
+            assert.ok(calls.includes('gmail:send_email'));
+            assert.ok(calls.includes('greenhouse:update_record'));
+        } finally { globalThis.fetch = originalFetch; }
+    });
+});
