@@ -74,7 +74,7 @@ export default function Features() {
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true, margin: "-60px" }}
                                 transition={{ duration: 0.5, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] }}
-                                className="rounded-[18px] p-6"
+                                className="op-lift rounded-[18px] p-6"
                                 style={{ background: "#ffffff", border: "1px solid #d2d2d7" }}
                             >
                                 <div

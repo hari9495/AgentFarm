@@ -67,6 +67,23 @@
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
 .op-soft .op-card, .op-dark .op-card { background: var(--op-paper); }
+
+/* Card hover interaction — lift + deepen shadow + warm the border to brand.
+   Reusable: apply .op-lift to any card element (op-card gets it for free). */
+.op-card, .op-lift {
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.18s ease, border-color 0.18s ease;
+  will-change: transform;
+}
+.op-card:hover, .op-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 34px rgba(16, 24, 40, 0.12);
+  border-color: color-mix(in srgb, var(--op-indigo) 35%, var(--op-line));
+}
+@media (prefers-reduced-motion: reduce) {
+  .op-card, .op-lift { transition: none; }
+  .op-card:hover, .op-lift:hover { transform: none; }
+}
 .op-mono { font-family: var(--font-mono); }
 
 /* Section headings across op sections use the display face for typographic cohesion */

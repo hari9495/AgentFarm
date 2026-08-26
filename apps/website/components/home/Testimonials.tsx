@@ -37,7 +37,7 @@ export default function Testimonials() {
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true, margin: "-60px" }}
                             transition={{ duration: 0.5, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }}
-                            className="rounded-[18px] p-6 flex flex-col gap-4"
+                            className="op-lift rounded-[18px] p-6 flex flex-col gap-4"
                             style={{ background: "var(--op-paper)", border: "1px solid var(--op-line)" }}
                         >
                             {/* Stars */}
