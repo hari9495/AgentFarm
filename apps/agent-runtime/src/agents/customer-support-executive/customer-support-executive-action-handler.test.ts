@@ -641,3 +641,62 @@ describe('workspace_cse_live_chat_handle', () => {
         assert.ok(result.errorOutput?.includes('sessionId'));
     });
 });
+
+describe('workspace_cse_reply_followup — send', () => {
+    it('composes only by default', async () => {
+        const { handleCustomerSupportExecutiveAction } = await import('./customer-support-executive-action-handler.js');
+        const result = await handleCustomerSupportExecutiveAction({
+            ...BASE,
+            actionType: 'workspace_cse_reply_followup',
+            payload: { customerEmail: 'cust@example.com', issueDescription: 'refund status' },
+        });
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['followUpComposed'], true);
+        assert.equal(parsed['sent'], undefined);
+    });
+
+    it('sends the follow-up via the email connector when send=true', async () => {
+        const originalFetch = globalThis.fetch;
+        globalThis.fetch = (async (url: string | URL | Request) => {
+            const href = typeof url === 'string' ? url : url.toString();
+            if (href.includes('gmail')) return new Response(JSON.stringify({ credentials: { accessToken: 'a' } }), { status: 200, headers: { 'content-type': 'application/json' } });
+            return new Response(null, { status: 404 });
+        }) as typeof fetch;
+        try {
+            const { handleCustomerSupportExecutiveAction } = await import('./customer-support-executive-action-handler.js');
+            const sent: Array<{ to: unknown }> = [];
+            const result = await handleCustomerSupportExecutiveAction({
+                ...BASE, gatewayBaseUrl: 'http://gateway', serviceToken: 'tok', workspaceId: 'ws-1',
+                actionType: 'workspace_cse_reply_followup',
+                connectorActionExecuteClient: async (i) => { sent.push({ to: i.payload['to'] }); return { ok: true, statusCode: 200, attempts: 1 }; },
+                payload: { customerEmail: 'cust@example.com', issueDescription: 'refund status', send: true },
+            });
+            const parsed = JSON.parse(result.output) as Record<string, unknown>;
+            assert.equal(parsed['sent'], true);
+            assert.equal(parsed['via'], 'gmail');
+            assert.deepEqual(sent, [{ to: 'cust@example.com' }]);
+        } finally { globalThis.fetch = originalFetch; }
+    });
+});
+
+describe('workspace_cse_standup_report — post', () => {
+    it('drafts by default; posts to Slack on post=true', async () => {
+        const { handleCustomerSupportExecutiveAction } = await import('./customer-support-executive-action-handler.js');
+        const calls: string[] = [];
+        const draft = await handleCustomerSupportExecutiveAction({
+            ...BASE, actionType: 'workspace_cse_standup_report',
+            connectorActionExecuteClient: async () => { calls.push('x'); return { ok: true, statusCode: 200, attempts: 1 }; },
+            payload: { recent_memory: ['Closed 8 tickets', 'Escalated a billing issue'] },
+        });
+        assert.equal((JSON.parse(draft.output) as Record<string, unknown>)['posted'], undefined);
+        assert.equal(calls.length, 0);
+
+        const posted = await handleCustomerSupportExecutiveAction({
+            ...BASE, actionType: 'workspace_cse_standup_report',
+            connectorActionExecuteClient: async (i) => { calls.push(`${i.connectorType}:${i.actionType}`); return { ok: true, statusCode: 200, attempts: 1 }; },
+            payload: { recent_memory: ['Closed 8 tickets'], post: true, channel: '#support' },
+        });
+        assert.equal((JSON.parse(posted.output) as Record<string, unknown>)['posted'], true);
+        assert.ok(calls.includes('slack:send_message'));
+    });
+});

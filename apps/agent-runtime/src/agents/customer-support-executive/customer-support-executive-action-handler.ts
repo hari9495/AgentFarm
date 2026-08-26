@@ -404,6 +404,20 @@ export async function handleCustomerSupportExecutiveAction(params: {
                 agentName: str(payload['agentName']) || undefined,
                 companyName: str(payload['companyName']) || undefined,
             });
+            // Send the follow-up now when requested (mirrors reply_send); a
+            // scheduledAt keeps the compose-only behaviour for later delivery.
+            if (payload['send'] === true) {
+                const dispatch = await sendEmailViaConnector({
+                    connectorClient: connectorActionExecuteClient,
+                    workspaceId, gatewayBaseUrl, serviceToken,
+                    to: customerEmail,
+                    subject: reply.subject,
+                    body: reply.body,
+                });
+                return ok(dispatch.sent
+                    ? { sent: true, via: dispatch.connectorType, customerEmail, reply }
+                    : { sent: false, followUpComposed: true, dispatch_reason: dispatch.reason, customerEmail, reply });
+            }
             return ok({ followUpComposed: true, customerEmail, reply, scheduledAt: payload['scheduledAt'] ?? null });
         }
 
@@ -693,6 +707,18 @@ export async function handleCustomerSupportExecutiveAction(params: {
                 teamName: str(payload['team_name']) || undefined,
                 shiftPeriod: str(payload['shift_period']) || undefined,
             });
+            // Post the shift standup to the team channel when requested.
+            if (payload['post'] === true) {
+                const channel = str(payload['channel']).trim();
+                if (!channel) return ok({ posted: false, reason: 'post=true requires payload.channel', summary });
+                if (!connectorActionExecuteClient) return ok({ posted: false, reason: 'no connector client available', summary });
+                const r = await connectorActionExecuteClient({
+                    connectorType: 'slack',
+                    actionType: 'send_message',
+                    payload: { channel, message: summary.summary },
+                });
+                return ok(r.ok ? { posted: true, channel, summary } : { posted: false, reason: r.errorMessage ?? 'slack post failed', summary });
+            }
             return ok(summary);
         }
 
