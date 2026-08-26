@@ -591,3 +591,80 @@ describe('workspace_rec_compose_rejection — gated send + ATS reject', () => {
         } finally { globalThis.fetch = originalFetch; }
     });
 });
+
+describe('workspace_rec_screen_resume — ATS pull', () => {
+    const GH_CANDIDATE = {
+        first_name: 'Jordan', last_name: 'Lee', title: 'Senior Engineer', company: 'Globex',
+        employments: [{ title: 'Senior Engineer', company_name: 'Globex', start_date: '2021', end_date: '' }],
+        educations: [{ degree: 'BSc', discipline: 'Computer Science', school_name: 'State U' }],
+        tags: ['Go', 'Kubernetes'],
+    };
+
+    it('screens a candidate pulled from the ATS by id (no paste)', async () => {
+        const originalFetch = globalThis.fetch;
+        globalThis.fetch = (async (url: string | URL | Request) => {
+            const href = typeof url === 'string' ? url : url.toString();
+            if (href.includes('greenhouse')) return new Response(JSON.stringify({ credentials: { api_key: 'k' } }), { status: 200, headers: { 'content-type': 'application/json' } });
+            return new Response(null, { status: 404 });
+        }) as typeof fetch;
+        try {
+            const result = await handleRecruiterAction({
+                ...BASE, workspaceId: 'ws-1', gatewayBaseUrl: 'http://gateway', serviceToken: 'tok',
+                actionType: 'workspace_rec_screen_resume',
+                connectorActionExecuteClient: async (i) => {
+                    assert.equal(i.actionType, 'get_record');
+                    assert.equal(i.payload['record_type'], 'candidates');
+                    return { ok: true, statusCode: 200, attempts: 1, data: GH_CANDIDATE };
+                },
+                payload: { candidateId: '123', jobTitle: 'Staff Engineer', requiredQualifications: ['Go', 'Kubernetes'] },
+            });
+            assert.equal(result.ok, true);
+            const parsed = JSON.parse(result.output) as Record<string, unknown>;
+            assert.equal(parsed['source'], 'ats');
+            assert.equal(parsed['candidateName'], 'Jordan Lee');
+            assert.ok(typeof parsed['overallScore'] === 'number');
+        } finally { globalThis.fetch = originalFetch; }
+    });
+
+    it('reports not-screenable when the ATS record has no career data', async () => {
+        const originalFetch = globalThis.fetch;
+        globalThis.fetch = (async (url: string | URL | Request) => {
+            const href = typeof url === 'string' ? url : url.toString();
+            if (href.includes('greenhouse')) return new Response(JSON.stringify({ credentials: { api_key: 'k' } }), { status: 200, headers: { 'content-type': 'application/json' } });
+            return new Response(null, { status: 404 });
+        }) as typeof fetch;
+        try {
+            const result = await handleRecruiterAction({
+                ...BASE, workspaceId: 'ws-1', gatewayBaseUrl: 'http://gateway', serviceToken: 'tok',
+                actionType: 'workspace_rec_screen_resume',
+                connectorActionExecuteClient: async () => ({ ok: true, statusCode: 200, attempts: 1, data: {} }),
+                payload: { candidateId: '123', jobTitle: 'Staff Engineer', requiredQualifications: ['Go'] },
+            });
+            const parsed = JSON.parse(result.output) as Record<string, unknown>;
+            assert.equal(parsed['screenable'], false);
+        } finally { globalThis.fetch = originalFetch; }
+    });
+
+    it('falls back to a browser plan when no ATS connector is configured', async () => {
+        const result = await handleRecruiterAction({
+            ...BASE,
+            actionType: 'workspace_rec_screen_resume',
+            payload: { candidateId: '123', jobTitle: 'Staff Engineer', requiredQualifications: ['Go'] },
+        });
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['source'], 'browser');
+        assert.equal((parsed['capability'] as Record<string, unknown>)['tier'], 'browser');
+    });
+
+    it('still screens pasted resume text (unchanged path)', async () => {
+        const result = await handleRecruiterAction({
+            ...BASE,
+            actionType: 'workspace_rec_screen_resume',
+            payload: { candidateName: 'Jordan Lee', resumeText: 'Senior Engineer with Go and Kubernetes experience since 2019.', jobTitle: 'Staff Engineer', requiredQualifications: ['Go'] },
+        });
+        assert.equal(result.ok, true);
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['source'], 'pasted');
+        assert.ok(typeof parsed['overallScore'] === 'number');
+    });
+});

@@ -41,7 +41,7 @@ import type { RoleBrief, EmploymentType, WorkArrangement, ExperienceLevel } from
 import { sourceCandidates } from './candidate-sourcer.js';
 import type { SourcingCriteria } from './candidate-sourcer.js';
 
-import { screenResume } from './resume-screener.js';
+import { screenResume, extractCandidateFromAtsRecord } from './resume-screener.js';
 import type { ResumeScreenInput } from './resume-screener.js';
 
 import { composeOutreach, buildOutreachSequence } from './outreach-composer.js';
@@ -564,13 +564,58 @@ export async function handleRecruiterAction(
         // payload: ResumeScreenInput fields
         // ----------------------------------------------------------------
         case 'workspace_rec_screen_resume': {
-            const candidateName = str(payload['candidateName']);
-            const resumeText = str(payload['resumeText']);
             const jobTitle = str(payload['jobTitle']);
             const requiredQualifications = strArr(payload['requiredQualifications']);
+            let candidateName = str(payload['candidateName']);
+            let resumeText = str(payload['resumeText']);
+            let source: 'pasted' | 'ats' = 'pasted';
+
+            // ATS pull: screen a candidate already in the ATS by id — no paste
+            // needed. The resume file itself is an attachment, so we screen on the
+            // record's structured career data (title/employments/educations/tags).
+            const candidateId = str(payload['candidateId']).trim();
+            if (!resumeText && candidateId) {
+                const cap = await resolveActionCapability({ nativeConnectors: ['greenhouse'], workspaceId, gatewayBaseUrl, serviceToken });
+                if (cap.tier === 'native' && connectorActionExecuteClient) {
+                    const res = await connectorActionExecuteClient({
+                        connectorType: cap.connectorType,
+                        actionType: 'get_record',
+                        payload: { record_type: 'candidates', record_id: candidateId },
+                    });
+                    if (!res.ok) return fail(res.errorMessage ?? `ATS get_record failed (${res.statusCode})`);
+                    const record = (res.data && typeof res.data === 'object') ? res.data as Record<string, unknown> : {};
+                    const extracted = extractCandidateFromAtsRecord(record);
+                    resumeText = extracted.resumeText;
+                    if (!candidateName) candidateName = extracted.candidateName;
+                    source = 'ats';
+                    if (!resumeText.trim()) {
+                        return jsonOut({
+                            source: 'ats',
+                            screenable: false,
+                            candidateId,
+                            reason: 'ATS record has no structured career data — the resume is likely a file attachment. Provide resumeText, or read the attachment via the browser path.',
+                        });
+                    }
+                } else {
+                    return jsonOut({
+                        source: 'browser',
+                        capability: {
+                            tier: 'browser' as const,
+                            reason: cap.tier === 'browser' ? cap.reason : 'no connector client available',
+                            target: str(payload['atsUrl']) || `the ATS candidate profile ${candidateId}`,
+                            steps: [
+                                { action: 'workspace_web_navigate', to: str(payload['atsUrl']) || 'the ATS' },
+                                { action: 'workspace_web_login', note: 'use the agent workspace session (no payload credentials)' },
+                                { action: 'workspace_web_click', target: `candidate ${candidateId}` },
+                                { action: 'workspace_web_extract_data', note: 'read the resume / profile text' },
+                            ],
+                        },
+                    });
+                }
+            }
 
             if (!candidateName) return fail('payload.candidateName is required');
-            if (!resumeText) return fail('payload.resumeText is required (paste full resume text)');
+            if (!resumeText) return fail('payload.resumeText is required (paste the resume, or pass candidateId to pull from the ATS)');
             if (!jobTitle) return fail('payload.jobTitle is required');
             if (requiredQualifications.length === 0) return fail('payload.requiredQualifications array is required');
 
@@ -586,7 +631,7 @@ export async function handleRecruiterAction(
                 dealBreakerKeywords: Array.isArray(payload['dealBreakerKeywords']) ? strArr(payload['dealBreakerKeywords']) : undefined,
             };
 
-            return jsonOut(screenResume(screenInput));
+            return jsonOut({ source, ...screenResume(screenInput) });
         }
 
         // ----------------------------------------------------------------

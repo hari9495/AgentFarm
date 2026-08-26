@@ -379,6 +379,53 @@ function buildPhoneScreenQuestions(gaps: string[], jobTitle: string): string[] {
 // Public API
 // ---------------------------------------------------------------------------
 
+/**
+ * Build screenable text + candidate name from an ATS candidate record.
+ *
+ * ATSs (e.g. Greenhouse) hold the resume itself as a file attachment, not text,
+ * but the record carries structured career data — title, company, employments,
+ * educations, tags — which is enough to screen against required qualifications
+ * without downloading/parsing the attachment. Defensive on shape: unknown ATS
+ * layouts simply yield less text.
+ */
+export function extractCandidateFromAtsRecord(
+    record: Record<string, unknown>,
+): { candidateName: string; resumeText: string } {
+    const s = (v: unknown): string => (typeof v === 'string' ? v.trim() : '');
+    const arr = (v: unknown): Record<string, unknown>[] =>
+        Array.isArray(v) ? v.filter((x): x is Record<string, unknown> => !!x && typeof x === 'object') : [];
+
+    const candidateName =
+        [s(record['first_name']), s(record['last_name'])].filter(Boolean).join(' ') || s(record['name']);
+
+    const lines: string[] = [];
+    if (candidateName) lines.push(`Name: ${candidateName}`);
+    const headline = [s(record['title']), s(record['company'])].filter(Boolean).join(' at ');
+    if (headline) lines.push(`Current: ${headline}`);
+
+    const employments = arr(record['employments']);
+    if (employments.length > 0) {
+        lines.push('Experience:');
+        for (const e of employments) {
+            const span = [s(e['start_date']), s(e['end_date']) || 'present'].filter(Boolean).join('–');
+            lines.push(`- ${[s(e['title']), s(e['company_name']) || s(e['company'])].filter(Boolean).join(' at ')}${span ? ` (${span})` : ''}`);
+        }
+    }
+
+    const educations = arr(record['educations']);
+    if (educations.length > 0) {
+        lines.push('Education:');
+        for (const ed of educations) {
+            lines.push(`- ${[s(ed['degree']), s(ed['discipline'])].filter(Boolean).join(' in ')}${ed['school_name'] ? `, ${s(ed['school_name'])}` : ''}`.trim());
+        }
+    }
+
+    const tags = Array.isArray(record['tags']) ? (record['tags'] as unknown[]).map((t) => String(t)).filter(Boolean) : [];
+    if (tags.length > 0) lines.push(`Tags: ${tags.join(', ')}`);
+
+    return { candidateName, resumeText: lines.join('\n') };
+}
+
 export function screenResume(input: ResumeScreenInput): ResumeScreenResult {
     // Blind screening: anonymize PII before any scoring so evaluators see only
     // skills and experience — not name, contact details, or identity signals.
