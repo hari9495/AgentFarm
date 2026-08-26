@@ -846,11 +846,11 @@ body {
 }
 
 .metric-row .metric-card:nth-child(3)::before {
-    background: #10b981;
+    background: #2563eb;
 }
 
 .metric-row .metric-card:nth-child(4)::before {
-    background: #f59e0b;
+    background: #2563eb;
 }
 
 .metric-row .metric-card:nth-child(5)::before {
@@ -889,28 +889,12 @@ body {
     flex-shrink: 0;
 }
 
-.metric-row .metric-card:nth-child(1) .metric-card-icon {
-    background: rgba(99, 102, 241, 0.12);
-    color: #2563eb;
-}
-
-.metric-row .metric-card:nth-child(2) .metric-card-icon {
-    background: rgba(37, 99, 235, 0.12);
-    color: #2563eb;
-}
-
-.metric-row .metric-card:nth-child(3) .metric-card-icon {
-    background: rgba(16, 185, 129, 0.12);
-    color: #10b981;
-}
-
-.metric-row .metric-card:nth-child(4) .metric-card-icon {
-    background: rgba(245, 158, 11, 0.12);
-    color: #f59e0b;
-}
-
+.metric-row .metric-card:nth-child(1) .metric-card-icon,
+.metric-row .metric-card:nth-child(2) .metric-card-icon,
+.metric-row .metric-card:nth-child(3) .metric-card-icon,
+.metric-row .metric-card:nth-child(4) .metric-card-icon,
 .metric-row .metric-card:nth-child(5) .metric-card-icon {
-    background: rgba(139, 92, 246, 0.12);
+    background: rgba(37, 99, 235, 0.12);
     color: #2563eb;
 }
 
@@ -3205,45 +3189,13 @@ textarea {
     }
 }
 
-/* ─── Border glow on metric card hover ───────────────────────────────── */
-.metric-row .metric-card:nth-child(1):hover {
+/* ─── Border glow on metric card hover (unified brand blue) ──────────── */
+.metric-row .metric-card:hover {
     box-shadow:
         0 24px 40px -28px rgba(15, 23, 42, 0.42),
-        0 14px 24px -18px rgba(14, 116, 144, 0.3),
-        0 0 0 1.5px rgba(99, 102, 241, 0.35),
-        0 0 24px rgba(99, 102, 241, 0.12);
-}
-
-.metric-row .metric-card:nth-child(2):hover {
-    box-shadow:
-        0 24px 40px -28px rgba(15, 23, 42, 0.42),
-        0 14px 24px -18px rgba(14, 116, 144, 0.3),
+        0 14px 24px -18px rgba(37, 99, 235, 0.3),
         0 0 0 1.5px rgba(37, 99, 235, 0.35),
         0 0 24px rgba(37, 99, 235, 0.12);
-}
-
-.metric-row .metric-card:nth-child(3):hover {
-    box-shadow:
-        0 24px 40px -28px rgba(15, 23, 42, 0.42),
-        0 14px 24px -18px rgba(14, 116, 144, 0.3),
-        0 0 0 1.5px rgba(16, 185, 129, 0.35),
-        0 0 24px rgba(16, 185, 129, 0.12);
-}
-
-.metric-row .metric-card:nth-child(4):hover {
-    box-shadow:
-        0 24px 40px -28px rgba(15, 23, 42, 0.42),
-        0 14px 24px -18px rgba(14, 116, 144, 0.3),
-        0 0 0 1.5px rgba(245, 158, 11, 0.35),
-        0 0 24px rgba(245, 158, 11, 0.12);
-}
-
-.metric-row .metric-card:nth-child(5):hover {
-    box-shadow:
-        0 24px 40px -28px rgba(15, 23, 42, 0.42),
-        0 14px 24px -18px rgba(14, 116, 144, 0.3),
-        0 0 0 1.5px rgba(139, 92, 246, 0.35),
-        0 0 24px rgba(139, 92, 246, 0.12);
 }
 
 .card:hover {
