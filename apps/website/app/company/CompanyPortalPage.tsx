@@ -157,8 +157,8 @@ type PendingIncidentAction = { incidentId: string; title: string };
 type PendingRoleAction = { userId: string; userName: string; newRole: UserRole };
 
 const roleStyles: Record<UserRole, string> = {
-    superadmin: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/40 dark:text-fuchsia-300",
-    admin: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+    superadmin: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+    admin: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
     member: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
 };
 
@@ -188,7 +188,7 @@ const incidentStyles: Record<IncidentStatus, string> = {
 };
 
 const levelStyles: Record<LogLevel, string> = {
-    info: "text-sky-600 dark:text-sky-400",
+    info: "text-blue-600 dark:text-blue-400",
     warn: "text-amber-600 dark:text-amber-400",
     error: "text-rose-600 dark:text-rose-400",
 };
@@ -797,14 +797,14 @@ export default function CompanyPortalPage() {
             return (
                 <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6">
                     <div className="max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 text-center">
-                        <Shield className="w-9 h-9 text-violet-500 mx-auto" />
+                        <Shield className="w-9 h-9 text-blue-500 mx-auto" />
                         <h1 className="mt-3 text-xl font-bold text-slate-900 dark:text-slate-100">Sign in to continue</h1>
                         <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                             The Company Portal requires a company operator account.
                         </p>
                         <Link
                             href="/login?next=/company"
-                            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-700"
+                            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
                         >
                             Sign in
                         </Link>
@@ -866,12 +866,12 @@ export default function CompanyPortalPage() {
                         </h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400">This action requires a reason for the audit trail.</p>
                         <textarea rows={3} placeholder="Enter reason…" value={reasonText} onChange={(e) => setReasonText(e.target.value)}
-                            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-violet-500" />
+                            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
                         <div className="flex gap-2 justify-end">
                             <button onClick={() => { setPendingBulkFleet(null); setReasonText(""); }}
                                 className="rounded-lg border border-slate-200 dark:border-slate-700 px-3.5 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">Cancel</button>
                             <button onClick={confirmBulkFleetModal} disabled={!reasonText.trim() || bulkSaving}
-                                className="rounded-lg bg-violet-600 text-white px-3.5 py-2 text-sm font-semibold hover:bg-violet-700 disabled:opacity-50">
+                                className="rounded-lg bg-blue-600 text-white px-3.5 py-2 text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
                                 {bulkSaving ? "Saving…" : "Confirm"}
                             </button>
                         </div>
@@ -887,7 +887,7 @@ export default function CompanyPortalPage() {
                         <div className="space-y-2">
                             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">Assign to (email)</label>
                             <input type="email" value={assigneeInput} onChange={(e) => setAssigneeInput(e.target.value)} placeholder="operator@company.com"
-                                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500" />
+                                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                         </div>
                         <div className="space-y-2">
                             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">Set Severity</label>
@@ -903,13 +903,13 @@ export default function CompanyPortalPage() {
                         <div className="space-y-2">
                             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">Reason (required)</label>
                             <textarea rows={2} placeholder="Enter reason…" value={assignReason} onChange={(e) => setAssignReason(e.target.value)}
-                                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-violet-500" />
+                                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
                         </div>
                         <div className="flex gap-2 justify-end">
                             <button onClick={() => { setPendingAssign(null); setAssigneeInput(""); setAssignSeverity(""); setAssignReason(""); }}
                                 className="rounded-lg border border-slate-200 dark:border-slate-700 px-3.5 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">Cancel</button>
                             <button onClick={confirmAssignIncident} disabled={(!assigneeInput.trim() && !assignSeverity) || !assignReason.trim() || savingAssign}
-                                className="rounded-lg bg-violet-600 text-white px-3.5 py-2 text-sm font-semibold hover:bg-violet-700 disabled:opacity-50">
+                                className="rounded-lg bg-blue-600 text-white px-3.5 py-2 text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
                                 {savingAssign ? "Saving…" : "Save"}
                             </button>
                         </div>
@@ -925,7 +925,7 @@ export default function CompanyPortalPage() {
                         <div className="space-y-2">
                             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">Tenant Name</label>
                             <input type="text" value={provisionName} onChange={(e) => setProvisionName(e.target.value)} placeholder="Acme Corp"
-                                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500" />
+                                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-2">
@@ -940,14 +940,14 @@ export default function CompanyPortalPage() {
                             <div className="space-y-2">
                                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">Region</label>
                                 <input type="text" value={provisionRegion} onChange={(e) => setProvisionRegion(e.target.value)} placeholder="us-east-1"
-                                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500" />
+                                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                             </div>
                         </div>
                         <div className="flex gap-2 justify-end">
                             <button onClick={() => { setShowProvisionModal(false); setProvisionName(""); setProvisionPlan("starter"); setProvisionRegion(""); }}
                                 className="rounded-lg border border-slate-200 dark:border-slate-700 px-3.5 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">Cancel</button>
                             <button onClick={provisionTenant} disabled={!provisionName.trim() || provisioning}
-                                className="rounded-lg bg-violet-600 text-white px-3.5 py-2 text-sm font-semibold hover:bg-violet-700 disabled:opacity-50">
+                                className="rounded-lg bg-blue-600 text-white px-3.5 py-2 text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
                                 {provisioning ? "Provisioning…" : "Provision"}
                             </button>
                         </div>
@@ -968,7 +968,7 @@ export default function CompanyPortalPage() {
                         </h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400">Reason required for audit trail.</p>
                         <textarea rows={3} placeholder="Enter reason…" value={reasonText} onChange={(e) => setReasonText(e.target.value)}
-                            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-violet-500" />
+                            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
                         <div className="flex gap-2 justify-end">
                             <button onClick={dismissModal}
                                 className="rounded-lg border border-slate-200 dark:border-slate-700 px-3.5 py-2 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">
@@ -977,7 +977,7 @@ export default function CompanyPortalPage() {
                             <button
                                 onClick={pendingFleet ? confirmFleetAction : pendingIncident ? confirmIncidentAction : confirmRoleAction}
                                 disabled={!reasonText.trim()}
-                                className="rounded-lg bg-violet-600 text-white px-3.5 py-2 text-sm font-semibold hover:bg-violet-700 disabled:opacity-50"
+                                className="rounded-lg bg-blue-600 text-white px-3.5 py-2 text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
                             >
                                 Confirm
                             </button>
@@ -986,16 +986,16 @@ export default function CompanyPortalPage() {
                 </div>
             )}
 
-            <section className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-fuchsia-700 via-violet-700 to-slate-900">
+            <section className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-blue-700 via-blue-700 to-slate-900">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-                    <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-fuchsia-200 mb-4">
+                    <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-200 mb-4">
                         <Crown className="w-3.5 h-3.5" />
                         AgentFarms Company Portal
                     </div>
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
+                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
                         Control every customer tenant from one place
                     </h1>
-                    <p className="mt-2 text-fuchsia-100 max-w-3xl">
+                    <p className="mt-2 text-blue-100 max-w-3xl">
                         Fleet operations, incident response, billing oversight, integration health, logs, and role governance.
                     </p>
                     <div className="mt-5 flex flex-wrap gap-3">
@@ -1040,7 +1040,7 @@ export default function CompanyPortalPage() {
                             <span className="text-xs text-slate-500 dark:text-slate-400">Live tenant heartbeat and plan visibility</span>
                         </div>
                         <button onClick={() => setShowProvisionModal(true)}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-violet-700">
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 text-white px-3 py-1.5 text-xs font-semibold hover:bg-blue-700">
                             <Plus className="w-3.5 h-3.5" />
                             Provision Tenant
                         </button>
@@ -1063,7 +1063,7 @@ export default function CompanyPortalPage() {
                                 {tenants.map((tenant) => (
                                     <tr key={tenant.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                                         <td className="px-5 py-3.5 font-semibold text-slate-900 dark:text-slate-100">
-                                            <Link href={`/company/tenants/${tenant.id}`} className="hover:text-violet-600 dark:hover:text-violet-400 underline-offset-2 hover:underline">{tenant.name}</Link>
+                                            <Link href={`/company/tenants/${tenant.id}`} className="hover:text-blue-600 dark:hover:text-blue-400 underline-offset-2 hover:underline">{tenant.name}</Link>
                                         </td>
                                         <td className="px-4 py-3.5 text-xs text-slate-600 dark:text-slate-300 capitalize">{tenant.plan}</td>
                                         <td className="px-4 py-3.5">
@@ -1096,8 +1096,8 @@ export default function CompanyPortalPage() {
                             <span className="text-xs text-slate-500 dark:text-slate-400">Pause, resume, or move bots to maintenance</span>
                         </div>
                         {selectedBotIds.size > 0 && (
-                            <div className="px-5 py-2.5 border-b border-slate-100 dark:border-slate-800 bg-violet-50 dark:bg-violet-950/20 flex items-center gap-2 flex-wrap">
-                                <span className="text-xs font-semibold text-violet-700 dark:text-violet-300">{selectedBotIds.size} bot(s) selected</span>
+                            <div className="px-5 py-2.5 border-b border-slate-100 dark:border-slate-800 bg-blue-50 dark:bg-blue-950/20 flex items-center gap-2 flex-wrap">
+                                <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">{selectedBotIds.size} bot(s) selected</span>
                                 <button onClick={() => handleBulkFleetAction("active")} disabled={bulkSaving}
                                     className="rounded px-2.5 py-1 text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 disabled:opacity-60">Active</button>
                                 <button onClick={() => handleBulkFleetAction("paused")} disabled={bulkSaving}
@@ -1190,7 +1190,7 @@ export default function CompanyPortalPage() {
                                     <p className="text-xs text-slate-500 dark:text-slate-400">{incident.tenantName} • {incident.source} • {incident.severity}</p>
                                     <p className="text-xs text-slate-400 dark:text-slate-500">
                                         Opened {formatAgo(incident.createdAt)}
-                                        {incident.assigneeEmail ? <span className="ml-2 text-violet-600 dark:text-violet-400">→ {incident.assigneeEmail}</span> : null}
+                                        {incident.assigneeEmail ? <span className="ml-2 text-blue-600 dark:text-blue-400">→ {incident.assigneeEmail}</span> : null}
                                     </p>
                                     {incident.status !== "resolved" ? (
                                         <div className="flex flex-wrap gap-1.5">
@@ -1199,7 +1199,7 @@ export default function CompanyPortalPage() {
                                                 {resolvingIncidentId === incident.id ? "Resolving..." : "Resolve"}
                                             </button>
                                             <button onClick={() => handleAssignIncident(incident)}
-                                                className="inline-flex items-center gap-1 rounded-lg bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-2.5 py-1.5 text-xs font-semibold">
+                                                className="inline-flex items-center gap-1 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2.5 py-1.5 text-xs font-semibold">
                                                 <UserCheck className="w-3 h-3" />
                                                 Escalate
                                             </button>
@@ -1251,7 +1251,7 @@ export default function CompanyPortalPage() {
                     <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
                         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                             <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Integration Health</h2>
-                            <DatabaseZap className="w-4 h-4 text-violet-500" />
+                            <DatabaseZap className="w-4 h-4 text-blue-500" />
                         </div>
                         <div className="p-4 space-y-2 max-h-[360px] overflow-auto">
                             {integrations.map((integration) => (
@@ -1323,12 +1323,12 @@ export default function CompanyPortalPage() {
                 <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
                     <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex flex-wrap gap-3 items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <ClipboardList className="w-4 h-4 text-violet-500" />
+                            <ClipboardList className="w-4 h-4 text-blue-500" />
                             <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Company Audit Trail</h2>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                             {newAuditCount > 0 && (
-                                <span className="inline-flex items-center rounded-full bg-violet-600 text-white px-2 py-0.5 text-[10px] font-bold">
+                                <span className="inline-flex items-center rounded-full bg-blue-600 text-white px-2 py-0.5 text-[10px] font-bold">
                                     +{newAuditCount} new
                                 </span>
                             )}
@@ -1364,7 +1364,7 @@ export default function CompanyPortalPage() {
                                 <option value="session.revoke">session.revoke</option>
                             </select>
                             <button onClick={() => { loadAuditEvents(); setNewAuditCount(0); }}
-                                className="inline-flex items-center gap-1 rounded-lg bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-2.5 py-1.5 text-xs font-semibold">
+                                className="inline-flex items-center gap-1 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2.5 py-1.5 text-xs font-semibold">
                                 <RefreshCw className="w-3.5 h-3.5" />
                                 Refresh
                             </button>
@@ -1406,7 +1406,7 @@ export default function CompanyPortalPage() {
                                             <tr key={evt.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                                                 <td className="px-5 py-3 text-xs text-slate-700 dark:text-slate-200">{evt.actorEmail}</td>
                                                 <td className="px-4 py-3">
-                                                    <span className="inline-flex items-center rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 px-2 py-0.5 text-[10px] font-semibold">
+                                                    <span className="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 text-[10px] font-semibold">
                                                         {evt.action}
                                                     </span>
                                                 </td>
@@ -1493,7 +1493,7 @@ export default function CompanyPortalPage() {
                                 <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Members</p>
                                 <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">{roleMetrics.members}</p>
                             </div>
-                            <div className="sm:col-span-3 rounded-lg border border-violet-200 dark:border-violet-900/50 bg-violet-50 dark:bg-violet-950/20 p-3 text-xs text-violet-800 dark:text-violet-300">
+                            <div className="sm:col-span-3 rounded-lg border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/20 p-3 text-xs text-blue-800 dark:text-blue-300">
                                 Company operators can resolve incidents and control fleet bots directly without logging into each customer instance.
                             </div>
                         </div>
@@ -1503,7 +1503,7 @@ export default function CompanyPortalPage() {
                 <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
                     <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <LogIn className="w-4 h-4 text-violet-500" />
+                            <LogIn className="w-4 h-4 text-blue-500" />
                             <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Active Operator Sessions</h2>
                         </div>
                         <button onClick={loadSessions}
@@ -1564,8 +1564,8 @@ function MetricCard({
     tone: "fuchsia" | "violet" | "slate" | "emerald" | "rose" | "amber";
 }) {
     const styleMap: Record<typeof tone, string> = {
-        fuchsia: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/40 dark:text-fuchsia-300",
-        violet: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+        fuchsia: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+        violet: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
         slate: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
         emerald: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
         rose: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",

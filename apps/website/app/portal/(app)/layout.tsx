@@ -87,7 +87,7 @@ export default async function PortalAppLayout({
 
     const branding = await getBranding(session.tenantId);
 
-    const primaryColor = branding?.primary_color ?? "#0284c7"; // sky-600 default
+    const primaryColor = branding?.primary_color ?? "#2563eb"; // brand blue (op-indigo) default
     const companyName = branding?.company_name ?? "AgentFarms Portal";
     const portalTitle = branding?.portal_title ?? companyName;
     const logoUrl = branding?.logo_url;
@@ -168,7 +168,7 @@ export default async function PortalAppLayout({
                         <Link
                             key={item.href}
                             href={item.href}
-                            className="flex flex-col items-center gap-0.5 text-xs text-slate-500 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 transition-colors px-3 py-1"
+                            className="flex flex-col items-center gap-0.5 text-xs text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors px-3 py-1"
                         >
                             <item.icon className="h-5 w-5" />
                             <span>{item.label}</span>

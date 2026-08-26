@@ -49,8 +49,8 @@ const statusMeta: Record<BotStatus, { label: string; dot: string; badge: string 
 };
 
 const toneClass: Record<string, string> = {
-    sky: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
-    violet: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+    sky: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+    violet: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
     amber: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
     rose: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
     emerald: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
@@ -198,7 +198,7 @@ export default function AdminBotsPage() {
                         <PremiumIcon icon={Bot} tone="amber" containerClassName="w-5 h-5 rounded-md bg-amber-300/15 text-amber-200 border-amber-200/30" iconClassName="w-3 h-3" />
                         Bot Control Panel
                     </div>
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight max-w-xl">
+                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight max-w-xl">
                         Configure and control AI workers
                     </h1>
                     <p className="mt-2 text-slate-400 max-w-lg">
@@ -210,7 +210,7 @@ export default function AdminBotsPage() {
                         </Link>
                         <button
                             onClick={() => setShowAddForm(true)}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 border border-violet-500 px-3.5 py-2 text-sm font-semibold text-white hover:bg-violet-700 transition-colors"
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 border border-blue-500 px-3.5 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
                         >
                             <Plus className="w-4 h-4" />
                             Add Bot
@@ -258,7 +258,7 @@ export default function AdminBotsPage() {
                                         placeholder="e.g. Developer Agent"
                                         value={addForm.name}
                                         onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))}
-                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
                                 <div>
@@ -268,7 +268,7 @@ export default function AdminBotsPage() {
                                         placeholder="e.g. Full-Stack Developer"
                                         value={addForm.role}
                                         onChange={(e) => setAddForm((f) => ({ ...f, role: e.target.value }))}
-                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
@@ -277,7 +277,7 @@ export default function AdminBotsPage() {
                                         <select
                                             value={addForm.tone}
                                             onChange={(e) => setAddForm((f) => ({ ...f, tone: e.target.value }))}
-                                            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         >
                                             {TONES.map((t) => <option key={t} value={t}>{t}</option>)}
                                         </select>
@@ -287,7 +287,7 @@ export default function AdminBotsPage() {
                                         <select
                                             value={addForm.autonomyLevel}
                                             onChange={(e) => setAddForm((f) => ({ ...f, autonomyLevel: e.target.value as AutonomyLevel }))}
-                                            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         >
                                             <option value="low">Low</option>
                                             <option value="medium">Medium</option>
@@ -300,7 +300,7 @@ export default function AdminBotsPage() {
                                     <select
                                         value={addForm.approvalPolicy}
                                         onChange={(e) => setAddForm((f) => ({ ...f, approvalPolicy: e.target.value as ApprovalPolicy }))}
-                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     >
                                         <option value="all">All actions need approval</option>
                                         <option value="medium-high">Medium + high risk</option>
@@ -312,7 +312,7 @@ export default function AdminBotsPage() {
                                 <button
                                     disabled={adding || !addForm.name.trim() || !addForm.role.trim()}
                                     onClick={addBot}
-                                    className="flex-1 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {adding ? "Adding…" : "Add Bot"}
                                 </button>
@@ -340,7 +340,7 @@ export default function AdminBotsPage() {
                                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 mb-4">Add your first bot to start monitoring its status.</p>
                                 <button
                                     onClick={() => setShowAddForm(true)}
-                                    className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 transition-colors"
+                                    className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
                                 >
                                     <Plus className="w-4 h-4" />
                                     Add Bot
@@ -427,7 +427,7 @@ export default function AdminBotsPage() {
                                                     <select
                                                         value={draft.autonomyLevel ?? bot.autonomyLevel}
                                                         onChange={(e) => setDraft(bot.slug, { autonomyLevel: e.target.value as AutonomyLevel })}
-                                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                     >
                                                         <option value="low">Low — ask approval for everything</option>
                                                         <option value="medium">Medium — auto-approve low risk</option>
@@ -441,7 +441,7 @@ export default function AdminBotsPage() {
                                                     <select
                                                         value={draft.approvalPolicy ?? bot.approvalPolicy}
                                                         onChange={(e) => setDraft(bot.slug, { approvalPolicy: e.target.value as ApprovalPolicy })}
-                                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                     >
                                                         <option value="all">All actions</option>
                                                         <option value="medium-high">Medium and high risk</option>
@@ -459,14 +459,14 @@ export default function AdminBotsPage() {
                                                             type="time"
                                                             value={draft.shiftStart ?? bot.shiftStart}
                                                             onChange={(e) => setDraft(bot.slug, { shiftStart: e.target.value })}
-                                                            className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                                            className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                         />
                                                         <span className="text-xs text-slate-400">to</span>
                                                         <input
                                                             type="time"
                                                             value={draft.shiftEnd ?? bot.shiftEnd}
                                                             onChange={(e) => setDraft(bot.slug, { shiftEnd: e.target.value })}
-                                                            className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                                            className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                         />
                                                     </div>
                                                 </div>
@@ -481,7 +481,7 @@ export default function AdminBotsPage() {
                                                                 <button
                                                                     key={day}
                                                                     onClick={() => toggleDay(bot.slug, bot, day)}
-                                                                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${active ? "bg-violet-600 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600"}`}
+                                                                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors ${active ? "bg-blue-600 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600"}`}
                                                                 >
                                                                     {day}
                                                                 </button>
@@ -498,7 +498,7 @@ export default function AdminBotsPage() {
                                                         value={draft.notes ?? bot.notes}
                                                         onChange={(e) => setDraft(bot.slug, { notes: e.target.value })}
                                                         placeholder="Internal notes for this bot…"
-                                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+                                                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-800 dark:text-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                                                     />
                                                 </div>
                                             </div>
@@ -508,7 +508,7 @@ export default function AdminBotsPage() {
                                                 <button
                                                     disabled={!hasDraft || isSaving}
                                                     onClick={() => saveDraft(bot.slug)}
-                                                    className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
                                                     {isSaving ? "Saving…" : "Save changes"}
                                                 </button>

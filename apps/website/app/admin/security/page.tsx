@@ -35,7 +35,7 @@ const ipAllowlist = [
 const securityEvents = [
     { ts: "Today 09:12", type: "warning", message: "Failed login attempt for jane@acme.io (3 attempts)", icon: AlertTriangle, color: "text-amber-500" },
     { ts: "Today 08:30", type: "info", message: "MFA successfully enrolled by Jordan Kim", icon: CheckCircle2, color: "text-emerald-500" },
-    { ts: "Yesterday 22:47", type: "info", message: "New session started from 10.0.1.5 (Jordan Kim)", icon: Monitor, color: "text-sky-500" },
+    { ts: "Yesterday 22:47", type: "info", message: "New session started from 10.0.1.5 (Jordan Kim)", icon: Monitor, color: "text-blue-500" },
     { ts: "Yesterday 14:00", type: "info", message: "IP allowlist updated — added 10.0.0.0/8", icon: Globe, color: "text-slate-500" },
     { ts: "2 days ago", type: "warning", message: "Session expired without logout for sam@acme.io", icon: AlertTriangle, color: "text-amber-500" },
 ];
@@ -140,7 +140,7 @@ export default function SecurityPage() {
 
                             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
                                 <div className="flex items-center gap-3 mb-4">
-                                    <PremiumIcon icon={Clock3} tone="sky" containerClassName="h-9 w-9 rounded-xl bg-sky-100 dark:bg-sky-900/40 shrink-0 text-sky-600 dark:text-sky-400" iconClassName="w-5 h-5" />
+                                    <PremiumIcon icon={Clock3} tone="sky" containerClassName="h-9 w-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 shrink-0 text-blue-600 dark:text-blue-400" iconClassName="w-5 h-5" />
                                     <div>
                                         <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Session Policy</p>
                                         <p className="text-xs text-slate-500 dark:text-slate-400">Idle timeout and max age</p>
@@ -192,7 +192,7 @@ export default function SecurityPage() {
                                                 <tr key={s.user} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                                                     <td className="px-5 py-3">
                                                         <div className="flex items-center gap-2">
-                                                            <div className="h-7 w-7 rounded-full bg-sky-100 dark:bg-sky-900/40 flex items-center justify-center text-[10px] font-bold text-sky-700 dark:text-sky-300 shrink-0">
+                                                            <div className="h-7 w-7 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-[10px] font-bold text-blue-700 dark:text-blue-300 shrink-0">
                                                                 {s.initials}
                                                             </div>
                                                             <div>
@@ -232,7 +232,7 @@ export default function SecurityPage() {
                                     <PremiumIcon icon={Globe} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="w-3.5 h-3.5" />
                                     <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wide">IP Allowlist</h2>
                                 </div>
-                                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition-colors">
+                                <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors">
                                     <PremiumIcon icon={Plus} tone="sky" containerClassName="w-5 h-5 rounded-md bg-white/15 text-white border-white/30" iconClassName="w-3 h-3" /> Add CIDR
                                 </button>
                             </div>

@@ -11,8 +11,8 @@ const integrations = [
         status: "connected",
         detail: "acme-workspace · 6 channels authorized",
         icon: Slack,
-        color: "text-violet-600 dark:text-violet-400",
-        bg: "bg-violet-100 dark:bg-violet-900/40",
+        color: "text-blue-600 dark:text-blue-400",
+        bg: "bg-blue-100 dark:bg-blue-900/40",
     },
     {
         name: "GitHub Organization",
@@ -38,8 +38,8 @@ const integrations = [
         status: "disconnected",
         detail: "No workspace linked",
         icon: Link2,
-        color: "text-sky-600 dark:text-sky-400",
-        bg: "bg-sky-100 dark:bg-sky-900/40",
+        color: "text-blue-600 dark:text-blue-400",
+        bg: "bg-blue-100 dark:bg-blue-900/40",
     },
 ];
 
@@ -140,7 +140,7 @@ export default function AdminIntegrationsPage() {
             )}
             <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-5 md:px-8">
                 <div className="flex items-center gap-3">
-                    <PremiumIcon icon={Link2} tone="sky" containerClassName="h-9 w-9 rounded-xl bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-5 h-5" />
+                    <PremiumIcon icon={Link2} tone="sky" containerClassName="h-9 w-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" iconClassName="w-5 h-5" />
                     <div>
                         <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Integrations</h1>
                         <p className="text-xs text-slate-500 dark:text-slate-400">Organization-level connectors and identity integrations</p>
@@ -204,7 +204,7 @@ export default function AdminIntegrationsPage() {
                                     ) : (
                                         <button
                                             onClick={() => { setJiraWizardOpen(true); setJiraStep(0); }}
-                                            className="inline-flex items-center gap-1 rounded-lg bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-700"
+                                            className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
                                         >
                                             <PremiumIcon icon={KeyRound} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-white/15 text-white border-white/30" iconClassName="w-3.5 h-3.5" /> Connect
                                         </button>
@@ -231,10 +231,10 @@ export default function AdminIntegrationsPage() {
                                 {["Auth method", "Credentials", "Verify"].map((label, idx) => (
                                     <div key={label} className="flex items-center gap-2">
                                         <div className={`flex items-center gap-1.5`}>
-                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${idx <= jiraStep ? "bg-sky-600 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-400"}`}>{idx + 1}</div>
+                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${idx <= jiraStep ? "bg-blue-600 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-400"}`}>{idx + 1}</div>
                                             <span className={`text-xs font-medium ${idx === jiraStep ? "text-slate-900 dark:text-slate-100" : "text-slate-400 dark:text-slate-500"}`}>{label}</span>
                                         </div>
-                                        {idx < 2 && <div className={`flex-1 h-px w-6 ${idx < jiraStep ? "bg-sky-600" : "bg-slate-200 dark:bg-slate-700"}`} />}
+                                        {idx < 2 && <div className={`flex-1 h-px w-6 ${idx < jiraStep ? "bg-blue-600" : "bg-slate-200 dark:bg-slate-700"}`} />}
                                     </div>
                                 ))}
                             </div>
@@ -246,8 +246,8 @@ export default function AdminIntegrationsPage() {
                                 <div className="space-y-3">
                                     <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">Choose how you want to authenticate with Jira.</p>
                                     {(["oauth", "apikey"] as const).map((method) => (
-                                        <label key={method} className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${jiraAuthMethod === method ? "border-sky-500 bg-sky-50 dark:bg-sky-900/20" : "border-slate-200 dark:border-slate-700 hover:border-slate-300"}`}>
-                                            <input type="radio" checked={jiraAuthMethod === method} onChange={() => setJiraAuthMethod(method)} className="mt-0.5 accent-sky-600" />
+                                        <label key={method} className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${jiraAuthMethod === method ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-slate-200 dark:border-slate-700 hover:border-slate-300"}`}>
+                                            <input type="radio" checked={jiraAuthMethod === method} onChange={() => setJiraAuthMethod(method)} className="mt-0.5 accent-blue-600" />
                                             <div>
                                                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{method === "oauth" ? "OAuth 2.0 (recommended)" : "API Key + Email"}</p>
                                                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{method === "oauth" ? "Authorize via Atlassian — no credentials stored" : "Personal access token with your Jira email"}</p>
@@ -263,15 +263,15 @@ export default function AdminIntegrationsPage() {
                                         <>
                                             <div>
                                                 <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">Jira base URL</label>
-                                                <input type="url" placeholder="https://your-org.atlassian.net" value={jiraBaseUrl} onChange={(e) => setJiraBaseUrl(e.target.value)} className="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500" />
+                                                <input type="url" placeholder="https://your-org.atlassian.net" value={jiraBaseUrl} onChange={(e) => setJiraBaseUrl(e.target.value)} className="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                             </div>
                                             <div>
                                                 <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">Email address</label>
-                                                <input type="email" placeholder="you@company.com" value={jiraEmail} onChange={(e) => setJiraEmail(e.target.value)} className="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500" />
+                                                <input type="email" placeholder="you@company.com" value={jiraEmail} onChange={(e) => setJiraEmail(e.target.value)} className="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                             </div>
                                             <div>
                                                 <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">API token</label>
-                                                <input type="password" placeholder="················" value={jiraApiToken} onChange={(e) => setJiraApiToken(e.target.value)} className="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500" />
+                                                <input type="password" placeholder="················" value={jiraApiToken} onChange={(e) => setJiraApiToken(e.target.value)} className="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                             </div>
                                         </>
                                     ) : (
@@ -304,7 +304,7 @@ export default function AdminIntegrationsPage() {
                                 <button
                                     onClick={jiraStep === 1 ? () => void handleJiraConnect() : () => setJiraStep(s => s + 1)}
                                     disabled={jiraStep === 1 && jiraLoading}
-                                    className="rounded-lg bg-sky-600 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-700 disabled:opacity-50"
+                                    className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
                                 >
                                     {jiraStep === 1 && jiraLoading ? "Connecting…" : jiraStep === 1 && jiraAuthMethod === "oauth" ? "Authorise with Atlassian" : "Next"}
                                 </button>

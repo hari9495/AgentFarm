@@ -63,7 +63,7 @@ function CsatForm() {
         return (
             <div className="text-center space-y-3">
                 <p className="text-sm text-rose-600 dark:text-rose-400">{loadErr}</p>
-                <Link href="/portal/support/history" className="text-sm text-sky-600 hover:underline">← Back to history</Link>
+                <Link href="/portal/support/history" className="text-sm text-blue-600 hover:underline">← Back to history</Link>
             </div>
         );
     }
@@ -76,7 +76,7 @@ function CsatForm() {
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                     {info?.rating != null ? `You rated this ${info.rating}/5.` : "Your feedback helps us improve."}
                 </p>
-                <Link href="/portal/support/history" className="inline-block text-sm font-semibold text-sky-600 hover:underline">
+                <Link href="/portal/support/history" className="inline-block text-sm font-semibold text-blue-600 hover:underline">
                     ← View your tickets
                 </Link>
             </div>
@@ -128,7 +128,7 @@ function CsatForm() {
                         onChange={(e) => setComment(e.target.value)}
                         rows={3}
                         placeholder="What went well? What could be improved?"
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition resize-y"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-y"
                     />
                 </div>
 
@@ -137,7 +137,7 @@ function CsatForm() {
                 <button
                     type="submit"
                     disabled={submitting || rating === 0}
-                    className="w-full py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-700 disabled:bg-slate-200 disabled:text-slate-400 dark:disabled:bg-slate-800 text-white text-sm font-semibold shadow-sm transition-colors"
+                    className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 dark:disabled:bg-slate-800 text-white text-sm font-semibold shadow-sm transition-colors"
                 >
                     {submitting ? "Submitting…" : "Submit feedback"}
                 </button>
@@ -152,7 +152,7 @@ export default function CsatPage() {
             <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center px-4 py-10">
                 <div className="w-full max-w-md">
                     <div className="flex flex-col items-center mb-8 gap-3">
-                        <div className="h-12 w-12 rounded-2xl bg-sky-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+                        <div className="h-12 w-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
                             <LayoutDashboard className="h-6 w-6 text-white" />
                         </div>
                         <div className="text-center">
