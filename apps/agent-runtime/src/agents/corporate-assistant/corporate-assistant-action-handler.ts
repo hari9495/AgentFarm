@@ -495,6 +495,23 @@ export async function handleCorporateAssistantAction(params: {
 
             const summary = buildCorporateAssistantStandupSummary(rawMemory, { botName, teamName });
             const context = buildCorporateAssistantMeetingContext(meetingType, { botName, teamName, standupSummary: summary });
+
+            // Post path: publish the standup to the team channel instead of just
+            // returning it. Routine → no gate; fail-safe.
+            if (payload['post'] === true) {
+                const channel = typeof payload['channel'] === 'string' ? payload['channel'].trim() : '';
+                if (!channel) return safeJsonResult({ posted: false, reason: 'post=true requires payload.channel', summary, context });
+                if (!connectorActionExecuteClient) return safeJsonResult({ posted: false, reason: 'no connector client available', summary, context });
+                const r = await connectorActionExecuteClient({
+                    connectorType: 'slack',
+                    actionType: 'send_message',
+                    payload: { channel, message: summary.spokenText },
+                });
+                return safeJsonResult(r.ok
+                    ? { posted: true, channel, summary, context }
+                    : { posted: false, reason: r.errorMessage ?? 'slack post failed', summary, context });
+            }
+
             return safeJsonResult({ summary, context });
         }
 

@@ -655,3 +655,47 @@ describe('workspace_ca_message_send', () => {
         assert.ok(result.errorOutput?.includes('slack') || result.errorOutput?.includes('MCP_SLACK_URL'));
     });
 });
+
+describe('workspace_ca_standup_report — post', () => {
+    it('returns the summary as a draft by default', async () => {
+        const { handleCorporateAssistantAction } = await import('./corporate-assistant-action-handler.js');
+        let called = false;
+        const result = await handleCorporateAssistantAction({
+            ...BASE,
+            actionType: 'workspace_ca_standup_report',
+            connectorActionExecuteClient: async () => { called = true; return { ok: true, statusCode: 200, attempts: 1 }; },
+            payload: { recent_memory: ['Sent the board deck', 'Scheduled the QBR'] },
+        });
+        assert.equal(result.ok, true);
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['posted'], undefined);
+        assert.ok(parsed['summary']);
+        assert.equal(called, false);
+    });
+
+    it('posts to Slack when post=true with a channel', async () => {
+        const { handleCorporateAssistantAction } = await import('./corporate-assistant-action-handler.js');
+        const calls: Array<{ connectorType: string; actionType: string; channel: unknown }> = [];
+        const result = await handleCorporateAssistantAction({
+            ...BASE,
+            actionType: 'workspace_ca_standup_report',
+            connectorActionExecuteClient: async (i) => { calls.push({ connectorType: i.connectorType, actionType: i.actionType, channel: i.payload['channel'] }); return { ok: true, statusCode: 200, attempts: 1 }; },
+            payload: { recent_memory: ['Sent the board deck'], post: true, channel: '#exec' },
+        });
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['posted'], true);
+        assert.deepEqual(calls, [{ connectorType: 'slack', actionType: 'send_message', channel: '#exec' }]);
+    });
+
+    it('returns summary with a reason when post=true without a channel', async () => {
+        const { handleCorporateAssistantAction } = await import('./corporate-assistant-action-handler.js');
+        const result = await handleCorporateAssistantAction({
+            ...BASE,
+            actionType: 'workspace_ca_standup_report',
+            payload: { recent_memory: ['x'], post: true },
+        });
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['posted'], false);
+        assert.ok(String(parsed['reason']).includes('channel'));
+    });
+});
