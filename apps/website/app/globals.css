@@ -15,29 +15,39 @@
    approved / pending / blocked map to the product's own states.
    ═══════════════════════════════════════════════════════ */
 :root {
-  --op-ink: #0e1116;          /* near-black, cool */
-  --op-ink-2: #1a1f27;        /* raised ink surface */
-  --op-ink-3: #232a34;        /* hairline on ink */
-  --op-paper: #faf9f6;        /* warm off-white */
-  --op-paper-2: #f1efe9;      /* recessed paper */
-  --op-line: #e4e1d8;         /* hairline on paper */
-  --op-muted: #6b7280;        /* secondary text */
+  /* Light-first, relaxed. Ink is a TEXT color, not a section background. */
+  --op-ink: #16181d;          /* primary text */
+  --op-ink-soft: #3a3f4a;     /* secondary heading text */
+  --op-paper: #ffffff;        /* base surface */
+  --op-paper-2: #f6f7f9;      /* soft alternate section (cool, calm) */
+  --op-paper-3: #eef1f6;      /* recessed / card wells */
+  --op-line: #e7e9ef;         /* hairline */
+  --op-muted: #697586;        /* secondary / captions */
 
   --op-indigo: #4f46e5;       /* brand / primary action */
+  --op-indigo-soft: #eef0fe;  /* soft brand wash */
   --op-indigo-ink: #3730a3;
 
-  --op-approved: #12b76a;     /* state: approved / shipped */
-  --op-pending: #f59e0b;      /* state: awaiting approval */
+  --op-approved: #0ea968;     /* state: approved / shipped */
+  --op-approved-soft: #e7f6ee;
+  --op-pending: #d98a00;      /* state: awaiting approval */
+  --op-pending-soft: #fdf3e2;
   --op-blocked: #e1483d;      /* state: blocked / rejected */
-  --op-evidence: #475569;     /* state: audit / evidence */
+  --op-evidence: #64748b;     /* state: audit / evidence */
+
+  /* legacy dark tokens kept so any op-dark usage still renders (retired on home) */
+  --op-ink-2: #1a1f27;
+  --op-ink-3: #232a34;
 }
 
 /* Operations Console — section utilities (home redesign) */
 .op-section { padding-top: 96px; padding-bottom: 96px; }
 .op-wrap { margin-inline: auto; max-width: 1200px; padding-inline: 24px; }
 .op-wrap-narrow { margin-inline: auto; max-width: 780px; padding-inline: 24px; }
-.op-dark { background: var(--op-ink); color: var(--op-paper); }
 .op-light { background: var(--op-paper); color: var(--op-ink); }
+.op-soft { background: var(--op-paper-2); color: var(--op-ink); }
+/* op-dark retired to a calm soft-brand wash instead of near-black */
+.op-dark { background: var(--op-indigo-soft); color: var(--op-ink); }
 .op-eyebrow {
   font-family: var(--font-mono);
   font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase;
@@ -50,12 +60,11 @@
 .op-lead { font-size: 1.075rem; line-height: 1.6; color: var(--op-muted); }
 .op-card {
   border-radius: 16px; padding: 24px;
-  background: color-mix(in srgb, var(--op-ink) 3%, var(--op-paper));
+  background: var(--op-paper);
   border: 1px solid var(--op-line);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
-.op-dark .op-card {
-  background: var(--op-ink-2); border-color: var(--op-ink-3);
-}
+.op-soft .op-card, .op-dark .op-card { background: var(--op-paper); }
 .op-mono { font-family: var(--font-mono); }
 
 /* Section headings across op sections use the display face for typographic cohesion */

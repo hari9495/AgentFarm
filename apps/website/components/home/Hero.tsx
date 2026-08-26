@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * Operations Console redesign — Hero.
- * The hero is the thesis: AI workers that ship behind human approval.
- * Signature element = a LIVE approval-gate card (the product's core loop),
- * playable right on the homepage: pending → approve → shipped + evidence.
+ * Operations Console — Hero (light / relaxed).
+ * Same thesis and signature as before (AI workers behind human approval, shown
+ * as a LIVE approval-gate card) but on a calm, airy light surface instead of a
+ * near-black console. Soft brand wash, generous space, gentle shadows.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -27,10 +27,8 @@ function useReducedMotion() {
 export default function Hero() {
     const reduced = useReducedMotion();
     const [state, setState] = useState<GateState>("pending");
-
-    // Ambient life: cycle pending → approved → pending, unless the user
-    // prefers reduced motion or has taken over by clicking.
     const [userDriven, setUserDriven] = useState(false);
+
     useEffect(() => {
         if (reduced || userDriven) return;
         let t: ReturnType<typeof setTimeout>;
@@ -61,8 +59,8 @@ export default function Hero() {
     const tone = useMemo(
         () =>
             state === "approved"
-                ? { label: "shipped", color: "var(--op-approved)" }
-                : { label: "awaiting approval", color: "var(--op-pending)" },
+                ? { label: "shipped", color: "var(--op-approved)", soft: "var(--op-approved-soft)" }
+                : { label: "awaiting approval", color: "var(--op-pending)", soft: "var(--op-pending-soft)" },
         [state],
     );
 
@@ -70,25 +68,23 @@ export default function Hero() {
         <section
             aria-label="Hero"
             className="relative overflow-hidden"
-            style={{ background: "var(--op-ink)", color: "var(--op-paper)" }}
+            style={{ background: "var(--op-paper)", color: "var(--op-ink)" }}
         >
-            {/* faint console grid */}
+            {/* soft brand wash — calm, not a hard grid */}
             <div
                 aria-hidden
-                className="pointer-events-none absolute inset-0 opacity-[0.06]"
+                className="pointer-events-none absolute inset-0"
                 style={{
-                    backgroundImage:
-                        "linear-gradient(var(--op-paper) 1px, transparent 1px), linear-gradient(90deg, var(--op-paper) 1px, transparent 1px)",
-                    backgroundSize: "44px 44px",
-                    maskImage: "radial-gradient(ellipse 80% 60% at 70% 20%, black, transparent)",
+                    background:
+                        "radial-gradient(60% 55% at 78% 12%, var(--op-indigo-soft), transparent 70%), radial-gradient(45% 40% at 8% 90%, var(--op-approved-soft), transparent 70%)",
                 }}
             />
             <div className="relative mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-14 px-6 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-28">
                 {/* ── Left: the thesis ── */}
                 <div>
                     <p
-                        className="mb-6 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[12px] font-medium uppercase tracking-[0.14em]"
-                        style={{ borderColor: "var(--op-ink-3)", color: "var(--op-paper)", fontFamily: "var(--font-mono)" }}
+                        className="mb-6 inline-flex items-center gap-2 rounded-full border bg-white px-3 py-1 text-[12px] font-medium uppercase tracking-[0.14em]"
+                        style={{ borderColor: "var(--op-line)", color: "var(--op-ink-soft)", fontFamily: "var(--font-mono)" }}
                     >
                         <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--op-approved)" }} />
                         AI workforce · human control
@@ -96,14 +92,14 @@ export default function Hero() {
 
                     <h1
                         className="font-display font-extrabold"
-                        style={{ fontSize: "clamp(2.7rem, 5.4vw, 4.2rem)", lineHeight: 1.02, letterSpacing: "-0.03em" }}
+                        style={{ fontSize: "clamp(2.7rem, 5.4vw, 4.2rem)", lineHeight: 1.03, letterSpacing: "-0.03em" }}
                     >
                         Hire AI workers that ship —
                         <br />
                         <span style={{ color: "var(--op-indigo)" }}>behind your approval.</span>
                     </h1>
 
-                    <p className="mt-6 max-w-[46ch] text-[1.075rem] leading-relaxed" style={{ color: "#c3c7ce" }}>
+                    <p className="mt-6 max-w-[46ch] text-[1.075rem] leading-relaxed" style={{ color: "var(--op-muted)" }}>
                         Thirteen specialist workers that do the real work — write the code, send the
                         outreach, run the interview, close the deal — and stop at an approval gate
                         before anything risky reaches your customers, code, or production.
@@ -112,15 +108,15 @@ export default function Hero() {
                     <div className="mt-9 flex flex-wrap items-center gap-3">
                         <Link
                             href="/get-started"
-                            className="rounded-lg px-5 py-3 text-[15px] font-semibold transition-transform hover:-translate-y-0.5"
-                            style={{ background: "var(--op-indigo)", color: "#fff" }}
+                            className="rounded-lg px-5 py-3 text-[15px] font-semibold text-white shadow-sm transition-transform hover:-translate-y-0.5"
+                            style={{ background: "var(--op-indigo)" }}
                         >
                             Start free — no card
                         </Link>
                         <Link
                             href="/book-demo"
-                            className="rounded-lg border px-5 py-3 text-[15px] font-semibold transition-colors hover:bg-white/5"
-                            style={{ borderColor: "var(--op-ink-3)", color: "var(--op-paper)" }}
+                            className="rounded-lg border bg-white px-5 py-3 text-[15px] font-semibold transition-colors hover:bg-[var(--op-paper-2)]"
+                            style={{ borderColor: "var(--op-line)", color: "var(--op-ink)" }}
                         >
                             Book a demo
                         </Link>
@@ -133,19 +129,16 @@ export default function Hero() {
                             ["0", "risky actions un-gated"],
                         ].map(([n, l]) => (
                             <div key={l}>
-                                <dt className="text-[1.4rem] font-semibold" style={{ color: "var(--op-paper)" }}>{n}</dt>
+                                <dt className="text-[1.4rem] font-semibold" style={{ color: "var(--op-ink)" }}>{n}</dt>
                                 <dd className="text-[12px] uppercase tracking-wide" style={{ color: "var(--op-muted)" }}>{l}</dd>
                             </div>
                         ))}
                     </dl>
                 </div>
 
-                {/* ── Right: the signature — live approval-gate card ── */}
+                {/* ── Right: the signature — live approval-gate card (light) ── */}
                 <div className="relative">
-                    <div
-                        className="rounded-2xl border p-1.5 shadow-2xl"
-                        style={{ background: "var(--op-ink-2)", borderColor: "var(--op-ink-3)" }}
-                    >
+                    <div className="rounded-2xl border bg-white p-1.5 shadow-xl" style={{ borderColor: "var(--op-line)" }}>
                         {/* window chrome */}
                         <div className="flex items-center justify-between px-3 py-2" style={{ fontFamily: "var(--font-mono)" }}>
                             <div className="flex items-center gap-1.5">
@@ -157,11 +150,11 @@ export default function Hero() {
                         </div>
 
                         {/* the gate */}
-                        <div className="rounded-xl p-5" style={{ background: "var(--op-ink)" }}>
+                        <div className="rounded-xl p-5" style={{ background: "var(--op-paper-2)" }}>
                             <div className="flex items-center justify-between">
                                 <span
                                     className="rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider"
-                                    style={{ fontFamily: "var(--font-mono)", color: tone.color, background: "color-mix(in srgb, currentColor 14%, transparent)" }}
+                                    style={{ fontFamily: "var(--font-mono)", color: tone.color, background: tone.soft }}
                                 >
                                     {tone.label}
                                 </span>
@@ -173,27 +166,27 @@ export default function Hero() {
                             <p className="mt-4 text-[13px]" style={{ fontFamily: "var(--font-mono)", color: "var(--op-muted)" }}>
                                 Recruiter Agent · proposes
                             </p>
-                            <p className="mt-1 text-[1.15rem] font-semibold" style={{ color: "var(--op-paper)" }}>
+                            <p className="mt-1 text-[1.15rem] font-semibold" style={{ color: "var(--op-ink)" }}>
                                 Send offer letter — Jordan Lee
                             </p>
-                            <p className="mt-1 text-[13px]" style={{ color: "#aeb3bb" }}>
+                            <p className="mt-1 text-[13px]" style={{ color: "var(--op-ink-soft)" }}>
                                 Staff Engineer · ₹42,00,000 · start Sep 1
                             </p>
 
-                            <div className="my-4 h-px" style={{ background: "var(--op-ink-3)" }} />
+                            <div className="my-4 h-px" style={{ background: "var(--op-line)" }} />
 
                             {state !== "approved" ? (
                                 <div className="flex items-center gap-3">
                                     <button
                                         onClick={approve}
-                                        className="flex-1 rounded-lg py-2.5 text-[14px] font-semibold transition-transform hover:-translate-y-0.5"
-                                        style={{ background: "var(--op-approved)", color: "#03130b" }}
+                                        className="flex-1 rounded-lg py-2.5 text-[14px] font-semibold text-white transition-transform hover:-translate-y-0.5"
+                                        style={{ background: "var(--op-approved)" }}
                                     >
                                         {state === "approving" ? "Approving…" : "Approve"}
                                     </button>
                                     <button
-                                        className="rounded-lg border px-4 py-2.5 text-[14px] font-medium"
-                                        style={{ borderColor: "var(--op-ink-3)", color: "var(--op-paper)", fontFamily: "var(--font-mono)" }}
+                                        className="rounded-lg border bg-white px-4 py-2.5 text-[14px] font-medium"
+                                        style={{ borderColor: "var(--op-line)", color: "var(--op-ink)", fontFamily: "var(--font-mono)" }}
                                     >
                                         Review diff
                                     </button>
@@ -202,7 +195,7 @@ export default function Hero() {
                                 <div>
                                     <div
                                         className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[14px] font-semibold"
-                                        style={{ background: "color-mix(in srgb, var(--op-approved) 14%, transparent)", color: "var(--op-approved)" }}
+                                        style={{ background: "var(--op-approved-soft)", color: "var(--op-approved)" }}
                                     >
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                                         Approved · offer sent via Gmail

@@ -20,7 +20,7 @@ export default function AnnouncementBar() {
                 >
                     <div
                         className="relative text-center py-2 px-10"
-                        style={{ background: "#0066cc" }}
+                        style={{ background: "var(--op-indigo)" }}
                     >
                         <div className="flex items-center justify-center gap-2 text-white text-[13px]">
                             <span>AgentFarms v2 — 13 AI worker roles, approval gates &amp; Azure isolation.</span>

@@ -20,22 +20,22 @@ export default function CallToAction() {
                 >
                     {/* Badge */}
                     <div
-                        className="inline-flex items-center gap-2 mb-6 rounded-full px-4 py-2 text-[12px] font-semibold text-[#2997ff]"
+                        className="inline-flex items-center gap-2 mb-6 rounded-full px-4 py-2 text-[12px] font-semibold text-[var(--op-indigo)]"
                         style={{ border: "1px solid rgba(41,151,255,0.25)", background: "rgba(41,151,255,0.08)" }}
                     >
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#2997ff]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--op-indigo)]" />
                         {cta.badge}
                     </div>
 
                     <h2
-                        className="font-semibold text-white"
+                        className="font-semibold text-[color:var(--op-ink)]"
                         style={{ fontSize: "clamp(2rem, 4.5vw, 3.2rem)", letterSpacing: "-0.028em", lineHeight: 1.07 }}
                     >
                         {cta.titleLead}{" "}
-                        <span className="text-[#2997ff]">{cta.titleAccent}</span>
+                        <span className="text-[var(--op-indigo)]">{cta.titleAccent}</span>
                     </h2>
 
-                    <p className="mt-5 mx-auto max-w-md text-[17px] text-[#98989d]" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
+                    <p className="mt-5 mx-auto max-w-md text-[17px] text-[var(--op-muted)]" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
                         {cta.description}
                     </p>
 
@@ -52,9 +52,9 @@ export default function CallToAction() {
                         </Link>
                         <Link
                             href="/book-demo"
-                            className="px-6 py-3 rounded-full font-medium text-[17px] text-white transition-colors"
-                            style={{ border: "1px solid rgba(255,255,255,0.25)" }}
-                            onMouseOver={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+                            className="px-6 py-3 rounded-full font-medium text-[17px] text-[color:var(--op-ink)] bg-white transition-colors"
+                            style={{ border: "1px solid var(--op-line)" }}
+                            onMouseOver={(e) => (e.currentTarget.style.background = "var(--op-paper-2)")}
                             onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}
                         >
                             Book a demo
@@ -64,8 +64,8 @@ export default function CallToAction() {
                     {/* Trust items */}
                     <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
                         {cta.trustItems.map((item) => (
-                            <span key={item} className="flex items-center gap-1.5 text-[13px] text-[#98989d]">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-[#2997ff]" />
+                            <span key={item} className="flex items-center gap-1.5 text-[13px] text-[var(--op-muted)]">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-[var(--op-indigo)]" />
                                 {item}
                             </span>
                         ))}
@@ -77,7 +77,7 @@ export default function CallToAction() {
                             <span
                                 key={m.label}
                                 className="flex items-center gap-1.5 text-[13px] font-semibold"
-                                style={{ color: "#98989d" }}
+                                style={{ color: "var(--op-muted)" }}
                             >
                                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: m.color }} />
                                 {m.label}

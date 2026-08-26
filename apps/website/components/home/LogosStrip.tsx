@@ -13,7 +13,7 @@ export default function LogosStrip() {
     return (
         <section
             aria-label="Works with your stack"
-            style={{ background: "var(--op-ink)", borderTop: "1px solid var(--op-ink-3)", borderBottom: "1px solid var(--op-ink-3)" }}
+            style={{ background: "var(--op-paper)", borderTop: "1px solid var(--op-line)", borderBottom: "1px solid var(--op-line)" }}
         >
             <div className="mx-auto max-w-[1200px] px-6 py-10">
                 <p
@@ -28,7 +28,7 @@ export default function LogosStrip() {
                             <span
                                 key={`${name}-${i}`}
                                 className="shrink-0 select-none text-[15px]"
-                                style={{ fontFamily: "var(--font-mono)", color: "#8a9099", letterSpacing: "-0.01em" }}
+                                style={{ fontFamily: "var(--font-mono)", color: "var(--op-muted)", letterSpacing: "-0.01em" }}
                             >
                                 {name}
                             </span>

@@ -37,14 +37,14 @@ function DropdownMenu({ items, onClose }: { items: ChildLink[]; onClose: () => v
       exit={{ opacity: 0, y: 2, scale: 0.98 }}
       transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
       className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-44 rounded-xl overflow-hidden"
-      style={{ background: "rgba(28,28,30,0.96)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "blur(20px)" }}
+      style={{ background: "#ffffff", border: "1px solid var(--op-line)", boxShadow: "0 8px 24px rgba(16,24,40,0.08)", backdropFilter: "blur(20px)" }}
     >
       {items.map((child) => (
         <Link
           key={child.href}
           href={child.href}
           onClick={onClose}
-          className="block px-4 py-2.5 text-[13px] text-[rgba(255,255,255,0.75)] hover:text-white hover:bg-white/[0.06] transition-colors"
+          className="block px-4 py-2.5 text-[13px] text-[color:var(--op-muted)] hover:text-[color:var(--op-ink)] hover:bg-[color:var(--op-paper-2)] transition-colors"
         >
           {child.label}
         </Link>
@@ -77,19 +77,19 @@ export default function Navbar() {
   return (
     <header
       className="sticky top-0 z-50"
-      style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "saturate(180%) blur(20px)", WebkitBackdropFilter: "saturate(180%) blur(20px)" }}
+      style={{ background: "rgba(255,255,255,0.9)", borderBottom: "1px solid var(--op-line)", backdropFilter: "saturate(180%) blur(20px)", WebkitBackdropFilter: "saturate(180%) blur(20px)" }}
     >
       <nav ref={ref} className="max-w-[1200px] mx-auto px-5 h-11 flex items-center justify-between gap-4">
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0 group">
-          <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-md bg-[#0066cc]">
+          <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-md bg-[var(--op-indigo)]">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
               <circle cx="6" cy="6" r="5" stroke="white" strokeWidth="1.5" />
               <path d="M4 6h4M6 4v4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </span>
-          <span className="text-white font-semibold text-[13px] tracking-[-0.01em]">AgentFarms</span>
+          <span className="text-[color:var(--op-ink)] font-semibold text-[13px] tracking-[-0.01em]">AgentFarms</span>
         </Link>
 
         {/* Desktop nav links */}
@@ -100,7 +100,7 @@ export default function Navbar() {
                 <>
                   <button
                     onClick={() => setDropdown(dropdown === l.label ? null : l.label)}
-                    className="flex items-center gap-1 px-3 py-1.5 text-[12px] text-[rgba(255,255,255,0.72)] hover:text-white transition-colors cursor-pointer"
+                    className="flex items-center gap-1 px-3 py-1.5 text-[12px] text-[color:var(--op-muted)] hover:text-[color:var(--op-ink)] transition-colors cursor-pointer"
                   >
                     {l.label}
                     <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${dropdown === l.label ? "rotate-180" : ""}`} />
@@ -115,7 +115,7 @@ export default function Navbar() {
                 <Link
                   href={l.href!}
                   className={`px-3 py-1.5 text-[12px] transition-colors block ${
-                    pathname === l.href ? "text-white" : "text-[rgba(255,255,255,0.72)] hover:text-white"
+                    pathname === l.href ? "text-[color:var(--op-ink)]" : "text-[color:var(--op-muted)] hover:text-[color:var(--op-ink)]"
                   }`}
                 >
                   {l.label}
@@ -129,16 +129,16 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-2">
           <Link
             href="/login"
-            className="px-3 py-1 text-[12px] text-[rgba(255,255,255,0.72)] hover:text-white transition-colors"
+            className="px-3 py-1 text-[12px] text-[color:var(--op-muted)] hover:text-[color:var(--op-ink)] transition-colors"
           >
             Sign in
           </Link>
           <Link
             href="/get-started"
             className="px-4 py-1.5 text-[13px] font-medium text-white rounded-full transition-colors"
-            style={{ background: "#0066cc" }}
-            onMouseOver={(e) => (e.currentTarget.style.background = "#0071e3")}
-            onMouseOut={(e) => (e.currentTarget.style.background = "#0066cc")}
+            style={{ background: "var(--op-indigo)" }}
+            onMouseOver={(e) => (e.currentTarget.style.background = "var(--op-indigo-ink)")}
+            onMouseOut={(e) => (e.currentTarget.style.background = "var(--op-indigo)")}
           >
             Get Started
           </Link>
@@ -146,7 +146,7 @@ export default function Navbar() {
 
         {/* Mobile hamburger */}
         <button
-          className="md:hidden p-1.5 text-[rgba(255,255,255,0.72)] hover:text-white transition-colors cursor-pointer"
+          className="md:hidden p-1.5 text-[color:var(--op-muted)] hover:text-[color:var(--op-ink)] transition-colors cursor-pointer"
           onClick={() => setOpen(!open)}
           aria-label="Toggle menu"
         >
@@ -171,7 +171,7 @@ export default function Navbar() {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
               className="md:hidden absolute inset-x-0 top-11 flex flex-col gap-0 z-40 max-h-[calc(100vh-2.75rem)] overflow-y-auto"
-              style={{ background: "rgba(28,28,30,0.97)", borderTop: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(20px)" }}
+              style={{ background: "#ffffff", borderTop: "1px solid var(--op-line)", backdropFilter: "blur(20px)" }}
             >
               <div className="px-4 py-4 flex flex-col gap-1">
                 {navLinks.map((l) =>
@@ -185,7 +185,7 @@ export default function Navbar() {
                           key={child.href}
                           href={child.href}
                           onClick={() => setOpen(false)}
-                          className="block px-4 py-2.5 text-[14px] text-[rgba(255,255,255,0.7)] hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors"
+                          className="block px-4 py-2.5 text-[14px] text-[color:var(--op-muted)] hover:text-[color:var(--op-ink)] rounded-lg hover:bg-[color:var(--op-paper-2)] transition-colors"
                         >
                           {child.label}
                         </Link>
@@ -197,7 +197,7 @@ export default function Navbar() {
                       href={l.href!}
                       onClick={() => setOpen(false)}
                       className={`px-4 py-2.5 text-[14px] rounded-lg transition-colors ${
-                        pathname === l.href ? "text-white bg-white/[0.08]" : "text-[rgba(255,255,255,0.7)] hover:text-white hover:bg-white/[0.06]"
+                        pathname === l.href ? "text-[color:var(--op-ink)] bg-[color:var(--op-paper-2)]" : "text-[color:var(--op-muted)] hover:text-[color:var(--op-ink)] hover:bg-[color:var(--op-paper-2)]"
                       }`}
                     >
                       {l.label}
@@ -209,7 +209,7 @@ export default function Navbar() {
                 <Link
                   href="/login"
                   onClick={() => setOpen(false)}
-                  className="w-full text-center px-4 py-2.5 text-[14px] text-[rgba(255,255,255,0.7)] border border-white/[0.15] rounded-full hover:text-white hover:border-white/[0.3] transition-colors"
+                  className="w-full text-center px-4 py-2.5 text-[14px] text-[color:var(--op-muted)] border border-[color:var(--op-line)] rounded-full hover:text-[color:var(--op-ink)] hover:border-[color:var(--op-muted)] transition-colors"
                 >
                   Sign in
                 </Link>
@@ -217,7 +217,7 @@ export default function Navbar() {
                   href="/get-started"
                   onClick={() => setOpen(false)}
                   className="w-full text-center px-4 py-2.5 text-[14px] font-medium text-white rounded-full"
-                  style={{ background: "#0066cc" }}
+                  style={{ background: "var(--op-indigo)" }}
                 >
                   Get Started
                 </Link>
