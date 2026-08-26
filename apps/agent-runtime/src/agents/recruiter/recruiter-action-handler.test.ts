@@ -103,3 +103,71 @@ describe('workspace_rec_send_outreach', () => {
         assert.ok(typeof parsed['body'] === 'string' && (parsed['body'] as string).length > 0);
     });
 });
+
+describe('workspace_rec_post_job — browser-fallback capability + gate', () => {
+    const POST_PAYLOAD = {
+        jobTitle: 'Staff Engineer',
+        targetPlatform: 'LinkedIn',
+        jobDescription: 'We are hiring a Staff Engineer to build the data platform.',
+        location: 'Remote',
+    };
+
+    it('requires a job description (must build the JD first)', async () => {
+        const result = await handleRecruiterAction({
+            ...BASE,
+            actionType: 'workspace_rec_post_job',
+            payload: { jobTitle: 'Staff Engineer' },
+        });
+        assert.equal(result.ok, false);
+        assert.ok(result.output.includes('jobDescription'));
+    });
+
+    it('gates as HIGH risk and emits a concrete browser plan (no API path)', async () => {
+        const result = await handleRecruiterAction({
+            ...BASE,
+            actionType: 'workspace_rec_post_job',
+            payload: { ...POST_PAYLOAD },
+        });
+
+        assert.equal(result.ok, true);
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['status'], 'AWAITING_APPROVAL');
+        assert.equal(parsed['riskLevel'], 'high');
+        assert.equal(parsed['gateType'], 'post_job_externally');
+
+        const cap = parsed['capability'] as { tier: string; steps: Array<Record<string, unknown>> };
+        assert.equal(cap.tier, 'browser');
+        const actions = cap.steps.map((s) => s['action']);
+        assert.deepEqual(actions, [
+            'workspace_web_navigate',
+            'workspace_web_login',
+            'workspace_web_fill_form',
+            'workspace_web_click',
+            'workspace_web_read_page',
+        ]);
+        // The JD content is carried into the form-fill step.
+        const fill = cap.steps.find((s) => s['action'] === 'workspace_web_fill_form')!;
+        assert.match(JSON.stringify(fill['fields']), /data platform/);
+    });
+
+    it('never carries credentials in the browser plan (login uses the workspace session)', async () => {
+        const result = await handleRecruiterAction({
+            ...BASE,
+            actionType: 'workspace_rec_post_job',
+            payload: { ...POST_PAYLOAD, password: 'hunter2', apiKey: 'secret-key' },
+        });
+        assert.equal(result.ok, true);
+        assert.ok(!result.output.includes('hunter2'), 'password must not leak into the plan');
+        assert.ok(!result.output.includes('secret-key'), 'apiKey must not leak into the plan');
+    });
+
+    it('adds a file-upload step only when a JD file is provided', async () => {
+        const withFile = await handleRecruiterAction({
+            ...BASE,
+            actionType: 'workspace_rec_post_job',
+            payload: { ...POST_PAYLOAD, jdFilePath: '/tmp/jd.pdf' },
+        });
+        const cap = (JSON.parse(withFile.output) as Record<string, unknown>)['capability'] as { steps: Array<Record<string, unknown>> };
+        assert.ok(cap.steps.some((s) => s['action'] === 'workspace_web_upload_file'));
+    });
+});

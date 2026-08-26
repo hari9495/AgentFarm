@@ -374,13 +374,42 @@ export async function handleRecruiterAction(
             const targetPlatform = str(payload['targetPlatform'], 'LinkedIn / Indeed');
             if (!jobTitle) return fail('payload.jobTitle is required');
 
-            const gateInput: RecruiterGateInput = {
+            const jobDescription = str(payload['jobDescription'] ?? payload['description']);
+            if (!jobDescription) return fail('payload.jobDescription is required (run workspace_rec_build_jd first)');
+            const location = str(payload['location']);
+            const employmentType = str(payload['employmentType'], 'full_time');
+            const postingUrl = str(payload['postingUrl']);
+
+            // Capability ladder: no job board exposes a native connector for
+            // publishing a public posting (Greenhouse ATS is candidate CRUD
+            // only), so posting is a browser-tier action — the agent opens the
+            // board and fills the form itself, as a human recruiter would.
+            // If a native job-board connector is added later, resolve it here
+            // and short-circuit to that path before the browser plan.
+            const browserPlan = {
+                tier: 'browser' as const,
+                apiPath: 'none — no native job-board connector; using browser',
+                target: postingUrl || `${targetPlatform} — "post a job" page`,
+                // Semantic steps executed by the workspace_web_* tier. Selectors
+                // are resolved live via read_page, so the plan is board-agnostic.
+                // Login uses the workspace's stored browser session for the
+                // agent's own identity — no credentials travel in the payload.
+                steps: [
+                    { action: 'workspace_web_navigate', to: postingUrl || targetPlatform },
+                    { action: 'workspace_web_login', note: 'use the agent workspace session for this board (no payload credentials)' },
+                    { action: 'workspace_web_fill_form', fields: { title: jobTitle, location: location || '(from JD)', employmentType, description: jobDescription } },
+                    ...(typeof payload['jdFilePath'] === 'string' ? [{ action: 'workspace_web_upload_file', file: payload['jdFilePath'] }] : []),
+                    { action: 'workspace_web_click', target: 'the Publish/Post button' },
+                    { action: 'workspace_web_read_page', note: 'confirm the posting is live and capture its public URL' },
+                ],
+            };
+
+            const gate = buildRecruiterGateRecord({
                 gateType: 'post_job_externally',
                 jobTitle,
                 targetPlatform,
                 detail: typeof payload['detail'] === 'string' ? payload['detail'] : undefined,
-            };
-            const gate = buildRecruiterGateRecord(gateInput);
+            });
             return jsonOut({
                 gateType: gate.gateType,
                 riskLevel: gate.riskLevel,
@@ -391,7 +420,8 @@ export async function handleRecruiterAction(
                 impacted_scope: buildRecruiterGateImpactScope(gate),
                 risk_reason: buildRecruiterGateRiskReason(gate),
                 status: 'AWAITING_APPROVAL',
-                instruction: 'Obtain approval from the required approver before posting. Once approved, use workspace_web_fill_form to submit the JD to the job board.',
+                capability: browserPlan,
+                instruction: 'Obtain approval from the required approver before posting. On approval, execute browser_plan.steps via the workspace_web_* browser tier to publish the posting.',
             });
         }
 
