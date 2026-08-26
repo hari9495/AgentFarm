@@ -47,6 +47,7 @@ import type { BrandVoiceSample } from './brand-voice-learner.js';
 import type { BrandVoice } from './draft-builder.js';
 import type { ContentBriefSpec } from './brief-parser.js';
 import { buildClarificationQuestions } from './brief-parser.js';
+import { buildContentWriterStandupSummary } from './content-writer-standup-builder.js';
 import { detectPlagiarismWithCopyscape } from './plagiarism-detector.js';
 import type { PlagiarismFetchFn } from './plagiarism-detector.js';
 import { localizeContentWithDeepL } from './content-localizer.js';
@@ -75,6 +76,11 @@ import type { HumanGateInput } from './human-gate-requests.js';
 export type ContentWriterActionType =
     | 'workspace_cw_research_topic'
     | 'workspace_cw_write_prose'
+    | 'workspace_cw_draft_blog'
+    | 'workspace_cw_draft_social'
+    | 'workspace_cw_draft_email'
+    | 'workspace_cw_draft_announcement'
+    | 'workspace_cw_standup_report'
     | 'workspace_cw_seo_optimize'
     | 'workspace_cw_publish_cms'
     | 'workspace_cw_promote_draft'
@@ -99,6 +105,11 @@ export function isContentWriterActionType(t: string): t is ContentWriterActionTy
     return (
         t === 'workspace_cw_research_topic' ||
         t === 'workspace_cw_write_prose' ||
+        t === 'workspace_cw_draft_blog' ||
+        t === 'workspace_cw_draft_social' ||
+        t === 'workspace_cw_draft_email' ||
+        t === 'workspace_cw_draft_announcement' ||
+        t === 'workspace_cw_standup_report' ||
         t === 'workspace_cw_seo_optimize' ||
         t === 'workspace_cw_publish_cms' ||
         t === 'workspace_cw_promote_draft' ||
@@ -265,12 +276,26 @@ export async function handleContentWriterAction(
         // workspace_cw_write_prose
         // payload: { spec: ContentBriefSpec, brandVoice?: BrandVoice, research?: ContentResearchResult }
         // ----------------------------------------------------------------
+        // draft_* are write_prose with a preset format (blog/social/email/
+        // announcement). They were advertised in the role profile but never
+        // routed — the planner could pick them and they would fail. Grouped here.
+        case 'workspace_cw_draft_blog':
+        case 'workspace_cw_draft_social':
+        case 'workspace_cw_draft_email':
+        case 'workspace_cw_draft_announcement':
         case 'workspace_cw_write_prose': {
             if (!callerFn) return noLlm();
+            const forcedFormat: Record<string, ContentBriefSpec['format']> = {
+                workspace_cw_draft_blog: 'blog_post',
+                workspace_cw_draft_social: 'social_post',
+                workspace_cw_draft_email: 'email_campaign',
+                workspace_cw_draft_announcement: 'internal_announcement',
+            };
+            const chosenFormat = forcedFormat[actionType] ?? ((str(payload['format']) as ContentBriefSpec['format']) || null);
             const specPayload = (payload['spec'] as ContentBriefSpec | undefined) ?? {
                 audience: str(payload['audience']) || null,
                 tone: str(payload['tone']) || null,
-                format: (str(payload['format']) as ContentBriefSpec['format']) || null,
+                format: chosenFormat,
                 wordCount: typeof payload['wordCount'] === 'number' ? payload['wordCount'] : 500,
                 keyMessages: strArr(payload['keyMessages']),
                 callToAction: typeof payload['callToAction'] === 'string' ? payload['callToAction'] : null,
@@ -286,6 +311,34 @@ export async function handleContentWriterAction(
             };
             const result = await writeProse(req, callerFn);
             return jsonOut(result);
+        }
+
+        // standup_report — advertised but previously unrouted. Builds the standup
+        // summary and, with post=true + channel, posts it to the team channel via
+        // the Slack connector. Routine → no gate; fail-safe.
+        case 'workspace_cw_standup_report': {
+            const summary = buildContentWriterStandupSummary(strArr(payload['recent_memory']), {
+                botName: str(payload['bot_name']) || 'Content Writer',
+                teamName: str(payload['team_name']) || 'the team',
+            });
+            if (payload['post'] === true) {
+                const channel = str(payload['channel']).trim();
+                if (!channel) return jsonOut({ posted: false, reason: 'post=true requires payload.channel', summary });
+                if (!input.connectorActionExecuteClient) return jsonOut({ posted: false, reason: 'no connector client available', summary });
+                const message = [
+                    `*Standup — ${str(payload['bot_name']) || 'Content Writer'}*`,
+                    `Yesterday:\n${summary.yesterday.map((i) => `• ${i}`).join('\n') || '• none'}`,
+                    `Today:\n${summary.today.map((i) => `• ${i}`).join('\n') || '• none'}`,
+                    `Blockers:\n${summary.blockers.map((i) => `• ${i}`).join('\n') || '• none'}`,
+                ].join('\n\n');
+                const r = await input.connectorActionExecuteClient({
+                    connectorType: 'slack',
+                    actionType: 'send_message',
+                    payload: { channel, message },
+                });
+                return jsonOut(r.ok ? { posted: true, channel, summary } : { posted: false, reason: r.errorMessage ?? 'slack post failed', summary });
+            }
+            return jsonOut({ summary });
         }
 
         // ----------------------------------------------------------------

@@ -380,6 +380,11 @@ export type LocalWorkspaceActionType =
     // Tier 28 (Content Writer domain actions)
     | 'workspace_cw_research_topic'
     | 'workspace_cw_write_prose'
+    | 'workspace_cw_draft_blog'
+    | 'workspace_cw_draft_social'
+    | 'workspace_cw_draft_email'
+    | 'workspace_cw_draft_announcement'
+    | 'workspace_cw_standup_report'
     | 'workspace_cw_seo_optimize'
     | 'workspace_cw_publish_cms'
     | 'workspace_cw_promote_draft'
@@ -14365,6 +14370,11 @@ export async function executeLocalWorkspaceAction(input: {
         // ====================================================================
         case 'workspace_cw_research_topic':
         case 'workspace_cw_write_prose':
+        case 'workspace_cw_draft_blog':
+        case 'workspace_cw_draft_social':
+        case 'workspace_cw_draft_email':
+        case 'workspace_cw_draft_announcement':
+        case 'workspace_cw_standup_report':
         case 'workspace_cw_seo_optimize':
         case 'workspace_cw_publish_cms':
         case 'workspace_cw_promote_draft':

@@ -391,3 +391,55 @@ describe('workspace_cw_publish_cms connector bridge', () => {
         assert.equal(connectorHit, false, 'contentful has no native executor — must not route through the connector');
     });
 });
+
+// ---------------------------------------------------------------------------
+// draft_* aliases + standup_report (previously advertised but unrouted)
+// ---------------------------------------------------------------------------
+
+describe('workspace_cw_draft_* aliases', () => {
+    for (const at of ['workspace_cw_draft_blog', 'workspace_cw_draft_social', 'workspace_cw_draft_email', 'workspace_cw_draft_announcement'] as const) {
+        test(`${at} routes to prose generation (no longer an unknown action)`, async () => {
+            const result = await handleContentWriterAction({
+                ...baseInput(at, { title: 'Launch', keyMessages: ['fast', 'simple'] }),
+                callerFn: mockCaller,
+            });
+            assert.equal(result.ok, true);
+            assert.ok(!result.output.includes('Unknown content writer action'));
+        });
+    }
+});
+
+describe('workspace_cw_standup_report', () => {
+    test('returns the summary as a draft by default', async () => {
+        let called = false;
+        const result = await handleContentWriterAction({
+            ...baseInput('workspace_cw_standup_report', { recent_memory: ['Published the launch blog', 'Drafting the newsletter'] }),
+            connectorActionExecuteClient: async () => { called = true; return { ok: true, statusCode: 200, attempts: 1 }; },
+        });
+        assert.equal(result.ok, true);
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['posted'], undefined);
+        assert.ok(parsed['summary']);
+        assert.equal(called, false);
+    });
+
+    test('posts to Slack when post=true with a channel', async () => {
+        const calls: Array<{ connectorType: string; actionType: string; channel: unknown }> = [];
+        const result = await handleContentWriterAction({
+            ...baseInput('workspace_cw_standup_report', { recent_memory: ['Published the launch blog'], post: true, channel: '#content' }),
+            connectorActionExecuteClient: async (i) => { calls.push({ connectorType: i.connectorType, actionType: i.actionType, channel: i.payload['channel'] }); return { ok: true, statusCode: 200, attempts: 1 }; },
+        });
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['posted'], true);
+        assert.deepEqual(calls, [{ connectorType: 'slack', actionType: 'send_message', channel: '#content' }]);
+    });
+
+    test('returns summary with a reason when post=true without a channel', async () => {
+        const result = await handleContentWriterAction(
+            baseInput('workspace_cw_standup_report', { recent_memory: ['x'], post: true }),
+        );
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['posted'], false);
+        assert.ok(String(parsed['reason']).includes('channel'));
+    });
+});
