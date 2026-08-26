@@ -187,29 +187,28 @@ export default async function DashboardPage() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
             {/* ── Hero ──────────────────────────────────────────────────────── */}
-            <section className="relative overflow-hidden rounded-2xl bg-slate-950">
+            <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-50 via-white to-white">
                 <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(14,165,233,0.18)_0%,transparent_60%)]" />
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.12)_0%,transparent_60%)]" />
-                    <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.07)_0%,transparent_60%)]" />
                 </div>
 
                 <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                     <div className="flex items-center gap-2 mb-5">
-                        <div className="flex items-center gap-2 rounded-xl bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-400">
-                            <PremiumIcon icon={LayoutGrid} tone="sky" containerClassName="w-4 h-4 rounded bg-blue-400/20 text-blue-300" iconClassName="w-2.5 h-2.5" />
+                        <div className="flex items-center gap-2 rounded-xl bg-blue-50 border border-blue-200 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-700">
+                            <PremiumIcon icon={LayoutGrid} tone="sky" containerClassName="w-4 h-4 rounded bg-blue-100 text-blue-600" iconClassName="w-2.5 h-2.5" />
                             Customer Dashboard
                         </div>
-                        <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                         <span className="text-xs text-slate-500">Overview</span>
                     </div>
 
                     <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
                         <div>
-                            <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
+                            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
                                 AI Teammate Operations
                             </h1>
-                            <p className="mt-2 text-slate-400 text-base max-w-lg">
+                            <p className="mt-2 text-slate-600 text-base max-w-lg">
                                 Monitor tasks, approvals, and delivery outcomes across every AI teammate in real time.
                             </p>
                         </div>
@@ -218,22 +217,22 @@ export default async function DashboardPage() {
                                 <Zap className="w-3.5 h-3.5" />
                                 Add AI Teammate
                             </ButtonLink>
-                            <ButtonLink href="/dashboard/billing" size="sm" variant="outline" className="!bg-white/10 !text-white !border-white/20 hover:!bg-white/20 hover:!border-white/30">
+                            <ButtonLink href="/dashboard/billing" size="sm" variant="outline" className="!bg-white !text-slate-900 !border-slate-200 hover:!bg-slate-50">
                                 Manage Plan
                             </ButtonLink>
                         </div>
                     </div>
 
                     {/* Mini stats bar */}
-                    <div className="mt-5 flex flex-wrap items-center gap-6 border-t border-white/10 pt-4">
+                    <div className="mt-5 flex flex-wrap items-center gap-6 border-t border-slate-200 pt-4">
                         {[
-                            { icon: <Users className="w-3.5 h-3.5 text-blue-400" />,            label: `${activeCount > 0 ? activeCount : bots.length || "—"} active teammate${activeCount !== 1 ? "s" : ""}` },
-                            { icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />,  label: `${thisWeekTasks > 0 ? thisWeekTasks : "—"} tasks this week` },
-                            { icon: <Clock3 className="w-3.5 h-3.5 text-amber-400" />,          label: successRatePct !== null ? `${successRatePct}% success rate` : "No task data yet" },
-                            { icon: <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />,    label: "Task isolation enforced" },
-                            { icon: <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />,    label: usage?.totalCostUsd != null ? `$${usage.totalCostUsd.toFixed(0)} AI cost this month` : "No billing data" },
+                            { icon: <Users className="w-3.5 h-3.5 text-blue-600" />,            label: `${activeCount > 0 ? activeCount : bots.length || "—"} active teammate${activeCount !== 1 ? "s" : ""}` },
+                            { icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />,  label: `${thisWeekTasks > 0 ? thisWeekTasks : "—"} tasks this week` },
+                            { icon: <Clock3 className="w-3.5 h-3.5 text-amber-600" />,          label: successRatePct !== null ? `${successRatePct}% success rate` : "No task data yet" },
+                            { icon: <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />,    label: "Task isolation enforced" },
+                            { icon: <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />,    label: usage?.totalCostUsd != null ? `$${usage.totalCostUsd.toFixed(0)} AI cost this month` : "No billing data" },
                         ].map(({ icon, label }) => (
-                            <div key={label} className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
+                            <div key={label} className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
                                 {icon}
                                 {label}
                             </div>

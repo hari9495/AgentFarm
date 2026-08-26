@@ -154,19 +154,19 @@ export default function SupportPage() {
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
-                <section className="relative overflow-hidden rounded-2xl bg-slate-950">
+                <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-50 via-white to-white">
                     <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(56,189,248,0.16)_0%,transparent_60%)]" />
-                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.12)_0%,transparent_60%)]" />
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.07)_0%,transparent_60%)]" />
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
                         <div>
-                            <div className="flex items-center gap-2 rounded-xl bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-300 w-fit mb-4">
+                            <div className="flex items-center gap-2 rounded-xl bg-blue-50 border border-blue-200 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-300 w-fit mb-4">
                                 <PremiumIcon icon={LifeBuoy} tone="sky" containerClassName="w-4 h-4 rounded bg-blue-400/20 text-blue-300" iconClassName="w-2.5 h-2.5" />
                                 Support
                             </div>
-                            <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">Support &amp; issues</h1>
-                            <p className="mt-2 text-slate-400 text-base max-w-lg">
+                            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">Support &amp; issues</h1>
+                            <p className="mt-2 text-slate-600 text-base max-w-lg">
                                 File an issue and our support agent will diagnose it, attempt a fix, and keep you posted here — escalating to a human when needed.
                             </p>
                         </div>
@@ -208,7 +208,7 @@ export default function SupportPage() {
                             </p>
                         )}
                         <div className="flex items-center gap-3">
-                            <button type="submit" disabled={submitting} className="rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-bold px-4 py-2 disabled:opacity-60">
+                            <button type="submit" disabled={submitting} className="rounded-lg bg-blue-600 dark:bg-white text-white dark:text-slate-900 text-sm font-bold px-4 py-2 disabled:opacity-60">
                                 {submitting ? "Filing…" : "File issue"}
                             </button>
                             <button type="button" onClick={() => setShowForm(false)} className="text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
