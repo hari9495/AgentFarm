@@ -65,6 +65,7 @@ import { handleBaAction, isBaActionType, type BaActionType } from './agents/busi
 import { handleMarketingSpecialistAction, isMarketingSpecialistActionType, type MarketingSpecialistActionType } from './agents/marketing-specialist/marketing-specialist-action-handler.js';
 import { handleRecruiterAction, isRecruiterActionType, type RecruiterActionType } from './agents/recruiter/recruiter-action-handler.js';
 import { runMeetingParticipation, type MeetingPlatform } from './agents/meeting-agent/meeting-transcription.js';
+import { runMeetingProtocolInterview } from './agents/shared/meeting-interview-adapter.js';
 import { handleCustomerSupportExecutiveAction, isCustomerSupportExecutiveActionType, type CustomerSupportExecutiveActionType } from './agents/customer-support-executive/customer-support-executive-action-handler.js';
 import { handleAgentfarmSupportAction, isAgentfarmSupportActionType, type AgentfarmSupportActionType } from './agents/agentfarm-support/action-handler.js';
 import type { ProseCallerFn } from './agents/content-writer/llm-prose-writer.js';
@@ -15366,6 +15367,19 @@ export async function executeLocalWorkspaceAction(input: {
                         platform: m.platform as MeetingPlatform,
                         ...(m.language ? { language: m.language } : {}),
                         ...(m.maxTurns ? { maxTurns: m.maxTurns } : {}),
+                    }),
+                protocolInterviewClient: async (m) =>
+                    runMeetingProtocolInterview({
+                        tenantId: m.tenantId,
+                        workspaceId: m.workspaceId,
+                        agentId: m.agentId,
+                        desktopSessionId: m.desktopSessionId,
+                        meetingUrl: m.meetingUrl,
+                        platform: m.platform as MeetingPlatform,
+                        protocol: m.protocol,
+                        ...(m.opening ? { opening: m.opening } : {}),
+                        ...(m.closing ? { closing: m.closing } : {}),
+                        ...(m.language ? { language: m.language } : {}),
                     }),
             });
             const recTitle =
