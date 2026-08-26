@@ -119,7 +119,7 @@ export default function CustomerWebhooksPage() {
         } catch { /* silent */ }
     };
 
-    const inp = "w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 placeholder:text-slate-400";
+    const inp = "w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400";
     const lbl = "block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5";
 
     return (
@@ -135,7 +135,7 @@ export default function CustomerWebhooksPage() {
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-sky-400">
+                            <div className="flex items-center gap-2 rounded-xl bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-400">
                                 <ArrowDownToLine className="w-3.5 h-3.5" />
                                 Webhooks
                             </div>
@@ -149,7 +149,7 @@ export default function CustomerWebhooksPage() {
                             </div>
                             {activeTab === "sources" && (
                                 <button onClick={() => setShowForm(v => !v)}
-                                    className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold transition-colors shrink-0">
+                                    className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors shrink-0">
                                     <Plus className="w-3.5 h-3.5" /> {showForm ? "Cancel" : "+ Add Source"}
                                 </button>
                             )}
@@ -209,9 +209,9 @@ export default function CustomerWebhooksPage() {
 
                         {/* Add form */}
                         {showForm && (
-                            <div className="rounded-2xl border-2 border-sky-200 dark:border-sky-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
-                                <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-sky-50/40 dark:bg-sky-950/10">
-                                    <p className="text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-widest mb-0.5">Add Webhook Source</p>
+                            <div className="rounded-2xl border-2 border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+                                <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-blue-50/40 dark:bg-blue-950/10">
+                                    <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-0.5">Add Webhook Source</p>
                                     <p className="text-sm text-slate-500 dark:text-slate-400">
                                         You'll get a unique URL and secret to paste into your service's webhook settings.
                                     </p>
@@ -243,7 +243,7 @@ export default function CustomerWebhooksPage() {
 
                                     <div className="flex gap-3">
                                         <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2.5 rounded-full border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Cancel</button>
-                                        <button type="submit" disabled={adding} className="px-6 py-2.5 rounded-full bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white text-sm font-bold transition-colors">
+                                        <button type="submit" disabled={adding} className="px-6 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-bold transition-colors">
                                             {adding ? "Creating…" : "Create Source"}
                                         </button>
                                     </div>
@@ -256,14 +256,14 @@ export default function CustomerWebhooksPage() {
                             <div className="space-y-3">{[1,2].map(i => <div key={i} className="h-24 rounded-2xl bg-slate-200 dark:bg-slate-800 animate-pulse" />)}</div>
                         ) : sources.length === 0 && !showForm ? (
                             <div className="rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 p-12 text-center">
-                                <div className="w-14 h-14 rounded-2xl bg-sky-100 dark:bg-sky-900/40 flex items-center justify-center mx-auto mb-4">
-                                    <ArrowDownToLine className="w-7 h-7 text-sky-500" />
+                                <div className="w-14 h-14 rounded-2xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center mx-auto mb-4">
+                                    <ArrowDownToLine className="w-7 h-7 text-blue-500" />
                                 </div>
                                 <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">No webhook sources yet</h3>
                                 <p className="text-sm text-slate-400 dark:text-slate-500 max-w-sm mx-auto mb-5 leading-relaxed">
                                     Add a source to let GitHub, Jira, Slack, or any service push events directly to your agents.
                                 </p>
-                                <button onClick={() => setShowForm(true)} className="px-5 py-2.5 rounded-full bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold transition-colors">
+                                <button onClick={() => setShowForm(true)} className="px-5 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors">
                                     Add your first source
                                 </button>
                             </div>
@@ -272,8 +272,8 @@ export default function CustomerWebhooksPage() {
                                 {sources.map(source => (
                                     <div key={source.id} className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
                                         <div className="flex items-start gap-3">
-                                            <div className="w-9 h-9 rounded-xl bg-sky-100 dark:bg-sky-900/40 flex items-center justify-center shrink-0">
-                                                <ArrowDownToLine className="w-4.5 h-4.5 text-sky-500" />
+                                            <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0">
+                                                <ArrowDownToLine className="w-4.5 h-4.5 text-blue-500" />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -284,7 +284,7 @@ export default function CustomerWebhooksPage() {
 
                                                 {/* Webhook URL */}
                                                 <div className="flex items-center gap-2 mb-2">
-                                                    <code className="flex-1 font-mono text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 overflow-hidden text-ellipsis whitespace-nowrap text-sky-600 dark:text-sky-400">
+                                                    <code className="flex-1 font-mono text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 overflow-hidden text-ellipsis whitespace-nowrap text-blue-600 dark:text-blue-400">
                                                         {source.inboundUrl}
                                                     </code>
                                                     <CopyBtn text={source.inboundUrl} label="Copy URL" />
@@ -313,7 +313,7 @@ export default function CustomerWebhooksPage() {
                                                     { label: "Any service", href: "#" },
                                                 ].map(({ label, href }) => (
                                                     <a key={label} href={href} target="_blank" rel="noopener noreferrer"
-                                                        className="flex items-center gap-1 text-xs text-sky-600 dark:text-sky-400 hover:underline">
+                                                        className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline">
                                                         <ExternalLink className="w-3 h-3" /> {label} docs
                                                     </a>
                                                 ))}
@@ -332,12 +332,12 @@ export default function CustomerWebhooksPage() {
                         {/* Filters */}
                         <div className="flex gap-3 items-center flex-wrap">
                             <select value={filterSource} onChange={e => setFilterSource(e.target.value)}
-                                className="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+                                className="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">All sources</option>
                                 {sources.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                             <select value={filterLimit} onChange={e => setFilterLimit(e.target.value)}
-                                className="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+                                className="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 {["20","50","100"].map(v => <option key={v} value={v}>{v} events</option>)}
                             </select>
                             <button onClick={() => void loadEvents()} disabled={loading}

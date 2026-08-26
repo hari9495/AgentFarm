@@ -31,7 +31,7 @@ type BotStatus = "active" | "paused" | "error" | "maintenance" | "created";
 
 const statusMeta: Record<string, { label: string; color: string }> = {
     active: { label: "Active", color: "bg-emerald-500" },
-    created: { label: "Provisioning", color: "bg-sky-500" },
+    created: { label: "Provisioning", color: "bg-blue-500" },
     paused: { label: "Paused", color: "bg-amber-500" },
     error: { label: "Needs review", color: "bg-rose-500" },
     maintenance: { label: "Maintenance", color: "bg-slate-400" },
@@ -70,9 +70,9 @@ export default async function AgentDetailPage({
     const lastActivityTs = new Date(agent.updatedAt).getTime();
 
     const kpis = [
-        { label: "Tasks completed", value: "0", icon: CheckCircle2, iconBg: "bg-sky-100 dark:bg-sky-900/40", iconColor: "text-sky-600 dark:text-sky-400" },
+        { label: "Tasks completed", value: "0", icon: CheckCircle2, iconBg: "bg-blue-100 dark:bg-blue-900/40", iconColor: "text-blue-600 dark:text-blue-400" },
         { label: "Reliability", value: "—", icon: Shield, iconBg: "bg-emerald-100 dark:bg-emerald-900/40", iconColor: "text-emerald-600 dark:text-emerald-400" },
-        { label: "Pending approvals", value: "0", icon: GitPullRequest, iconBg: "bg-violet-100 dark:bg-violet-900/40", iconColor: "text-violet-600 dark:text-violet-400" },
+        { label: "Pending approvals", value: "0", icon: GitPullRequest, iconBg: "bg-blue-100 dark:bg-blue-900/40", iconColor: "text-blue-600 dark:text-blue-400" },
         { label: "Last active", value: formatRelativeTime(lastActivityTs), icon: Clock3, iconBg: "bg-amber-100 dark:bg-amber-900/40", iconColor: "text-amber-600 dark:text-amber-400" },
         { label: "Working hours", value: "09:00–18:00", icon: Timer, iconBg: "bg-rose-100 dark:bg-rose-900/40", iconColor: "text-rose-600 dark:text-rose-400" },
     ];
@@ -83,7 +83,7 @@ export default async function AgentDetailPage({
             <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-5 md:px-8">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-sky-100 dark:bg-sky-900/40 flex items-center justify-center text-base font-bold text-sky-600 dark:text-sky-400">
+                        <div className="h-12 w-12 rounded-2xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-base font-bold text-blue-600 dark:text-blue-400">
                             {initials}
                         </div>
                         <div>
@@ -155,7 +155,7 @@ export default async function AgentDetailPage({
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-br from-emerald-50 to-sky-50 dark:from-emerald-950/20 dark:to-sky-950/20 rounded-2xl border border-emerald-200 dark:border-emerald-900/40 p-5">
+                        <div className="bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-950/20 dark:to-blue-950/20 rounded-2xl border border-emerald-200 dark:border-emerald-900/40 p-5">
                             <div className="flex items-center gap-2 mb-2">
                                 <PremiumIcon icon={ArrowUpRight} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400" iconClassName="w-3.5 h-3.5" />
                                 <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Lifetime summary</span>

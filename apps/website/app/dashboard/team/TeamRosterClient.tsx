@@ -22,8 +22,8 @@ const initials = (name: string) =>
         .join("") || "U";
 
 const roleBadge: Record<"superadmin" | "admin" | "member", { label: string; className: string; icon: typeof Shield }> = {
-    superadmin: { label: "Super Admin", className: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/40 dark:text-fuchsia-300", icon: ShieldCheck },
-    admin: { label: "Org Admin", className: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300", icon: Shield },
+    superadmin: { label: "Super Admin", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300", icon: ShieldCheck },
+    admin: { label: "Org Admin", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300", icon: Shield },
     member: { label: "Member", className: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300", icon: Users },
 };
 
@@ -136,7 +136,7 @@ export default function TeamRosterClient({
                 {canManage && (
                     <button
                         onClick={() => { setShowAddForm((v) => !v); setAddError(null); }}
-                        className="inline-flex items-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 text-white text-xs font-bold px-3.5 py-2 transition-colors"
+                        className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-xs font-bold px-3.5 py-2 transition-colors"
                     >
                         {showAddForm ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
                         {showAddForm ? "Cancel" : "Add Member"}
@@ -147,10 +147,10 @@ export default function TeamRosterClient({
             {showAddForm && canManage && (
                 <form
                     onSubmit={(e) => void handleAddMember(e)}
-                    className="mt-6 rounded-2xl border border-violet-200 dark:border-violet-800/60 bg-violet-50 dark:bg-violet-950/30 p-5 space-y-4"
+                    className="mt-6 rounded-2xl border border-blue-200 dark:border-blue-800/60 bg-blue-50 dark:bg-blue-950/30 p-5 space-y-4"
                 >
                     <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                        <PremiumIcon icon={Users} tone="violet" containerClassName="w-6 h-6 rounded-lg bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400" iconClassName="w-3.5 h-3.5" />
+                        <PremiumIcon icon={Users} tone="violet" containerClassName="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" iconClassName="w-3.5 h-3.5" />
                         Add a new team member
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -162,7 +162,7 @@ export default function TeamRosterClient({
                                 value={addName}
                                 onChange={(e) => setAddName(e.target.value)}
                                 required
-                                className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
                         <div className="flex flex-col gap-1.5">
@@ -173,7 +173,7 @@ export default function TeamRosterClient({
                                 value={addEmail}
                                 onChange={(e) => setAddEmail(e.target.value)}
                                 required
-                                className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
                         <div className="flex flex-col gap-1.5">
@@ -185,7 +185,7 @@ export default function TeamRosterClient({
                                 onChange={(e) => setAddPassword(e.target.value)}
                                 required
                                 minLength={8}
-                                className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
                         <div className="flex flex-col gap-1.5">
@@ -193,7 +193,7 @@ export default function TeamRosterClient({
                             <select
                                 value={addRole}
                                 onChange={(e) => setAddRole(e.target.value as "admin" | "member")}
-                                className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                                 <option value="member">Member — read-only access</option>
                                 <option value="admin">Admin — full management access</option>
@@ -214,7 +214,7 @@ export default function TeamRosterClient({
                         <button
                             type="submit"
                             disabled={adding}
-                            className="inline-flex items-center gap-2 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-60 text-white text-xs font-bold px-4 py-2 transition-colors"
+                            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-xs font-bold px-4 py-2 transition-colors"
                         >
                             {adding ? "Adding…" : "Add to team"}
                         </button>
@@ -259,7 +259,7 @@ export default function TeamRosterClient({
                                         <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                                             <td className="px-5 py-3.5">
                                                 <div className="flex items-center gap-3">
-                                                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 text-xs font-bold shrink-0">
+                                                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-bold shrink-0">
                                                         {initials(m.name)}
                                                     </span>
                                                     <span className="font-semibold text-slate-900 dark:text-slate-100">
@@ -284,7 +284,7 @@ export default function TeamRosterClient({
                                             {canManage && (
                                                 <td className="px-4 py-3.5">
                                                     {isSuperAdmin ? (
-                                                        <span className="inline-flex items-center gap-1.5 rounded-lg border border-fuchsia-200 dark:border-fuchsia-900/50 px-2.5 py-1.5 text-xs font-semibold text-fuchsia-700 dark:text-fuchsia-300">
+                                                        <span className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 dark:border-blue-900/50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300">
                                                             <ShieldCheck className="w-3.5 h-3.5" />
                                                             Protected role
                                                         </span>
@@ -305,7 +305,7 @@ export default function TeamRosterClient({
                                                         <button
                                                             disabled={busy}
                                                             onClick={() => changeRole(m.id, "admin")}
-                                                            className="inline-flex items-center gap-1.5 rounded-lg border border-violet-300 dark:border-violet-700 px-2.5 py-1.5 text-xs font-semibold text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 dark:border-blue-700 px-2.5 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                         >
                                                             <UserCheck className="w-3.5 h-3.5" />
                                                             {busy ? "Saving…" : "Promote to Admin"}

@@ -21,7 +21,7 @@ type PingState = { loading: boolean; ok?: boolean; latencyMs?: number };
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
-const inp = "w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 placeholder:text-slate-400 dark:placeholder:text-slate-500";
+const inp = "w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400 dark:placeholder:text-slate-500";
 const lbl = "block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5";
 
 // ── What MCP does — use-case cards ────────────────────────────────────────────
@@ -111,7 +111,7 @@ export default function CustomerMcpPage() {
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-sky-400">
+                            <div className="flex items-center gap-2 rounded-xl bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-400">
                                 <Cpu className="w-3.5 h-3.5" />
                                 MCP Servers
                             </div>
@@ -129,7 +129,7 @@ export default function CustomerMcpPage() {
                                 </Link>
                                 <button
                                     onClick={() => setShowForm(v => !v)}
-                                    className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold transition-colors"
+                                    className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
                                 >
                                     <Plus className="w-3.5 h-3.5" />
                                     {showForm ? "Cancel" : "+ Add MCP Server"}
@@ -146,9 +146,9 @@ export default function CustomerMcpPage() {
 
                 {/* ── What is MCP — shown only when no servers yet ── */}
                 {!loading && servers.length === 0 && !showForm && (
-                    <div className="rounded-2xl border border-sky-200 dark:border-sky-900/40 bg-sky-50/50 dark:bg-sky-950/10 p-6">
+                    <div className="rounded-2xl border border-blue-200 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/10 p-6">
                         <div className="flex items-start gap-3 mb-5">
-                            <Cpu className="w-5 h-5 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5" />
+                            <Cpu className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                             <div>
                                 <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1">
                                     What is an MCP server?
@@ -173,22 +173,22 @@ export default function CustomerMcpPage() {
                             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">How to connect your tool in 3 steps</p>
                             <ol className="space-y-1.5 text-sm text-slate-600 dark:text-slate-300">
                                 <li className="flex items-start gap-2">
-                                    <span className="w-5 h-5 rounded-full bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
+                                    <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
                                     Build a small MCP server that wraps your internal tool (Anthropic provides SDKs for Python, TypeScript, and Go — takes ~30 min)
                                 </li>
                                 <li className="flex items-start gap-2">
-                                    <span className="w-5 h-5 rounded-full bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
+                                    <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
                                     Deploy it inside your infrastructure so it has a reachable URL
                                 </li>
                                 <li className="flex items-start gap-2">
-                                    <span className="w-5 h-5 rounded-full bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
+                                    <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
                                     Register the URL here → click <strong>Ping</strong> to verify → agents start using it on their next task
                                 </li>
                             </ol>
                         </div>
                         <button
                             onClick={() => setShowForm(true)}
-                            className="mt-5 flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold transition-colors"
+                            className="mt-5 flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
                         >
                             <Plus className="w-3.5 h-3.5" /> Register your first MCP server
                         </button>
@@ -197,9 +197,9 @@ export default function CustomerMcpPage() {
 
                 {/* ── Add form ────────────────────────────────────────── */}
                 {showForm && (
-                    <div className="rounded-2xl border-2 border-sky-200 dark:border-sky-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
-                        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-sky-50/40 dark:bg-sky-950/10">
-                            <p className="text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-widest mb-0.5">Register MCP Server</p>
+                    <div className="rounded-2xl border-2 border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+                        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-blue-50/40 dark:bg-blue-950/10">
+                            <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-0.5">Register MCP Server</p>
                             <p className="text-sm text-slate-500 dark:text-slate-400">
                                 Point to your MCP endpoint. Agents will discover it automatically on their next task.
                             </p>
@@ -246,7 +246,7 @@ export default function CustomerMcpPage() {
                                 <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2.5 rounded-full border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                                     Cancel
                                 </button>
-                                <button type="submit" disabled={adding} className="px-6 py-2.5 rounded-full bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white text-sm font-bold transition-colors">
+                                <button type="submit" disabled={adding} className="px-6 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-bold transition-colors">
                                     {adding ? "Registering…" : "Register Server"}
                                 </button>
                             </div>
@@ -299,7 +299,7 @@ export default function CustomerMcpPage() {
                                                         {server.isActive ? "Active" : "Inactive"}
                                                     </span>
                                                 </div>
-                                                <p className="text-xs font-mono text-sky-600 dark:text-sky-400">{server.url}</p>
+                                                <p className="text-xs font-mono text-blue-600 dark:text-blue-400">{server.url}</p>
                                                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                                                     {server.workspaceId ? `Workspace: ${server.workspaceId}` : "Available to all agents in your account"}
                                                 </p>

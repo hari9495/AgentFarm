@@ -43,9 +43,9 @@ const statusMeta: Record<BotStatus, { label: string; dot: string; badge: string;
     },
     provisioning: {
         label: "Provisioning",
-        dot: "bg-sky-400 animate-pulse",
-        badge: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
-        icon: <PremiumIcon icon={Clock} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-4 h-4" />,
+        dot: "bg-blue-400 animate-pulse",
+        badge: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+        icon: <PremiumIcon icon={Clock} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" iconClassName="w-4 h-4" />,
     },
     paused: {
         label: "Paused",
@@ -68,8 +68,8 @@ const statusMeta: Record<BotStatus, { label: string; dot: string; badge: string;
 };
 
 const toneClass: Record<string, string> = {
-    sky: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
-    violet: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+    sky: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+    violet: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
     amber: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
     rose: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
     emerald: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
@@ -138,7 +138,7 @@ export default function DashboardBotsPage() {
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-sky-400">
+                            <div className="flex items-center gap-2 rounded-xl bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-400">
                                 <Bot className="w-3.5 h-3.5" />
                                 Bot Status
                             </div>

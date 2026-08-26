@@ -80,8 +80,8 @@ export default async function TeamPage() {
 
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-5">
-                            <div className="flex items-center gap-2 rounded-xl bg-violet-500/10 border border-violet-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-violet-400">
-                                <PremiumIcon icon={Users} tone="violet" containerClassName="w-4 h-4 rounded bg-violet-400/20 text-violet-300" iconClassName="w-2.5 h-2.5" />
+                            <div className="flex items-center gap-2 rounded-xl bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-400">
+                                <PremiumIcon icon={Users} tone="violet" containerClassName="w-4 h-4 rounded bg-blue-400/20 text-blue-300" iconClassName="w-2.5 h-2.5" />
                                 Team
                             </div>
                             <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
@@ -116,7 +116,7 @@ export default async function TeamPage() {
                 {/* ── Footnote ────────────────────────────────────────── */}
                 <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
                     <div className="flex items-center gap-2 mb-2">
-                        <PremiumIcon icon={ShieldCheck} tone="violet" containerClassName="w-6 h-6 rounded-lg bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400" iconClassName="w-3.5 h-3.5" />
+                        <PremiumIcon icon={ShieldCheck} tone="violet" containerClassName="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" iconClassName="w-3.5 h-3.5" />
                         <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">About roles</h3>
                     </div>
                     <ul className="space-y-1.5 text-xs text-slate-500 dark:text-slate-400 list-disc list-inside">

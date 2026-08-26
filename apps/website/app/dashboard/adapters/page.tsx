@@ -40,13 +40,13 @@ const ADAPTER_TYPES: { value: AdapterType; label: string }[] = [
 const HTTP_METHODS: HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 const METHOD_COLORS: Record<HttpMethod, string> = {
     GET: "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/40",
-    POST: "text-sky-600 bg-sky-50 dark:bg-sky-900/40",
+    POST: "text-blue-600 bg-blue-50 dark:bg-blue-900/40",
     PUT: "text-amber-600 bg-amber-50 dark:bg-amber-900/40",
-    PATCH: "text-violet-600 bg-violet-50 dark:bg-violet-900/40",
+    PATCH: "text-blue-600 bg-blue-50 dark:bg-blue-900/40",
     DELETE: "text-rose-600 bg-rose-50 dark:bg-rose-900/40",
 };
 
-const inp = "w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 placeholder:text-slate-400";
+const inp = "w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400";
 const lbl = "block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5";
 
 // ── Register form ─────────────────────────────────────────────────────────────
@@ -104,11 +104,11 @@ function RegisterForm({ onSave, onCancel }: { onSave: (data: unknown) => Promise
     const STEPS = [{ n: 1, lbl: "Identity" }, { n: 2, lbl: "Connection" }, { n: 3, lbl: "Actions" }];
 
     return (
-        <div className="rounded-2xl border-2 border-sky-200 dark:border-sky-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden mb-6">
+        <div className="rounded-2xl border-2 border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden mb-6">
             {/* Header */}
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                 <div>
-                    <p className="text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-widest mb-0.5">Register Custom Adapter</p>
+                    <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-0.5">Register Custom Adapter</p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">Connect your internal API so your agents can call it</p>
                 </div>
                 <button onClick={onCancel} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">✕</button>
@@ -120,10 +120,10 @@ function RegisterForm({ onSave, onCancel }: { onSave: (data: unknown) => Promise
                     <div key={n} className="flex items-center gap-2">
                         {i > 0 && <div className="w-8 h-px bg-slate-200 dark:bg-slate-700" />}
                         <div className="flex items-center gap-2">
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${step === n ? "bg-sky-600 text-white" : step > n ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300" : "bg-slate-100 dark:bg-slate-800 text-slate-400"}`}>
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${step === n ? "bg-blue-600 text-white" : step > n ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300" : "bg-slate-100 dark:bg-slate-800 text-slate-400"}`}>
                                 {step > n ? "✓" : n}
                             </div>
-                            <span className={`text-xs font-semibold ${step === n ? "text-sky-600 dark:text-sky-400" : step > n ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500"}`}>{l}</span>
+                            <span className={`text-xs font-semibold ${step === n ? "text-blue-600 dark:text-blue-400" : step > n ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500"}`}>{l}</span>
                         </div>
                     </div>
                 ))}
@@ -140,7 +140,7 @@ function RegisterForm({ onSave, onCancel }: { onSave: (data: unknown) => Promise
                             <div><label className={lbl}>Version</label><input value={version} onChange={e => setVersion(e.target.value)} className={inp} placeholder="1.0.0" /></div>
                             <div className="col-span-2"><label className={lbl}>Description</label><input value={description} onChange={e => setDescription(e.target.value)} className={inp} placeholder="What does this adapter do? (optional)" /></div>
                         </div>
-                        <div className="flex justify-end"><button onClick={() => { if (!adapterId.trim() || !name.trim()) { setError("Adapter ID and Name are required."); return; } setError(null); setStep(2); }} className="px-6 py-2 rounded-full bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold transition-colors">Next: Connection →</button></div>
+                        <div className="flex justify-end"><button onClick={() => { if (!adapterId.trim() || !name.trim()) { setError("Adapter ID and Name are required."); return; } setError(null); setStep(2); }} className="px-6 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors">Next: Connection →</button></div>
                     </>
                 )}
 
@@ -152,7 +152,7 @@ function RegisterForm({ onSave, onCancel }: { onSave: (data: unknown) => Promise
                             <label className={lbl}>Authentication</label>
                             <div className="flex gap-2 flex-wrap">
                                 {(["none","api_key","bearer_token","basic_auth"] as AuthType[]).map(a => (
-                                    <button key={a} type="button" onClick={() => setAuthType(a)} className={`px-3 py-1.5 rounded-full border text-xs font-semibold transition-colors ${authType === a ? "border-sky-500 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300" : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:border-slate-400"}`}>
+                                    <button key={a} type="button" onClick={() => setAuthType(a)} className={`px-3 py-1.5 rounded-full border text-xs font-semibold transition-colors ${authType === a ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:border-slate-400"}`}>
                                         {a === "none" ? "None" : a === "api_key" ? "API Key" : a === "bearer_token" ? "Bearer Token" : "Basic Auth"}
                                     </button>
                                 ))}
@@ -162,7 +162,7 @@ function RegisterForm({ onSave, onCancel }: { onSave: (data: unknown) => Promise
                         {authType === "bearer_token" && <div><label className={lbl}>Bearer Token <span className="text-rose-500">*</span></label><input value={bearerToken} onChange={e => setBearerToken(e.target.value)} type="password" className={inp} /></div>}
                         {authType === "basic_auth" && <div className="grid grid-cols-2 gap-4"><div><label className={lbl}>Username <span className="text-rose-500">*</span></label><input value={basicUser} onChange={e => setBasicUser(e.target.value)} className={inp} /></div><div><label className={lbl}>Password <span className="text-rose-500">*</span></label><input value={basicPass} onChange={e => setBasicPass(e.target.value)} type="password" className={inp} /></div></div>}
                         <div><label className={lbl}>Health Check Path</label><input value={healthPath} onChange={e => setHealthPath(e.target.value)} className={inp} placeholder="/health" /><p className="text-xs text-slate-400 mt-1">GET request — expects HTTP 200</p></div>
-                        <div className="flex gap-3 justify-end"><button onClick={() => setStep(1)} className="px-4 py-2 rounded-full border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">← Back</button><button onClick={() => { if (!endpointUrl.trim()) { setError("API Base URL is required."); return; } setError(null); setStep(3); }} className="px-6 py-2 rounded-full bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold transition-colors">Next: Actions →</button></div>
+                        <div className="flex gap-3 justify-end"><button onClick={() => setStep(1)} className="px-4 py-2 rounded-full border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">← Back</button><button onClick={() => { if (!endpointUrl.trim()) { setError("API Base URL is required."); return; } setError(null); setStep(3); }} className="px-6 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors">Next: Actions →</button></div>
                     </>
                 )}
 
@@ -183,12 +183,12 @@ function RegisterForm({ onSave, onCancel }: { onSave: (data: unknown) => Promise
                                 </div>
                             ))}
                         </div>
-                        <div className="rounded-xl bg-sky-50 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-900/40 px-4 py-3 text-sm text-sky-700 dark:text-sky-300">
+                        <div className="rounded-xl bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
                             <strong>{name}</strong> · {endpointUrl} · {authType.replace(/_/g, " ")} · {actions.filter(a => a.name.trim()).length} action{actions.filter(a => a.name.trim()).length !== 1 ? "s" : ""}
                         </div>
                         {error && <div className="flex items-center gap-2 text-sm text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 rounded-xl px-4 py-2"><AlertCircle className="w-4 h-4 shrink-0" />{error}</div>}
                         {success && <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/40 rounded-xl px-4 py-2"><CheckCircle2 className="w-4 h-4 shrink-0" />Adapter registered! Agents can now use it.</div>}
-                        <div className="flex gap-3 justify-end"><button onClick={() => setStep(2)} className="px-4 py-2 rounded-full border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm hover:bg-slate-50 transition-colors">← Back</button><button onClick={submit} disabled={saving || success} className="px-6 py-2 rounded-full bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white text-sm font-bold transition-colors">{saving ? "Registering…" : success ? "✓ Done" : "Register Adapter"}</button></div>
+                        <div className="flex gap-3 justify-end"><button onClick={() => setStep(2)} className="px-4 py-2 rounded-full border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm hover:bg-slate-50 transition-colors">← Back</button><button onClick={submit} disabled={saving || success} className="px-6 py-2 rounded-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-bold transition-colors">{saving ? "Registering…" : success ? "✓ Done" : "Register Adapter"}</button></div>
                     </>
                 )}
 
@@ -262,7 +262,7 @@ export default function CustomerAdaptersPage() {
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-sky-400">
+                            <div className="flex items-center gap-2 rounded-xl bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-400">
                                 <Layers className="w-3.5 h-3.5" />
                                 Custom APIs
                             </div>
@@ -278,7 +278,7 @@ export default function CustomerAdaptersPage() {
                                 <Link href="/dashboard/integrations" className="text-xs text-slate-400 hover:text-slate-200 transition-colors">
                                     ← Standard connectors
                                 </Link>
-                                <button onClick={() => setShowForm(v => !v)} className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold transition-colors">
+                                <button onClick={() => setShowForm(v => !v)} className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors">
                                     <Plus className="w-3.5 h-3.5" /> {showForm ? "Cancel" : "+ Register Adapter"}
                                 </button>
                             </div>
@@ -290,7 +290,7 @@ export default function CustomerAdaptersPage() {
 
                 {/* What is this */}
                 {!showForm && adapters.length === 0 && !loading && (
-                    <div className="rounded-2xl border border-sky-200 dark:border-sky-900/40 bg-sky-50/50 dark:bg-sky-950/10 p-6">
+                    <div className="rounded-2xl border border-blue-200 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/10 p-6">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {[
                                 { icon: "🏭", title: "Register your API", desc: "Point it at your internal tool's base URL and define how to authenticate." },
@@ -306,7 +306,7 @@ export default function CustomerAdaptersPage() {
                                 </div>
                             ))}
                         </div>
-                        <button onClick={() => setShowForm(true)} className="mt-5 flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold transition-colors">
+                        <button onClick={() => setShowForm(true)} className="mt-5 flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors">
                             <Plus className="w-3.5 h-3.5" /> Register your first adapter
                         </button>
                     </div>
@@ -343,7 +343,7 @@ export default function CustomerAdaptersPage() {
                                                     {adapter.version && <span className="text-[10px] text-slate-400">v{adapter.version}</span>}
                                                 </div>
                                                 <p className="text-xs font-mono text-slate-400 dark:text-slate-500">{adapter.adapter_id}</p>
-                                                {adapter.endpoint_url && <p className="text-xs text-sky-600 dark:text-sky-400 mt-1">{adapter.endpoint_url}</p>}
+                                                {adapter.endpoint_url && <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">{adapter.endpoint_url}</p>}
                                                 {pingResult && <p className={`text-xs mt-1 flex items-center gap-1 ${pingResult.ok ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>{pingResult.ok ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}{pingResult.ok ? `Healthy · ${pingResult.ms}ms` : "Unreachable"}</p>}
                                             </div>
                                             <div className="flex items-center gap-2 shrink-0">

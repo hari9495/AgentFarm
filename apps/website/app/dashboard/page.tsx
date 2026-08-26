@@ -81,12 +81,12 @@ const ROLE_NAMES: Record<string, string> = {
 };
 
 const ROLE_STYLES = [
-    { color: "text-sky-600",    ring: "ring-sky-200 bg-sky-50"    },
-    { color: "text-violet-600", ring: "ring-violet-200 bg-violet-50" },
+    { color: "text-blue-600",    ring: "ring-blue-200 bg-blue-50"    },
+    { color: "text-blue-600", ring: "ring-blue-200 bg-blue-50" },
     { color: "text-amber-600",  ring: "ring-amber-200 bg-amber-50"  },
     { color: "text-rose-600",   ring: "ring-rose-200 bg-rose-50"    },
     { color: "text-emerald-600",ring: "ring-emerald-200 bg-emerald-50" },
-    { color: "text-indigo-600", ring: "ring-indigo-200 bg-indigo-50" },
+    { color: "text-blue-600", ring: "ring-blue-200 bg-blue-50" },
 ];
 
 function botDisplayName(role: string): string {
@@ -196,8 +196,8 @@ export default async function DashboardPage() {
 
                 <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                     <div className="flex items-center gap-2 mb-5">
-                        <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-sky-400">
-                            <PremiumIcon icon={LayoutGrid} tone="sky" containerClassName="w-4 h-4 rounded bg-sky-400/20 text-sky-300" iconClassName="w-2.5 h-2.5" />
+                        <div className="flex items-center gap-2 rounded-xl bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-400">
+                            <PremiumIcon icon={LayoutGrid} tone="sky" containerClassName="w-4 h-4 rounded bg-blue-400/20 text-blue-300" iconClassName="w-2.5 h-2.5" />
                             Customer Dashboard
                         </div>
                         <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
@@ -227,10 +227,10 @@ export default async function DashboardPage() {
                     {/* Mini stats bar */}
                     <div className="mt-5 flex flex-wrap items-center gap-6 border-t border-white/10 pt-4">
                         {[
-                            { icon: <Users className="w-3.5 h-3.5 text-sky-400" />,            label: `${activeCount > 0 ? activeCount : bots.length || "—"} active teammate${activeCount !== 1 ? "s" : ""}` },
+                            { icon: <Users className="w-3.5 h-3.5 text-blue-400" />,            label: `${activeCount > 0 ? activeCount : bots.length || "—"} active teammate${activeCount !== 1 ? "s" : ""}` },
                             { icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />,  label: `${thisWeekTasks > 0 ? thisWeekTasks : "—"} tasks this week` },
                             { icon: <Clock3 className="w-3.5 h-3.5 text-amber-400" />,          label: successRatePct !== null ? `${successRatePct}% success rate` : "No task data yet" },
-                            { icon: <ShieldCheck className="w-3.5 h-3.5 text-violet-400" />,    label: "Task isolation enforced" },
+                            { icon: <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />,    label: "Task isolation enforced" },
                             { icon: <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />,    label: usage?.totalCostUsd != null ? `$${usage.totalCostUsd.toFixed(0)} AI cost this month` : "No billing data" },
                         ].map(({ icon, label }) => (
                             <div key={label} className="flex items-center gap-1.5 text-xs font-medium text-slate-400">
@@ -261,8 +261,8 @@ export default async function DashboardPage() {
                     <div className="xl:col-span-2 rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
                         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                             <div className="flex items-center gap-3">
-                                <div className="w-7 h-7 rounded-lg bg-sky-100 flex items-center justify-center">
-                                    <Users className="w-3.5 h-3.5 text-sky-600" />
+                                <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
+                                    <Users className="w-3.5 h-3.5 text-blue-600" />
                                 </div>
                                 <h2 className="text-sm font-bold text-slate-900">Active AI Teammates</h2>
                             </div>
@@ -298,7 +298,7 @@ export default async function DashboardPage() {
                                                             {w.initials}
                                                         </div>
                                                         <div>
-                                                            <p className="font-semibold text-slate-900 text-sm group-hover:text-sky-600 transition-colors">{w.name}</p>
+                                                            <p className="font-semibold text-slate-900 text-sm group-hover:text-blue-600 transition-colors">{w.name}</p>
                                                             <p className="text-xs text-slate-400">{w.role}</p>
                                                         </div>
                                                     </Link>
@@ -316,7 +316,7 @@ export default async function DashboardPage() {
                                                     {w.reliability > 0 ? (
                                                         <div className="flex items-center gap-3">
                                                             <div className="w-20 h-1.5 rounded-full bg-slate-200 overflow-hidden">
-                                                                <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-sky-500" style={{ width: `${w.reliability}%` }} />
+                                                                <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-blue-500" style={{ width: `${w.reliability}%` }} />
                                                             </div>
                                                             <span className="text-xs font-bold text-slate-700 tabular-nums">{w.reliability}%</span>
                                                         </div>
@@ -424,7 +424,7 @@ export default async function DashboardPage() {
                     </div>
 
                     {/* Ops Health */}
-                    <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-sky-50 overflow-hidden shadow-sm">
+                    <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-blue-50 overflow-hidden shadow-sm">
                         <div className="px-6 py-4 border-b border-emerald-100 bg-emerald-50/50">
                             <div className="flex items-center gap-2.5">
                                 <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center">

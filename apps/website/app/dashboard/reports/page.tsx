@@ -11,8 +11,8 @@ export const metadata: Metadata = {
 const tones = ["sky", "violet", "amber", "rose"] as const;
 
 const toneClass: Record<string, string> = {
-    sky: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
-    violet: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+    sky: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+    violet: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
     amber: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
     rose: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
 };
@@ -159,7 +159,7 @@ export default async function DashboardReportsPage() {
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-sky-400">
+                            <div className="flex items-center gap-2 rounded-xl bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-400">
                                 <BarChart3 className="w-3.5 h-3.5" />
                                 Reports
                             </div>
@@ -193,7 +193,7 @@ export default async function DashboardReportsPage() {
                     <div className="xl:col-span-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
                         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                             <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                                <PremiumIcon icon={Users} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-3.5 h-3.5" />
+                                <PremiumIcon icon={Users} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" iconClassName="w-3.5 h-3.5" />
                                 Agent Output
                             </h2>
                             <span className="text-[10px] text-slate-400 font-mono">Lifetime totals · approvals last 7d</span>
@@ -296,10 +296,10 @@ export default async function DashboardReportsPage() {
                         {/* Decision latency */}
                         <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
                             <div className="flex items-center gap-2 mb-3">
-                                <PremiumIcon icon={Clock} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-3.5 h-3.5" />
+                                <PremiumIcon icon={Clock} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" iconClassName="w-3.5 h-3.5" />
                                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Avg. Decision Latency</h3>
                             </div>
-                            <p className="text-3xl font-extrabold text-sky-600 dark:text-sky-400 tabular-nums">{avgLatencyLabel}</p>
+                            <p className="text-3xl font-extrabold text-blue-600 dark:text-blue-400 tabular-nums">{avgLatencyLabel}</p>
                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                 {latencies.length > 0
                                     ? `Across ${latencies.length} decided ${latencies.length === 1 ? "approval" : "approvals"}`

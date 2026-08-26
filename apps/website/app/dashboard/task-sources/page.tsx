@@ -35,7 +35,7 @@ const EMPTY = {
 };
 
 const inputCls =
-    "mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500";
+    "mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500";
 
 export default function TaskSourcesPage() {
     const [sources, setSources] = useState<PollSource[]>([]);
@@ -138,7 +138,7 @@ export default function TaskSourcesPage() {
                     </button>
                     <button
                         onClick={() => setShowForm((v) => !v)}
-                        className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+                        className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
                     >
                         <Plus className="w-4 h-4" /> Add source
                     </button>
@@ -240,7 +240,7 @@ export default function TaskSourcesPage() {
                     <button
                         onClick={() => void create()}
                         disabled={saving || !form.assignee.trim()}
-                        className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                        className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
                     >
                         {saving ? "Adding…" : "Save source"}
                     </button>
