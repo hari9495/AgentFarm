@@ -24,9 +24,11 @@
   --op-line: #e7e9ef;         /* hairline */
   --op-muted: #697586;        /* secondary / captions */
 
-  --op-indigo: #4f46e5;       /* brand / primary action */
-  --op-indigo-soft: #eef0fe;  /* soft brand wash */
-  --op-indigo-ink: #3730a3;
+  /* Brand accent — blue (reads more trustworthy/attractive than violet).
+     Token name kept as --op-indigo so every reference flips in one place. */
+  --op-indigo: #2563eb;       /* brand / primary action (blue-600) */
+  --op-indigo-soft: #e9f1fe;  /* soft brand wash */
+  --op-indigo-ink: #1d4ed8;   /* hover / pressed (blue-700) */
 
   --op-approved: #0ea968;     /* state: approved / shipped */
   --op-approved-soft: #e7f6ee;
