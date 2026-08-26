@@ -78,7 +78,7 @@ export default function HeatmapDatePicker({ fromValue, toValue, minDate, maxDate
                 onClick={() => setOpen(v => !v)}
                 className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors
                     ${open
-                        ? "border-sky-400 bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400"
+                        ? "border-blue-400 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
                         : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                     }`}
             >
@@ -93,8 +93,8 @@ export default function HeatmapDatePicker({ fromValue, toValue, minDate, maxDate
                     {/* Header */}
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                            <div className="h-6 w-6 rounded-lg bg-sky-100 dark:bg-sky-900/40 flex items-center justify-center shrink-0">
-                                <Calendar className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
+                            <div className="h-6 w-6 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0">
+                                <Calendar className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                             </div>
                             <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Pick a date range</p>
                         </div>
@@ -113,7 +113,7 @@ export default function HeatmapDatePicker({ fromValue, toValue, minDate, maxDate
                                 min={minDate}
                                 max={pickedTo || maxDate}
                                 onChange={e => handleFromChange(e.target.value)}
-                                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-2 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-400 transition"
+                                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-2 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
                             />
                         </div>
                         <div className="shrink-0 pb-2.5">
@@ -127,7 +127,7 @@ export default function HeatmapDatePicker({ fromValue, toValue, minDate, maxDate
                                 min={pickedFrom ? addDaysStr(pickedFrom, MIN_DAYS - 1) : minDate}
                                 max={maxDate}
                                 onChange={e => setTo(e.target.value)}
-                                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-2 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-400 transition"
+                                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-2 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
                             />
                         </div>
                     </div>
@@ -138,7 +138,7 @@ export default function HeatmapDatePicker({ fromValue, toValue, minDate, maxDate
                             <span className="inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 text-[11px] font-bold shrink-0">
                                 {days}d
                             </span>
-                            <span className="inline-flex items-center rounded-full bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 px-2 py-0.5 text-[11px] font-bold shrink-0">
+                            <span className="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-0.5 text-[11px] font-bold shrink-0">
                                 {weeks}w
                             </span>
                             <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
@@ -160,7 +160,7 @@ export default function HeatmapDatePicker({ fromValue, toValue, minDate, maxDate
                         <button onClick={handleCancel} className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                             Cancel
                         </button>
-                        <button onClick={handleApply} disabled={!canApply} className="flex-1 rounded-xl bg-slate-900 dark:bg-slate-100 py-2 text-xs font-semibold text-white dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-white/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                        <button onClick={handleApply} disabled={!canApply} className="flex-1 rounded-xl bg-blue-600 dark:bg-slate-100 py-2 text-xs font-semibold text-white dark:text-slate-900 hover:bg-blue-700 dark:hover:bg-white/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                             Apply
                         </button>
                     </div>

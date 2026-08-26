@@ -92,8 +92,8 @@ function SkeletonCard() {
 // ── Card config ───────────────────────────────────────────────────────────────
 
 const CARDS = [
-    { key: "tasksCompleted"  as const, icon: CheckCircle2,  border: "border-sky-100",     bg: "bg-gradient-to-br from-sky-50 to-white",     iconBg: "bg-sky-100",     iconColor: "text-sky-600",     barBg: "bg-sky-400",     dPos: "text-emerald-700 bg-emerald-50 border border-emerald-100", dNeg: "text-rose-600 bg-rose-50 border border-rose-100", label: "Tasks Completed"   },
-    { key: "prsMerged"       as const, icon: GitPullRequest, border: "border-violet-100",  bg: "bg-gradient-to-br from-violet-50 to-white",  iconBg: "bg-violet-100",  iconColor: "text-violet-600",  barBg: "bg-violet-400",  dPos: "text-emerald-700 bg-emerald-50 border border-emerald-100", dNeg: "text-rose-600 bg-rose-50 border border-rose-100", label: "PRs Merged"        },
+    { key: "tasksCompleted"  as const, icon: CheckCircle2,  border: "border-blue-100",     bg: "bg-gradient-to-br from-blue-50 to-white",     iconBg: "bg-blue-100",     iconColor: "text-blue-600",     barBg: "bg-blue-400",     dPos: "text-emerald-700 bg-emerald-50 border border-emerald-100", dNeg: "text-rose-600 bg-rose-50 border border-rose-100", label: "Tasks Completed"   },
+    { key: "prsMerged"       as const, icon: GitPullRequest, border: "border-blue-100",  bg: "bg-gradient-to-br from-blue-50 to-white",  iconBg: "bg-blue-100",  iconColor: "text-blue-600",  barBg: "bg-blue-400",  dPos: "text-emerald-700 bg-emerald-50 border border-emerald-100", dNeg: "text-rose-600 bg-rose-50 border border-rose-100", label: "PRs Merged"        },
     { key: "medianCycleTime" as const, icon: Timer,          border: "border-amber-100",   bg: "bg-gradient-to-br from-amber-50 to-white",   iconBg: "bg-amber-100",   iconColor: "text-amber-600",   barBg: "bg-amber-400",   dPos: "text-emerald-700 bg-emerald-50 border border-emerald-100", dNeg: "text-rose-600 bg-rose-50 border border-rose-100", label: "Median Cycle Time" },
     { key: "estimatedSavings" as const, icon: TrendingUp,   border: "border-emerald-100", bg: "bg-gradient-to-br from-emerald-50 to-white", iconBg: "bg-emerald-100", iconColor: "text-emerald-600", barBg: "bg-emerald-400", dPos: "text-emerald-700 bg-emerald-50 border border-emerald-100", dNeg: "text-rose-600 bg-rose-50 border border-rose-100", label: "Estimated Savings" },
 ] as const;
@@ -174,7 +174,7 @@ export default function KpiCardsV2() {
                     onChange={e => handleAgentChange(e.target.value)}
                     disabled={agentsLoading || agents.length === 0}
                     style={{ WebkitAppearance: "none", MozAppearance: "none", appearance: "none" }}
-                    className="pl-10 pr-8 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer transition-colors disabled:opacity-60"
+                    className="pl-10 pr-8 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors disabled:opacity-60"
                 >
                     {agentsLoading
                         ? <option value="">Loading…</option>
@@ -201,7 +201,7 @@ export default function KpiCardsV2() {
                     value={fromDate}
                     max={toDate}
                     onChange={e => setFromDate(e.target.value)}
-                    className="text-sm text-slate-700 font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 hover:border-slate-300 transition-colors cursor-pointer"
+                    className="text-sm text-slate-700 font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-slate-300 transition-colors cursor-pointer"
                 />
                 <span className="text-xs text-slate-400 font-medium">to</span>
                 <input
@@ -210,7 +210,7 @@ export default function KpiCardsV2() {
                     min={fromDate}
                     max={toDateStr(new Date())}
                     onChange={e => setToDate(e.target.value)}
-                    className="text-sm text-slate-700 font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 hover:border-slate-300 transition-colors cursor-pointer"
+                    className="text-sm text-slate-700 font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-slate-300 transition-colors cursor-pointer"
                 />
             </div>
 
@@ -218,7 +218,7 @@ export default function KpiCardsV2() {
             <button
                 onClick={handleApply}
                 disabled={!fromDate || !toDate || fromDate > toDate}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-sky-600 hover:bg-sky-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl shadow-sm transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl shadow-sm transition-colors"
             >
                 Apply
             </button>

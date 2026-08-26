@@ -23,7 +23,7 @@ type DeploymentJob = {
 
 const statusClass: Record<DeploymentStatus, string> = {
     queued: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-    running: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
+    running: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
     succeeded: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
     failed: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
     canceled: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
@@ -174,7 +174,7 @@ export default function DeploymentStatusPanel() {
             ) : !deployment ? (
                 <div className="mt-4 space-y-2">
                     <p className="text-sm text-slate-600 dark:text-slate-300">{summary}</p>
-                    <Link href="/dashboard/deployments" className="inline-flex text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline">
+                    <Link href="/dashboard/deployments" className="inline-flex text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
                         View deployment history
                     </Link>
                 </div>
@@ -213,7 +213,7 @@ export default function DeploymentStatusPanel() {
                             </button>
                         ) : null}
                     </div>
-                    <Link href="/dashboard/deployments" className="inline-flex text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline">
+                    <Link href="/dashboard/deployments" className="inline-flex text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
                         View deployment history
                     </Link>
                 </div>

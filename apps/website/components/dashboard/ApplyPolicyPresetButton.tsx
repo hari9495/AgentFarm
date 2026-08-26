@@ -39,7 +39,7 @@ export default function ApplyPolicyPresetButton({ preset, label }: { preset: "st
                 type="button"
                 onClick={apply}
                 disabled={loading}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800 rounded-lg px-3 py-1.5 hover:bg-sky-50 dark:hover:bg-sky-900/20 disabled:opacity-60 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-60 transition-colors"
             >
                 {loading && <LoaderCircle className="w-3 h-3 animate-spin" />}
                 {applied ? "Applied ✓" : (label ?? "Apply preset")}

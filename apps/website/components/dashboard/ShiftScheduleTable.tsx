@@ -23,8 +23,8 @@ export type ShiftScheduleAgent = {
 const allDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const toneAccent: Record<string, { bg: string; text: string }> = {
-    sky: { bg: "bg-sky-100 dark:bg-sky-900/40", text: "text-sky-600 dark:text-sky-400" },
-    violet: { bg: "bg-violet-100 dark:bg-violet-900/40", text: "text-violet-600 dark:text-violet-400" },
+    sky: { bg: "bg-blue-100 dark:bg-blue-900/40", text: "text-blue-600 dark:text-blue-400" },
+    violet: { bg: "bg-blue-100 dark:bg-blue-900/40", text: "text-blue-600 dark:text-blue-400" },
     amber: { bg: "bg-amber-100 dark:bg-amber-900/40", text: "text-amber-600 dark:text-amber-400" },
     rose: { bg: "bg-rose-100 dark:bg-rose-900/40", text: "text-rose-600 dark:text-rose-400" },
 };
@@ -67,7 +67,7 @@ function EditRow({ agent, onCancel, onSaved }: { agent: ShiftScheduleAgent; onCa
     };
 
     return (
-        <tr className="bg-sky-50/60 dark:bg-sky-950/20">
+        <tr className="bg-blue-50/60 dark:bg-blue-950/20">
             <td className="px-5 py-3" colSpan={6}>
                 <div className="flex flex-col lg:flex-row lg:items-center gap-3">
                     <div className="flex items-center gap-2">
@@ -93,7 +93,7 @@ function EditRow({ agent, onCancel, onSaved }: { agent: ShiftScheduleAgent; onCa
                                 type="button"
                                 onClick={() => toggleDay(d)}
                                 className={`inline-flex items-center justify-center h-6 w-7 rounded text-[9px] font-semibold transition-colors ${days.includes(d)
-                                    ? "bg-sky-500 text-white"
+                                    ? "bg-blue-500 text-white"
                                     : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700"
                                     }`}
                             >
@@ -115,7 +115,7 @@ function EditRow({ agent, onCancel, onSaved }: { agent: ShiftScheduleAgent; onCa
                             type="button"
                             onClick={save}
                             disabled={saving}
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-sky-600 hover:bg-sky-500 disabled:opacity-60 rounded-lg px-3 py-1.5 transition-colors"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-60 rounded-lg px-3 py-1.5 transition-colors"
                         >
                             {saving && <LoaderCircle className="w-3 h-3 animate-spin" />}
                             Save
@@ -188,7 +188,7 @@ export default function ShiftScheduleTable({ agents }: { agents: ShiftScheduleAg
                                             <span
                                                 key={d}
                                                 className={`inline-flex items-center justify-center h-5 w-6 rounded text-[9px] font-semibold ${agent.days.includes(d)
-                                                    ? "bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300"
+                                                    ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"
                                                     : "bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600"
                                                     }`}
                                             >
@@ -201,7 +201,7 @@ export default function ShiftScheduleTable({ agents }: { agents: ShiftScheduleAg
                                     <button
                                         type="button"
                                         onClick={() => setEditingSlug(agent.slug)}
-                                        className="text-xs font-medium text-sky-600 dark:text-sky-400 hover:underline"
+                                        className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
                                     >
                                         Edit
                                     </button>

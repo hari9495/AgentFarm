@@ -70,11 +70,11 @@ const ACTIVE_JOB_STATUSES: ReadonlySet<string> = new Set([
 
 const statusPillClass: Record<ProvisioningStatus, string> = {
     queued: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200",
-    validating: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
-    creating_resources: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
-    bootstrapping_vm: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300",
+    validating: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+    creating_resources: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+    bootstrapping_vm: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
     starting_container: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-    registering_runtime: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+    registering_runtime: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
     healthchecking: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
     completed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
     failed: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
@@ -124,7 +124,7 @@ export function ProvisioningProgressCardContent(props: {
             <div className="flex items-start justify-between gap-3">
                 <div>
                     <p className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                        <PremiumIcon icon={Clock3} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-3.5 h-3.5" />
+                        <PremiumIcon icon={Clock3} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" iconClassName="w-3.5 h-3.5" />
                         Provisioning Progress
                     </p>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Live runtime bootstrap state for your tenant workspace</p>
