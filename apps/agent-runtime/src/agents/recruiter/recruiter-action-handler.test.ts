@@ -171,3 +171,77 @@ describe('workspace_rec_post_job — browser-fallback capability + gate', () => 
         assert.ok(cap.steps.some((s) => s['action'] === 'workspace_web_upload_file'));
     });
 });
+
+describe('workspace_rec_schedule_interview — browser booking + email send', () => {
+    const SCHED_PAYLOAD = {
+        candidateName: 'Jordan Lee',
+        candidateEmail: 'jordan@example.com',
+        jobTitle: 'Staff Engineer',
+        companyName: 'Acme',
+        recruiterName: 'Alex Recruiter',
+        recruiterEmail: 'alex@acme.com',
+        interviewers: [{ name: 'Sam Dev', title: 'EM', email: 'sam@acme.com' }],
+        proposedSlots: [{ date: '2026-09-01', startTime: '10:00', endTime: '10:45', timezone: 'UTC' }],
+        format: 'video_call',
+    };
+
+    it('books via the browser (no calendar connector) and returns the draft', async () => {
+        const result = await handleRecruiterAction({
+            ...BASE,
+            actionType: 'workspace_rec_schedule_interview',
+            payload: { ...SCHED_PAYLOAD },
+        });
+
+        assert.equal(result.ok, true);
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        // draft content preserved
+        assert.ok(typeof parsed['confirmationEmailToCandidate'] === 'string');
+        const booking = parsed['booking'] as { tier: string; steps: Array<Record<string, unknown>> };
+        assert.equal(booking.tier, 'browser');
+        const actions = booking.steps.map((s) => s['action']);
+        assert.ok(actions.includes('workspace_web_navigate'));
+        assert.ok(actions.includes('workspace_web_fill_form'));
+        // video_call format adds a conferencing step
+        assert.ok(booking.steps.some((s) => String(s['target'] ?? '').includes('video conferencing')));
+        // no email attempted without send=true
+        assert.equal(parsed['confirmationEmail'], undefined);
+    });
+
+    it('sends the candidate confirmation via the email connector when send=true', async () => {
+        const originalFetch = globalThis.fetch;
+        globalThis.fetch = (async (url: string | URL | Request) => {
+            const href = typeof url === 'string' ? url : url.toString();
+            if (href.includes('gmail')) {
+                return new Response(JSON.stringify({ credentials: { accessToken: 'a' } }), {
+                    status: 200, headers: { 'content-type': 'application/json' },
+                });
+            }
+            return new Response(null, { status: 404 }); // calendar connectors: not configured → browser
+        }) as typeof globalThis.fetch;
+
+        try {
+            const sent: Array<{ connectorType: string; to: unknown }> = [];
+            const result = await handleRecruiterAction({
+                ...BASE,
+                actionType: 'workspace_rec_schedule_interview',
+                gatewayBaseUrl: 'http://gateway',
+                serviceToken: 'tok',
+                workspaceId: 'ws-1',
+                connectorActionExecuteClient: async (i) => {
+                    sent.push({ connectorType: i.connectorType, to: i.payload['to'] });
+                    return { ok: true, statusCode: 200, attempts: 1 };
+                },
+                payload: { ...SCHED_PAYLOAD, send: true },
+            });
+
+            assert.equal(result.ok, true);
+            const parsed = JSON.parse(result.output) as Record<string, unknown>;
+            // calendar still browser (no calendar connector), email sent via gmail
+            assert.equal((parsed['booking'] as { tier: string }).tier, 'browser');
+            assert.deepEqual(parsed['confirmationEmail'], { sent: true, via: 'gmail' });
+            assert.deepEqual(sent, [{ connectorType: 'gmail', to: 'jordan@example.com' }]);
+        } finally {
+            globalThis.fetch = originalFetch;
+        }
+    });
+});

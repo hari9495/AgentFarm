@@ -33,6 +33,7 @@
 
 import type { LocalWorkspaceResult, LocalWorkspaceConnectorClient } from '../../local-workspace-executor.js';
 import { sendEmailViaConnector } from '../shared/connector-email.js';
+import { resolveActionCapability } from '../shared/capability-resolver.js';
 
 import { buildJobDescription } from './jd-builder.js';
 import type { RoleBrief, EmploymentType, WorkArrangement, ExperienceLevel } from './jd-builder.js';
@@ -382,13 +383,16 @@ export async function handleRecruiterAction(
 
             // Capability ladder: no job board exposes a native connector for
             // publishing a public posting (Greenhouse ATS is candidate CRUD
-            // only), so posting is a browser-tier action — the agent opens the
-            // board and fills the form itself, as a human recruiter would.
-            // If a native job-board connector is added later, resolve it here
-            // and short-circuit to that path before the browser plan.
+            // only), so posting resolves to the browser tier — the agent opens
+            // the board and fills the form itself, as a human recruiter would.
+            // Add a job-board connector to nativeConnectors to gain an API path.
+            const cap = await resolveActionCapability({
+                nativeConnectors: [], // no native job-board connector today
+                workspaceId, gatewayBaseUrl, serviceToken,
+            });
             const browserPlan = {
                 tier: 'browser' as const,
-                apiPath: 'none — no native job-board connector; using browser',
+                apiPath: `none (${cap.tier === 'browser' ? cap.reason : cap.connectorType}) — using browser`,
                 target: postingUrl || `${targetPlatform} — "post a job" page`,
                 // Semantic steps executed by the workspace_web_* tier. Selectors
                 // are resolved live via read_page, so the plan is board-agnostic.
@@ -597,7 +601,59 @@ export async function handleRecruiterAction(
                 companyValuesUrl: typeof payload['companyValuesUrl'] === 'string' ? payload['companyValuesUrl'] : undefined,
             };
 
-            return jsonOut(scheduleInterview(schedInput));
+            const draft = scheduleInterview(schedInput);
+
+            // Booking the event: no calendar connector exists (no google/outlook
+            // calendar executor), so it resolves to the browser tier — the agent
+            // opens the calendar and creates the event, as a human would. When a
+            // calendar connector is added, it takes the native path automatically.
+            const bookCap = await resolveActionCapability({
+                nativeConnectors: ['google_calendar', 'outlook_calendar'],
+                workspaceId, gatewayBaseUrl, serviceToken,
+            });
+            const needsVideo = schedInput.format === 'video_call';
+            const booking = bookCap.tier === 'native'
+                ? { tier: 'native' as const, connectorType: bookCap.connectorType, action: 'create_event', event: draft.calendarInvite }
+                : {
+                    tier: 'browser' as const,
+                    reason: bookCap.reason,
+                    target: str(payload['calendarUrl']) || 'the recruiting team calendar',
+                    steps: [
+                        { action: 'workspace_web_navigate', to: str(payload['calendarUrl']) || 'the calendar app' },
+                        { action: 'workspace_web_login', note: 'use the agent workspace session (no payload credentials)' },
+                        { action: 'workspace_web_click', target: 'Create / New event' },
+                        { action: 'workspace_web_fill_form', fields: {
+                            title: draft.calendarInvite.title,
+                            start: draft.calendarInvite.startDateTime,
+                            end: draft.calendarInvite.endDateTime,
+                            timezone: draft.calendarInvite.timezone,
+                            attendees: draft.calendarInvite.attendees.join(', '),
+                            location: draft.calendarInvite.location,
+                            description: draft.calendarInvite.description,
+                        } },
+                        ...(needsVideo ? [{ action: 'workspace_web_click', target: 'Add video conferencing (Meet/Zoom/Teams)' }] : []),
+                        { action: 'workspace_web_click', target: 'Send / Save invite' },
+                        { action: 'workspace_web_read_page', note: 'confirm the event was created and capture the video link' },
+                    ],
+                };
+
+            // Send the candidate confirmation email through the native email
+            // connector when send=true — that rung DOES have an API.
+            let confirmationEmail: Record<string, unknown> | undefined;
+            if (payload['send'] === true) {
+                const d = await sendEmailViaConnector({
+                    connectorClient: connectorActionExecuteClient,
+                    workspaceId, gatewayBaseUrl, serviceToken,
+                    to: candidateEmail,
+                    subject: `Interview confirmation — ${jobTitle} at ${companyName}`,
+                    body: draft.confirmationEmailToCandidate,
+                });
+                confirmationEmail = d.sent
+                    ? { sent: true, via: d.connectorType }
+                    : { sent: false, reason: d.reason };
+            }
+
+            return jsonOut({ ...draft, booking, ...(confirmationEmail ? { confirmationEmail } : {}) });
         }
 
         // ----------------------------------------------------------------
