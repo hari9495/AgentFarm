@@ -1695,6 +1695,7 @@ async function handlePmDocumentAction(params: PmActionParams): Promise<PmActionR
         gatewayBaseUrl,
         serviceToken,
         callLlm,
+        connectorClient,
         approvalNotificationTarget,
         approvalNotificationChannel = 'slack',
         approvalEscalationDeadlineIso,
@@ -1743,11 +1744,23 @@ async function handlePmDocumentAction(params: PmActionParams): Promise<PmActionR
         generatedContent = `# ${documentType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}\n\n_Content generation requires a configured LLM provider._\n\n${userPrompt}`;
     }
 
-    // Route by risk
-    if (riskLevel === 'low') {
+    // Route by risk. Low-risk auto-approves; medium/high gate first — but once
+    // approval is granted (payload.approved / approvalActionId), the report is
+    // delivered like an approved report.
+    const approvalGranted = payload['approved'] === true ||
+        (typeof payload['approvalActionId'] === 'string' && (payload['approvalActionId'] as string).trim() !== '');
+    if (riskLevel === 'low' || approvalGranted) {
         await ingestPmDocument({ tenantId, botId, documentTitle: projectName, documentType, content: generatedContent, gatewayBaseUrl, serviceToken });
         await writeEpisodicMemory({ tenantId, workspaceId, pattern: `pm:${documentType}:auto_approved`, summary: `${documentType} auto-approved: ${projectName.slice(0, 80)}`, gatewayBaseUrl, serviceToken });
-        return { ok: true, output: generatedContent, documentType, riskLevel: 'low', approvalStatus: 'auto_approved', ragContextUsed: !!ragContextBlock };
+        // Deliver the approved report to the team channel when requested — a human
+        // PM shares the status/charter/report, not just files it. Fail-safe.
+        let deliveredTo: string | undefined;
+        const slackChannel = str(payload['slack_channel']);
+        if (slackChannel && connectorClient) {
+            const r = await connectorClient({ connectorType: 'slack', actionType: 'send_message', payload: { channel: slackChannel, message: `*${projectName}* (${documentType})\n\n${generatedContent}` } });
+            deliveredTo = r.ok ? `slack:${slackChannel}` : undefined;
+        }
+        return { ok: true, output: generatedContent, documentType, riskLevel, approvalStatus: 'auto_approved', ragContextUsed: !!ragContextBlock, ...(deliveredTo ? { deliveredTo } : {}) };
     }
 
     if (riskLevel === 'medium') {

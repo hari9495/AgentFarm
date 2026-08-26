@@ -320,3 +320,35 @@ describe('workspace_pm_impediment_log', () => {
         assert.equal(result.ok, true);
     });
 });
+
+describe('workspace_pm_status_report — deliver on approval', () => {
+    it('delivers the approved report to the team channel', async () => {
+        const { handlePmAction } = await import('./project-manager-action-handler.js');
+        const calls: Array<{ connectorType: string; actionType: string; channel: unknown }> = [];
+        const result = await handlePmAction({
+            ...BASE,
+            actionType: 'workspace_pm_status_report',
+            callLlm: async () => 'Status: on track. 8/10 stories done.',
+            connectorClient: async (i) => { calls.push({ connectorType: i.connectorType, actionType: i.actionType, channel: i.payload['channel'] }); return { ok: true, statusCode: 200 }; },
+            payload: { title: 'Sprint 4 status', approved: true, slack_channel: '#project' },
+        } as Parameters<typeof handlePmAction>[0]);
+        assert.equal(result.ok, true);
+        assert.equal((result as Record<string, unknown>)['deliveredTo'], 'slack:#project');
+        assert.deepEqual(calls, [{ connectorType: 'slack', actionType: 'send_message', channel: '#project' }]);
+    });
+
+    it('does not deliver without approval (goes to the gate)', async () => {
+        const { handlePmAction } = await import('./project-manager-action-handler.js');
+        let called = false;
+        const result = await handlePmAction({
+            ...BASE,
+            actionType: 'workspace_pm_status_report',
+            callLlm: async () => 'Status: on track.',
+            connectorClient: async () => { called = true; return { ok: true, statusCode: 200 }; },
+            payload: { title: 'Sprint 4 status', slack_channel: '#project' },
+        } as Parameters<typeof handlePmAction>[0]);
+        assert.equal(result.ok, true);
+        assert.equal((result as Record<string, unknown>)['deliveredTo'], undefined);
+        assert.equal(called, false, 'must not post an unapproved status report');
+    });
+});
