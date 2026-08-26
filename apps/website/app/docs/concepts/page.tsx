@@ -23,11 +23,11 @@ export default function ConceptsPage() {
 
             <div className="my-6 space-y-0">
                 {[
-                    { stage: "01  Receive", color: "#0066cc", description: "A task is assigned through the dashboard, API, or a connector path (Slack message, webhook, email). The worker acknowledges the task and queues it for planning." },
+                    { stage: "01  Receive", color: "var(--op-indigo)", description: "A task is assigned through the dashboard, API, or a connector path (Slack message, webhook, email). The worker acknowledges the task and queues it for planning." },
                     { stage: "02  Plan", color: "#5856d6", description: "The worker gathers context from connected tools and the workspace knowledge base, evaluates policy constraints, and generates a bounded execution plan before taking any action." },
                     { stage: "03  Execute", color: "#1a7a4a", description: "The task runs inside the execution sandbox with tool calls, file changes, and API calls captured as evidence. Actions are classified by risk level before execution." },
                     { stage: "04  Review", color: "#b86800", description: "Output, risk signals, and impact are checked against approval policy. Any action at or above the configured threshold pauses and routes to a human reviewer." },
-                    { stage: "05  Iterate", color: "#6e6e73", description: "If the reviewer approves, the task continues. If feedback arrives, the worker adapts its plan, updates the output, and records the new state without losing prior context." },
+                    { stage: "05  Iterate", color: "var(--op-muted)", description: "If the reviewer approves, the task continues. If feedback arrives, the worker adapts its plan, updates the output, and records the new state without losing prior context." },
                 ].map((s, i) => (
                     <div key={s.stage} className="flex gap-4">
                         <div className="flex flex-col items-center">
@@ -37,11 +37,11 @@ export default function ConceptsPage() {
                             >
                                 {i + 1}
                             </div>
-                            {i < 4 && <div className="w-px flex-1 my-1.5" style={{ background: "#e8e8ed" }} />}
+                            {i < 4 && <div className="w-px flex-1 my-1.5" style={{ background: "var(--op-line)" }} />}
                         </div>
                         <div className="pb-4">
-                            <p className="font-semibold text-[15px] text-[#1d1d1f] mb-1">{s.stage}</p>
-                            <p className="text-[14px] text-[#6e6e73]" style={{ lineHeight: 1.6 }}>{s.description}</p>
+                            <p className="font-semibold text-[15px] text-[var(--op-ink)] mb-1">{s.stage}</p>
+                            <p className="text-[14px] text-[var(--op-muted)]" style={{ lineHeight: 1.6 }}>{s.description}</p>
                         </div>
                     </div>
                 ))}
@@ -96,7 +96,7 @@ export default function ConceptsPage() {
                         <p className="font-semibold text-[14px] mb-2" style={{ color: r.color }}>{r.label}</p>
                         <div className="flex flex-wrap gap-2">
                             {r.examples.map((e) => (
-                                <span key={e} className="text-[12px] px-2 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.6)", color: "#424245" }}>
+                                <span key={e} className="text-[12px] px-2 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.6)", color: "var(--op-ink-soft)" }}>
                                     {e}
                                 </span>
                             ))}
@@ -114,7 +114,7 @@ export default function ConceptsPage() {
             {/* Execution sandbox */}
             <H2 id="execution-sandbox">Execution sandbox</H2>
             <P>Each task runs inside a dedicated execution environment designed for controlled delivery:</P>
-            <ul className="list-disc pl-6 my-4 space-y-2 text-[14px] text-[#424245]" style={{ lineHeight: 1.7 }}>
+            <ul className="list-disc pl-6 my-4 space-y-2 text-[14px] text-[var(--op-ink-soft)]" style={{ lineHeight: 1.7 }}>
                 <li>A fresh environment is created per task — state is never shared between tasks</li>
                 <li>Outbound access is limited to the connectors your workspace has explicitly authorized</li>
                 <li>Execution state resets after task completion — a clean environment is guaranteed for the next run</li>
@@ -132,7 +132,7 @@ export default function ConceptsPage() {
                 {[
                     {
                         title: "Workspace context",
-                        color: "#0066cc", bg: "rgba(0,102,204,0.04)",
+                        color: "var(--op-indigo)", bg: "rgba(37,99,235,0.04)",
                         items: ["Shared conventions and approved tool access", "Persistent workspace rules (see below)", "Connector credentials and scope definitions", "Role-specific instructions and constraints"],
                     },
                     {
@@ -150,7 +150,7 @@ export default function ConceptsPage() {
                         <p className="font-semibold text-[14px] mb-2" style={{ color: tier.color }}>{tier.title}</p>
                         <ul className="space-y-1">
                             {tier.items.map((item) => (
-                                <li key={item} className="flex items-start gap-2 text-[13px] text-[#424245]">
+                                <li key={item} className="flex items-start gap-2 text-[13px] text-[var(--op-ink-soft)]">
                                     <span style={{ color: tier.color }}>·</span> {item}
                                 </li>
                             ))}
@@ -200,9 +200,9 @@ export default function ConceptsPage() {
             <P>
                 Every agent has a dual-memory system that improves over time without retraining:
             </P>
-            <div className="my-4 rounded-[11px] overflow-hidden" style={{ border: "1px solid #d2d2d7" }}>
-                <div className="px-4 py-3" style={{ background: "#f5f5f7", borderBottom: "1px solid #d2d2d7" }}>
-                    <p className="font-semibold text-[13px] text-[#1d1d1f]">How the flywheel works</p>
+            <div className="my-4 rounded-[11px] overflow-hidden" style={{ border: "1px solid var(--op-line)" }}>
+                <div className="px-4 py-3" style={{ background: "var(--op-paper-2)", borderBottom: "1px solid var(--op-line)" }}>
+                    <p className="font-semibold text-[13px] text-[var(--op-ink)]">How the flywheel works</p>
                 </div>
                 <div className="p-4 space-y-3">
                     {[
@@ -213,13 +213,13 @@ export default function ConceptsPage() {
                         <div key={item.step} className="flex items-start gap-3">
                             <span
                                 className="w-6 h-6 rounded-full text-[11px] font-bold text-white flex items-center justify-center shrink-0 mt-0.5"
-                                style={{ background: "#0066cc" }}
+                                style={{ background: "var(--op-indigo)" }}
                             >
                                 {i + 1}
                             </span>
                             <div>
-                                <span className="font-semibold text-[14px] text-[#1d1d1f]">{item.step}</span>
-                                <span className="text-[14px] text-[#6e6e73]"> — {item.action}</span>
+                                <span className="font-semibold text-[14px] text-[var(--op-ink)]">{item.step}</span>
+                                <span className="text-[14px] text-[var(--op-muted)]"> — {item.action}</span>
                             </div>
                         </div>
                     ))}

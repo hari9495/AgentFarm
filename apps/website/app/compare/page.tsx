@@ -33,8 +33,8 @@ const rows: { feature: string; AgentFarms: Value; copilot: Value; contractor: Va
 ];
 
 function Cell({ v }: { v: Value }) {
-    if (v === "yes") return <CheckCircle className="w-5 h-5 text-[#0066cc] mx-auto" />;
-    if (v === "no") return <XCircle className="w-5 h-5 text-[#d2d2d7] mx-auto" />;
+    if (v === "yes") return <CheckCircle className="w-5 h-5 text-[var(--op-indigo)] mx-auto" />;
+    if (v === "no") return <XCircle className="w-5 h-5 text-[var(--op-line)] mx-auto" />;
     return <MinusCircle className="w-5 h-5 text-[#ff9f0a] mx-auto" />;
 }
 
@@ -53,10 +53,10 @@ export default function ComparePage() {
             <section className="af-tile af-tile-white text-center" style={{ paddingTop: 80, paddingBottom: 64 }}>
                 <div className="af-container-narrow">
                     <p className="af-eyebrow mb-4">Compare</p>
-                    <h1 className="font-semibold text-[#1d1d1f]" style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}>
+                    <h1 className="font-semibold text-[var(--op-ink)]" style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}>
                         AgentFarms vs the alternatives
                     </h1>
-                    <p className="mt-5 text-[17px] text-[#424245] max-w-lg mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
+                    <p className="mt-5 text-[17px] text-[var(--op-ink-soft)] max-w-lg mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
                         Copilots suggest. Contractors bill by the hour. Full-time hires take months to onboard. AgentFarms workers execute with accountability from day one.
                     </p>
                 </div>
@@ -65,21 +65,21 @@ export default function ComparePage() {
             {/* Comparison table — parchment */}
             <section className="af-tile af-tile-parchment" style={{ paddingTop: 0, paddingBottom: 64 }}>
                 <div className="af-container-wide">
-                    <div className="rounded-[18px] overflow-hidden" style={{ border: "1px solid #d2d2d7" }}>
+                    <div className="rounded-[18px] overflow-hidden" style={{ border: "1px solid var(--op-line)" }}>
                         {/* Header */}
-                        <div className="grid grid-cols-5 bg-[#ffffff]" style={{ borderBottom: "1px solid #d2d2d7" }}>
+                        <div className="grid grid-cols-5 bg-[#ffffff]" style={{ borderBottom: "1px solid var(--op-line)" }}>
                             <div className="px-5 py-4">
-                                <span className="text-[13px] font-semibold text-[#6e6e73]">Feature</span>
+                                <span className="text-[13px] font-semibold text-[var(--op-muted)]">Feature</span>
                             </div>
                             {cols.map((col) => (
                                 <div
                                     key={col.key}
                                     className="px-4 py-4 text-center"
-                                    style={{ background: col.highlight ? "rgba(0,102,204,0.04)" : undefined }}
+                                    style={{ background: col.highlight ? "rgba(37,99,235,0.04)" : undefined }}
                                 >
                                     <span
                                         className="text-[13px] font-semibold"
-                                        style={{ color: col.highlight ? "#0066cc" : "#6e6e73" }}
+                                        style={{ color: col.highlight ? "var(--op-indigo)" : "var(--op-muted)" }}
                                     >
                                         {col.label}
                                     </span>
@@ -92,18 +92,18 @@ export default function ComparePage() {
                                 key={row.feature}
                                 className="grid grid-cols-5"
                                 style={{
-                                    borderBottom: i < rows.length - 1 ? "1px solid #e8e8ed" : "none",
-                                    background: i % 2 === 0 ? "#ffffff" : "#fafafa",
+                                    borderBottom: i < rows.length - 1 ? "1px solid var(--op-line)" : "none",
+                                    background: i % 2 === 0 ? "#ffffff" : "var(--op-paper-2)",
                                 }}
                             >
                                 <div className="px-5 py-3 flex items-center">
-                                    <span className="text-[14px] text-[#1d1d1f]">{row.feature}</span>
+                                    <span className="text-[14px] text-[var(--op-ink)]">{row.feature}</span>
                                 </div>
                                 {cols.map((col) => (
                                     <div
                                         key={col.key}
                                         className="py-3 flex items-center justify-center"
-                                        style={{ background: col.highlight ? "rgba(0,102,204,0.02)" : undefined }}
+                                        style={{ background: col.highlight ? "rgba(37,99,235,0.02)" : undefined }}
                                     >
                                         <Cell v={row[col.key as keyof typeof row] as Value} />
                                     </div>
@@ -114,14 +114,14 @@ export default function ComparePage() {
 
                     {/* Legend */}
                     <div className="mt-4 flex flex-wrap items-center gap-5 justify-center">
-                        <span className="flex items-center gap-1.5 text-[13px] text-[#6e6e73]">
-                            <CheckCircle className="w-4 h-4 text-[#0066cc]" /> Yes / Supported
+                        <span className="flex items-center gap-1.5 text-[13px] text-[var(--op-muted)]">
+                            <CheckCircle className="w-4 h-4 text-[var(--op-indigo)]" /> Yes / Supported
                         </span>
-                        <span className="flex items-center gap-1.5 text-[13px] text-[#6e6e73]">
+                        <span className="flex items-center gap-1.5 text-[13px] text-[var(--op-muted)]">
                             <MinusCircle className="w-4 h-4 text-[#ff9f0a]" /> Partial / Limited
                         </span>
-                        <span className="flex items-center gap-1.5 text-[13px] text-[#6e6e73]">
-                            <XCircle className="w-4 h-4 text-[#d2d2d7]" /> Not supported
+                        <span className="flex items-center gap-1.5 text-[13px] text-[var(--op-muted)]">
+                            <XCircle className="w-4 h-4 text-[var(--op-line)]" /> Not supported
                         </span>
                     </div>
                 </div>
@@ -130,17 +130,17 @@ export default function ComparePage() {
             {/* CTA — dark */}
             <section className="af-tile af-tile-dark text-center">
                 <div className="af-container-narrow">
-                    <h2 className="font-semibold text-white" style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.025em", lineHeight: 1.1 }}>
+                    <h2 className="font-semibold text-[color:var(--op-ink)]" style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.025em", lineHeight: 1.1 }}>
                         Ready to see the difference?
                     </h2>
-                    <p className="mt-4 text-[17px] text-[#98989d]" style={{ lineHeight: 1.47 }}>
+                    <p className="mt-4 text-[17px] text-[var(--op-muted)]" style={{ lineHeight: 1.47 }}>
                         Start with one workflow, see real output within hours.
                     </p>
                     <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-                        <Link href="/get-started" className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors" style={{ background: "#0066cc" }}>
+                        <Link href="/get-started" className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors" style={{ background: "var(--op-indigo)" }}>
                             Start free trial <ArrowRight className="inline w-4 h-4 ml-1" />
                         </Link>
-                        <Link href="/pricing" className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors" style={{ border: "1px solid rgba(255,255,255,0.25)" }}>
+                        <Link href="/pricing" className="px-6 py-3 rounded-full text-[17px] font-medium text-[color:var(--op-ink)] transition-colors" style={{ border: "1px solid var(--op-line)" }}>
                             View pricing
                         </Link>
                     </div>

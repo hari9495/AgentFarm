@@ -68,7 +68,7 @@ export default function DocsPage() {
             </div>
 
             <Callout type="tip" title="New to AgentFarms?">
-                Start with the <Link href="/docs/quickstart" className="text-[#0066cc] hover:underline font-medium">Quickstart guide</Link> — you can have a worker live and processing real tasks in under 10 minutes. No credit card required.
+                Start with the <Link href="/docs/quickstart" className="text-[var(--op-indigo)] hover:underline font-medium">Quickstart guide</Link> — you can have a worker live and processing real tasks in under 10 minutes. No credit card required.
             </Callout>
 
             {/* Quick links grid */}
@@ -81,23 +81,23 @@ export default function DocsPage() {
                             key={card.title}
                             href={card.href}
                             className="group flex flex-col gap-3 rounded-[14px] p-5 transition-all hover:-translate-y-0.5 hover:shadow-md"
-                            style={{ border: "1px solid #d2d2d7" }}
+                            style={{ border: "1px solid var(--op-line)" }}
                         >
                             <div className="flex items-center gap-2.5">
                                 <div
                                     className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0"
-                                    style={{ background: "rgba(0,102,204,0.08)" }}
+                                    style={{ background: "rgba(37,99,235,0.08)" }}
                                 >
-                                    <Icon className="w-4 h-4 text-[#0066cc]" />
+                                    <Icon className="w-4 h-4 text-[var(--op-indigo)]" />
                                 </div>
-                                <h3 className="font-semibold text-[15px] text-[#1d1d1f] group-hover:text-[#0066cc] transition-colors" style={{ letterSpacing: "-0.015em" }}>
+                                <h3 className="font-semibold text-[15px] text-[var(--op-ink)] group-hover:text-[var(--op-indigo)] transition-colors" style={{ letterSpacing: "-0.015em" }}>
                                     {card.title}
                                 </h3>
                             </div>
-                            <p className="text-[13px] text-[#6e6e73]" style={{ lineHeight: 1.5 }}>
+                            <p className="text-[13px] text-[var(--op-muted)]" style={{ lineHeight: 1.5 }}>
                                 {card.description}
                             </p>
-                            <span className="text-[13px] font-medium text-[#0066cc]">{card.cta}</span>
+                            <span className="text-[13px] font-medium text-[var(--op-indigo)]">{card.cta}</span>
                         </Link>
                     );
                 })}
@@ -131,14 +131,14 @@ export default function DocsPage() {
                 className="rounded-[12px] p-5 my-5 font-mono text-[13px]"
                 style={{ background: "#1a1a1c", color: "#e5e5ea" }}
             >
-                <div className="text-[#98989d] mb-2"># Request flow</div>
+                <div className="text-[var(--op-muted)] mb-2"># Request flow</div>
                 <div><span className="text-[#0a84ff]">Dashboard / API / Webhook</span></div>
-                <div className="pl-4 text-[#98989d]">↓</div>
-                <div><span className="text-[#30d158]">AgentFarms API Gateway</span> <span className="text-[#98989d]">(auth, billing, approvals)</span></div>
-                <div className="pl-4 text-[#98989d]">↓</div>
-                <div><span className="text-[#ffd60a]">Agent Runtime</span> <span className="text-[#98989d]">(LLM dispatch, action tiers)</span></div>
-                <div className="pl-4 text-[#98989d]">↓</div>
-                <div><span className="text-[#ff453a]">Connectors</span> <span className="text-[#98989d]">(GitHub, Jira, Slack, Salesforce…)</span></div>
+                <div className="pl-4 text-[var(--op-muted)]">↓</div>
+                <div><span className="text-[#30d158]">AgentFarms API Gateway</span> <span className="text-[var(--op-muted)]">(auth, billing, approvals)</span></div>
+                <div className="pl-4 text-[var(--op-muted)]">↓</div>
+                <div><span className="text-[#ffd60a]">Agent Runtime</span> <span className="text-[var(--op-muted)]">(LLM dispatch, action tiers)</span></div>
+                <div className="pl-4 text-[var(--op-muted)]">↓</div>
+                <div><span className="text-[#ff453a]">Connectors</span> <span className="text-[var(--op-muted)]">(GitHub, Jira, Slack, Salesforce…)</span></div>
             </div>
 
             {/* Key concepts */}
@@ -153,22 +153,22 @@ export default function DocsPage() {
                     { term: "Risk level", def: "A classification (low / medium / high) assigned to each action that determines whether it auto-executes or requires approval." },
                 ].map((item) => (
                     <div key={item.term} className="flex gap-3">
-                        <span className="font-semibold text-[14px] text-[#1d1d1f] shrink-0 min-w-[120px]">{item.term}</span>
-                        <span className="text-[14px] text-[#6e6e73]" style={{ lineHeight: 1.6 }}>{item.def}</span>
+                        <span className="font-semibold text-[14px] text-[var(--op-ink)] shrink-0 min-w-[120px]">{item.term}</span>
+                        <span className="text-[14px] text-[var(--op-muted)]" style={{ lineHeight: 1.6 }}>{item.def}</span>
                     </div>
                 ))}
             </div>
 
             {/* Plans */}
             <H2 id="plans">Plans &amp; limits</H2>
-            <div className="overflow-hidden rounded-[11px] my-4" style={{ border: "1px solid #d2d2d7" }}>
+            <div className="overflow-hidden rounded-[11px] my-4" style={{ border: "1px solid var(--op-line)" }}>
                 <table className="w-full text-[13px]">
                     <thead>
-                        <tr style={{ background: "#f5f5f7", borderBottom: "1px solid #d2d2d7" }}>
-                            <th className="px-4 py-2.5 text-left font-semibold text-[#1d1d1f]">Plan</th>
-                            <th className="px-4 py-2.5 text-left font-semibold text-[#1d1d1f]">Workers</th>
-                            <th className="px-4 py-2.5 text-left font-semibold text-[#1d1d1f]">Tasks / month</th>
-                            <th className="px-4 py-2.5 text-left font-semibold text-[#1d1d1f]">Price</th>
+                        <tr style={{ background: "var(--op-paper-2)", borderBottom: "1px solid var(--op-line)" }}>
+                            <th className="px-4 py-2.5 text-left font-semibold text-[var(--op-ink)]">Plan</th>
+                            <th className="px-4 py-2.5 text-left font-semibold text-[var(--op-ink)]">Workers</th>
+                            <th className="px-4 py-2.5 text-left font-semibold text-[var(--op-ink)]">Tasks / month</th>
+                            <th className="px-4 py-2.5 text-left font-semibold text-[var(--op-ink)]">Price</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -177,17 +177,17 @@ export default function DocsPage() {
                             { plan: "Pro+", workers: "5", tasks: "10,000", price: "From $599/mo" },
                             { plan: "Enterprise", workers: "Unlimited", tasks: "Unlimited", price: "Custom" },
                         ].map((row, i) => (
-                            <tr key={row.plan} style={{ borderBottom: i < 2 ? "1px solid #e8e8ed" : "none" }}>
-                                <td className="px-4 py-3 font-semibold text-[#1d1d1f]">{row.plan}</td>
-                                <td className="px-4 py-3 text-[#424245]">{row.workers}</td>
-                                <td className="px-4 py-3 text-[#424245]">{row.tasks}</td>
-                                <td className="px-4 py-3 text-[#424245]">{row.price}</td>
+                            <tr key={row.plan} style={{ borderBottom: i < 2 ? "1px solid var(--op-line)" : "none" }}>
+                                <td className="px-4 py-3 font-semibold text-[var(--op-ink)]">{row.plan}</td>
+                                <td className="px-4 py-3 text-[var(--op-ink-soft)]">{row.workers}</td>
+                                <td className="px-4 py-3 text-[var(--op-ink-soft)]">{row.tasks}</td>
+                                <td className="px-4 py-3 text-[var(--op-ink-soft)]">{row.price}</td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
-            <P>All plans include a 14-day free trial with no credit card required. See <Link href="/pricing" className="text-[#0066cc] hover:underline">full pricing details</Link>.</P>
+            <P>All plans include a 14-day free trial with no credit card required. See <Link href="/pricing" className="text-[var(--op-indigo)] hover:underline">full pricing details</Link>.</P>
 
             <PageNav
                 next={{ href: "/docs/quickstart", label: "Quickstart" }}

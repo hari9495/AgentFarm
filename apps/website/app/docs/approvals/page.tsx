@@ -29,20 +29,20 @@ export default function ApprovalsPage() {
                 className="rounded-[12px] p-5 my-5 font-mono text-[13px]"
                 style={{ background: "#1a1a1c", color: "#e5e5ea" }}
             >
-                <div className="text-[#98989d]"># Approval flow per action</div>
+                <div className="text-[var(--op-muted)]"># Approval flow per action</div>
                 <br />
                 <div><span className="text-[#0a84ff]">Worker plans action</span></div>
-                <div className="pl-4 text-[#98989d]">↓ classify risk level</div>
-                <div><span className="text-[#30d158]">low</span> <span className="text-[#98989d]">→ auto-execute immediately</span></div>
-                <div><span className="text-[#ffd60a]">medium</span> <span className="text-[#98989d]">→ pause if threshold ≤ medium</span></div>
-                <div><span className="text-[#ff453a]">high</span> <span className="text-[#98989d]">→ always pause for review</span></div>
+                <div className="pl-4 text-[var(--op-muted)]">↓ classify risk level</div>
+                <div><span className="text-[#30d158]">low</span> <span className="text-[var(--op-muted)]">→ auto-execute immediately</span></div>
+                <div><span className="text-[#ffd60a]">medium</span> <span className="text-[var(--op-muted)]">→ pause if threshold ≤ medium</span></div>
+                <div><span className="text-[#ff453a]">high</span> <span className="text-[var(--op-muted)]">→ always pause for review</span></div>
                 <br />
-                <div className="text-[#98989d]"># If paused:</div>
-                <div><span className="text-[#0a84ff]">Approval record created</span> <span className="text-[#98989d]">→ notification sent (Slack / dashboard)</span></div>
-                <div className="pl-4 text-[#98989d]">↓ await decision</div>
-                <div><span className="text-[#30d158]">approved</span> <span className="text-[#98989d]">→ action executes, task continues</span></div>
-                <div><span className="text-[#ff453a]">rejected</span> <span className="text-[#98989d]">→ task pauses, worker awaits guidance</span></div>
-                <div><span className="text-[#ffd60a]">expired</span> <span className="text-[#98989d]">→ task cancelled after 24h (configurable)</span></div>
+                <div className="text-[var(--op-muted)]"># If paused:</div>
+                <div><span className="text-[#0a84ff]">Approval record created</span> <span className="text-[var(--op-muted)]">→ notification sent (Slack / dashboard)</span></div>
+                <div className="pl-4 text-[var(--op-muted)]">↓ await decision</div>
+                <div><span className="text-[#30d158]">approved</span> <span className="text-[var(--op-muted)]">→ action executes, task continues</span></div>
+                <div><span className="text-[#ff453a]">rejected</span> <span className="text-[var(--op-muted)]">→ task pauses, worker awaits guidance</span></div>
+                <div><span className="text-[#ffd60a]">expired</span> <span className="text-[var(--op-muted)]">→ task cancelled after 24h (configurable)</span></div>
             </div>
 
             {/* Approval object */}
@@ -131,11 +131,11 @@ Content-Type: application/json
             {/* Notifications */}
             <H2 id="notifications">Approval notifications</H2>
             <P>When an approval is required, AgentFarms sends notifications through your connected channels:</P>
-            <ul className="list-disc pl-6 my-4 space-y-2 text-[14px] text-[#424245]" style={{ lineHeight: 1.7 }}>
+            <ul className="list-disc pl-6 my-4 space-y-2 text-[14px] text-[var(--op-ink-soft)]" style={{ lineHeight: 1.7 }}>
                 <li><strong>Dashboard</strong> — the approvals queue in the operator dashboard updates in real time</li>
                 <li><strong>Slack</strong> — if Slack is connected, a message is sent to your configured approval channel with approve/reject buttons</li>
                 <li><strong>Microsoft Teams</strong> — same as Slack if Teams is connected</li>
-                <li><strong>Webhooks</strong> — an <InlineCode>approval.created</InlineCode> event fires on your webhook endpoint (see <a href="/docs/webhooks" className="text-[#0066cc] hover:underline">Webhooks</a>)</li>
+                <li><strong>Webhooks</strong> — an <InlineCode>approval.created</InlineCode> event fires on your webhook endpoint (see <a href="/docs/webhooks" className="text-[var(--op-indigo)] hover:underline">Webhooks</a>)</li>
                 <li><strong>Email</strong> — a summary email is sent to workspace administrators if no decision is made within 4 hours</li>
             </ul>
 

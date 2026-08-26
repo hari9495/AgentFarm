@@ -14,26 +14,26 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
             {/* Docs top bar — sits below the marketing navbar (which is sticky at top-0) */}
             <div
                 className="sticky z-40 flex items-center gap-3 px-6 h-11"
-                style={{ top: 44, background: "#fafafa", borderBottom: "1px solid #e8e8ed" }}
+                style={{ top: 44, background: "var(--op-paper-2)", borderBottom: "1px solid var(--op-line)" }}
             >
                 {/* Breadcrumb */}
-                <Link href="/" className="text-[12px] text-[#6e6e73] hover:text-[#0066cc] transition-colors">
+                <Link href="/" className="text-[12px] text-[var(--op-muted)] hover:text-[var(--op-indigo)] transition-colors">
                     AgentFarms
                 </Link>
-                <span className="text-[#d2d2d7] text-[12px]">/</span>
-                <span className="text-[12px] font-semibold text-[#1d1d1f]">Docs</span>
+                <span className="text-[var(--op-line)] text-[12px]">/</span>
+                <span className="text-[12px] font-semibold text-[var(--op-ink)]">Docs</span>
 
                 <div className="ml-auto flex items-center gap-4">
-                    <Link href="/docs/quickstart" className="text-[12px] text-[#6e6e73] hover:text-[#1d1d1f] transition-colors hidden sm:block">
+                    <Link href="/docs/quickstart" className="text-[12px] text-[var(--op-muted)] hover:text-[var(--op-ink)] transition-colors hidden sm:block">
                         Quickstart
                     </Link>
-                    <Link href="/docs/api-reference" className="text-[12px] text-[#6e6e73] hover:text-[#1d1d1f] transition-colors hidden sm:block">
+                    <Link href="/docs/api-reference" className="text-[12px] text-[var(--op-muted)] hover:text-[var(--op-ink)] transition-colors hidden sm:block">
                         API Reference
                     </Link>
                     <a
                         href="/get-started"
                         className="flex items-center gap-1 text-[12px] font-medium text-[#ffffff] px-3 py-1 rounded-full transition-colors"
-                        style={{ background: "#0066cc" }}
+                        style={{ background: "var(--op-indigo)" }}
                     >
                         Get API key <ArrowUpRight className="w-3 h-3" />
                     </a>

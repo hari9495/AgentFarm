@@ -112,12 +112,12 @@ app.post("/webhooks/agentfarms", (req, res) => {
 
             <H3 id="task-events">Task events</H3>
 
-            <div className="my-4 rounded-[11px] overflow-hidden" style={{ border: "1px solid #d2d2d7" }}>
-                <div className="px-4 py-2.5 font-mono text-[12px] font-semibold text-[#5856d6]" style={{ background: "#f5f5f7", borderBottom: "1px solid #d2d2d7" }}>
+            <div className="my-4 rounded-[11px] overflow-hidden" style={{ border: "1px solid var(--op-line)" }}>
+                <div className="px-4 py-2.5 font-mono text-[12px] font-semibold text-[#5856d6]" style={{ background: "var(--op-paper-2)", borderBottom: "1px solid var(--op-line)" }}>
                     task.queued
                 </div>
                 <div className="px-4 py-3">
-                    <p className="text-[13px] text-[#6e6e73] mb-3">Fires when a task is accepted and added to the worker queue.</p>
+                    <p className="text-[13px] text-[var(--op-muted)] mb-3">Fires when a task is accepted and added to the worker queue.</p>
                     <Code lang="json">{`{
   "event": "task.queued",
   "data": {
@@ -131,12 +131,12 @@ app.post("/webhooks/agentfarms", (req, res) => {
                 </div>
             </div>
 
-            <div className="my-4 rounded-[11px] overflow-hidden" style={{ border: "1px solid #d2d2d7" }}>
-                <div className="px-4 py-2.5 font-mono text-[12px] font-semibold text-[#5856d6]" style={{ background: "#f5f5f7", borderBottom: "1px solid #d2d2d7" }}>
+            <div className="my-4 rounded-[11px] overflow-hidden" style={{ border: "1px solid var(--op-line)" }}>
+                <div className="px-4 py-2.5 font-mono text-[12px] font-semibold text-[#5856d6]" style={{ background: "var(--op-paper-2)", borderBottom: "1px solid var(--op-line)" }}>
                     task.completed
                 </div>
                 <div className="px-4 py-3">
-                    <p className="text-[13px] text-[#6e6e73] mb-3">Fires when a task finishes successfully.</p>
+                    <p className="text-[13px] text-[var(--op-muted)] mb-3">Fires when a task finishes successfully.</p>
                     <Code lang="json">{`{
   "event": "task.completed",
   "data": {
@@ -154,12 +154,12 @@ app.post("/webhooks/agentfarms", (req, res) => {
                 </div>
             </div>
 
-            <div className="my-4 rounded-[11px] overflow-hidden" style={{ border: "1px solid #d2d2d7" }}>
-                <div className="px-4 py-2.5 font-mono text-[12px] font-semibold text-[#5856d6]" style={{ background: "#f5f5f7", borderBottom: "1px solid #d2d2d7" }}>
+            <div className="my-4 rounded-[11px] overflow-hidden" style={{ border: "1px solid var(--op-line)" }}>
+                <div className="px-4 py-2.5 font-mono text-[12px] font-semibold text-[#5856d6]" style={{ background: "var(--op-paper-2)", borderBottom: "1px solid var(--op-line)" }}>
                     task.failed
                 </div>
                 <div className="px-4 py-3">
-                    <p className="text-[13px] text-[#6e6e73] mb-3">Fires when a task fails due to an error or irrecoverable blocker.</p>
+                    <p className="text-[13px] text-[var(--op-muted)] mb-3">Fires when a task fails due to an error or irrecoverable blocker.</p>
                     <Code lang="json">{`{
   "event": "task.failed",
   "data": {
@@ -175,12 +175,12 @@ app.post("/webhooks/agentfarms", (req, res) => {
 
             <H3 id="approval-events">Approval events</H3>
 
-            <div className="my-4 rounded-[11px] overflow-hidden" style={{ border: "1px solid #d2d2d7" }}>
-                <div className="px-4 py-2.5 font-mono text-[12px] font-semibold text-[#5856d6]" style={{ background: "#f5f5f7", borderBottom: "1px solid #d2d2d7" }}>
+            <div className="my-4 rounded-[11px] overflow-hidden" style={{ border: "1px solid var(--op-line)" }}>
+                <div className="px-4 py-2.5 font-mono text-[12px] font-semibold text-[#5856d6]" style={{ background: "var(--op-paper-2)", borderBottom: "1px solid var(--op-line)" }}>
                     approval.created
                 </div>
                 <div className="px-4 py-3">
-                    <p className="text-[13px] text-[#6e6e73] mb-3">Fires when a worker pauses and requires human review before an action.</p>
+                    <p className="text-[13px] text-[var(--op-muted)] mb-3">Fires when a worker pauses and requires human review before an action.</p>
                     <Code lang="json">{`{
   "event": "approval.created",
   "data": {
@@ -203,12 +203,12 @@ app.post("/webhooks/agentfarms", (req, res) => {
                 </div>
             </div>
 
-            <div className="my-4 rounded-[11px] overflow-hidden" style={{ border: "1px solid #d2d2d7" }}>
-                <div className="px-4 py-2.5 font-mono text-[12px] font-semibold text-[#5856d6]" style={{ background: "#f5f5f7", borderBottom: "1px solid #d2d2d7" }}>
+            <div className="my-4 rounded-[11px] overflow-hidden" style={{ border: "1px solid var(--op-line)" }}>
+                <div className="px-4 py-2.5 font-mono text-[12px] font-semibold text-[#5856d6]" style={{ background: "var(--op-paper-2)", borderBottom: "1px solid var(--op-line)" }}>
                     approval.decided
                 </div>
                 <div className="px-4 py-3">
-                    <p className="text-[13px] text-[#6e6e73] mb-3">Fires when a reviewer approves or rejects an approval request.</p>
+                    <p className="text-[13px] text-[var(--op-muted)] mb-3">Fires when a reviewer approves or rejects an approval request.</p>
                     <Code lang="json">{`{
   "event": "approval.decided",
   "data": {

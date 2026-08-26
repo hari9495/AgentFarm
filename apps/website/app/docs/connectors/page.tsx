@@ -142,7 +142,7 @@ Content-Type: application/json
                     {cat.items.map((conn) => (
                         <div key={conn.id} className="my-5">
                             <div className="flex items-center gap-3 mb-3">
-                                <h3 className="font-semibold text-[15px] text-[#1d1d1f]">{conn.name}</h3>
+                                <h3 className="font-semibold text-[15px] text-[var(--op-ink)]">{conn.name}</h3>
                                 <span
                                     className="text-[11px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-[0.04em]"
                                     style={{
@@ -152,14 +152,14 @@ Content-Type: application/json
                                 >
                                     {conn.status}
                                 </span>
-                                <span className="text-[12px] text-[#6e6e73]">Auth: {conn.auth}</span>
+                                <span className="text-[12px] text-[var(--op-muted)]">Auth: {conn.auth}</span>
                             </div>
                             <div className="flex flex-wrap gap-1.5">
                                 {conn.actions.map((action) => (
                                     <code
                                         key={action}
                                         className="text-[12px] font-mono px-2 py-0.5 rounded"
-                                        style={{ background: "#f5f5f7", color: "#5856d6", border: "1px solid #e8e8ed" }}
+                                        style={{ background: "var(--op-paper-2)", color: "#5856d6", border: "1px solid var(--op-line)" }}
                                     >
                                         {action}
                                     </code>

@@ -22,12 +22,12 @@ export default function EvidencePage() {
             <H2 id="what-is-captured">What is captured</H2>
             <P>The evidence plane records every meaningful event during task execution:</P>
 
-            <div className="my-5 overflow-hidden rounded-[11px]" style={{ border: "1px solid #d2d2d7" }}>
+            <div className="my-5 overflow-hidden rounded-[11px]" style={{ border: "1px solid var(--op-line)" }}>
                 <table className="w-full text-[13px]">
                     <thead>
-                        <tr style={{ background: "#f5f5f7", borderBottom: "1px solid #d2d2d7" }}>
-                            <th className="px-4 py-2.5 text-left font-semibold text-[#1d1d1f]">Event type</th>
-                            <th className="px-4 py-2.5 text-left font-semibold text-[#1d1d1f]">What it captures</th>
+                        <tr style={{ background: "var(--op-paper-2)", borderBottom: "1px solid var(--op-line)" }}>
+                            <th className="px-4 py-2.5 text-left font-semibold text-[var(--op-ink)]">Event type</th>
+                            <th className="px-4 py-2.5 text-left font-semibold text-[var(--op-ink)]">What it captures</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -43,11 +43,11 @@ export default function EvidencePage() {
                             { type: "task.completed", capture: "Final status, total actions, approvals, duration, outputs" },
                             { type: "task.failed", capture: "Failure reason, last action before failure, recovery options" },
                         ].map((row, i, arr) => (
-                            <tr key={row.type} style={{ borderBottom: i < arr.length - 1 ? "1px solid #e8e8ed" : "none" }}>
+                            <tr key={row.type} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--op-line)" : "none" }}>
                                 <td className="px-4 py-3 align-top">
                                     <code className="font-mono text-[#5856d6] text-[12px]">{row.type}</code>
                                 </td>
-                                <td className="px-4 py-3 text-[#6e6e73]">{row.capture}</td>
+                                <td className="px-4 py-3 text-[var(--op-muted)]">{row.capture}</td>
                             </tr>
                         ))}
                     </tbody>

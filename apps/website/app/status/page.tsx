@@ -37,15 +37,15 @@ const STATUS_COLORS: Record<ServiceStatus, string> = {
 };
 
 const STATUS_TEXT: Record<ServiceStatus, string> = {
-    operational: 'text-emerald-400',
-    degraded: 'text-amber-300',
-    outage: 'text-red-400',
+    operational: 'text-emerald-700',
+    degraded: 'text-amber-700',
+    outage: 'text-red-700',
 };
 
 const STATUS_BANNER_BG: Record<ServiceStatus, string> = {
-    operational: 'bg-emerald-950/60 border-emerald-700',
-    degraded: 'bg-amber-950/60 border-amber-600',
-    outage: 'bg-red-950/60 border-red-700',
+    operational: 'bg-emerald-50 border-emerald-200',
+    degraded: 'bg-amber-50 border-amber-200',
+    outage: 'bg-red-50 border-red-200',
 };
 
 const STATUS_LABEL: Record<ServiceStatus, string> = {
@@ -90,7 +90,7 @@ export default async function StatusPage() {
 
             {/* Header */}
             <section className="max-w-3xl mx-auto px-6 pt-20 pb-10">
-                <h1 className="text-4xl font-semibold tracking-[-0.03em] text-[var(--ink)] mb-2">
+                <h1 className="font-display text-4xl font-bold tracking-[-0.03em] text-[var(--ink)] mb-2">
                     System Status
                 </h1>
                 <p className="text-[var(--mute)] text-sm">
