@@ -152,7 +152,7 @@ export default function TenantDetailPage() {
         return (
             <div className="site-shell min-h-screen flex flex-col items-center justify-center gap-4">
                 <p className="text-sm text-rose-600 dark:text-rose-400">{error ?? "Tenant not found."}</p>
-                <Link href="/company" className="text-xs text-violet-600 dark:text-violet-400 underline">← Back to portal</Link>
+                <Link href="/company" className="text-xs text-blue-600 dark:text-blue-400 underline">← Back to portal</Link>
             </div>
         );
     }
@@ -165,7 +165,7 @@ export default function TenantDetailPage() {
 
                 {/* Back link */}
                 <Link href="/company"
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-violet-600 dark:hover:text-violet-400">
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400">
                     <ArrowLeft className="w-3.5 h-3.5" />
                     Back to Company Portal
                 </Link>
@@ -211,7 +211,7 @@ export default function TenantDetailPage() {
                 {/* Fleet Bots */}
                 <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
                     <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
-                        <Bot className="w-4 h-4 text-violet-500" />
+                        <Bot className="w-4 h-4 text-blue-500" />
                         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Fleet Bots</h2>
                         <span className="ml-auto text-xs text-slate-500 dark:text-slate-400">{fleet.length} bot(s)</span>
                     </div>
@@ -285,7 +285,7 @@ export default function TenantDetailPage() {
                                     </div>
                                     <p className="text-xs text-slate-500 dark:text-slate-400">
                                         {incident.source} · Opened {formatAgo(incident.createdAt)}
-                                        {incident.assigneeEmail ? <span className="ml-2 text-violet-600 dark:text-violet-400">→ {incident.assigneeEmail}</span> : null}
+                                        {incident.assigneeEmail ? <span className="ml-2 text-blue-600 dark:text-blue-400">→ {incident.assigneeEmail}</span> : null}
                                         {incident.resolvedAt ? <span className="ml-2 text-emerald-600 dark:text-emerald-400">Resolved {formatAgo(incident.resolvedAt)}</span> : null}
                                     </p>
                                 </div>

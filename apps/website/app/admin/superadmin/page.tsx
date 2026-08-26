@@ -39,8 +39,8 @@ type BotRecord = {
 };
 
 const roleStyles: Record<UserRole, string> = {
-    superadmin: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/40 dark:text-fuchsia-300",
-    admin: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+    superadmin: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+    admin: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
     member: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
 };
 
@@ -156,7 +156,7 @@ export default function TenantSuperAdminPage() {
                     </div>
                     <h1 className="mt-3 text-xl font-bold text-slate-900 dark:text-slate-100">Tenant superadmin access required</h1>
                     <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">This page is for per-customer tenant controls only.</p>
-                    <Link href="/admin" className="mt-4 inline-flex items-center rounded-lg bg-slate-900 dark:bg-slate-100 px-4 py-2 text-sm font-semibold text-white dark:text-slate-900">Return to Admin Console</Link>
+                    <Link href="/admin" className="mt-4 inline-flex items-center rounded-lg bg-blue-600 dark:bg-slate-100 px-4 py-2 text-sm font-semibold text-white dark:text-slate-900">Return to Admin Console</Link>
                 </div>
             </div>
         );
@@ -170,20 +170,20 @@ export default function TenantSuperAdminPage() {
                 </div>
             )}
 
-            <section className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-violet-700 via-indigo-700 to-slate-900">
+            <section className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-blue-700 via-blue-700 to-slate-900">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-                    <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-violet-200 mb-4">
-                        <PremiumIcon icon={ShieldCheck} tone="violet" containerClassName="w-5 h-5 rounded-md bg-violet-300/15 text-violet-200 border-violet-200/30" iconClassName="w-3 h-3" />
+                    <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-200 mb-4">
+                        <PremiumIcon icon={ShieldCheck} tone="violet" containerClassName="w-5 h-5 rounded-md bg-blue-300/15 text-blue-200 border-blue-200/30" iconClassName="w-3 h-3" />
                         Tenant Superadmin
                     </div>
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">Customer tenant governance</h1>
-                    <p className="mt-2 text-violet-100 max-w-3xl">Manage users and monitor bots inside this customer tenant. AgentFarms company portal is separated at /company.</p>
+                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">Customer tenant governance</h1>
+                    <p className="mt-2 text-blue-100 max-w-3xl">Manage users and monitor bots inside this customer tenant. AgentFarms company portal is separated at /company.</p>
                     <div className="mt-5 flex flex-wrap gap-3">
                         <button onClick={loadData} disabled={loading} className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 border border-white/20 px-3.5 py-2 text-sm font-semibold text-white hover:bg-white/20 disabled:opacity-60">
                             <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-white/15 text-white border-white/30" iconClassName={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />Refresh
                         </button>
                         <Link href="/admin" className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 border border-white/20 px-3.5 py-2 text-sm font-semibold text-white hover:bg-white/20">Back to Admin</Link>
-                        <Link href="/company" className="inline-flex items-center gap-1.5 rounded-lg bg-fuchsia-500/20 border border-fuchsia-300/40 px-3.5 py-2 text-sm font-semibold text-white hover:bg-fuchsia-500/30">Company Portal</Link>
+                        <Link href="/company" className="inline-flex items-center gap-1.5 rounded-lg bg-blue-500/20 border border-blue-300/40 px-3.5 py-2 text-sm font-semibold text-white hover:bg-blue-500/30">Company Portal</Link>
                     </div>
                 </div>
             </section>
@@ -285,8 +285,8 @@ function MetricCard({
     tone: "fuchsia" | "violet" | "slate" | "emerald" | "rose";
 }) {
     const styleMap: Record<typeof tone, string> = {
-        fuchsia: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/40 dark:text-fuchsia-300",
-        violet: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+        fuchsia: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+        violet: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
         slate: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
         emerald: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
         rose: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",

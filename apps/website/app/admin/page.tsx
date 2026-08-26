@@ -67,8 +67,8 @@ export default async function AdminPage() {
             label: "Members",
             value: memberCount.toString(),
             icon: Users,
-            iconBg: "bg-violet-100 dark:bg-violet-900/50",
-            iconColor: "text-violet-600 dark:text-violet-400",
+            iconBg: "bg-blue-100 dark:bg-blue-900/50",
+            iconColor: "text-blue-600 dark:text-blue-400",
             sub: memberCount === 1 ? "1 on your team" : `${memberCount} on your team`,
         },
         {
@@ -100,35 +100,29 @@ export default async function AdminPage() {
     return (
         <div className="site-shell min-h-screen">
             {/* Hero */}
-            <section className="relative overflow-hidden border-b border-slate-200 dark:border-slate-800">
-                <img
-                    src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1800&q=80"
-                    alt="Admin operations center"
-                    className="w-full h-[260px] sm:h-[300px] object-cover object-center"
-                    loading="eager"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-900/80 to-slate-900/10" />
-                <div className="absolute inset-0 flex items-center">
-                    <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
-                        <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-amber-300 mb-3">
-                            <PremiumIcon icon={Shield} tone="amber" containerClassName="w-5 h-5 rounded-md bg-amber-300/15 text-amber-200 border-amber-200/30" iconClassName="w-3 h-3" />
-                            Admin Console
-                        </div>
-                        <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight max-w-xl leading-tight">
-                            Govern identity,<br className="hidden sm:block" /> policy, and spend
-                        </h1>
-                        <p className="mt-2 text-slate-300 text-base max-w-lg">
-                            Central control for users, approvals, RBAC, and enterprise audit posture.
-                        </p>
-                        <div className="mt-5 flex flex-wrap gap-3">
-                            <ButtonLink href="/dashboard" size="sm">Customer Dashboard</ButtonLink>
-                            <ButtonLink href="/admin/superadmin" size="sm" variant="outline" className="!bg-fuchsia-500/20 !text-white !border-fuchsia-300/50 hover:!bg-fuchsia-500/30">
-                                Tenant Superadmin
-                            </ButtonLink>
-                            <ButtonLink href="/docs/api-reference" variant="outline" size="sm" className="!bg-white/10 !text-white !border-white/30 hover:!bg-white/20">
-                                API Keys and Access
-                            </ButtonLink>
-                        </div>
+            <section className="relative overflow-hidden border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-blue-50 via-white to-white dark:from-slate-900 dark:to-slate-950">
+                <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_55%_90%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
+                </div>
+                <div className="relative max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
+                    <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-700 dark:text-blue-300 mb-3">
+                        <PremiumIcon icon={Shield} tone="sky" containerClassName="w-5 h-5 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300" iconClassName="w-3 h-3" />
+                        Admin Console
+                    </div>
+                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight max-w-xl leading-tight">
+                        Govern identity,<br className="hidden sm:block" /> policy, and spend
+                    </h1>
+                    <p className="mt-2 text-slate-600 dark:text-slate-400 text-base max-w-lg">
+                        Central control for users, approvals, RBAC, and enterprise audit posture.
+                    </p>
+                    <div className="mt-5 flex flex-wrap gap-3">
+                        <ButtonLink href="/dashboard" size="sm">Customer Dashboard</ButtonLink>
+                        <ButtonLink href="/admin/superadmin" size="sm" variant="outline" className="!bg-white !text-slate-900 !border-slate-200 hover:!bg-slate-50">
+                            Tenant Superadmin
+                        </ButtonLink>
+                        <ButtonLink href="/docs/api-reference" variant="outline" size="sm" className="!bg-white !text-slate-900 !border-slate-200 hover:!bg-slate-50">
+                            API Keys and Access
+                        </ButtonLink>
                     </div>
                 </div>
             </section>
@@ -212,9 +206,9 @@ export default async function AdminPage() {
 
                 {/* Quick Action Cards */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                    <div className="rounded-2xl border border-violet-200 dark:border-violet-800/40 bg-white dark:bg-slate-900 p-5">
+                    <div className="rounded-2xl border border-blue-200 dark:border-blue-800/40 bg-white dark:bg-slate-900 p-5">
                         <div className="flex items-center gap-3 mb-3">
-                            <PremiumIcon icon={Bot} tone="violet" containerClassName="w-9 h-9 rounded-xl bg-violet-100 dark:bg-violet-900/50 text-violet-600 dark:text-violet-400" iconClassName="w-5 h-5" />
+                            <PremiumIcon icon={Bot} tone="violet" containerClassName="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400" iconClassName="w-5 h-5" />
                             <h3 className="font-bold text-slate-900 dark:text-slate-100">Bot Control</h3>
                         </div>
                         <p className="text-sm text-slate-600 dark:text-slate-300">Add bots, pause or resume workers, set autonomy levels, approval policies, and working hours.</p>
@@ -223,7 +217,7 @@ export default async function AdminPage() {
 
                     <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
                         <div className="flex items-center gap-3 mb-3">
-                            <PremiumIcon icon={Shield} tone="sky" containerClassName="w-9 h-9 rounded-xl bg-sky-100 dark:bg-sky-900/50 text-sky-600 dark:text-sky-400" iconClassName="w-5 h-5" />
+                            <PremiumIcon icon={Shield} tone="sky" containerClassName="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400" iconClassName="w-5 h-5" />
                             <h3 className="font-bold text-slate-900 dark:text-slate-100">Policy Engine</h3>
                         </div>
                         <p className="text-sm text-slate-600 dark:text-slate-300">Define role-based approval rules for high-impact actions and deployment workflows.</p>
@@ -232,7 +226,7 @@ export default async function AdminPage() {
 
                     <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
                         <div className="flex items-center gap-3 mb-3">
-                            <PremiumIcon icon={KeyRound} tone="violet" containerClassName="w-9 h-9 rounded-xl bg-violet-100 dark:bg-violet-900/50 text-violet-600 dark:text-violet-400" iconClassName="w-5 h-5" />
+                            <PremiumIcon icon={KeyRound} tone="violet" containerClassName="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400" iconClassName="w-5 h-5" />
                             <h3 className="font-bold text-slate-900 dark:text-slate-100">Secrets and Tokens</h3>
                         </div>
                         <p className="text-sm text-slate-600 dark:text-slate-300">Rotate API keys, track token usage, and monitor expired credentials by workspace.</p>

@@ -29,16 +29,16 @@ type AuditEventRecord = {
 };
 
 const ACTION_CONFIG: Record<string, { icon: LucideIcon; badge: string; category: string }> = {
-    "user.role_change": { icon: UserCheck, badge: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300", category: "User Change" },
+    "user.role_change": { icon: UserCheck, badge: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300", category: "User Change" },
     "user.signup": { icon: UserCheck, badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300", category: "User Change" },
-    "user.login": { icon: UserCheck, badge: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300", category: "User Change" },
+    "user.login": { icon: UserCheck, badge: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300", category: "User Change" },
     "user.logout": { icon: UserCheck, badge: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300", category: "User Change" },
     "session.revoked": { icon: KeyRound, badge: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300", category: "Security" },
     "bot.status_change": { icon: Settings2, badge: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300", category: "Agent Action" },
     "bot.config_change": { icon: Settings2, badge: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300", category: "Agent Action" },
     "incident.resolved": { icon: CheckCircle2, badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300", category: "System" },
     "incident.assigned": { icon: AlertTriangle, badge: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300", category: "System" },
-    "tenant.created": { icon: Shield, badge: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300", category: "System" },
+    "tenant.created": { icon: Shield, badge: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300", category: "System" },
 };
 
 const DEFAULT_CONFIG = { icon: Settings2, badge: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400", category: "System" };
@@ -126,7 +126,7 @@ export default function AuditPage() {
                         <PremiumIcon
                             icon={ClipboardList}
                             tone="violet"
-                            containerClassName="h-9 w-9 rounded-xl bg-violet-100 dark:bg-violet-900/40 shrink-0 text-violet-600 dark:text-violet-400"
+                            containerClassName="h-9 w-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 shrink-0 text-blue-600 dark:text-blue-400"
                             iconClassName="w-5 h-5"
                         />
                         <div>
@@ -163,7 +163,7 @@ export default function AuditPage() {
                         placeholder="Search by actor, action, target, or reason…"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full max-w-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        className="w-full max-w-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                 </div>
 
@@ -173,7 +173,7 @@ export default function AuditPage() {
                             key={cat}
                             onClick={() => setCategory(cat)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${category === cat
-                                    ? "bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900"
+                                    ? "bg-blue-600 dark:bg-slate-100 text-white dark:text-slate-900"
                                     : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
                                 }`}
                         >

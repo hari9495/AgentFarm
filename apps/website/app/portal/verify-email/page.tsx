@@ -38,7 +38,7 @@ function VerifyEmailContent() {
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                     This link is invalid or has already been used. Try requesting a new link from the login page.
                 </p>
-                <Link href="/portal/login" className="inline-block text-sm text-sky-600 hover:underline">
+                <Link href="/portal/login" className="inline-block text-sm text-blue-600 hover:underline">
                     Back to login
                 </Link>
             </div>
@@ -58,7 +58,7 @@ function VerifyEmailContent() {
             </p>
             <Link
                 href="/portal/login?verified=1"
-                className="inline-flex items-center justify-center gap-2 py-2 px-5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold shadow-sm transition-colors"
+                className="inline-flex items-center justify-center gap-2 py-2 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-colors"
             >
                 Sign in →
             </Link>
@@ -72,7 +72,7 @@ export default function VerifyEmailPage() {
             <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center px-4">
                 <div className="w-full max-w-md">
                     <div className="flex flex-col items-center mb-8 gap-3">
-                        <div className="h-12 w-12 rounded-2xl bg-sky-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+                        <div className="h-12 w-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
                             <LayoutDashboard className="h-6 w-6 text-white" />
                         </div>
                         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">AgentFarms Portal</h1>

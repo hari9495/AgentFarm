@@ -125,13 +125,13 @@ export default function AdminBillingPage() {
         <div className="site-shell min-h-screen">
 
             {/* Page header */}
-            <section className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-700">
+            <section className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-emerald-600 via-emerald-700 to-blue-700">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
                     <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-emerald-200 mb-4">
                         <PremiumIcon icon={CreditCard} tone="emerald" containerClassName="w-5 h-5 rounded-md bg-emerald-300/15 text-emerald-200 border-emerald-200/30" iconClassName="w-3 h-3" />
                         Admin Billing
                     </div>
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight max-w-xl">
+                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight max-w-xl">
                         Plan, seats, and invoice management
                     </h1>
                     <p className="mt-2 text-emerald-200 max-w-lg">
@@ -167,7 +167,7 @@ export default function AdminBillingPage() {
 
                     <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
                         <div className="flex items-center justify-between mb-4">
-                            <PremiumIcon icon={Users} tone="sky" containerClassName="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-900/50 text-sky-600 dark:text-sky-400" iconClassName="w-5 h-5" />
+                            <PremiumIcon icon={Users} tone="sky" containerClassName="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400" iconClassName="w-5 h-5" />
                             <span className="text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 rounded-full px-2.5 py-1">
                                 {seatPct}% used
                             </span>
@@ -180,7 +180,7 @@ export default function AdminBillingPage() {
                         <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">4 seats remaining</p>
                     </div>
 
-                    <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800/50 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/20 p-5">
+                    <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800/50 bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-950/30 dark:to-blue-950/20 p-5">
                         <div className="flex items-center justify-between mb-4">
                             <PremiumIcon icon={Zap} tone="emerald" containerClassName="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400" iconClassName="w-5 h-5" />
                             <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 rounded-full px-2.5 py-1">
@@ -359,9 +359,9 @@ export default function AdminBillingPage() {
                                                         href={order.invoice.pdfUrl}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-200 transition-colors"
+                                                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors"
                                                     >
-                                                        <PremiumIcon icon={Download} tone="sky" containerClassName="w-5 h-5 rounded-md bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-3 h-3" />
+                                                        <PremiumIcon icon={Download} tone="sky" containerClassName="w-5 h-5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" iconClassName="w-3 h-3" />
                                                         Download
                                                     </a>
                                                 ) : (
@@ -421,8 +421,8 @@ export default function AdminBillingPage() {
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3.5">
-                                                <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-200 transition-colors">
-                                                    <PremiumIcon icon={Download} tone="sky" containerClassName="w-5 h-5 rounded-md bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400" iconClassName="w-3 h-3" />
+                                                <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors">
+                                                    <PremiumIcon icon={Download} tone="sky" containerClassName="w-5 h-5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" iconClassName="w-3 h-3" />
                                                     Download
                                                 </button>
                                             </td>

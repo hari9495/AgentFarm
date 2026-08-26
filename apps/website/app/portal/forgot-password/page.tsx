@@ -42,7 +42,7 @@ export default function ForgotPasswordPage() {
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center px-4">
             <div className="w-full max-w-md">
                 <div className="flex flex-col items-center mb-8 gap-3">
-                    <div className="h-12 w-12 rounded-2xl bg-sky-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+                    <div className="h-12 w-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
                         <LayoutDashboard className="h-6 w-6 text-white" />
                     </div>
                     <div className="text-center">
@@ -63,10 +63,10 @@ export default function ForgotPasswordPage() {
                                 <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-4 py-3 text-xs text-amber-800 dark:text-amber-300 break-all">
                                     <strong>Dev mode — reset link:</strong>
                                     <br />
-                                    <a href={devResetUrl} className="text-sky-600 hover:underline">{devResetUrl}</a>
+                                    <a href={devResetUrl} className="text-blue-600 hover:underline">{devResetUrl}</a>
                                 </div>
                             )}
-                            <Link href="/portal/login" className="block text-center text-sm text-sky-600 hover:underline">
+                            <Link href="/portal/login" className="block text-center text-sm text-blue-600 hover:underline">
                                 ← Back to sign in
                             </Link>
                         </div>
@@ -92,7 +92,7 @@ export default function ForgotPasswordPage() {
                                             required
                                             value={tenantId}
                                             onChange={(e) => setTenantId(e.target.value)}
-                                            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition"
+                                            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                                         />
                                     </div>
                                 </div>
@@ -110,14 +110,14 @@ export default function ForgotPasswordPage() {
                                             required
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition"
+                                            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                                         />
                                     </div>
                                 </div>
                                 <button
                                     type="submit"
                                     disabled={loading || !tenantId.trim() || !email.trim()}
-                                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-700 disabled:bg-sky-400 text-white text-sm font-semibold shadow-sm transition-colors"
+                                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-semibold shadow-sm transition-colors"
                                 >
                                     {loading ? (
                                         <>
@@ -130,7 +130,7 @@ export default function ForgotPasswordPage() {
                                 </button>
                             </form>
                             <p className="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">
-                                <Link href="/portal/login" className="text-sky-600 hover:underline">← Back to sign in</Link>
+                                <Link href="/portal/login" className="text-blue-600 hover:underline">← Back to sign in</Link>
                             </p>
                         </>
                     )}
