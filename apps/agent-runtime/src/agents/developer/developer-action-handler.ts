@@ -1114,6 +1114,35 @@ export async function handleDeveloperAction(
                 ? buildSprintCeremonyContext(ceremonyType as SprintCeremonyType, { botName, teamName, summary: standupSummary })
                 : null;
 
+            // Post path: publish the standup to the team channel instead of just
+            // handing back the text — the way a developer actually posts standup.
+            // Routine, so no gate. Fail-safe: a post failure still returns the
+            // summary so the work is never lost.
+            if (payload['post'] === true) {
+                const channel = str(payload['channel']).trim();
+                if (!channel) {
+                    return safeJson({ ok: true, posted: false, reason: 'post=true requires payload.channel', summary: standupSummary, ceremony_context: ceremonyContext, bot_name: botName, team_name: teamName });
+                }
+                const section = (label: string, items: string[]): string =>
+                    `${label}:\n${items.length ? items.map((i) => `• ${i}`).join('\n') : '• none'}`;
+                const standupText = [
+                    `*Standup — ${botName} / ${teamName}*`,
+                    section('Yesterday', standupSummary.yesterday),
+                    section('Today', standupSummary.today),
+                    section('Blockers', standupSummary.blockers),
+                ].join('\n\n');
+                const postRes = await executeAction('workspace_slack_notify', { channel, message: standupText });
+                return safeJson({
+                    ok: true,
+                    posted: postRes.ok,
+                    ...(postRes.ok ? { channel } : { reason: postRes.errorOutput ?? 'slack post failed' }),
+                    summary: standupSummary,
+                    ceremony_context: ceremonyContext,
+                    bot_name: botName,
+                    team_name: teamName,
+                });
+            }
+
             return safeJson({
                 ok:              true,
                 summary:         standupSummary,
