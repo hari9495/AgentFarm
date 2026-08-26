@@ -14111,6 +14111,15 @@ export async function executeLocalWorkspaceAction(input: {
                 runCommand,
                 callLlm: buildTwLlmCallerFn(),
                 browsePage: browsePageFn,
+                executeAction: (aType, aPayload) =>
+                    executeLocalWorkspaceAction({
+                        tenantId,
+                        botId,
+                        taskId,
+                        actionType: aType as LocalWorkspaceActionType,
+                        payload: aPayload,
+                        connectorActionExecuteClient,
+                    }),
             });
         }
 

@@ -1516,7 +1516,72 @@ function parseRetroItems(raw: unknown): RetroItem[] {
 // Main dispatcher
 // ---------------------------------------------------------------------------
 
-export async function handleTechnicalWriterAction(params: {
+type TwExecuteActionFn = (
+    actionType: string,
+    payload: Record<string, unknown>,
+) => Promise<{ ok: boolean; output: string; errorOutput?: string }>;
+
+/** Doc-generation actions whose output should be published, not just returned. */
+const TW_PUBLISHABLE_ACTIONS = new Set<string>([
+    'workspace_tw_manual',
+    'workspace_tw_tutorial',
+    'workspace_tw_api_doc_code',
+    'workspace_tw_api_doc_openapi',
+    'workspace_tw_faq',
+    'workspace_tw_onboarding',
+    'workspace_tw_whitepaper',
+    'workspace_tw_sprint_doc',
+    'workspace_tw_release_notes',
+    'workspace_tw_audience_rewrite',
+]);
+
+/**
+ * Publish a generated doc the way a human technical writer does: commit it to the
+ * repo (workspace_write_file at publish_path). Never throws — a failure returns a
+ * receipt so the generated content is never lost.
+ */
+async function publishTwDoc(
+    content: string,
+    payload: Record<string, unknown>,
+    executeAction: TwExecuteActionFn,
+): Promise<Record<string, unknown>> {
+    const filePath = typeof payload['publish_path'] === 'string' ? payload['publish_path'].trim() : '';
+    if (!filePath) {
+        return { published: false, reason: 'publish=true requires payload.publish_path (repo path, e.g. docs/guide.md)' };
+    }
+    try {
+        const r = await executeAction('workspace_write_file', { file_path: filePath, content });
+        return r.ok
+            ? { published: true, via: 'repo', path: filePath }
+            : { published: false, via: 'repo', reason: r.errorOutput ?? 'workspace_write_file failed' };
+    } catch (err) {
+        return { published: false, via: 'repo', reason: err instanceof Error ? err.message : String(err) };
+    }
+}
+
+/**
+ * Public entry point. Generates the doc via the inner handler, then — for
+ * publishable doc types with publish=true — actually publishes it. Publishing is
+ * additive and fail-safe: the generated content is always returned regardless.
+ */
+export async function handleTechnicalWriterAction(
+    params: Parameters<typeof runTechnicalWriterAction>[0],
+): Promise<LocalWorkspaceResult> {
+    const result = await runTechnicalWriterAction(params);
+    if (
+        result.ok &&
+        result.output &&
+        params.executeAction &&
+        params.payload['publish'] === true &&
+        TW_PUBLISHABLE_ACTIONS.has(params.actionType)
+    ) {
+        const published = await publishTwDoc(result.output, params.payload, params.executeAction);
+        return { ...result, ...(published ? { published } : {}) } as LocalWorkspaceResult;
+    }
+    return result;
+}
+
+async function runTechnicalWriterAction(params: {
     actionType: TechnicalWriterActionType;
     tenantId: string;
     botId: string;
@@ -1554,6 +1619,8 @@ export async function handleTechnicalWriterAction(params: {
      * Used by workspace_tw_interact_product.
      */
     interactPage?: InteractPageFn;
+    /** Optional — publishes generated docs (write to repo / Confluence / Notion). */
+    executeAction?: TwExecuteActionFn;
     /** Optional — when provided, RAG context is fetched and injected into every LLM call. */
     gatewayBaseUrl?: string;
     serviceToken?: string;
