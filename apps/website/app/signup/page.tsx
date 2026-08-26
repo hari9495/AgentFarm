@@ -26,11 +26,11 @@ function BrandMark() {
  *  approval-gate card sits on paper as a calm white card, not a blue slab. */
 function BrandPanel() {
     return (
-        <div className="relative hidden lg:flex flex-col justify-between p-12">
-            <BrandMark />
+        <div className="relative hidden lg:flex flex-col justify-center p-12">
+            <div className="max-w-md">
+                <BrandMark />
 
-            <div>
-                <p className="op-eyebrow mb-4">AI workforce · human control</p>
+                <p className="op-eyebrow mt-10 mb-4">AI workforce · human control</p>
                 <h2 className="font-display font-extrabold" style={{ fontSize: "2.3rem", lineHeight: 1.06, letterSpacing: "-0.03em", color: "var(--op-ink)" }}>
                     Hire AI workers that ship —
                     <br />
@@ -66,7 +66,7 @@ function BrandPanel() {
                 </div>
             </div>
 
-            <ul className="space-y-2.5 text-[14px]" style={{ color: "var(--op-ink-soft)" }}>
+            <ul className="mt-8 max-w-md space-y-2.5 text-[14px]" style={{ color: "var(--op-ink-soft)" }}>
                 {["13 specialist roles, live in your tools", "Every risky action stops at an approval gate", "Full evidence trail on everything they do"].map((t) => (
                     <li key={t} className="flex items-start gap-2.5">
                         <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "var(--op-approved)" }} />
