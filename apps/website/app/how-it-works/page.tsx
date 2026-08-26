@@ -49,13 +49,13 @@ export default function HowItWorksPage() {
                 <div className="af-container-narrow">
                     <p className="af-eyebrow mb-4">{hero.eyebrow}</p>
                     <h1
-                        className="font-semibold text-[#1d1d1f]"
+                        className="font-semibold text-[var(--op-ink)]"
                         style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}
                     >
                         {hero.titleLead}{" "}
-                        <span className="text-[#0066cc]">{hero.titleAccent}</span>
+                        <span className="text-[var(--op-indigo)]">{hero.titleAccent}</span>
                     </h1>
-                    <p className="mt-5 text-[17px] text-[#424245] max-w-lg mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
+                    <p className="mt-5 text-[17px] text-[var(--op-ink-soft)] max-w-lg mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
                         {hero.description}
                     </p>
                 </div>
@@ -68,15 +68,15 @@ export default function HowItWorksPage() {
                         {timeline.map((item, i) => (
                             <div key={item.label} className="flex items-center gap-3">
                                 <span
-                                    className="text-[12px] font-semibold text-white rounded-full w-5 h-5 flex items-center justify-center shrink-0"
-                                    style={{ background: "#0066cc", fontSize: "11px" }}
+                                    className="text-[12px] font-semibold text-[color:var(--op-ink)] rounded-full w-5 h-5 flex items-center justify-center shrink-0"
+                                    style={{ background: "var(--op-indigo)", fontSize: "11px" }}
                                 >
                                     {i + 1}
                                 </span>
-                                <span className="text-[14px] text-[#6e6e73]">{item.label}</span>
-                                <span className="text-[14px] font-semibold text-[#0066cc]">{item.time}</span>
+                                <span className="text-[14px] text-[var(--op-muted)]">{item.label}</span>
+                                <span className="text-[14px] font-semibold text-[var(--op-indigo)]">{item.time}</span>
                                 {i < timeline.length - 1 && (
-                                    <ArrowRight className="w-3.5 h-3.5 text-[#d2d2d7] hidden sm:block" />
+                                    <ArrowRight className="w-3.5 h-3.5 text-[var(--op-line)] hidden sm:block" />
                                 )}
                             </div>
                         ))}
@@ -102,11 +102,11 @@ export default function HowItWorksPage() {
                                     <div className="flex items-center gap-3 mb-5">
                                         <div
                                             className="w-10 h-10 rounded-[10px] flex items-center justify-center"
-                                            style={{ background: isDark ? "rgba(41,151,255,0.15)" : "rgba(0,102,204,0.08)" }}
+                                            style={{ background: isDark ? "rgba(37,99,235,0.15)" : "rgba(37,99,235,0.08)" }}
                                         >
-                                            <StepIcon className="w-5 h-5" style={{ color: isDark ? "#2997ff" : "#0066cc" }} />
+                                            <StepIcon className="w-5 h-5" style={{ color: isDark ? "var(--op-indigo)" : "var(--op-indigo)" }} />
                                         </div>
-                                        <span className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: isDark ? "#98989d" : "#aeaeb2" }}>
+                                        <span className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: isDark ? "var(--op-muted)" : "var(--op-muted)" }}>
                                             Step {step.number}
                                         </span>
                                     </div>
@@ -116,19 +116,19 @@ export default function HowItWorksPage() {
                                             fontSize: "clamp(1.6rem, 3vw, 2.2rem)",
                                             letterSpacing: "-0.025em",
                                             lineHeight: 1.1,
-                                            color: isDark ? "#f5f5f7" : "#1d1d1f",
+                                            color: isDark ? "var(--op-paper-2)" : "var(--op-ink)",
                                         }}
                                     >
                                         {step.title}
                                     </h2>
-                                    <p className="text-[17px] mb-5" style={{ lineHeight: 1.47, letterSpacing: "-0.022em", color: isDark ? "#98989d" : "#424245" }}>
+                                    <p className="text-[17px] mb-5" style={{ lineHeight: 1.47, letterSpacing: "-0.022em", color: isDark ? "var(--op-muted)" : "var(--op-ink-soft)" }}>
                                         {step.description}
                                     </p>
                                     <span
                                         className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full"
                                         style={{
-                                            background: isDark ? "rgba(41,151,255,0.12)" : "rgba(0,102,204,0.08)",
-                                            color: isDark ? "#2997ff" : "#0066cc",
+                                            background: isDark ? "rgba(37,99,235,0.12)" : "rgba(37,99,235,0.08)",
+                                            color: isDark ? "var(--op-indigo)" : "var(--op-indigo)",
                                         }}
                                     >
                                         {step.detail}
@@ -137,7 +137,7 @@ export default function HowItWorksPage() {
                                 <div
                                     className="rounded-[18px] overflow-hidden"
                                     style={{
-                                        border: isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid #d2d2d7",
+                                        border: isDark ? "1px solid var(--op-line)" : "1px solid var(--op-line)",
                                         boxShadow: "0 24px 56px -20px rgba(0,0,0,0.18)",
                                     }}
                                 >
@@ -158,19 +158,19 @@ export default function HowItWorksPage() {
             <section className="af-tile af-tile-dark text-center">
                 <div className="af-container-narrow">
                     <h2
-                        className="font-semibold text-white"
+                        className="font-semibold text-[color:var(--op-ink)]"
                         style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.025em", lineHeight: 1.1 }}
                     >
                         {cta.title}
                     </h2>
-                    <p className="mt-4 text-[17px] text-[#98989d]" style={{ lineHeight: 1.47 }}>
+                    <p className="mt-4 text-[17px] text-[var(--op-muted)]" style={{ lineHeight: 1.47 }}>
                         {cta.description}
                     </p>
                     <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-                        <Link href={cta.primary.href} className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors" style={{ background: "#0066cc" }}>
+                        <Link href={cta.primary.href} className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors" style={{ background: "var(--op-indigo)" }}>
                             {cta.primary.label}
                         </Link>
-                        <Link href="/pricing" className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors" style={{ border: "1px solid rgba(255,255,255,0.25)" }}>
+                        <Link href="/pricing" className="px-6 py-3 rounded-full text-[17px] font-medium text-[color:var(--op-ink)] transition-colors" style={{ border: "1px solid var(--op-line)" }}>
                             See pricing
                         </Link>
                     </div>

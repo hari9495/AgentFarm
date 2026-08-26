@@ -33,10 +33,10 @@ export default function ContactPage() {
             <section className="af-tile af-tile-white text-center" style={{ paddingTop: 80, paddingBottom: 64 }}>
                 <div className="af-container-narrow">
                     <p className="af-eyebrow mb-4">Contact</p>
-                    <h1 className="font-semibold text-[#1d1d1f]" style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}>
+                    <h1 className="font-semibold text-[var(--op-ink)]" style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}>
                         Get in touch
                     </h1>
-                    <p className="mt-5 text-[17px] text-[#424245] max-w-md mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
+                    <p className="mt-5 text-[17px] text-[var(--op-ink-soft)] max-w-md mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
                         Questions about the platform, a demo request, or a partnership inquiry — we read everything and respond fast.
                     </p>
                 </div>
@@ -52,28 +52,28 @@ export default function ContactPage() {
                             {contactItems.map((item) => {
                                 const Icon = item.icon;
                                 return (
-                                    <div key={item.label} className="rounded-[18px] p-5" style={{ background: "#ffffff", border: "1px solid #d2d2d7" }}>
+                                    <div key={item.label} className="rounded-[18px] p-5" style={{ background: "#ffffff", border: "1px solid var(--op-line)" }}>
                                         <div className="flex items-center gap-3 mb-3">
-                                            <div className="w-8 h-8 rounded-[8px] flex items-center justify-center" style={{ background: "rgba(0,102,204,0.08)" }}>
-                                                <Icon className="w-4 h-4 text-[#0066cc]" />
+                                            <div className="w-8 h-8 rounded-[8px] flex items-center justify-center" style={{ background: "rgba(37,99,235,0.08)" }}>
+                                                <Icon className="w-4 h-4 text-[var(--op-indigo)]" />
                                             </div>
-                                            <span className="text-[14px] font-semibold text-[#1d1d1f]">{item.label}</span>
+                                            <span className="text-[14px] font-semibold text-[var(--op-ink)]">{item.label}</span>
                                         </div>
                                         {item.lines.map((line) => (
-                                            <p key={line} className="text-[14px] text-[#6e6e73]" style={{ lineHeight: 1.6 }}>{line}</p>
+                                            <p key={line} className="text-[14px] text-[var(--op-muted)]" style={{ lineHeight: 1.6 }}>{line}</p>
                                         ))}
                                     </div>
                                 );
                             })}
 
-                            <div className="rounded-[18px] p-5" style={{ background: "rgba(0,102,204,0.04)", border: "1px solid rgba(0,102,204,0.2)" }}>
-                                <p className="text-[14px] font-semibold text-[#0066cc] mb-1">Want a live demo instead?</p>
-                                <p className="text-[13px] text-[#424245] mb-3" style={{ lineHeight: 1.5 }}>
+                            <div className="rounded-[18px] p-5" style={{ background: "rgba(37,99,235,0.04)", border: "1px solid rgba(37,99,235,0.2)" }}>
+                                <p className="text-[14px] font-semibold text-[var(--op-indigo)] mb-1">Want a live demo instead?</p>
+                                <p className="text-[13px] text-[var(--op-ink-soft)] mb-3" style={{ lineHeight: 1.5 }}>
                                     Book a 30-minute session with the team and see a worker in action.
                                 </p>
                                 <a
                                     href="/book-demo"
-                                    className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#0066cc] hover:text-[#0071e3] transition-colors"
+                                    className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--op-indigo)] hover:text-[var(--op-indigo-ink)] transition-colors"
                                 >
                                     Book a demo <ArrowRight className="w-3.5 h-3.5" />
                                 </a>
@@ -81,8 +81,8 @@ export default function ContactPage() {
                         </div>
 
                         {/* Contact form */}
-                        <div className="rounded-[18px] p-7" style={{ background: "#ffffff", border: "1px solid #d2d2d7" }}>
-                            <h2 className="font-semibold text-[#1d1d1f] mb-6" style={{ fontSize: "1.2rem", letterSpacing: "-0.018em" }}>
+                        <div className="rounded-[18px] p-7" style={{ background: "#ffffff", border: "1px solid var(--op-line)" }}>
+                            <h2 className="font-semibold text-[var(--op-ink)] mb-6" style={{ fontSize: "1.2rem", letterSpacing: "-0.018em" }}>
                                 Send us a message
                             </h2>
                             <ContactForm />

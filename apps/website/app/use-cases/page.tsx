@@ -72,10 +72,10 @@ export default function UseCasesPage() {
             <section className="af-tile af-tile-white text-center" style={{ paddingTop: 80, paddingBottom: 72 }}>
                 <div className="af-container-narrow">
                     <p className="af-eyebrow mb-4">Use Cases</p>
-                    <h1 className="font-semibold text-[#1d1d1f]" style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}>
+                    <h1 className="font-semibold text-[var(--op-ink)]" style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}>
                         Built for every department in your company
                     </h1>
-                    <p className="mt-5 text-[17px] text-[#424245] max-w-lg mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
+                    <p className="mt-5 text-[17px] text-[var(--op-ink-soft)] max-w-lg mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
                         From engineering teams to HR, operations, and sales — see how AgentFarms workers take on repeatable work across every function.
                     </p>
                 </div>
@@ -92,29 +92,29 @@ export default function UseCasesPage() {
                             <div className={`grid lg:grid-cols-2 gap-12 items-center ${isReversed ? "lg:[&>*:first-child]:order-2 lg:[&>*:last-child]:order-1" : ""}`}>
                                 <div>
                                     <div className="flex items-center gap-2 mb-5">
-                                        <div className="w-8 h-8 rounded-[8px] flex items-center justify-center" style={{ background: isDark ? "rgba(41,151,255,0.15)" : "rgba(0,102,204,0.08)" }}>
-                                            <Icon className="w-4.5 h-4.5" style={{ color: isDark ? "#2997ff" : "#0066cc" }} />
+                                        <div className="w-8 h-8 rounded-[8px] flex items-center justify-center" style={{ background: isDark ? "rgba(37,99,235,0.15)" : "rgba(37,99,235,0.08)" }}>
+                                            <Icon className="w-4.5 h-4.5" style={{ color: isDark ? "var(--op-indigo)" : "var(--op-indigo)" }} />
                                         </div>
-                                        <span className="text-[12px] font-semibold uppercase tracking-[0.06em]" style={{ color: isDark ? "#2997ff" : "#0066cc" }}>
+                                        <span className="text-[12px] font-semibold uppercase tracking-[0.06em]" style={{ color: isDark ? "var(--op-indigo)" : "var(--op-indigo)" }}>
                                             {c.audience}
                                         </span>
                                     </div>
-                                    <h2 className="font-semibold mb-4" style={{ fontSize: "clamp(1.6rem, 3vw, 2.2rem)", letterSpacing: "-0.025em", lineHeight: 1.1, color: isDark ? "#f5f5f7" : "#1d1d1f" }}>
+                                    <h2 className="font-semibold mb-4" style={{ fontSize: "clamp(1.6rem, 3vw, 2.2rem)", letterSpacing: "-0.025em", lineHeight: 1.1, color: isDark ? "var(--op-paper-2)" : "var(--op-ink)" }}>
                                         {c.headline}
                                     </h2>
-                                    <p className="text-[15px] mb-6" style={{ lineHeight: 1.6, color: isDark ? "#98989d" : "#424245" }}>
+                                    <p className="text-[15px] mb-6" style={{ lineHeight: 1.6, color: isDark ? "var(--op-muted)" : "var(--op-ink-soft)" }}>
                                         {c.story}
                                     </p>
                                     <div className="grid grid-cols-2 gap-2">
                                         {c.results.map((r) => (
                                             <div key={r} className="flex items-start gap-2">
-                                                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" style={{ color: isDark ? "#2997ff" : "#0066cc" }} />
-                                                <span className="text-[13px]" style={{ lineHeight: 1.4, color: isDark ? "#98989d" : "#424245" }}>{r}</span>
+                                                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" style={{ color: isDark ? "var(--op-indigo)" : "var(--op-indigo)" }} />
+                                                <span className="text-[13px]" style={{ lineHeight: 1.4, color: isDark ? "var(--op-muted)" : "var(--op-ink-soft)" }}>{r}</span>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
-                                <div className="rounded-[18px] overflow-hidden" style={{ border: isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid #d2d2d7", boxShadow: "0 24px 56px -20px rgba(0,0,0,0.18)" }}>
+                                <div className="rounded-[18px] overflow-hidden" style={{ border: isDark ? "1px solid var(--op-line)" : "1px solid var(--op-line)", boxShadow: "0 24px 56px -20px rgba(0,0,0,0.18)" }}>
                                     <img src={c.image} alt={c.headline} className="w-full h-64 sm:h-72 object-cover" loading="lazy" />
                                 </div>
                             </div>
@@ -128,24 +128,24 @@ export default function UseCasesPage() {
                 <div className="af-container">
                     <div className="text-center mb-12">
                         <p className="af-eyebrow mb-4">ROI estimate</p>
-                        <h2 className="font-semibold text-[#1d1d1f]" style={{ fontSize: "clamp(1.9rem, 3.5vw, 2.8rem)", letterSpacing: "-0.028em", lineHeight: 1.07 }}>
+                        <h2 className="font-semibold text-[var(--op-ink)]" style={{ fontSize: "clamp(1.9rem, 3.5vw, 2.8rem)", letterSpacing: "-0.028em", lineHeight: 1.07 }}>
                             How much could your team save?
                         </h2>
-                        <p className="mt-3 mx-auto max-w-md text-[17px] text-[#424245]" style={{ lineHeight: 1.47 }}>
+                        <p className="mt-3 mx-auto max-w-md text-[17px] text-[var(--op-ink-soft)]" style={{ lineHeight: 1.47 }}>
                             Based on median outcomes across customers. Actual results vary by role and workflow.
                         </p>
                     </div>
                     <div className="grid sm:grid-cols-3 gap-4 max-w-[800px] mx-auto">
                         {roi.map((r) => (
-                            <div key={r.tier} className="rounded-[18px] p-6 text-center" style={{ border: "1px solid #d2d2d7" }}>
-                                <p className="text-[13px] font-semibold text-[#6e6e73] mb-3">{r.tier}</p>
-                                <p className="font-semibold text-[#1d1d1f]" style={{ fontSize: "1.8rem", letterSpacing: "-0.025em", lineHeight: 1 }}>{r.hours}</p>
-                                <p className="text-[14px] font-semibold text-[#0066cc] mt-1">{r.cost} saved</p>
-                                <p className="text-[12px] text-[#aeaeb2] mt-2">{r.note}</p>
+                            <div key={r.tier} className="rounded-[18px] p-6 text-center" style={{ border: "1px solid var(--op-line)" }}>
+                                <p className="text-[13px] font-semibold text-[var(--op-muted)] mb-3">{r.tier}</p>
+                                <p className="font-semibold text-[var(--op-ink)]" style={{ fontSize: "1.8rem", letterSpacing: "-0.025em", lineHeight: 1 }}>{r.hours}</p>
+                                <p className="text-[14px] font-semibold text-[var(--op-indigo)] mt-1">{r.cost} saved</p>
+                                <p className="text-[12px] text-[var(--op-muted)] mt-2">{r.note}</p>
                             </div>
                         ))}
                     </div>
-                    <p className="text-center text-[12px] text-[#aeaeb2] mt-6">
+                    <p className="text-center text-[12px] text-[var(--op-muted)] mt-6">
                         Estimate based on $80/hr blended labor cost across all role types and median AgentFarms automation rates.
                     </p>
                 </div>
@@ -154,17 +154,17 @@ export default function UseCasesPage() {
             {/* CTA — dark */}
             <section className="af-tile af-tile-dark text-center">
                 <div className="af-container-narrow">
-                    <h2 className="font-semibold text-white" style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.025em", lineHeight: 1.1 }}>
+                    <h2 className="font-semibold text-[color:var(--op-ink)]" style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.025em", lineHeight: 1.1 }}>
                         Which departments would you staff first?
                     </h2>
-                    <p className="mt-4 text-[17px] text-[#98989d]" style={{ lineHeight: 1.47 }}>
+                    <p className="mt-4 text-[17px] text-[var(--op-muted)]" style={{ lineHeight: 1.47 }}>
                         Start with the workflow that hurts most and expand once the output proves itself.
                     </p>
                     <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-                        <Link href="/get-started" className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors" style={{ background: "#0066cc" }}>
+                        <Link href="/get-started" className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors" style={{ background: "var(--op-indigo)" }}>
                             Start free trial <ArrowRight className="inline w-4 h-4 ml-1" />
                         </Link>
-                        <Link href="/marketplace" className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors" style={{ border: "1px solid rgba(255,255,255,0.25)" }}>
+                        <Link href="/marketplace" className="px-6 py-3 rounded-full text-[17px] font-medium text-[color:var(--op-ink)] transition-colors" style={{ border: "1px solid var(--op-line)" }}>
                             Browse agent roles
                         </Link>
                     </div>

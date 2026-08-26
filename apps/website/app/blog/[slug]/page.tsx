@@ -115,9 +115,9 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 )}
 
                 <div className="mt-12 p-8 rounded-3xl bg-gradient-to-br from-sky-500 via-blue-600 to-emerald-500 text-center">
-                    <Bot className="w-8 h-8 text-white/80 mx-auto mb-3" />
+                    <Bot className="w-8 h-8 text-[color:var(--op-muted)] mx-auto mb-3" />
                     <h3 className="text-lg font-bold text-white mb-2">{blogListingContent.postCta.title}</h3>
-                    <p className="text-sm text-white/80 mb-5">{blogListingContent.postCta.description}</p>
+                    <p className="text-sm text-[color:var(--op-muted)] mb-5">{blogListingContent.postCta.description}</p>
                     <Link
                         href={blogListingContent.postCta.buttonHref}
                         className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-sky-700 font-semibold text-sm hover:bg-slate-50 transition-colors shadow-lg"

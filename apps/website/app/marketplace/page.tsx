@@ -75,12 +75,12 @@ export default function MarketplacePage() {
                         <div>
                             <p className="af-eyebrow mb-5">Agent Marketplace</p>
                             <h1
-                                className="font-semibold text-[#1d1d1f]"
+                                className="font-semibold text-[var(--op-ink)]"
                                 style={{ fontSize: "clamp(2.2rem, 4.5vw, 3.4rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}
                             >
                                 Hire an AI worker for every role in your company
                             </h1>
-                            <p className="mt-4 max-w-xl text-[17px] text-[#424245]" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
+                            <p className="mt-4 max-w-xl text-[17px] text-[var(--op-ink-soft)]" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
                                 13 specialist AI workers across engineering, sales, marketing, support, operations, and more.
                                 Real tool access, approval gates on every high-stakes action, full evidence trail.
                             </p>
@@ -88,8 +88,8 @@ export default function MarketplacePage() {
                             {/* Trust bullets */}
                             <ul className="mt-5 grid sm:grid-cols-2 gap-2">
                                 {trustPoints.map((t) => (
-                                    <li key={t} className="flex items-center gap-2 text-[14px] text-[#424245]">
-                                        <CheckCircle2 className="w-4 h-4 shrink-0 text-[#0066cc]" />
+                                    <li key={t} className="flex items-center gap-2 text-[14px] text-[var(--op-ink-soft)]">
+                                        <CheckCircle2 className="w-4 h-4 shrink-0 text-[var(--op-indigo)]" />
                                         {t}
                                     </li>
                                 ))}
@@ -112,10 +112,10 @@ export default function MarketplacePage() {
                                 <div
                                     key={s.label}
                                     className="rounded-[14px] p-5 flex flex-col gap-1"
-                                    style={{ border: "1px solid #d2d2d7", background: "#f5f5f7" }}
+                                    style={{ border: "1px solid var(--op-line)", background: "var(--op-paper-2)" }}
                                 >
-                                    <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#aeaeb2]">{s.label}</p>
-                                    <p className="font-semibold text-[#1d1d1f]" style={{ fontSize: "1.8rem", letterSpacing: "-0.03em", lineHeight: 1 }}>
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--op-muted)]">{s.label}</p>
+                                    <p className="font-semibold text-[var(--op-ink)]" style={{ fontSize: "1.8rem", letterSpacing: "-0.03em", lineHeight: 1 }}>
                                         {s.value}
                                     </p>
                                 </div>
@@ -129,12 +129,12 @@ export default function MarketplacePage() {
                             <div
                                 key={path.label}
                                 className="rounded-[14px] p-5"
-                                style={{ border: "1px solid #d2d2d7", background: "#f5f5f7" }}
+                                style={{ border: "1px solid var(--op-line)", background: "var(--op-paper-2)" }}
                             >
-                                <p className="font-semibold text-[15px] text-[#1d1d1f] mb-2" style={{ letterSpacing: "-0.015em" }}>
+                                <p className="font-semibold text-[15px] text-[var(--op-ink)] mb-2" style={{ letterSpacing: "-0.015em" }}>
                                     {path.label}
                                 </p>
-                                <p className="text-[13px] text-[#6e6e73]" style={{ lineHeight: 1.5 }}>{path.detail}</p>
+                                <p className="text-[13px] text-[var(--op-muted)]" style={{ lineHeight: 1.5 }}>{path.detail}</p>
                             </div>
                         ))}
                     </div>
@@ -146,10 +146,10 @@ export default function MarketplacePage() {
                 <div className="af-container-wide">
                     <div className="flex items-baseline justify-between mb-8">
                         <div>
-                            <h2 className="font-semibold text-[#1d1d1f]" style={{ fontSize: "clamp(1.4rem, 2.5vw, 1.8rem)", letterSpacing: "-0.022em" }}>
+                            <h2 className="font-semibold text-[var(--op-ink)]" style={{ fontSize: "clamp(1.4rem, 2.5vw, 1.8rem)", letterSpacing: "-0.022em" }}>
                                 Browse all workers
                             </h2>
-                            <p className="mt-1 text-[14px] text-[#6e6e73]">
+                            <p className="mt-1 text-[14px] text-[var(--op-muted)]">
                                 Filter by department, plan, or search by skill
                             </p>
                         </div>

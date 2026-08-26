@@ -82,12 +82,12 @@ export default function IntegrationsPage() {
                 <div className="af-container-narrow">
                     <p className="af-eyebrow mb-4">Integrations</p>
                     <h1
-                        className="font-semibold text-[#1d1d1f]"
+                        className="font-semibold text-[var(--op-ink)]"
                         style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}
                     >
                         Connect every tool your team already uses
                     </h1>
-                    <p className="mt-5 text-[17px] text-[#424245] max-w-lg mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
+                    <p className="mt-5 text-[17px] text-[var(--op-ink-soft)] max-w-lg mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
                         {totalConnectors} connectors across code, tasks, messaging, CRM, support, and infrastructure.
                         Workers get scoped access — no broader than the role requires.
                     </p>
@@ -108,8 +108,8 @@ export default function IntegrationsPage() {
                 <div className="af-container">
                     <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {highlights.map((h) => (
-                            <li key={h} className="flex items-start gap-2.5 text-[15px] text-[#424245]">
-                                <CheckCircle2 className="mt-0.5 w-4 h-4 shrink-0 text-[#0066cc]" />
+                            <li key={h} className="flex items-start gap-2.5 text-[15px] text-[var(--op-ink-soft)]">
+                                <CheckCircle2 className="mt-0.5 w-4 h-4 shrink-0 text-[var(--op-indigo)]" />
                                 <span style={{ lineHeight: 1.5 }}>{h}</span>
                             </li>
                         ))}
@@ -119,16 +119,16 @@ export default function IntegrationsPage() {
 
             {/* Connector grid by category */}
             {categories.map((cat, ci) => {
-                const isDark = ci % 2 === 1;
+                const isDark = false; // tiles are all light now
                 return (
                     <section
                         key={cat.name}
-                        className={`af-tile ${isDark ? "af-tile-dark" : "af-tile-white"}`}
+                        className={`af-tile ${ci % 2 === 1 ? "af-tile-parchment" : "af-tile-white"}`}
                         style={{ paddingTop: 56, paddingBottom: 56 }}
                     >
                         <div className="af-container">
                             <h2
-                                className={`font-semibold mb-8 ${isDark ? "text-white" : "text-[#1d1d1f]"}`}
+                                className={`font-semibold mb-8 ${isDark ? "text-white" : "text-[var(--op-ink)]"}`}
                                 style={{ fontSize: "1.2rem", letterSpacing: "-0.018em" }}
                             >
                                 {cat.name}
@@ -140,15 +140,15 @@ export default function IntegrationsPage() {
                                         className="rounded-[18px] p-5"
                                         style={{
                                             background: isDark ? "rgba(255,255,255,0.05)" : "#ffffff",
-                                            border: isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid #d2d2d7",
+                                            border: isDark ? "1px solid var(--op-line)" : "1px solid var(--op-line)",
                                         }}
                                     >
                                         <div className="flex items-start justify-between gap-2 mb-3">
                                             <div
                                                 className="w-9 h-9 rounded-[8px] flex items-center justify-center shrink-0 text-[13px] font-bold"
                                                 style={{
-                                                    background: isDark ? "rgba(41,151,255,0.15)" : "rgba(0,102,204,0.08)",
-                                                    color: isDark ? "#2997ff" : "#0066cc",
+                                                    background: isDark ? "rgba(37,99,235,0.15)" : "rgba(37,99,235,0.08)",
+                                                    color: isDark ? "var(--op-indigo)" : "var(--op-indigo)",
                                                 }}
                                             >
                                                 {connector.name.slice(0, 2).toUpperCase()}
@@ -157,10 +157,10 @@ export default function IntegrationsPage() {
                                                 className="text-[11px] font-semibold uppercase tracking-[0.05em] px-2 py-0.5 rounded-full"
                                                 style={{
                                                     background: connector.status === "GA"
-                                                        ? (isDark ? "rgba(41,151,255,0.12)" : "rgba(0,102,204,0.08)")
+                                                        ? (isDark ? "rgba(37,99,235,0.12)" : "rgba(37,99,235,0.08)")
                                                         : (isDark ? "rgba(255,159,10,0.15)" : "rgba(255,159,10,0.1)"),
                                                     color: connector.status === "GA"
-                                                        ? (isDark ? "#2997ff" : "#0066cc")
+                                                        ? (isDark ? "var(--op-indigo)" : "var(--op-indigo)")
                                                         : "#ff9f0a",
                                                 }}
                                             >
@@ -169,14 +169,14 @@ export default function IntegrationsPage() {
                                         </div>
                                         <h3
                                             className="font-semibold text-[15px] mb-1.5"
-                                            style={{ color: isDark ? "#f5f5f7" : "#1d1d1f", letterSpacing: "-0.015em" }}
+                                            style={{ color: isDark ? "var(--op-paper-2)" : "var(--op-ink)", letterSpacing: "-0.015em" }}
                                         >
                                             {connector.name}
                                         </h3>
-                                        <p className="text-[13px] mb-3" style={{ color: isDark ? "#98989d" : "#6e6e73", lineHeight: 1.5 }}>
+                                        <p className="text-[13px] mb-3" style={{ color: isDark ? "var(--op-muted)" : "var(--op-muted)", lineHeight: 1.5 }}>
                                             {connector.description}
                                         </p>
-                                        <p className="text-[12px]" style={{ color: isDark ? "#6e6e73" : "#aeaeb2" }}>
+                                        <p className="text-[12px]" style={{ color: isDark ? "var(--op-muted)" : "var(--op-muted)" }}>
                                             Auth: {connector.auth}
                                         </p>
                                     </div>
@@ -191,19 +191,19 @@ export default function IntegrationsPage() {
             <section className="af-tile af-tile-dark text-center">
                 <div className="af-container-narrow">
                     <h2
-                        className="font-semibold text-white"
+                        className="font-semibold text-[color:var(--op-ink)]"
                         style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.025em", lineHeight: 1.1 }}
                     >
                         Need a connector that&apos;s not listed?
                     </h2>
-                    <p className="mt-4 text-[17px] text-[#98989d]" style={{ lineHeight: 1.47 }}>
+                    <p className="mt-4 text-[17px] text-[var(--op-muted)]" style={{ lineHeight: 1.47 }}>
                         Enterprise plans include custom connector development for internal tools and proprietary systems.
                     </p>
                     <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-                        <Link href="/contact" className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors" style={{ background: "#0066cc" }}>
+                        <Link href="/contact" className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors" style={{ background: "var(--op-indigo)" }}>
                             Request a connector
                         </Link>
-                        <Link href="/docs/quickstart" className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors" style={{ border: "1px solid rgba(255,255,255,0.25)" }}>
+                        <Link href="/docs/quickstart" className="px-6 py-3 rounded-full text-[17px] font-medium text-[color:var(--op-ink)] transition-colors" style={{ border: "1px solid var(--op-line)" }}>
                             Setup guide
                         </Link>
                     </div>

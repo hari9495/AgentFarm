@@ -90,12 +90,12 @@ export default function CareersPage() {
                 <div className="af-container-narrow">
                     <p className="af-eyebrow mb-4">Careers</p>
                     <h1
-                        className="font-semibold text-[#1d1d1f]"
+                        className="font-semibold text-[var(--op-ink)]"
                         style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}
                     >
                         Build the future of governed AI work
                     </h1>
-                    <p className="mt-5 text-[17px] text-[#424245] max-w-lg mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
+                    <p className="mt-5 text-[17px] text-[var(--op-ink-soft)] max-w-lg mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
                         We are a small, focused team making AI workers trustworthy enough for real business operations.
                         If you care about output, governance, and shipping work that matters, we would like to hear from you.
                     </p>
@@ -115,7 +115,7 @@ export default function CareersPage() {
             <section className="af-tile af-tile-parchment">
                 <div className="af-container">
                     <h2
-                        className="font-semibold text-[#1d1d1f] text-center mb-12"
+                        className="font-semibold text-[var(--op-ink)] text-center mb-12"
                         style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.4rem)", letterSpacing: "-0.025em" }}
                     >
                         How we work
@@ -127,18 +127,18 @@ export default function CareersPage() {
                                 <div
                                     key={v.title}
                                     className="rounded-[18px] p-6"
-                                    style={{ background: "#ffffff", border: "1px solid #d2d2d7" }}
+                                    style={{ background: "#ffffff", border: "1px solid var(--op-line)" }}
                                 >
                                     <div
                                         className="w-9 h-9 rounded-[8px] flex items-center justify-center mb-4"
-                                        style={{ background: "rgba(0,102,204,0.08)" }}
+                                        style={{ background: "rgba(37,99,235,0.08)" }}
                                     >
-                                        <Icon className="w-5 h-5 text-[#0066cc]" />
+                                        <Icon className="w-5 h-5 text-[var(--op-indigo)]" />
                                     </div>
-                                    <h3 className="font-semibold text-[15px] text-[#1d1d1f] mb-2" style={{ letterSpacing: "-0.015em" }}>
+                                    <h3 className="font-semibold text-[15px] text-[var(--op-ink)] mb-2" style={{ letterSpacing: "-0.015em" }}>
                                         {v.title}
                                     </h3>
-                                    <p className="text-[14px] text-[#6e6e73]" style={{ lineHeight: 1.5 }}>{v.body}</p>
+                                    <p className="text-[14px] text-[var(--op-muted)]" style={{ lineHeight: 1.5 }}>{v.body}</p>
                                 </div>
                             );
                         })}
@@ -150,12 +150,12 @@ export default function CareersPage() {
             <section id="open-roles" className="af-tile af-tile-white">
                 <div className="af-container">
                     <h2
-                        className="font-semibold text-[#1d1d1f] mb-2"
+                        className="font-semibold text-[var(--op-ink)] mb-2"
                         style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.4rem)", letterSpacing: "-0.025em" }}
                     >
                         Open roles
                     </h2>
-                    <p className="text-[17px] text-[#6e6e73] mb-10" style={{ lineHeight: 1.5 }}>
+                    <p className="text-[17px] text-[var(--op-muted)] mb-10" style={{ lineHeight: 1.5 }}>
                         {openRoles.length} positions currently open
                     </p>
                     <div className="space-y-4">
@@ -163,37 +163,37 @@ export default function CareersPage() {
                             <div
                                 key={role.title}
                                 className="rounded-[18px] p-6"
-                                style={{ border: "1px solid #d2d2d7" }}
+                                style={{ border: "1px solid var(--op-line)" }}
                             >
                                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                                     <div className="flex-1">
                                         <div className="flex flex-wrap items-center gap-2 mb-2">
                                             <span
-                                                className="text-[11px] font-semibold uppercase tracking-[0.06em] px-2.5 py-1 rounded-full text-[#0066cc]"
-                                                style={{ background: "rgba(0,102,204,0.08)" }}
+                                                className="text-[11px] font-semibold uppercase tracking-[0.06em] px-2.5 py-1 rounded-full text-[var(--op-indigo)]"
+                                                style={{ background: "rgba(37,99,235,0.08)" }}
                                             >
                                                 {role.department}
                                             </span>
-                                            <span className="flex items-center gap-1 text-[13px] text-[#6e6e73]">
+                                            <span className="flex items-center gap-1 text-[13px] text-[var(--op-muted)]">
                                                 <MapPin className="w-3.5 h-3.5" />
                                                 {role.location}
                                             </span>
-                                            <span className="flex items-center gap-1 text-[13px] text-[#6e6e73]">
+                                            <span className="flex items-center gap-1 text-[13px] text-[var(--op-muted)]">
                                                 <Clock className="w-3.5 h-3.5" />
                                                 {role.type}
                                             </span>
                                         </div>
-                                        <h3 className="font-semibold text-[19px] text-[#1d1d1f] mb-2" style={{ letterSpacing: "-0.02em" }}>
+                                        <h3 className="font-semibold text-[19px] text-[var(--op-ink)] mb-2" style={{ letterSpacing: "-0.02em" }}>
                                             {role.title}
                                         </h3>
-                                        <p className="text-[15px] text-[#6e6e73] max-w-2xl" style={{ lineHeight: 1.5 }}>
+                                        <p className="text-[15px] text-[var(--op-muted)] max-w-2xl" style={{ lineHeight: 1.5 }}>
                                             {role.description}
                                         </p>
                                     </div>
                                     <Link
                                         href={role.href}
                                         className="shrink-0 self-start inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[15px] font-medium text-white transition-colors"
-                                        style={{ background: "#0066cc" }}
+                                        style={{ background: "var(--op-indigo)" }}
                                     >
                                         Apply
                                         <ArrowRight className="w-4 h-4" />
@@ -205,12 +205,12 @@ export default function CareersPage() {
 
                     <div
                         className="mt-6 rounded-[18px] p-6 text-center"
-                        style={{ border: "1px solid #d2d2d7", background: "#f5f5f7" }}
+                        style={{ border: "1px solid var(--op-line)", background: "var(--op-paper-2)" }}
                     >
-                        <p className="text-[15px] text-[#6e6e73] mb-3">
+                        <p className="text-[15px] text-[var(--op-muted)] mb-3">
                             Don&apos;t see a role that fits? We hire for people before roles.
                         </p>
-                        <Link href="/contact" className="text-[15px] text-[#0066cc] hover:text-[#0071e3] transition-colors font-medium">
+                        <Link href="/contact" className="text-[15px] text-[var(--op-indigo)] hover:text-[var(--op-indigo-ink)] transition-colors font-medium">
                             Send us a general application &rarr;
                         </Link>
                     </div>
@@ -221,7 +221,7 @@ export default function CareersPage() {
             <section className="af-tile af-tile-parchment">
                 <div className="af-container">
                     <h2
-                        className="font-semibold text-[#1d1d1f] mb-10 text-center"
+                        className="font-semibold text-[var(--op-ink)] mb-10 text-center"
                         style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.4rem)", letterSpacing: "-0.025em" }}
                     >
                         Benefits &amp; perks
@@ -231,10 +231,10 @@ export default function CareersPage() {
                             <div
                                 key={perk}
                                 className="rounded-[14px] px-5 py-4 flex items-center gap-3"
-                                style={{ background: "#ffffff", border: "1px solid #d2d2d7" }}
+                                style={{ background: "#ffffff", border: "1px solid var(--op-line)" }}
                             >
-                                <span className="w-2 h-2 rounded-full shrink-0 bg-[#0066cc]" />
-                                <span className="text-[14px] text-[#1d1d1f]" style={{ letterSpacing: "-0.01em" }}>{perk}</span>
+                                <span className="w-2 h-2 rounded-full shrink-0 bg-[var(--op-indigo)]" />
+                                <span className="text-[14px] text-[var(--op-ink)]" style={{ letterSpacing: "-0.01em" }}>{perk}</span>
                             </div>
                         ))}
                     </div>
@@ -245,26 +245,26 @@ export default function CareersPage() {
             <section className="af-tile af-tile-dark text-center">
                 <div className="af-container-narrow">
                     <h2
-                        className="font-semibold text-white"
+                        className="font-semibold text-[color:var(--op-ink)]"
                         style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.025em", lineHeight: 1.1 }}
                     >
                         Ready to join the team?
                     </h2>
-                    <p className="mt-4 text-[17px] text-[#98989d]" style={{ lineHeight: 1.47 }}>
+                    <p className="mt-4 text-[17px] text-[var(--op-muted)]" style={{ lineHeight: 1.47 }}>
                         Browse open roles above or send us a note directly.
                     </p>
                     <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
                         <a
                             href="#open-roles"
                             className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors"
-                            style={{ background: "#0066cc" }}
+                            style={{ background: "var(--op-indigo)" }}
                         >
                             See open roles
                         </a>
                         <Link
                             href="/contact"
-                            className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors"
-                            style={{ border: "1px solid rgba(255,255,255,0.25)" }}
+                            className="px-6 py-3 rounded-full text-[17px] font-medium text-[color:var(--op-ink)] transition-colors"
+                            style={{ border: "1px solid var(--op-line)" }}
                         >
                             Get in touch
                         </Link>
