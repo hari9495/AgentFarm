@@ -170,20 +170,21 @@ export default function TenantSuperAdminPage() {
                 </div>
             )}
 
-            <section className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-blue-700 via-blue-700 to-slate-900">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-                    <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-200 mb-4">
-                        <PremiumIcon icon={ShieldCheck} tone="violet" containerClassName="w-5 h-5 rounded-md bg-blue-300/15 text-blue-200 border-blue-200/30" iconClassName="w-3 h-3" />
+            <section className="relative overflow-hidden border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-blue-50 via-white to-white dark:from-slate-900 dark:to-slate-950">
+                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_55%_90%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
+                <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                    <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-700 dark:text-blue-300 mb-4">
+                        <PremiumIcon icon={ShieldCheck} tone="sky" containerClassName="w-5 h-5 rounded-md bg-blue-100 text-blue-600" iconClassName="w-3 h-3" />
                         Tenant Superadmin
                     </div>
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">Customer tenant governance</h1>
-                    <p className="mt-2 text-blue-100 max-w-3xl">Manage users and monitor bots inside this customer tenant. AgentFarms company portal is separated at /company.</p>
+                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight leading-tight">Customer tenant governance</h1>
+                    <p className="mt-2 text-slate-600 dark:text-slate-400 max-w-3xl">Manage users and monitor bots inside this customer tenant. AgentFarms company portal is separated at /company.</p>
                     <div className="mt-5 flex flex-wrap gap-3">
-                        <button onClick={loadData} disabled={loading} className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 border border-white/20 px-3.5 py-2 text-sm font-semibold text-white hover:bg-white/20 disabled:opacity-60">
-                            <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-white/15 text-white border-white/30" iconClassName={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />Refresh
+                        <button onClick={loadData} disabled={loading} className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-3.5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60">
+                            <PremiumIcon icon={RefreshCw} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-blue-100 text-blue-600" iconClassName={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />Refresh
                         </button>
-                        <Link href="/admin" className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 border border-white/20 px-3.5 py-2 text-sm font-semibold text-white hover:bg-white/20">Back to Admin</Link>
-                        <Link href="/company" className="inline-flex items-center gap-1.5 rounded-lg bg-blue-500/20 border border-blue-300/40 px-3.5 py-2 text-sm font-semibold text-white hover:bg-blue-500/30">Company Portal</Link>
+                        <Link href="/admin" className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-3.5 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">Back to Admin</Link>
+                        <Link href="/company" className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 border border-blue-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-blue-700">Company Portal</Link>
                     </div>
                 </div>
             </section>

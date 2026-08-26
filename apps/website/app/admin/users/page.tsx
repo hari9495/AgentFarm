@@ -94,34 +94,35 @@ export default function AdminUsersPage() {
             )}
 
             {/* Page header */}
-            <section className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-700">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-                    <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-200 mb-4">
-                        <PremiumIcon icon={Users} tone="violet" containerClassName="w-5 h-5 rounded-md bg-blue-300/15 text-blue-200 border-blue-200/30" iconClassName="w-3 h-3" />
+            <section className="relative overflow-hidden border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-blue-50 via-white to-white dark:from-slate-900 dark:to-slate-950">
+                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_55%_90%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
+                <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                    <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-700 dark:text-blue-300 mb-4">
+                        <PremiumIcon icon={Users} tone="sky" containerClassName="w-5 h-5 rounded-md bg-blue-100 text-blue-600" iconClassName="w-3 h-3" />
                         Team &amp; Access
                     </div>
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight max-w-xl">
+                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight leading-tight max-w-xl">
                         Manage members and roles
                     </h1>
-                    <p className="mt-2 text-blue-200 max-w-lg">
+                    <p className="mt-2 text-slate-600 dark:text-slate-400 max-w-lg">
                         Promote or demote workspace members. Role changes take effect on next login.
                     </p>
                     <div className="mt-5 flex flex-wrap gap-3">
-                        <div className="inline-flex items-center gap-2 rounded-lg bg-white/15 px-3.5 py-2 text-sm font-semibold text-white">
-                            <PremiumIcon icon={ShieldCheck} tone="violet" containerClassName="w-6 h-6 rounded-lg bg-white/15 text-blue-200 border-white/30" iconClassName="w-4 h-4" />
+                        <div className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-3.5 py-2 text-sm font-semibold text-slate-700">
+                            <PremiumIcon icon={ShieldCheck} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-blue-100 text-blue-600" iconClassName="w-4 h-4" />
                             {superAdminCount} Super Admin{superAdminCount !== 1 ? "s" : ""}
                         </div>
-                        <div className="inline-flex items-center gap-2 rounded-lg bg-white/15 px-3.5 py-2 text-sm font-semibold text-white">
-                            <PremiumIcon icon={Shield} tone="violet" containerClassName="w-6 h-6 rounded-lg bg-white/15 text-blue-200 border-white/30" iconClassName="w-4 h-4" />
+                        <div className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-3.5 py-2 text-sm font-semibold text-slate-700">
+                            <PremiumIcon icon={Shield} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-blue-100 text-blue-600" iconClassName="w-4 h-4" />
                             {adminCount} Admin{adminCount !== 1 ? "s" : ""}
                         </div>
-                        <div className="inline-flex items-center gap-2 rounded-lg bg-white/15 px-3.5 py-2 text-sm font-semibold text-white">
-                            <PremiumIcon icon={Users} tone="violet" containerClassName="w-6 h-6 rounded-lg bg-white/15 text-blue-200 border-white/30" iconClassName="w-4 h-4" />
+                        <div className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-3.5 py-2 text-sm font-semibold text-slate-700">
+                            <PremiumIcon icon={Users} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-blue-100 text-blue-600" iconClassName="w-4 h-4" />
                             {memberCount} Member{memberCount !== 1 ? "s" : ""}
                         </div>
                         <Link
                             href="/admin"
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 border border-white/30 px-3.5 py-2 text-sm font-semibold text-white hover:bg-white/20 transition-colors"
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-3.5 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 transition-colors"
                         >
                             Back to Admin
                         </Link>
