@@ -8,8 +8,8 @@ export default function Testimonials() {
     const { testimonials } = homeMarketingContent;
 
     return (
-        <section className="af-tile af-tile-dark" aria-label="Customer testimonials">
-            <div className="af-container">
+        <section className="op-section op-dark" aria-label="Customer testimonials">
+            <div className="op-wrap">
                 <motion.div
                     initial={{ opacity: 0, y: 16 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -17,7 +17,7 @@ export default function Testimonials() {
                     transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                     className="text-center mb-14"
                 >
-                    <p className="af-eyebrow mb-4">{testimonials.eyebrow}</p>
+                    <p className="op-eyebrow mb-4">{testimonials.eyebrow}</p>
                     <h2
                         className="font-semibold text-white"
                         style={{ fontSize: "clamp(1.9rem, 3.5vw, 2.8rem)", letterSpacing: "-0.028em", lineHeight: 1.07 }}
@@ -61,7 +61,7 @@ export default function Testimonials() {
                             <div className="flex items-center gap-3 pt-2" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
                                 <div
                                     className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-semibold text-white shrink-0"
-                                    style={{ background: "#0066cc" }}
+                                    style={{ background: "var(--op-indigo)" }}
                                 >
                                     {item.initials}
                                 </div>

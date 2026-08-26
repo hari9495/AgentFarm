@@ -57,7 +57,7 @@ export const metadata: Metadata = {
 
   // ── Core meta ───────────────────────────────────────────────────────────────
   description:
-    "Deploy governed AI workers that execute real tasks inside your tools, stop at approval boundaries, and leave a full evidence trail. 12 roles, 18 connectors.",
+    "Deploy governed AI workers that execute real tasks inside your tools, stop at approval boundaries, and leave a full evidence trail. 13 roles, 18 connectors.",
   keywords: [
     "AI workers", "AI agents platform", "governed AI", "AI automation",
     "AI staffing platform", "AI backend developer", "AI QA engineer",
@@ -94,7 +94,7 @@ export const metadata: Metadata = {
     siteName: BRAND,
     title: `${BRAND} — AI Workers That Ship With Human Control`,
     description:
-      "Deploy governed AI workers that execute tasks inside your tools, stop at approval boundaries, and leave a full evidence trail. 12 specialist roles, 18 connectors.",
+      "Deploy governed AI workers that execute tasks inside your tools, stop at approval boundaries, and leave a full evidence trail. 13 specialist roles, 18 connectors.",
     images: [
       {
         url: "/opengraph-image.png",

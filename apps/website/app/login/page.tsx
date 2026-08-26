@@ -283,7 +283,7 @@ function LoginForm() {
                             <span style={{ color: "#2997ff" }}>with your oversight.</span>
                         </h2>
                         <p className="text-[15px] mb-10" style={{ color: "#86868b", lineHeight: 1.6 }}>
-                            12 specialist roles, 18 connectors, and approval gates on every
+                            13 specialist roles, 18 connectors, and approval gates on every
                             high-stakes action — built for teams that need real output with real guardrails.
                         </p>
                         <div className="space-y-4">

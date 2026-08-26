@@ -66,7 +66,7 @@ export default function Footer() {
                             <span className="text-[#1d1d1f] font-semibold text-[13px] tracking-[-0.01em]">AgentFarms</span>
                         </Link>
                         <p className="mt-3 text-[14px] text-[#6e6e73] leading-relaxed max-w-xs">
-                            AI staffing platform — 12 specialist roles, approval gates, and a full audit trail.
+                            AI staffing platform — 13 specialist roles, approval gates, and a full audit trail.
                         </p>
                         <div className="mt-5 flex items-center gap-2">
                             {socials.map((s) => (

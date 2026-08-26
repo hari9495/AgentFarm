@@ -23,7 +23,7 @@ export default function AnnouncementBar() {
                         style={{ background: "#0066cc" }}
                     >
                         <div className="flex items-center justify-center gap-2 text-white text-[13px]">
-                            <span>AgentFarms v2 — 12 AI worker roles, approval gates &amp; Azure isolation.</span>
+                            <span>AgentFarms v2 — 13 AI worker roles, approval gates &amp; Azure isolation.</span>
                             <Link
                                 href="/changelog"
                                 className="inline-flex items-center gap-1 font-medium underline underline-offset-2 hover:no-underline transition-all"

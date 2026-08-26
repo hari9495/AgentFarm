@@ -15,7 +15,7 @@ const openRoles = [
         location: "Remote (US / EU)",
         type: "Full-time",
         description:
-            "Build the execution engine that powers 12 AI worker roles. You'll work on task scheduling, LLM dispatch, tool connectors, and the approval pipeline.",
+            "Build the execution engine that powers 13 AI worker roles. You'll work on task scheduling, LLM dispatch, tool connectors, and the approval pipeline.",
         href: "/contact",
     },
     {

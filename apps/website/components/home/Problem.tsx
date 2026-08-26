@@ -7,8 +7,8 @@ export default function Problem() {
     const { problem } = homeMarketingContent;
 
     return (
-        <section className="af-tile af-tile-dark" aria-label="The problem">
-            <div className="af-container">
+        <section aria-label="The problem" style={{ background: "var(--op-ink)", color: "var(--op-paper)", paddingTop: 96, paddingBottom: 96 }}>
+            <div className="mx-auto max-w-[1100px] px-6">
                 {/* Section header */}
                 <motion.div
                     initial={{ opacity: 0, y: 16 }}
@@ -17,10 +17,10 @@ export default function Problem() {
                     transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                     className="text-center mb-14"
                 >
-                    <p className="af-eyebrow mb-4">{problem.eyebrow}</p>
+                    <p className="mb-4 text-[12px] uppercase tracking-[0.16em]" style={{ fontFamily: "var(--font-mono)", color: "var(--op-pending)" }}>{problem.eyebrow}</p>
                     <h2
-                        className="font-semibold text-white"
-                        style={{ fontSize: "clamp(2rem, 4vw, 3rem)", letterSpacing: "-0.028em", lineHeight: 1.07 }}
+                        className="font-display font-extrabold text-white"
+                        style={{ fontSize: "clamp(2.1rem, 4.2vw, 3.2rem)", letterSpacing: "-0.03em", lineHeight: 1.04 }}
                     >
                         {problem.title}
                     </h2>

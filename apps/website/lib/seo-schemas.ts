@@ -70,7 +70,7 @@ export const websiteSchema = {
     name: BRAND,
     url: BASE_URL,
     description:
-        "Deploy governed AI workers for engineering, sales, operations, support, and more. 12 specialist roles, 18 connectors, human approval on every high-stakes action.",
+        "Deploy governed AI workers for engineering, sales, operations, support, and more. 13 specialist roles, 18 connectors, human approval on every high-stakes action.",
     publisher: { "@id": `${BASE_URL}/#organization` },
     potentialAction: {
         "@type": "SearchAction",
@@ -135,7 +135,7 @@ export const softwareApplicationSchema = {
         reviewCount: "87",
     },
     featureList: [
-        "12 specialist AI worker roles",
+        "13 specialist AI worker roles",
         "18 connector integrations",
         "Risk-classified approval gates",
         "Full evidence trail on every action",
@@ -184,7 +184,7 @@ export const homeFAQSchema = {
             name: "What AI worker roles are available in AgentFarms?",
             acceptedAnswer: {
                 "@type": "Answer",
-                text: "AgentFarms offers 12 specialist worker roles: AI Backend Developer, AI Full-Stack Developer, AI QA Engineer, AI Technical Writer, AI Business Analyst, AI Technical Recruiter, AI Content Writer, AI Sales Rep, AI Marketing Specialist, AI Corporate Assistant, AI Customer Support Agent, and AI Project Manager.",
+                text: "AgentFarms offers 13 specialist worker roles: AI Backend Developer, AI Full-Stack Developer, AI QA Engineer, AI Technical Writer, AI Business Analyst, AI Technical Recruiter, AI Content Writer, AI Sales Rep, AI Marketing Specialist, AI Corporate Assistant, AI Customer Support Agent, and AI Project Manager.",
             },
         },
         {

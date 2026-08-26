@@ -10,8 +10,8 @@ export default function FAQ() {
     const { faq } = homeMarketingContent;
 
     return (
-        <section className="af-tile af-tile-parchment" aria-label="FAQ">
-            <div className="af-container-narrow">
+        <section className="op-section op-light" aria-label="FAQ">
+            <div className="op-wrap-narrow">
                 <motion.div
                     initial={{ opacity: 0, y: 16 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -19,7 +19,7 @@ export default function FAQ() {
                     transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                     className="text-center mb-12"
                 >
-                    <p className="af-eyebrow mb-4">{faq.eyebrow}</p>
+                    <p className="op-eyebrow mb-4">{faq.eyebrow}</p>
                     <h2
                         className="font-semibold text-[#1d1d1f]"
                         style={{ fontSize: "clamp(1.9rem, 3.5vw, 2.8rem)", letterSpacing: "-0.028em", lineHeight: 1.07 }}

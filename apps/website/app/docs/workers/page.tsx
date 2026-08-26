@@ -233,7 +233,7 @@ export default function WorkersPage() {
             <Tag>Workers</Tag>
             <H1>Worker Roles</H1>
             <Lead>
-                AgentFarms includes 12 specialist worker roles across engineering, sales,
+                AgentFarms includes 13 specialist worker roles across engineering, sales,
                 marketing, operations, and customer success. Each role has a defined scope,
                 toolset, and approval model.
             </Lead>

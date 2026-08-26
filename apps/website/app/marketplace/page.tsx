@@ -7,7 +7,7 @@ import { marketplaceItemListSchema, aggregateRatingSchema, breadcrumbSchema } fr
 export const metadata: Metadata = {
     title: "AI Worker Marketplace — 12 Specialist Roles | AgentFarms",
     description:
-        "Browse and hire AI workers across 12 specialist roles — Backend Developer, QA Engineer, Sales Rep, Customer Support, Project Manager, and more. Deploy in under 10 minutes.",
+        "Browse and hire AI workers across 13 specialist roles — Backend Developer, QA Engineer, Sales Rep, Customer Support, Project Manager, and more. Deploy in under 10 minutes.",
     keywords: [
         "AI worker marketplace", "hire AI agents", "AI backend developer",
         "AI QA engineer", "AI sales rep", "AI customer support agent",
@@ -81,7 +81,7 @@ export default function MarketplacePage() {
                                 Hire an AI worker for every role in your company
                             </h1>
                             <p className="mt-4 max-w-xl text-[17px] text-[#424245]" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
-                                12 specialist AI workers across engineering, sales, marketing, support, operations, and more.
+                                13 specialist AI workers across engineering, sales, marketing, support, operations, and more.
                                 Real tool access, approval gates on every high-stakes action, full evidence trail.
                             </p>
 

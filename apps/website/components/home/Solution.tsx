@@ -11,8 +11,8 @@ export default function Solution() {
     const { solution } = homeMarketingContent;
 
     return (
-        <section className="af-tile af-tile-white" aria-label="The solution">
-            <div className="af-container">
+        <section className="op-section op-light" aria-label="The solution">
+            <div className="op-wrap">
                 <div className="grid lg:grid-cols-2 gap-16 items-center">
                     {/* Left — text */}
                     <motion.div
@@ -21,7 +21,7 @@ export default function Solution() {
                         viewport={{ once: true, margin: "-80px" }}
                         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                     >
-                        <p className="af-eyebrow mb-4">{solution.eyebrow}</p>
+                        <p className="op-eyebrow mb-4">{solution.eyebrow}</p>
                         <h2
                             className="font-semibold text-[#1d1d1f]"
                             style={{ fontSize: "clamp(1.9rem, 3.5vw, 2.8rem)", letterSpacing: "-0.028em", lineHeight: 1.07 }}
@@ -34,12 +34,12 @@ export default function Solution() {
                         <ul className="mt-6 space-y-3">
                             {solution.benefits.map((b) => (
                                 <li key={b} className="flex items-start gap-2.5 text-[15px] text-[#424245]">
-                                    <CheckCircle2 className="mt-0.5 w-4 h-4 shrink-0 text-[#0066cc]" />
+                                    <CheckCircle2 className="mt-0.5 w-4 h-4 shrink-0 text-[var(--op-indigo)]" />
                                     <span style={{ lineHeight: 1.5, letterSpacing: "-0.01em" }}>{b}</span>
                                 </li>
                             ))}
                         </ul>
-                        <Link href={solution.link.href} className="mt-8 inline-flex items-center gap-1.5 text-[17px] text-[#0066cc] hover:text-[#0071e3] transition-colors">
+                        <Link href={solution.link.href} className="mt-8 inline-flex items-center gap-1.5 text-[17px] text-[var(--op-indigo)] hover:text-[#0071e3] transition-colors">
                             {solution.link.label}
                             <ArrowRight className="w-4 h-4" />
                         </Link>
@@ -102,7 +102,7 @@ export default function Solution() {
                                             </div>
                                             {isHigh && (
                                                 <div className="mt-3 flex gap-2">
-                                                    <button className="flex-1 rounded-full bg-[#0066cc] py-1.5 text-[12px] font-medium text-white hover:bg-[#0071e3] transition-colors cursor-pointer">
+                                                    <button className="flex-1 rounded-full bg-[var(--op-indigo)] py-1.5 text-[12px] font-medium text-white hover:bg-[#0071e3] transition-colors cursor-pointer">
                                                         Approve
                                                     </button>
                                                     <button className="flex-1 rounded-full py-1.5 text-[12px] font-medium text-[#6e6e73] hover:text-[#1d1d1f] transition-colors cursor-pointer" style={{ border: "1px solid #d2d2d7" }}>

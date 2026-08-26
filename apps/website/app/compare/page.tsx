@@ -22,7 +22,7 @@ const rows: { feature: string; AgentFarms: Value; copilot: Value; contractor: Va
     { feature: "No hiring / onboarding time", AgentFarms: "yes", copilot: "yes", contractor: "partial", hiring: "no" },
     { feature: "Scales instantly", AgentFarms: "yes", copilot: "yes", contractor: "no", hiring: "no" },
     { feature: "Understands full codebase context", AgentFarms: "yes", copilot: "partial", contractor: "partial", hiring: "yes" },
-    { feature: "12 AI worker roles available", AgentFarms: "yes", copilot: "no", contractor: "partial", hiring: "partial" },
+    { feature: "13 AI worker roles available", AgentFarms: "yes", copilot: "no", contractor: "partial", hiring: "partial" },
     { feature: "OWASP / security scanning per PR", AgentFarms: "yes", copilot: "no", contractor: "no", hiring: "partial" },
     { feature: "Test coverage delta tracked per PR", AgentFarms: "yes", copilot: "no", contractor: "no", hiring: "partial" },
     { feature: "Per-skill analytics dashboard", AgentFarms: "yes", copilot: "no", contractor: "no", hiring: "no" },

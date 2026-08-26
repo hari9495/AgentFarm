@@ -71,7 +71,7 @@ export default function OGImage() {
             <span style={{ color: "#0066cc" }}>With Human Control</span>
           </h1>
           <p style={{ color: "#424245", fontSize: 24, margin: 0, lineHeight: 1.47, letterSpacing: "-0.5px" }}>
-            12 specialist roles · 18 connectors · approval gates on every high-risk action
+            13 specialist roles · 18 connectors · approval gates on every high-risk action
           </p>
         </div>
 

@@ -9,8 +9,8 @@ export default function CallToAction() {
     const { cta } = homeMarketingContent;
 
     return (
-        <section className="af-tile af-tile-dark" aria-label="Get started">
-            <div className="af-container-narrow">
+        <section className="op-section op-dark" aria-label="Get started">
+            <div className="op-wrap-narrow">
                 <motion.div
                     initial={{ opacity: 0, y: 16 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -44,9 +44,9 @@ export default function CallToAction() {
                         <Link
                             href="/get-started"
                             className="px-6 py-3 rounded-full font-medium text-[17px] text-white transition-colors"
-                            style={{ background: "#0066cc" }}
+                            style={{ background: "var(--op-indigo)" }}
                             onMouseOver={(e) => (e.currentTarget.style.background = "#0071e3")}
-                            onMouseOut={(e) => (e.currentTarget.style.background = "#0066cc")}
+                            onMouseOut={(e) => (e.currentTarget.style.background = "var(--op-indigo)")}
                         >
                             Start free trial
                         </Link>

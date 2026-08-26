@@ -14,7 +14,7 @@ const featureCards = [
     },
     {
         icon: Users,
-        title: "12 specialist roles",
+        title: "13 specialist roles",
         body: "From Backend Developer to Customer Support Executive — every role has a defined scope, toolset, and approval model built in.",
     },
     {
@@ -43,8 +43,8 @@ export default function Features() {
     const { features } = homeMarketingContent;
 
     return (
-        <section className="af-tile af-tile-parchment" aria-label="Platform features">
-            <div className="af-container">
+        <section className="op-section op-light" aria-label="Platform features">
+            <div className="op-wrap">
                 <motion.div
                     initial={{ opacity: 0, y: 16 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -52,7 +52,7 @@ export default function Features() {
                     transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                     className="text-center mb-14"
                 >
-                    <p className="af-eyebrow mb-4">{features.eyebrow}</p>
+                    <p className="op-eyebrow mb-4">{features.eyebrow}</p>
                     <h2
                         className="font-semibold text-[#1d1d1f]"
                         style={{ fontSize: "clamp(1.9rem, 3.5vw, 2.8rem)", letterSpacing: "-0.028em", lineHeight: 1.07 }}
@@ -81,7 +81,7 @@ export default function Features() {
                                     className="w-9 h-9 rounded-[8px] flex items-center justify-center mb-4"
                                     style={{ background: "rgba(0,102,204,0.08)" }}
                                 >
-                                    <Icon className="w-5 h-5 text-[#0066cc]" />
+                                    <Icon className="w-5 h-5 text-[var(--op-indigo)]" />
                                 </div>
                                 <h3 className="font-semibold text-[17px] text-[#1d1d1f] mb-2" style={{ letterSpacing: "-0.018em" }}>
                                     {card.title}

@@ -32,6 +32,35 @@
   --op-evidence: #475569;     /* state: audit / evidence */
 }
 
+/* Operations Console — section utilities (home redesign) */
+.op-section { padding-top: 96px; padding-bottom: 96px; }
+.op-wrap { margin-inline: auto; max-width: 1200px; padding-inline: 24px; }
+.op-wrap-narrow { margin-inline: auto; max-width: 780px; padding-inline: 24px; }
+.op-dark { background: var(--op-ink); color: var(--op-paper); }
+.op-light { background: var(--op-paper); color: var(--op-ink); }
+.op-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--op-indigo);
+}
+.op-h2 {
+  font-family: var(--font-display); font-weight: 800;
+  font-size: clamp(2.1rem, 4.2vw, 3.2rem); line-height: 1.04; letter-spacing: -0.03em;
+}
+.op-lead { font-size: 1.075rem; line-height: 1.6; color: var(--op-muted); }
+.op-card {
+  border-radius: 16px; padding: 24px;
+  background: color-mix(in srgb, var(--op-ink) 3%, var(--op-paper));
+  border: 1px solid var(--op-line);
+}
+.op-dark .op-card {
+  background: var(--op-ink-2); border-color: var(--op-ink-3);
+}
+.op-mono { font-family: var(--font-mono); }
+
+/* Section headings across op sections use the display face for typographic cohesion */
+.op-light h2, .op-dark h2 { font-family: var(--font-display); letter-spacing: -0.03em; }
+
 /* ═══════════════════════════════════════════════════════
    AgentFarms — Apple-inspired design system
    Light-first · Single Action Blue #0066cc accent

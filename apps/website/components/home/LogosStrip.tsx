@@ -1,33 +1,39 @@
-const logos = [
-    "Vercel", "Stripe", "Notion", "Linear", "Figma", "GitHub",
-    "Slack", "Jira", "Salesforce", "HubSpot", "Zendesk", "Intercom",
+/**
+ * Operations Console redesign — "works with your stack".
+ * These aren't vanity logos: they're the connectors the agents actually act
+ * through, so the strip is framed honestly and set in mono (the evidence voice).
+ */
+
+const connectors = [
+    "GitHub", "Jira", "Slack", "Gmail", "Outlook", "Greenhouse",
+    "Salesforce", "HubSpot", "Linear", "Teams", "WordPress", "Zoom",
 ];
 
 export default function LogosStrip() {
     return (
         <section
-            className="af-tile af-tile-parchment"
-            style={{ paddingTop: 48, paddingBottom: 48 }}
-            aria-label="Trusted by teams at"
+            aria-label="Works with your stack"
+            style={{ background: "var(--op-ink)", borderTop: "1px solid var(--op-ink-3)", borderBottom: "1px solid var(--op-ink-3)" }}
         >
-            <div className="af-container-wide">
-                <p className="text-center text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6e6e73] mb-8">
-                    Trusted by fast-moving teams
+            <div className="mx-auto max-w-[1200px] px-6 py-10">
+                <p
+                    className="mb-7 text-center text-[12px] uppercase tracking-[0.16em]"
+                    style={{ fontFamily: "var(--font-mono)", color: "var(--op-muted)" }}
+                >
+                    acts through the tools you already run
                 </p>
-                <div className="relative overflow-hidden">
-                    <div className="flex gap-12 animate-marquee" aria-hidden>
-                        {[...logos, ...logos].map((logo, i) => (
+                <div className="relative overflow-hidden" style={{ maskImage: "linear-gradient(90deg, transparent, black 8%, black 92%, transparent)" }}>
+                    <div className="flex w-max gap-10 animate-marquee">
+                        {[...connectors, ...connectors].map((name, i) => (
                             <span
-                                key={`${logo}-${i}`}
-                                className="shrink-0 text-[15px] font-semibold text-[#aeaeb2] select-none"
-                                style={{ letterSpacing: "-0.01em" }}
+                                key={`${name}-${i}`}
+                                className="shrink-0 select-none text-[15px]"
+                                style={{ fontFamily: "var(--font-mono)", color: "#8a9099", letterSpacing: "-0.01em" }}
                             >
-                                {logo}
+                                {name}
                             </span>
                         ))}
                     </div>
-                    <div className="pointer-events-none absolute inset-y-0 left-0 w-20" style={{ background: "linear-gradient(to right, #f5f5f7, transparent)" }} />
-                    <div className="pointer-events-none absolute inset-y-0 right-0 w-20" style={{ background: "linear-gradient(to left, #f5f5f7, transparent)" }} />
                 </div>
             </div>
         </section>
