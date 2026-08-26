@@ -378,3 +378,73 @@ describe('workspace_rec_source_candidates — ATS read (search_records → data)
         assert.ok(cap.steps.some((s) => s['action'] === 'workspace_web_extract_data'));
     });
 });
+
+describe('workspace_rec_conduct_phone_screen — presence (join the call)', () => {
+    const SCREEN_PAYLOAD = {
+        candidateName: 'Jordan Lee',
+        jobTitle: 'Staff Engineer',
+        companyName: 'Acme',
+        recruiterName: 'Alex',
+        requiredSkills: ['Go', 'Distributed systems'],
+    };
+
+    it('drafts the guide only (no join) by default', async () => {
+        let called = false;
+        const result = await handleRecruiterAction({
+            ...BASE,
+            actionType: 'workspace_rec_conduct_phone_screen',
+            meetingParticipationClient: async () => { called = true; return { meetingSessionId: 'x' }; },
+            payload: { ...SCREEN_PAYLOAD },
+        });
+        assert.equal(result.ok, true);
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['joined'], undefined);
+        assert.equal(called, false);
+    });
+
+    it('joins and participates when join=true, returning the meeting session id', async () => {
+        const seen: Record<string, unknown>[] = [];
+        const result = await handleRecruiterAction({
+            ...BASE,
+            workspaceId: 'ws-1',
+            actionType: 'workspace_rec_conduct_phone_screen',
+            meetingParticipationClient: async (m) => { seen.push(m); return { meetingSessionId: 'mtg-123' }; },
+            payload: { ...SCREEN_PAYLOAD, join: true, desktopSessionId: 'ds-1', meetingUrl: 'https://zoom.us/j/1', platform: 'zoom' },
+        });
+        assert.equal(result.ok, true);
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['joined'], true);
+        assert.equal(parsed['meetingSessionId'], 'mtg-123');
+        assert.equal(seen.length, 1);
+        assert.equal(seen[0]!['desktopSessionId'], 'ds-1');
+        assert.equal(seen[0]!['platform'], 'zoom');
+    });
+
+    it('returns the guide with a reason when join=true but required params are missing', async () => {
+        const result = await handleRecruiterAction({
+            ...BASE,
+            workspaceId: 'ws-1',
+            actionType: 'workspace_rec_conduct_phone_screen',
+            meetingParticipationClient: async () => ({ meetingSessionId: 'x' }),
+            payload: { ...SCREEN_PAYLOAD, join: true }, // no desktopSessionId/meetingUrl/platform
+        });
+        assert.equal(result.ok, true);
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['joined'], false);
+        assert.ok(String(parsed['reason']).includes('desktopSessionId'));
+    });
+
+    it('fails safe to the guide when the join throws', async () => {
+        const result = await handleRecruiterAction({
+            ...BASE,
+            workspaceId: 'ws-1',
+            actionType: 'workspace_rec_conduct_phone_screen',
+            meetingParticipationClient: async () => { throw new Error('desktop-agent unreachable'); },
+            payload: { ...SCREEN_PAYLOAD, join: true, desktopSessionId: 'ds-1', meetingUrl: 'https://zoom.us/j/1', platform: 'zoom' },
+        });
+        assert.equal(result.ok, true, 'join failure must not lose the guide');
+        const parsed = JSON.parse(result.output) as Record<string, unknown>;
+        assert.equal(parsed['joined'], false);
+        assert.ok(String(parsed['reason']).includes('desktop-agent unreachable'));
+    });
+});

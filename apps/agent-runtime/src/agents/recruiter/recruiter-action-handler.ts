@@ -273,7 +273,25 @@ export interface RecruiterActionInput {
     workspaceId?: string;
     /** Optional — dispatches native connector actions (e.g. gmail/outlook send_email for candidate outreach). */
     connectorActionExecuteClient?: LocalWorkspaceConnectorClient;
+    /** Optional — joins a live meeting and participates (phone screens / interviews). */
+    meetingParticipationClient?: RecruiterMeetingClient;
 }
+
+/**
+ * Joins a meeting via the desktop-agent and runs the capture→respond→speak
+ * loop, returning the meeting session id so the transcript/summary can be
+ * retrieved afterwards (feeds gather_feedback). Backed by runMeetingParticipation.
+ */
+export type RecruiterMeetingClient = (input: {
+    tenantId: string;
+    workspaceId: string;
+    agentId: string;
+    desktopSessionId: string;
+    meetingUrl: string;
+    platform: string;
+    language?: string;
+    maxTurns?: number;
+}) => Promise<{ meetingSessionId: string }>;
 
 // ---------------------------------------------------------------------------
 // Small helpers
@@ -296,7 +314,7 @@ export async function handleRecruiterAction(
     input: RecruiterActionInput,
 ): Promise<LocalWorkspaceResult> {
     const { actionType, payload } = input;
-    const { tenantId, botId, gatewayBaseUrl, serviceToken, workspaceId, connectorActionExecuteClient } = input;
+    const { tenantId, botId, gatewayBaseUrl, serviceToken, workspaceId, connectorActionExecuteClient, meetingParticipationClient } = input;
 
     // RAG pre-flight — fetch prior approved hiring artifacts, templates, and recruiter lessons
     let ragContextBlock = '';
@@ -729,7 +747,40 @@ export async function handleRecruiterAction(
                 interviewerNames: Array.isArray(payload['interviewerNames']) ? strArr(payload['interviewerNames']) : undefined,
             };
 
-            return jsonOut(buildPhoneScreenGuide(screenInput));
+            const guide = buildPhoneScreenGuide(screenInput);
+
+            // Presence path: actually join the call and run the screen. The
+            // generated guide is the agent's brief; the meeting session id lets
+            // gather_feedback pull the transcript afterwards. Fail-safe — any
+            // problem returns the guide so the work is never lost.
+            if (payload['join'] === true) {
+                const desktopSessionId = str(payload['desktopSessionId']).trim();
+                const meetingUrl = str(payload['meetingUrl']).trim();
+                const platform = str(payload['platform']).trim();
+                if (!desktopSessionId || !meetingUrl || !platform || !workspaceId) {
+                    return jsonOut({ joined: false, reason: 'join=true requires desktopSessionId, meetingUrl, platform and a workspace', ...guide });
+                }
+                if (!meetingParticipationClient) {
+                    return jsonOut({ joined: false, reason: 'no meeting participation client available', ...guide });
+                }
+                try {
+                    const res = await meetingParticipationClient({
+                        tenantId,
+                        workspaceId,
+                        agentId: botId,
+                        desktopSessionId,
+                        meetingUrl,
+                        platform,
+                        language: typeof payload['language'] === 'string' ? payload['language'] : undefined,
+                        maxTurns: typeof payload['maxTurns'] === 'number' ? payload['maxTurns'] : undefined,
+                    });
+                    return jsonOut({ joined: true, meetingSessionId: res.meetingSessionId, ...guide });
+                } catch (err) {
+                    return jsonOut({ joined: false, reason: err instanceof Error ? err.message : String(err), ...guide });
+                }
+            }
+
+            return jsonOut(guide);
         }
 
         // ----------------------------------------------------------------

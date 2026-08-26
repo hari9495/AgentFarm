@@ -64,6 +64,7 @@ import { handlePmAction, isPmActionType, type PmActionType } from './agents/proj
 import { handleBaAction, isBaActionType, type BaActionType } from './agents/business-analyst/business-analyst-action-handler.js';
 import { handleMarketingSpecialistAction, isMarketingSpecialistActionType, type MarketingSpecialistActionType } from './agents/marketing-specialist/marketing-specialist-action-handler.js';
 import { handleRecruiterAction, isRecruiterActionType, type RecruiterActionType } from './agents/recruiter/recruiter-action-handler.js';
+import { runMeetingParticipation, type MeetingPlatform } from './agents/meeting-agent/meeting-transcription.js';
 import { handleCustomerSupportExecutiveAction, isCustomerSupportExecutiveActionType, type CustomerSupportExecutiveActionType } from './agents/customer-support-executive/customer-support-executive-action-handler.js';
 import { handleAgentfarmSupportAction, isAgentfarmSupportActionType, type AgentfarmSupportActionType } from './agents/agentfarm-support/action-handler.js';
 import type { ProseCallerFn } from './agents/content-writer/llm-prose-writer.js';
@@ -15355,6 +15356,17 @@ export async function executeLocalWorkspaceAction(input: {
                 serviceToken: input.serviceToken,
                 workspaceId: input.workspaceId,
                 connectorActionExecuteClient,
+                meetingParticipationClient: async (m) =>
+                    runMeetingParticipation({
+                        tenantId: m.tenantId,
+                        workspaceId: m.workspaceId,
+                        agentId: m.agentId,
+                        desktopSessionId: m.desktopSessionId,
+                        meetingUrl: m.meetingUrl,
+                        platform: m.platform as MeetingPlatform,
+                        ...(m.language ? { language: m.language } : {}),
+                        ...(m.maxTurns ? { maxTurns: m.maxTurns } : {}),
+                    }),
             });
             const recTitle =
                 typeof payload['candidateName'] === 'string' ? payload['candidateName'] :
