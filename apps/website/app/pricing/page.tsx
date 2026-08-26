@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { CheckCircle2, ArrowRight } from "lucide-react";
+import { Check, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { marketplaceBots, type Bot } from "@/lib/bots";
 import { pricingPageContent } from "@/lib/marketing-content";
-import { pricingFAQSchema, softwareApplicationSchema, breadcrumbSchema } from "@/lib/seo-schemas";
+import { pricingFAQSchema, breadcrumbSchema } from "@/lib/seo-schemas";
 
 export const metadata: Metadata = {
     title: pricingPageContent.metadata.title,
@@ -87,77 +87,89 @@ const pageSchemas = [
 
 export default function PricingPage() {
     return (
-        <div style={{ background: "#ffffff" }}>
+        <div>
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(pageSchemas) }} />
 
-            {/* Hero tile */}
-            <section className="af-tile af-tile-white text-center" style={{ paddingTop: 80, paddingBottom: 64 }}>
-                <div className="af-container-narrow">
-                    <p className="af-eyebrow mb-4">{pricingPageContent.hero.eyebrow}</p>
+            {/* ── Hero ── */}
+            <section className="op-light relative overflow-hidden">
+                {/* soft brand wash, matching home */}
+                <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0"
+                    style={{ background: "radial-gradient(55% 50% at 50% 0%, var(--op-indigo-soft), transparent 70%)" }}
+                />
+                <div className="op-wrap-narrow relative text-center" style={{ paddingTop: 88, paddingBottom: 56 }}>
+                    <p className="op-eyebrow op-rise op-d1">{pricingPageContent.hero.eyebrow}</p>
                     <h1
-                        className="font-semibold text-[#1d1d1f]"
-                        style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}
+                        className="op-rise op-d2 font-display font-extrabold mt-4"
+                        style={{ fontSize: "clamp(2.5rem, 5vw, 3.8rem)", letterSpacing: "-0.03em", lineHeight: 1.05, color: "var(--op-ink)" }}
                     >
                         {pricingPageContent.hero.title}
                     </h1>
-                    <p className="mt-5 mx-auto max-w-lg text-[17px] text-[#424245]" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
+                    <p className="op-rise op-d3 mt-5 mx-auto max-w-xl text-[1.075rem] leading-relaxed" style={{ color: "var(--op-muted)" }}>
                         {pricingPageContent.hero.description}
                     </p>
-                    <p className="mt-3 text-[14px] text-[#aeaeb2]">
+                    <p className="op-rise op-d4 mt-3 text-[13px]" style={{ fontFamily: "var(--font-mono)", color: "var(--op-muted)" }}>
                         {pricingPageContent.hero.footnoteTemplate.replace("{count}", String(availableMarketplaceBots.length))}
                     </p>
                 </div>
             </section>
 
-            {/* Plan cards */}
-            <section className="af-tile af-tile-parchment" style={{ paddingTop: 0, paddingBottom: 64 }}>
-                <div className="af-container">
-                    <div className="grid md:grid-cols-3 gap-4 max-w-[900px] mx-auto">
+            {/* ── Plan cards ── */}
+            <section className="op-soft" style={{ paddingTop: 8, paddingBottom: 88 }}>
+                <div className="op-wrap">
+                    <div className="grid md:grid-cols-3 gap-5 max-w-[960px] mx-auto items-stretch">
                         {plans.map((plan) => (
                             <div
                                 key={plan.name}
-                                className="rounded-[18px] p-6 flex flex-col"
+                                className="op-lift rounded-2xl p-7 flex flex-col bg-white"
                                 style={{
-                                    border: plan.highlighted ? "2px solid #0066cc" : "1px solid #d2d2d7",
-                                    background: plan.highlighted ? "rgba(0,102,204,0.02)" : "#ffffff",
+                                    border: plan.highlighted ? "1.5px solid var(--op-indigo)" : "1px solid var(--op-line)",
+                                    boxShadow: plan.highlighted
+                                        ? "0 12px 34px rgba(37,99,235,0.14)"
+                                        : "0 1px 2px rgba(16,24,40,0.04)",
                                 }}
                             >
-                                {plan.highlighted && (
+                                {plan.highlighted ? (
                                     <span
-                                        className="self-start mb-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#0066cc] px-2.5 py-1 rounded-full"
-                                        style={{ background: "rgba(0,102,204,0.1)" }}
+                                        className="self-start mb-4 text-[11px] font-semibold uppercase tracking-[0.1em] px-2.5 py-1 rounded-full"
+                                        style={{ fontFamily: "var(--font-mono)", color: "var(--op-indigo-ink)", background: "var(--op-indigo-soft)" }}
                                     >
                                         Most popular
                                     </span>
+                                ) : (
+                                    <span className="mb-4 h-[26px]" aria-hidden />
                                 )}
-                                <p className="text-[12px] font-semibold text-[#6e6e73] uppercase tracking-[0.06em]">{plan.name}</p>
-                                <div className="mt-2 flex items-end gap-1.5">
+                                <p className="text-[12px] font-semibold uppercase tracking-[0.1em]" style={{ fontFamily: "var(--font-mono)", color: "var(--op-muted)" }}>
+                                    {plan.name}
+                                </p>
+                                <div className="mt-2 flex items-end gap-1.5" style={{ fontFamily: "var(--font-mono)" }}>
                                     <span
-                                        className="font-semibold text-[#1d1d1f]"
-                                        style={{ fontSize: "2.4rem", letterSpacing: "-0.03em", lineHeight: 1 }}
+                                        className="font-semibold"
+                                        style={{ fontSize: "2.6rem", letterSpacing: "-0.03em", lineHeight: 1, color: "var(--op-ink)" }}
                                     >
                                         {plan.price}
                                     </span>
                                     {plan.period && (
-                                        <span className="mb-1 text-[14px] text-[#aeaeb2]">{plan.period}</span>
+                                        <span className="mb-1.5 text-[13px]" style={{ color: "var(--op-muted)" }}>{plan.period}</span>
                                     )}
                                 </div>
-                                <p className="mt-2.5 text-[14px] text-[#6e6e73]" style={{ lineHeight: 1.5 }}>{plan.description}</p>
-                                <ul className="mt-5 flex-1 space-y-2.5">
+                                <p className="mt-3 text-[14px] leading-relaxed" style={{ color: "var(--op-muted)" }}>{plan.description}</p>
+                                <ul className="mt-6 flex-1 space-y-3">
                                     {plan.features.map((f) => (
-                                        <li key={f} className="flex items-start gap-2 text-[14px] text-[#424245]">
-                                            <CheckCircle2 className="mt-0.5 w-4 h-4 shrink-0 text-[#0066cc]" />
+                                        <li key={f} className="flex items-start gap-2.5 text-[14px]" style={{ color: "var(--op-ink-soft)" }}>
+                                            <Check className="mt-0.5 w-4 h-4 shrink-0" style={{ color: "var(--op-approved)" }} />
                                             <span style={{ lineHeight: 1.5 }}>{f}</span>
                                         </li>
                                     ))}
                                 </ul>
                                 <Link
                                     href={plan.ctaHref}
-                                    className="mt-6 flex items-center justify-center gap-2 rounded-full py-2.5 text-[15px] font-medium transition-colors"
+                                    className="mt-7 flex items-center justify-center gap-2 rounded-lg py-3 text-[15px] font-semibold transition-transform hover:-translate-y-0.5"
                                     style={{
-                                        background: plan.highlighted ? "#0066cc" : "transparent",
-                                        color: plan.highlighted ? "#ffffff" : "#1d1d1f",
-                                        border: plan.highlighted ? "none" : "1px solid #d2d2d7",
+                                        background: plan.highlighted ? "var(--op-indigo)" : "white",
+                                        color: plan.highlighted ? "white" : "var(--op-ink)",
+                                        border: plan.highlighted ? "none" : "1px solid var(--op-line)",
                                     }}
                                 >
                                     {plan.cta}
@@ -167,85 +179,83 @@ export default function PricingPage() {
                         ))}
                     </div>
 
-                    <p className="mt-6 text-center text-[13px] text-[#aeaeb2]">
+                    <p className="mt-7 text-center text-[13px]" style={{ fontFamily: "var(--font-mono)", color: "var(--op-muted)" }}>
                         {pricingPageContent.pageFooterNote}
                     </p>
                 </div>
             </section>
 
-            {/* Decision helper cards */}
-            <section className="af-tile af-tile-white" style={{ paddingTop: 48, paddingBottom: 48 }}>
-                <div className="af-container">
-                    <div className="grid md:grid-cols-3 gap-4">
+            {/* ── Decision helper cards ── */}
+            <section className="op-light" style={{ paddingTop: 72, paddingBottom: 72 }}>
+                <div className="op-wrap">
+                    <div className="grid md:grid-cols-3 gap-5">
                         {decisionCards.map((card) => (
                             <div
                                 key={card.chip}
-                                className="rounded-[18px] p-6"
-                                style={{ border: "1px solid #d2d2d7" }}
+                                className="op-lift rounded-2xl p-7 bg-white"
+                                style={{ border: "1px solid var(--op-line)", boxShadow: "0 1px 2px rgba(16,24,40,0.04)" }}
                             >
-                                <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#0066cc]">
-                                    {card.chip}
-                                </p>
-                                <p className="text-[17px] font-semibold text-[#1d1d1f]" style={{ letterSpacing: "-0.018em" }}>
+                                <p className="op-eyebrow mb-3">{card.chip}</p>
+                                <p className="text-[17px] font-semibold" style={{ letterSpacing: "-0.018em", color: "var(--op-ink)" }}>
                                     {card.price}
                                 </p>
-                                <p className="mt-1.5 text-[14px] text-[#6e6e73]" style={{ lineHeight: 1.5 }}>{card.desc}</p>
+                                <p className="mt-2 text-[14px] leading-relaxed" style={{ color: "var(--op-muted)" }}>{card.desc}</p>
                             </div>
                         ))}
                     </div>
                 </div>
             </section>
 
-            {/* FAQ */}
-            <section className="af-tile af-tile-parchment" aria-label="Pricing FAQ">
-                <div className="af-container-narrow">
+            {/* ── FAQ ── */}
+            <section className="op-soft" aria-label="Pricing FAQ" style={{ paddingTop: 88, paddingBottom: 88 }}>
+                <div className="op-wrap-narrow">
                     <h2
-                        className="text-center font-semibold text-[#1d1d1f] mb-10"
-                        style={{ fontSize: "clamp(1.6rem, 3vw, 2.2rem)", letterSpacing: "-0.025em" }}
+                        className="text-center op-h2 mb-10"
+                        style={{ fontSize: "clamp(1.7rem, 3vw, 2.3rem)", letterSpacing: "-0.025em" }}
                     >
                         Frequently asked questions
                     </h2>
-                    <div className="rounded-[18px] overflow-hidden" style={{ border: "1px solid #d2d2d7", background: "#ffffff" }}>
+                    <div className="rounded-2xl overflow-hidden bg-white" style={{ border: "1px solid var(--op-line)" }}>
                         {pricingPageContent.faqs.map(({ q, a }, i) => (
                             <div
                                 key={q}
-                                className="px-6 py-5 hover:bg-[#f5f5f7] transition-colors"
-                                style={{ borderBottom: i < pricingPageContent.faqs.length - 1 ? "1px solid #e8e8ed" : "none" }}
+                                className="px-6 py-5 transition-colors hover:bg-[var(--op-paper-2)]"
+                                style={{ borderBottom: i < pricingPageContent.faqs.length - 1 ? "1px solid var(--op-line)" : "none" }}
                             >
-                                <h3 className="font-semibold text-[#1d1d1f] mb-2" style={{ fontSize: "15px", letterSpacing: "-0.015em" }}>
+                                <h3 className="font-semibold mb-2" style={{ fontSize: "15px", letterSpacing: "-0.015em", color: "var(--op-ink)" }}>
                                     {q}
                                 </h3>
-                                <p className="text-[14px] text-[#6e6e73]" style={{ lineHeight: 1.6 }}>{a}</p>
+                                <p className="text-[14px]" style={{ lineHeight: 1.6, color: "var(--op-muted)" }}>{a}</p>
                             </div>
                         ))}
                     </div>
                 </div>
             </section>
 
-            {/* CTA tile */}
-            <section className="af-tile af-tile-dark text-center">
-                <div className="af-container-narrow">
+            {/* ── CTA ── */}
+            <section className="op-dark text-center" style={{ paddingTop: 88, paddingBottom: 88 }}>
+                <div className="op-wrap-narrow">
                     <h2
-                        className="font-semibold text-white"
-                        style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.025em", lineHeight: 1.1 }}
+                        className="op-h2"
+                        style={{ fontSize: "clamp(1.9rem, 3.5vw, 2.7rem)", letterSpacing: "-0.025em", lineHeight: 1.1 }}
                     >
                         Ready to deploy your first worker?
                     </h2>
-                    <p className="mt-4 text-[17px] text-[#98989d]" style={{ lineHeight: 1.47 }}>
+                    <p className="mt-4 text-[1.075rem]" style={{ lineHeight: 1.5, color: "var(--op-muted)" }}>
                         Start free for 14 days. No credit card required.
                     </p>
                     <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
                         <Link
                             href="/get-started"
-                            className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors"
-                            style={{ background: "#0066cc" }}
+                            className="px-6 py-3 rounded-lg text-[15px] font-semibold text-white shadow-sm transition-transform hover:-translate-y-0.5"
+                            style={{ background: "var(--op-indigo)" }}
                         >
                             Start free trial
                         </Link>
                         <Link
                             href="/book-demo"
-                            className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors"
-                            style={{ border: "1px solid rgba(255,255,255,0.25)" }}
+                            className="px-6 py-3 rounded-lg text-[15px] font-semibold bg-white transition-colors hover:bg-[var(--op-paper-2)]"
+                            style={{ border: "1px solid var(--op-line)", color: "var(--op-ink)" }}
                         >
                             Talk to sales
                         </Link>
