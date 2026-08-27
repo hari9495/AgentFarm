@@ -24,12 +24,14 @@ export default function MarketplaceListingsPage() {
     const [listings, setListings] = useState<Listing[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [needsAuth, setNeedsAuth] = useState(false);
     const [query, setQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('active');
 
     const fetchListings = async () => {
         setLoading(true);
         setError(null);
+        setNeedsAuth(false);
 
         const params = new URLSearchParams();
         if (statusFilter) params.set('status', statusFilter);
@@ -42,6 +44,12 @@ export default function MarketplaceListingsPage() {
             listings?: Listing[];
             message?: string;
         };
+
+        if (response.status === 401) {
+            setNeedsAuth(true);
+            setLoading(false);
+            return;
+        }
 
         if (!response.ok) {
             setError(data.message ?? 'Unable to load listings.');
@@ -112,7 +120,7 @@ export default function MarketplaceListingsPage() {
                     </button>
                 </div>
 
-                {error && (
+                {!needsAuth && error && (
                     <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-300">
                         {error}
                     </div>
@@ -120,6 +128,21 @@ export default function MarketplaceListingsPage() {
 
                 {loading ? (
                     <div className="text-slate-400 text-sm py-8 text-center">Loading listings...</div>
+                ) : needsAuth ? (
+                    <div className="rounded-2xl bg-slate-900/80 border border-slate-700/60 px-6 py-12 text-center">
+                        <h2 className="text-lg font-semibold text-slate-100">
+                            Sign in to browse the skill registry
+                        </h2>
+                        <p className="mt-1.5 text-sm text-slate-400">
+                            Published skills are available to logged-in accounts.
+                        </p>
+                        <Link
+                            href="/portal/login"
+                            className="mt-5 inline-flex items-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+                        >
+                            Sign in
+                        </Link>
+                    </div>
                 ) : filtered.length === 0 ? (
                     <div className="text-slate-500 text-sm py-8 text-center">
                         No listings match your filters.
@@ -160,9 +183,11 @@ export default function MarketplaceListingsPage() {
                     </div>
                 )}
 
-                <p className="mt-6 text-xs text-slate-600">
-                    Showing {filtered.length} of {listings.length} listings
-                </p>
+                {!needsAuth && (
+                    <p className="mt-6 text-xs text-slate-600">
+                        Showing {filtered.length} of {listings.length} listings
+                    </p>
+                )}
             </div>
         </div>
     );
