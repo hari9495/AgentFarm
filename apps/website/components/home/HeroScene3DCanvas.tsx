@@ -37,7 +37,7 @@ function CartoonAgent({ compactMotion }: { compactMotion: boolean }) {
             {/* Body */}
             <mesh position={[0, -0.55, 0]}>
                 <capsuleGeometry args={[0.48, 0.9, 8, 16]} />
-                <meshStandardMaterial color="#0284c7" roughness={0.4} metalness={0.08} />
+                <meshStandardMaterial color="#1d4ed8" roughness={0.4} metalness={0.08} />
             </mesh>
 
             {/* Head */}
@@ -71,11 +71,11 @@ function CartoonAgent({ compactMotion }: { compactMotion: boolean }) {
             {/* Arms */}
             <mesh position={[-0.56, -0.45, 0]} rotation={[0, 0, 0.48]}>
                 <capsuleGeometry args={[0.1, 0.48, 6, 12]} />
-                <meshStandardMaterial color="#0ea5e9" roughness={0.35} metalness={0.08} />
+                <meshStandardMaterial color="#2563eb" roughness={0.35} metalness={0.08} />
             </mesh>
             <mesh position={[0.56, -0.45, 0]} rotation={[0, 0, -0.48]}>
                 <capsuleGeometry args={[0.1, 0.48, 6, 12]} />
-                <meshStandardMaterial color="#0ea5e9" roughness={0.35} metalness={0.08} />
+                <meshStandardMaterial color="#2563eb" roughness={0.35} metalness={0.08} />
             </mesh>
 
             {/* Tiny laptop */}
@@ -108,12 +108,12 @@ export default function HeroScene3DCanvas({ compactMotion }: { compactMotion: bo
                 <color attach="background" args={["#ecfeff"]} />
                 <hemisphereLight intensity={0.75} color="#f0f9ff" groundColor="#0f172a" />
                 <directionalLight position={[2.6, 2.2, 2.8]} intensity={1.15} color="#c7f9ff" />
-                <directionalLight position={[-2.2, -1.8, 1.2]} intensity={0.35} color="#bae6fd" />
+                <directionalLight position={[-2.2, -1.8, 1.2]} intensity={0.35} color="#bfdbfe" />
 
                 {/* Ground */}
                 <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.05, 0]}>
                     <circleGeometry args={[1.95, 64]} />
-                    <meshBasicMaterial color="#bae6fd" transparent opacity={0.35} />
+                    <meshBasicMaterial color="#bfdbfe" transparent opacity={0.35} />
                 </mesh>
 
                 <CartoonAgent compactMotion={compactMotion} />
