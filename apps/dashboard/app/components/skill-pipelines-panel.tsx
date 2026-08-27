@@ -69,6 +69,19 @@ function inlineBadge(label: string, map: Record<string, { bg: string; color: str
     );
 }
 
+// ponytail: pipelines API returns snake_case; the rest of this panel reads camelCase
+function normalizeRun(r: Record<string, unknown>): PipelineRun {
+    return {
+        ...r,
+        runId: (r.runId ?? r.run_id) as string,
+        pipelineId: (r.pipelineId ?? r.pipeline_id) as string,
+        status: (r.status ?? 'unknown') as string,
+        startedAt: (r.startedAt ?? r.started_at) as string | undefined,
+        completedAt: (r.completedAt ?? r.completed_at) as string | undefined,
+        dryRun: (r.dryRun ?? r.dry_run) as boolean | undefined,
+    } as PipelineRun;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function SkillPipelinesPanel() {
@@ -133,7 +146,7 @@ export default function SkillPipelinesPanel() {
         const response = await fetch('/api/pipelines/runs?limit=20', { cache: 'no-store' });
         const data = (await response.json().catch(() => ({}))) as { runs?: PipelineRun[] };
 
-        setPipelineRuns(data.runs ?? []);
+        setPipelineRuns((data.runs ?? []).map((r) => normalizeRun(r as Record<string, unknown>)));
         setRunsLoading(false);
     }, []);
 
@@ -223,7 +236,7 @@ export default function SkillPipelinesPanel() {
             return;
         }
 
-        setRunResult(data);
+        setRunResult(normalizeRun(data as Record<string, unknown>));
         await fetchRuns();
         setRunning(false);
     };
@@ -237,7 +250,7 @@ export default function SkillPipelinesPanel() {
         });
         const data = (await response.json().catch(() => null)) as PipelineRun | null;
 
-        setSelectedRun(data);
+        setSelectedRun(data ? normalizeRun(data as Record<string, unknown>) : null);
         setRunDetailLoading(false);
     };
 
@@ -518,7 +531,7 @@ export default function SkillPipelinesPanel() {
                                         {pipelineRuns.map((run, idx) => (
                                             <tr key={idx} style={{ borderBottom: '1px solid var(--line)' }}>
                                                 <td style={{ padding: '0.35rem 0.5rem' }}>
-                                                    <code style={{ fontSize: '0.76rem' }}>{run.runId.slice(0, 12)}</code>
+                                                    <code style={{ fontSize: '0.76rem' }}>{run.runId?.slice(0, 12) ?? '—'}</code>
                                                 </td>
                                                 <td style={{ padding: '0.35rem 0.5rem' }}>
                                                     <code style={{ fontSize: '0.76rem' }}>{run.pipelineId}</code>
