@@ -1,5 +1,6 @@
 import { AdapterDiscoveryPanel } from '../components/adapter-discovery-panel';
 import { PageHeader } from '../components/page-header';
+import { getSessionPayload } from '../lib/internal-session';
 
 type SearchParams = {
     workspaceId?: string;
@@ -7,7 +8,10 @@ type SearchParams = {
 
 export default async function AdaptersPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
     const params = await searchParams;
-    const workspaceId = params.workspaceId?.trim() || 'ws_primary_001';
+    const session = await getSessionPayload();
+    // Use the session's active workspace, not a hardcoded placeholder — a fake
+    // default (e.g. ws_primary_001) is rejected as "workspace_id not in session scope".
+    const workspaceId = params.workspaceId?.trim() || session?.workspaceIds?.[0];
 
     return (
         <main className="page-shell" style={{ maxWidth: 1000 }}>
