@@ -100,6 +100,9 @@
       REDIS_URL: redis://redis:6379
       OPA_BASE_URL: http://opa:8181
       API_GATEWAY_PORT: '3000'
+      # Orchestrator runs as a HOST process on :3011 (see dashboard note below);
+      # the gateway's wake routes proxy to it via host.docker.internal.
+      ORCHESTRATOR_API_BASE_URL: ${ORCHESTRATOR_API_BASE_URL:-http://host.docker.internal:3011}
       # LLM observability (langfuse profile) — keys live in gitignored .env
       LANGFUSE_HOST: ${LANGFUSE_HOST:-}
       LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
