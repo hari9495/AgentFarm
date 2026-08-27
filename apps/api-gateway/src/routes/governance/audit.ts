@@ -400,6 +400,32 @@ export const registerAuditRoutes = async (
         };
     });
 
+    app.get('/v1/audit/sessions', async (request, reply) => {
+        const session = options.getSession(request);
+        if (!session) {
+            return reply.code(401).send({
+                error: 'unauthorized',
+                message: 'A valid authenticated session is required.',
+            });
+        }
+
+        const prisma = await getPrisma();
+        const sessions = await prisma.agentSession.findMany({
+            where: { tenantId: session.tenantId },
+            orderBy: { createdAt: 'desc' },
+            take: 50,
+            select: {
+                id: true,
+                taskId: true,
+                status: true,
+                startedAt: true,
+                createdAt: true,
+            },
+        });
+
+        return { sessions, total: sessions.length };
+    });
+
     app.post<{ Body: RetentionBody }>('/v1/audit/retention/cleanup', async (request, reply) => {
         const session = options.getSession(request);
         if (!session) {
