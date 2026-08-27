@@ -55,8 +55,12 @@ export async function GET(request: NextRequest): Promise<Response> {
     }
 
     if (!upstreamRes.ok) {
+        // Pass client errors through as-is (e.g. 401 unauthenticated, 403 when no
+        // workspace is selected); reserve 502 for genuine upstream failures.
+        const status =
+            upstreamRes.status >= 400 && upstreamRes.status < 500 ? upstreamRes.status : 502;
         return new Response(JSON.stringify({ error: 'upstream_error', status: upstreamRes.status }), {
-            status: 502,
+            status,
             headers: { 'Content-Type': 'application/json' },
         });
     }
