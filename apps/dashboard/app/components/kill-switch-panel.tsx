@@ -68,12 +68,14 @@ function ActivateModal({ onClose, onActivated }: { onClose: () => void; onActiva
             const res = await fetch('/api/kill-switches', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                // API expects snake_case; sending camelCase silently dropped the
+                // scope fields (bot_id/workspace_id) — a tenant-wide switch by mistake.
                 body: JSON.stringify({
-                    switchType,
+                    switch_type: switchType,
                     reason: reason.trim(),
-                    ...(workspaceId.trim() ? { workspaceId: workspaceId.trim() } : {}),
-                    ...(botId.trim() ? { botId: botId.trim() } : {}),
-                    ...(incidentRef.trim() ? { incidentRef: incidentRef.trim() } : {}),
+                    ...(workspaceId.trim() ? { workspace_id: workspaceId.trim() } : {}),
+                    ...(botId.trim() ? { bot_id: botId.trim() } : {}),
+                    ...(incidentRef.trim() ? { incident_ref: incidentRef.trim() } : {}),
                 }),
             });
             const body = (await res.json()) as { error?: string; message?: string };
