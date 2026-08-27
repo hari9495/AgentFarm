@@ -22,6 +22,11 @@ type LoopRun = {
     success_criteria?: string;
 };
 
+// ponytail: loops API returns snake_case loop_id; the rest of this component uses loopId
+function normalizeLoop(r: Record<string, unknown>): LoopRun {
+    return { ...r, loopId: (r.loopId ?? r.loop_id) as string } as LoopRun;
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATE_BADGE: Record<string, { bg: string; color: string }> = {
@@ -98,10 +103,11 @@ export default function AutonomousLoopsPanel() {
         }
 
         // Merge: keep local-only entries the in-memory store may not have
-        const serverIds = new Set((data.loops ?? []).map((r) => r.loopId));
+        const incoming = (data.loops ?? []).map((r) => normalizeLoop(r as Record<string, unknown>));
+        const serverIds = new Set(incoming.map((r) => r.loopId));
         setRuns((prev) => {
             const localOnly = prev.filter((r) => !serverIds.has(r.loopId));
-            return [...(data.loops ?? []), ...localOnly];
+            return [...incoming, ...localOnly];
         });
 
         setLoading(false);
@@ -157,6 +163,7 @@ export default function AutonomousLoopsPanel() {
 
         const resolvedId =
             (data as Record<string, unknown>).loopId as string | undefined ??
+            (data as Record<string, unknown>).loop_id as string | undefined ??
             data.result?.loopId ??
             String(Date.now());
 
@@ -188,7 +195,7 @@ export default function AutonomousLoopsPanel() {
             cache: 'no-store',
         });
         const data = (await response.json().catch(() => ({}))) as LoopRun;
-        setSelectedRun(response.ok ? data : null);
+        setSelectedRun(response.ok ? normalizeLoop(data as Record<string, unknown>) : null);
         setDetailLoading(false);
     };
 
