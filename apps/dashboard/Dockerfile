@@ -1,5 +1,5 @@
 # ── Stage 1: builder ──────────────────────────────────────────────────────────
-FROM node:22-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 
 RUN corepack enable && for i in 1 2 3 4 5; do corepack prepare pnpm@9.12.0 --activate && break || { echo "corepack retry $i/5"; sleep 5; }; done
@@ -20,7 +20,7 @@ RUN pnpm --filter "./services/**" run --if-present build
 RUN pnpm --filter @agentfarm/dashboard run build
 
 # ── Stage 2: runner ───────────────────────────────────────────────────────────
-FROM node:22-alpine AS runner
+FROM node:26-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
