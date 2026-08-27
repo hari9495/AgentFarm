@@ -154,7 +154,7 @@ export default function AbTestsPanel({ tenantId: _tenantId }: AbTestsPanelProps)
                     name: formName.trim(),
                     versionAId: formVersionA.trim(),
                     versionBId: formVersionB.trim(),
-                    trafficSplit: formSplit,
+                    trafficSplit: formSplit / 100, // API expects a 0-1 fraction; slider is a percent
                 }),
             });
             const data = (await res.json()) as { error?: string; message?: string };
