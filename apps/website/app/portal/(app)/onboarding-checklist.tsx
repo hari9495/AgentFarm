@@ -97,7 +97,7 @@ export default function OnboardingChecklist({
                             width: `${pct}%`,
                             background: allDone
                                 ? "linear-gradient(90deg,#059669,#10b981)"
-                                : "linear-gradient(90deg,#0284c7,#38bdf8)",
+                                : "linear-gradient(90deg,#1d4ed8,#3b82f6)",
                         }}
                     />
                 </div>

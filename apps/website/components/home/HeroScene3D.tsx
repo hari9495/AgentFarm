@@ -48,7 +48,7 @@ export default function HeroScene3D() {
                             <span
                                 className="w-3 h-3 rounded-full"
                                 style={{
-                                    backgroundColor: stage.active ? "#0ea5e9" : "#cbd5e1",
+                                    backgroundColor: stage.active ? "#2563eb" : "#cbd5e1",
                                 }}
                             />
                             <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{stage.label}</span>
@@ -56,7 +56,7 @@ export default function HeroScene3D() {
                         <span
                             className="text-sm font-semibold"
                             style={{
-                                color: stage.status === "high-risk" ? "#ef4444" : stage.status === "shipped" ? "#3b82f6" : "#0ea5e9",
+                                color: stage.status === "high-risk" ? "#ef4444" : stage.status === "shipped" ? "#3b82f6" : "#2563eb",
                             }}
                         >
                             {stage.count} {stage.status}

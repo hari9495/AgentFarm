@@ -356,13 +356,13 @@ export default async function DashboardPage() {
                                     const isToday = idx === weeklyActivity.length - 1;
                                     return (
                                         <div key={`${d.day}-${idx}`} className="flex-1 flex flex-col items-center gap-1" style={{ height: "100%" }}>
-                                            <span className="text-[10px] font-bold tabular-nums" style={{ color: isToday ? "#0ea5e9" : "#94a3b8" }}>
+                                            <span className="text-[10px] font-bold tabular-nums" style={{ color: isToday ? "#2563eb" : "#94a3b8" }}>
                                                 {d.tasks > 0 ? d.tasks : ""}
                                             </span>
                                             <div className="flex-1 w-full flex flex-col justify-end">
                                                 <div
                                                     className="w-full rounded-t-[4px] transition-all duration-500"
-                                                    style={{ height: `${heightPct}%`, background: isToday ? "#0ea5e9" : "#bae6fd" }}
+                                                    style={{ height: `${heightPct}%`, background: isToday ? "#2563eb" : "#bfdbfe" }}
                                                 />
                                             </div>
                                             <span className="text-[10px] font-semibold" style={{ color: isToday ? "#0f172a" : "#94a3b8" }}>
