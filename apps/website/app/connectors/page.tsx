@@ -610,13 +610,13 @@ export default function ConnectorsPage() {
                             available.slice(0, 12).map((c) => {
                                 const categoryColor: Record<ConnectorCategory, string> = {
                                     task_tracker: "bg-[var(--accent-blue)]/10",
-                                    messaging: "bg-violet-500/10",
+                                    messaging: "bg-blue-500/10",
                                     code: "bg-[var(--surface-el)]",
                                     email: "bg-[var(--accent-green)]/10",
                                     crm: "bg-amber-500/10",
                                     ats: "bg-emerald-500/10",
-                                    cms: "bg-sky-500/10",
-                                    cloud: "bg-indigo-500/10",
+                                    cms: "bg-blue-500/10",
+                                    cloud: "bg-blue-500/10",
                                 };
                                 return (
                                     <div key={c.tool} className={`flex flex-col items-center gap-2 p-3 rounded-xl ${categoryColor[c.category]} border border-transparent hover:border-[var(--hairline)] transition-colors cursor-default`}>

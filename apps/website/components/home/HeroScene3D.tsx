@@ -18,11 +18,11 @@ export default function HeroScene3D() {
     ];
 
     return (
-        <div className="hero-3d-canvas-wrap rounded-2xl overflow-hidden bg-gradient-to-br from-sky-50 to-cyan-50 dark:from-slate-900 dark:to-slate-800 border border-cyan-200/60 dark:border-slate-700 shadow-2xl">
+        <div className="hero-3d-canvas-wrap rounded-2xl overflow-hidden bg-gradient-to-br from-blue-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 border border-blue-200/60 dark:border-slate-700 shadow-2xl">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200/60 dark:border-slate-700 bg-white/70 dark:bg-slate-900/70 backdrop-blur">
                 <div className="flex items-center gap-2">
-                    <LayoutDashboard className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                    <LayoutDashboard className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">Agent Runtime Board</span>
                 </div>
                 <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">

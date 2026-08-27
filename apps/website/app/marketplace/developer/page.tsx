@@ -291,7 +291,7 @@ export default function DeveloperMarketplacePage() {
             <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 pb-20">
                 <div className="relative overflow-hidden rounded-2xl border border-[var(--accent-blue)]/20 bg-[var(--surface-el)] p-10 text-center">
                     {/* Subtle blue glow backdrop */}
-                    <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500/5 via-transparent to-violet-500/5" aria-hidden="true" />
+                    <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500/5 via-transparent to-blue-500/5" aria-hidden="true" />
                     <div className="relative">
                         <h2 className="text-2xl font-semibold text-[var(--ink)] mb-2">
                             Ready to hire your AI developer?
