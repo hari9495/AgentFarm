@@ -103,7 +103,7 @@ function CartoonAgent({ compactMotion }: { compactMotion: boolean }) {
 
 export default function HeroScene3DCanvas({ compactMotion }: { compactMotion: boolean }) {
     return (
-        <div className="h-[320px] sm:h-[380px] bg-gradient-to-br from-sky-50 to-cyan-50 dark:from-slate-900 dark:to-slate-800">
+        <div className="h-[320px] sm:h-[380px] bg-gradient-to-br from-blue-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
             <Canvas camera={{ position: [0, 0.16, 4.2], fov: 43 }} dpr={[1, 1.4]} gl={{ antialias: false }}>
                 <color attach="background" args={["#ecfeff"]} />
                 <hemisphereLight intensity={0.75} color="#f0f9ff" groundColor="#0f172a" />

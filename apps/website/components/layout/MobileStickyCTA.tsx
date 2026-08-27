@@ -45,7 +45,7 @@ export default function MobileStickyCTA() {
     <>
       <div className="md:hidden h-24" aria-hidden />
       <div className="md:hidden fixed inset-x-0 bottom-0 z-40 p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pointer-events-none">
-        <div className="pointer-events-auto rounded-2xl border border-sky-200/80 dark:border-sky-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl shadow-sky-500/15">
+        <div className="pointer-events-auto rounded-2xl border border-blue-200/80 dark:border-blue-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl shadow-blue-500/15">
           <Link
             href="/get-started"
             onClick={() => track({ type: "mobile_sticky_cta_click", sourcePath: pathname })}
@@ -55,7 +55,7 @@ export default function MobileStickyCTA() {
               <p className="text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500">Launch your first agent</p>
               <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Get started in under 10 minutes</p>
             </div>
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 via-blue-600 to-emerald-500 text-white shadow-md shadow-sky-500/35">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-emerald-500 text-white shadow-md shadow-blue-500/35">
               <ArrowRight className="h-4 w-4" />
             </span>
           </Link>

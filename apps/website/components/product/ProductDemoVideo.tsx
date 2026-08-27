@@ -40,8 +40,8 @@ const STORIES: Record<PersonaId, PersonaStory> = {
     cto: {
         label: "CTO / Enterprise Buyer",
         icon: Building2,
-        accent: "from-cyan-400 via-sky-500 to-blue-600",
-        chip: "bg-cyan-500/15 text-cyan-200 border border-cyan-400/25",
+        accent: "from-blue-400 via-blue-500 to-blue-600",
+        chip: "bg-blue-500/15 text-blue-200 border border-blue-400/25",
         duration: "1:18",
         shortLabel: "Enterprise",
         scenes: [
@@ -88,8 +88,8 @@ const STORIES: Record<PersonaId, PersonaStory> = {
     manager: {
         label: "Engineering Manager",
         icon: Users,
-        accent: "from-violet-400 via-fuchsia-500 to-pink-500",
-        chip: "bg-violet-500/15 text-violet-200 border border-violet-400/25",
+        accent: "from-blue-400 via-blue-500 to-blue-500",
+        chip: "bg-blue-500/15 text-blue-200 border border-blue-400/25",
         duration: "1:04",
         shortLabel: "Manager",
         scenes: [
@@ -206,15 +206,15 @@ function CartoonScene({
                 transition={{ duration: 0.75, ease: "easeInOut" }}
             >
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(34,211,238,0.18),transparent_24%),radial-gradient(circle_at_72%_28%,rgba(168,85,247,0.18),transparent_22%),radial-gradient(circle_at_78%_78%,rgba(59,130,246,0.16),transparent_20%)]" />
-                <div className="absolute left-[8%] top-[18%] rounded-full border border-sky-400/15 bg-sky-400/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]">
+                <div className="absolute left-[8%] top-[18%] rounded-full border border-blue-400/15 bg-blue-400/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]">
                     <span className={`bg-gradient-to-r ${accent} bg-clip-text text-transparent`}>AgentFarms</span>
                 </div>
                 <div className={`absolute left-[5%] top-[33%] flex h-10 w-10 items-center justify-center rounded-[14px] bg-gradient-to-br ${accent} shadow-lg shadow-black/40`}>
                     <span className="text-sm font-black tracking-tight text-white">AF</span>
                 </div>
                 <div className="absolute left-[14%] top-[58%] h-20 w-20 rounded-[28px] border border-white/8 bg-white/4" />
-                <div className="absolute right-[20%] top-[20%] h-24 w-24 rounded-[32px] border border-cyan-300/10 bg-cyan-300/5" />
-                <div className="absolute right-[12%] bottom-[16%] rounded-2xl border border-violet-300/10 bg-violet-300/6 px-3 py-2 text-[10px] font-semibold text-violet-200">
+                <div className="absolute right-[20%] top-[20%] h-24 w-24 rounded-[32px] border border-blue-300/10 bg-blue-300/5" />
+                <div className="absolute right-[12%] bottom-[16%] rounded-2xl border border-blue-300/10 bg-blue-300/6 px-3 py-2 text-[10px] font-semibold text-blue-200">
                     Approval + Evidence
                 </div>
             </motion.div>
@@ -251,7 +251,7 @@ function CartoonScene({
                     transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
                 >
                     <div className="relative h-28 w-20">
-                        <div className="absolute bottom-0 left-1/2 h-16 w-14 -translate-x-1/2 rounded-[20px] bg-gradient-to-b from-cyan-400 to-blue-600 shadow-[0_14px_28px_-12px_rgba(37,99,235,0.7)]" />
+                        <div className="absolute bottom-0 left-1/2 h-16 w-14 -translate-x-1/2 rounded-[20px] bg-gradient-to-b from-blue-400 to-blue-600 shadow-[0_14px_28px_-12px_rgba(37,99,235,0.7)]" />
                         <div className="absolute bottom-14 left-1/2 h-11 w-11 -translate-x-1/2 rounded-full bg-[#f1d3b3]" />
                         <div className="absolute bottom-[3.9rem] left-[1.4rem] h-2 w-2 rounded-full bg-slate-950" />
                         <div className="absolute bottom-[3.9rem] right-[1.4rem] h-2 w-2 rounded-full bg-slate-950" />
@@ -275,7 +275,7 @@ function CartoonScene({
                     transition={{ repeat: Infinity, duration: 2.1, ease: "easeInOut", delay: 0.35 }}
                 >
                     <div className="relative h-24 w-16">
-                        <div className="absolute bottom-0 left-1/2 h-14 w-11 -translate-x-1/2 rounded-[18px] bg-gradient-to-b from-violet-400 to-fuchsia-600" />
+                        <div className="absolute bottom-0 left-1/2 h-14 w-11 -translate-x-1/2 rounded-[18px] bg-gradient-to-b from-blue-400 to-blue-600" />
                         <div className="absolute bottom-12 left-1/2 h-9 w-9 -translate-x-1/2 rounded-full bg-[#f5d9bd]" />
                         <div className="absolute bottom-[3.1rem] left-[1.05rem] h-1.5 w-1.5 rounded-full bg-slate-950" />
                         <div className="absolute bottom-[3.1rem] right-[1.05rem] h-1.5 w-1.5 rounded-full bg-slate-950" />
@@ -374,7 +374,7 @@ export default function ProductDemoVideo() {
 
                     <div className="absolute inset-0 flex items-center justify-center px-6">
                         <div className="max-w-[640px] text-center">
-                            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-300">2D Cartoon Product Demo</p>
+                            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-300">2D Cartoon Product Demo</p>
                             <h3 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl">
                                 Watch AgentFarms explain itself for {currentStory.label}
                             </h3>
@@ -414,7 +414,7 @@ export default function ProductDemoVideo() {
                                 <div className="mt-1 flex items-center gap-2 text-white">
                                     {(() => {
                                         const Icon = currentStory.icon;
-                                        return <Icon className="h-4 w-4 text-sky-300" />;
+                                        return <Icon className="h-4 w-4 text-blue-300" />;
                                     })()}
                                     <span className="text-sm font-semibold">{currentStory.label}</span>
                                 </div>
@@ -495,7 +495,7 @@ export default function ProductDemoVideo() {
                                             <motion.span
                                                 animate={{ opacity: [1, 0, 1] }}
                                                 transition={{ repeat: Infinity, duration: 0.7 }}
-                                                className="ml-0.5 inline-block h-4 w-0.5 translate-y-0.5 bg-sky-400 align-middle"
+                                                className="ml-0.5 inline-block h-4 w-0.5 translate-y-0.5 bg-blue-400 align-middle"
                                             />
                                         )}
                                     </p>
@@ -522,7 +522,7 @@ export default function ProductDemoVideo() {
                                             const complete = index < step;
                                             return (
                                                 <div key={scene.title} className="flex items-center gap-2.5">
-                                                    <span className={`h-2.5 w-2.5 rounded-full ${active || complete ? "bg-sky-400" : "bg-slate-700"}`} />
+                                                    <span className={`h-2.5 w-2.5 rounded-full ${active || complete ? "bg-blue-400" : "bg-slate-700"}`} />
                                                     <p className={`text-[11px] ${active ? "text-white" : complete ? "text-slate-300" : "text-slate-500"}`}>{scene.title}</p>
                                                 </div>
                                             );

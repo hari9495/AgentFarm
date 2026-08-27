@@ -58,8 +58,8 @@ const PLAN_DETAILS: Record<
         executions: "500 task executions / month",
     },
     Pro: {
-        color: "text-purple-700 dark:text-purple-300",
-        bg: "bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800",
+        color: "text-blue-800 dark:text-blue-200",
+        bg: "bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700",
         description: "For teams scaling with multiple AI workers in parallel.",
         executions: "5,000 task executions / month",
     },

@@ -152,7 +152,7 @@ export default function BotDetailClient({ bot }: { bot: Bot }) {
                             <img src={heroImage} alt={`${bot.department} team context`} className="w-full h-full object-cover" loading="lazy" />
                             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/25 to-transparent" />
                             <div className="absolute bottom-4 left-4 right-4 text-white">
-                                <p className="text-xs uppercase tracking-wide text-sky-200">Role context</p>
+                                <p className="text-xs uppercase tracking-wide text-blue-200">Role context</p>
                                 <p className="text-sm sm:text-base font-semibold">Built for teams running {bot.department.toLowerCase()} workflows at speed with accountability.</p>
                             </div>
                         </div>

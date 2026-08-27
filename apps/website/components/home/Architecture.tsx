@@ -29,7 +29,7 @@ export default function Architecture() {
                         {[
                             { icon: Monitor, label: "AgentFarms Dashboard", sub: "Assign tasks, review PRs", color: "bg-blue-600" },
                             { icon: GitBranch, label: "GitHub / GitLab", sub: "Source control & PRs", color: "bg-slate-700" },
-                            { icon: Database, label: "Teams / Jira / Email", sub: "Task assignments & approvals", color: "bg-indigo-600" },
+                            { icon: Database, label: "Teams / Jira / Email", sub: "Task assignments & approvals", color: "bg-blue-600" },
                         ].map(({ icon: Icon, label, sub, color }, i) => (
                             <motion.div
                                 key={label}
@@ -59,7 +59,7 @@ export default function Architecture() {
                             className="relative w-full bg-gradient-to-b from-slate-800 to-slate-900 rounded-2xl border border-slate-700 p-6 shadow-2xl overflow-hidden"
                         >
                             {/* Glow */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-purple-600/10" />
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-blue-600/10" />
                             <div className="relative z-10 space-y-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
@@ -99,7 +99,7 @@ export default function Architecture() {
                         <p className="text-xs font-semibold uppercase tracking-wider text-[var(--ash)] mb-1">AI Workers Output</p>
                         {[
                             { icon: Bot, label: "Code & Pull Requests", sub: "Reviewed and ready to merge", color: "bg-emerald-600" },
-                            { icon: ShieldCheck, label: "Security Reports", sub: "Zero-trust audit trail", color: "bg-purple-600" },
+                            { icon: ShieldCheck, label: "Security Reports", sub: "Zero-trust audit trail", color: "bg-blue-600" },
                             { icon: ArrowDown, label: "Deployments", sub: "CI/CD pipelines triggered", color: "bg-orange-600" },
                         ].map(({ icon: Icon, label, sub, color }, i) => (
                             <motion.div

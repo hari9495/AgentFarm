@@ -108,7 +108,7 @@ export default function CommandPalette() {
                                                 key={entry.href}
                                                 href={entry.href}
                                                 onClick={() => setOpen(false)}
-                                                className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-900/20 hover:text-sky-700 dark:hover:text-sky-300 transition-colors"
+                                                className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
                                             >
                                                 <entry.icon className="w-4 h-4 shrink-0 text-slate-400 dark:text-slate-500" />
                                                 {entry.label}

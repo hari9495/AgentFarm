@@ -6,7 +6,7 @@ import { blogListingContent, blogPostsContent } from "@/lib/marketing-content";
 
 const categoryColors: Record<string, string> = {
     Product: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
-    Engineering: "bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300",
+    Engineering: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
     Insights: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300",
 };
 
@@ -40,11 +40,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
     return (
         <article className="site-shell min-h-screen">
-            <div className="bg-gradient-to-br from-slate-50 to-sky-50/30 dark:from-slate-900 dark:to-sky-900/10 border-b border-slate-200 dark:border-slate-800">
+            <div className="bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-slate-900 dark:to-blue-900/10 border-b border-slate-200 dark:border-slate-800">
                 <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
                     <Link
                         href="/blog"
-                        className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 mb-8 transition-colors"
+                        className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 mb-8 transition-colors"
                     >
                         <ArrowLeft className="w-4 h-4" /> All posts
                     </Link>
@@ -65,7 +65,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                     <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed mb-8">{post.excerpt}</p>
 
                     <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-sky-500 via-blue-600 to-emerald-500 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 via-blue-600 to-emerald-500 flex items-center justify-center text-xs font-bold text-white shrink-0">
                             {post.author.initials}
                         </div>
                         <div>
@@ -97,12 +97,12 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                                 <Link
                                     key={entry.slug}
                                     href={`/blog/${entry.slug}`}
-                                    className="group block p-5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-sky-300 dark:hover:border-sky-700 bg-slate-50 dark:bg-slate-900 hover:bg-sky-50/30 dark:hover:bg-sky-900/10 transition-all"
+                                    className="group block p-5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700 bg-slate-50 dark:bg-slate-900 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-all"
                                 >
                                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold mb-3 ${categoryColors[entry.category]}`}>
                                         {entry.category}
                                     </span>
-                                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-sky-700 dark:group-hover:text-sky-300 transition-colors leading-snug mb-2">
+                                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors leading-snug mb-2">
                                         {entry.title}
                                     </p>
                                     <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -114,13 +114,13 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                     </div>
                 )}
 
-                <div className="mt-12 p-8 rounded-3xl bg-gradient-to-br from-sky-500 via-blue-600 to-emerald-500 text-center">
+                <div className="mt-12 p-8 rounded-3xl bg-gradient-to-br from-blue-500 via-blue-600 to-emerald-500 text-center">
                     <Bot className="w-8 h-8 text-[color:var(--op-muted)] mx-auto mb-3" />
                     <h3 className="text-lg font-bold text-white mb-2">{blogListingContent.postCta.title}</h3>
                     <p className="text-sm text-[color:var(--op-muted)] mb-5">{blogListingContent.postCta.description}</p>
                     <Link
                         href={blogListingContent.postCta.buttonHref}
-                        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-sky-700 font-semibold text-sm hover:bg-slate-50 transition-colors shadow-lg"
+                        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-blue-700 font-semibold text-sm hover:bg-slate-50 transition-colors shadow-lg"
                     >
                         {blogListingContent.postCta.buttonLabel}
                     </Link>
