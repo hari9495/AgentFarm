@@ -526,11 +526,14 @@ export async function registerTaskTemplateRoutes(
             // Agent ownership check — verify the target agent belongs to this tenant
             // (done after template resolution so unknown templates short-circuit first)
             {
+                // Bot is scoped by workspaceId (it has no tenantId column). The
+                // workspace was already verified to be in the session's scope above,
+                // so checking the agent belongs to that workspace is sufficient.
                 const prisma = await resolvePrisma();
                 const agent = await (prisma as unknown as {
-                    bot: { findFirst: (a: { where: { id: string; tenantId: string }; select: { id: boolean } }) => Promise<{ id: string } | null> };
+                    bot: { findFirst: (a: { where: { id: string; workspaceId: string }; select: { id: boolean } }) => Promise<{ id: string } | null> };
                 }).bot.findFirst({
-                    where: { id: body.agentId, tenantId: session.tenantId },
+                    where: { id: body.agentId, workspaceId: body.workspaceId },
                     select: { id: true },
                 });
                 if (!agent) {
