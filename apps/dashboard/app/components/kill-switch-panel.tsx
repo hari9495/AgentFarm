@@ -73,6 +73,7 @@ function ActivateModal({ onClose, onActivated }: { onClose: () => void; onActiva
                 body: JSON.stringify({
                     switch_type: switchType,
                     reason: reason.trim(),
+                    affected_action_types: ['*'], // UI halts ALL task execution in scope
                     ...(workspaceId.trim() ? { workspace_id: workspaceId.trim() } : {}),
                     ...(botId.trim() ? { bot_id: botId.trim() } : {}),
                     ...(incidentRef.trim() ? { incident_ref: incidentRef.trim() } : {}),
