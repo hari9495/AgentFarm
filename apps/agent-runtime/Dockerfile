@@ -2,7 +2,7 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
+RUN corepack enable && for i in 1 2 3 4 5; do corepack prepare pnpm@9.12.0 --activate && break || { echo "corepack retry $i/5"; sleep 5; }; done
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
 COPY packages/ ./packages/
