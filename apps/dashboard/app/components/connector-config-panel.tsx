@@ -215,7 +215,7 @@ function CredentialForm({
 
         try {
             const response = await fetch(
-                `${apiBase}/v1/connectors/${connector.connector_id}/credentials`,
+                `/api/connectors/${connector.connector_id}/credentials`,
                 {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -362,7 +362,7 @@ export function ConnectorConfigPanel({ workspaceId, apiBase, initialConnectors }
         setOauthPendingId(connector.connector_id);
         setOauthErrorId(null);
         try {
-            const response = await fetch(`${apiBase}/v1/connectors/oauth/initiate`, {
+            const response = await fetch(`/api/connectors/oauth/initiate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -395,7 +395,7 @@ export function ConnectorConfigPanel({ workspaceId, apiBase, initialConnectors }
         setRevokePendingId(connector.connector_id);
         setRevokeErrorId(null);
         try {
-            const response = await fetch(`${apiBase}/v1/connectors/oauth/revoke`, {
+            const response = await fetch(`/api/connectors/oauth/revoke`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -432,7 +432,7 @@ export function ConnectorConfigPanel({ workspaceId, apiBase, initialConnectors }
         setHealthRunning(true);
         setHealthError(null);
         try {
-            const response = await fetch(`${apiBase}/v1/connectors/health/check`, {
+            const response = await fetch(`/api/connectors/health/check`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
