@@ -272,5 +272,15 @@ if (enableScreenShare) {
     }
 }
 
-console.log('teams-join: done');
-// Keep the browser open — the desktop-agent process keeps it alive.
+console.log('teams-join: join request submitted (or in meeting). Keeping browser alive.');
+// Explicitly hold this process — and therefore the Playwright-launched Chromium —
+// open so the bot persists in the meeting/lobby. Falling off the end can let Node
+// exit and tear down the browser (see the meet-join.mjs fix). The desktop-agent
+// tracks this PID and sends SIGTERM on leave.
+const shutdown = async () => {
+    try { await browser.close(); } catch { /* ignore */ }
+    process.exit(0);
+};
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+await new Promise(() => {}); // hold open until the desktop-agent terminates us
