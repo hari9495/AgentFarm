@@ -1179,11 +1179,17 @@ model MeetingActionItem {
   dueDate          DateTime?
   priority         String    @default("medium")  // low | medium | high
   status           String    @default("open")    // open | dispatched | done | dismissed
-  linkedTaskId     String?   // external tracker key once acted on (Jira/Linear/…)
-  linkedConnector  String?   // jira | slack | gmail | outlook | …
-  sortOrder        Int       @default(0)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  linkedTaskId      String?   // external tracker key once acted on (Jira/Linear/…)
+  linkedConnector   String?   // jira | slack | gmail | outlook | …
+  // ── Phase 2: act-via-approvals ──────────────────────────────────────────
+  approvalId        String?   // Approval row created when this item was dispatched
+  dispatchConnector String?   // connector_type queued for execution (jira|slack|email…)
+  dispatchActionType String?  // normalized action_type (create_task|send_message|send_email)
+  dispatchPayload   Json?     // connector action payload to run once approved
+  dispatchError     String?   // last execution failure reason, if any
+  sortOrder         Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   session          MeetingSession @relation(fields: [meetingSessionId], references: [id], onDelete: Cascade)
 

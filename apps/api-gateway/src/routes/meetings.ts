@@ -1,5 +1,11 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import type { PrismaClient } from '@prisma/client';
+import type { PrismaClient, Prisma } from '@prisma/client';
+import {
+    createApprovalForAction,
+    executeConnectorAction,
+    defaultActionTypeForConnector,
+    roleForConnector,
+} from '../lib/meeting-action-dispatch.js';
 import {
     isMeetingSlackEnabled,
     distributeMeetingSummaryToSlack,
@@ -75,6 +81,23 @@ type AnalyzeTranscriptBody = {
     transcript: string;
     language?: string;
 };
+
+type DispatchActionBody = {
+    connector: string;
+    actionType?: string;
+    payload?: Record<string, unknown>;
+};
+
+/** Build a sensible default connector payload from the action-item text. */
+function buildDefaultPayload(actionType: string, text: string): Record<string, unknown> {
+    if (actionType === 'create_task') {
+        return { title: text, summary: text, description: 'Action item captured from a meeting.' };
+    }
+    if (actionType === 'send_email') {
+        return { subject: 'Meeting action item', body: text };
+    }
+    return { text }; // send_message
+}
 
 type PatchActionItemBody = {
     status?: string;
@@ -477,6 +500,147 @@ export async function registerMeetingRoutes(
             }
             const updated = await prisma.meetingActionItem.update({ where: { id: itemId }, data });
             return reply.send(updated);
+        },
+    );
+
+    // -----------------------------------------------------------------------
+    // POST /v1/meetings/:sessionId/action-items/:itemId/dispatch
+    // Phase 2 "act": propose a connector action for this item and create an
+    // Approval in the queue (medium risk). The item moves to awaiting_approval;
+    // nothing runs until an operator approves and /execute is called.
+    // -----------------------------------------------------------------------
+    app.post<{ Params: { sessionId: string; itemId: string }; Body: DispatchActionBody }>(
+        '/v1/meetings/:sessionId/action-items/:itemId/dispatch',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'Unauthorized' });
+            }
+            const { sessionId, itemId } = request.params;
+            const body = request.body ?? ({} as DispatchActionBody);
+            const connector = typeof body.connector === 'string' ? body.connector.trim() : '';
+            if (!connector) {
+                return reply.code(400).send({ error: 'connector is required (e.g. jira, slack, gmail)' });
+            }
+            const prisma = await resolvePrisma();
+            const item = await prisma.meetingActionItem.findFirst({
+                where: { id: itemId, meetingSessionId: sessionId, tenantId: session.tenantId },
+            });
+            if (!item) {
+                return reply.code(404).send({ error: 'Action item not found' });
+            }
+            const meeting = await prisma.meetingSession.findFirst({
+                where: { id: sessionId, tenantId: session.tenantId },
+            });
+            if (!meeting) {
+                return reply.code(404).send({ error: 'Meeting session not found' });
+            }
+
+            const actionType = body.actionType?.trim() || defaultActionTypeForConnector(connector);
+            const payload = body.payload ?? buildDefaultPayload(actionType, item.text);
+            const actionId = `mtg-ai:${itemId}`;
+            const actionSummary = `${connector}/${actionType}: ${item.text}`.slice(0, 480);
+
+            const intake = await createApprovalForAction({
+                tenantId: session.tenantId,
+                workspaceId: meeting.workspaceId,
+                botId: meeting.agentId,
+                actionId,
+                actionSummary,
+                riskLevel: 'medium',
+                requestedBy: session.userId,
+            });
+            if (!intake.ok) {
+                return reply.code(502).send({ error: 'approval_intake_failed', detail: intake.error });
+            }
+
+            const updated = await prisma.meetingActionItem.update({
+                where: { id: itemId },
+                data: {
+                    status: 'awaiting_approval',
+                    approvalId: intake.approvalId ?? null,
+                    dispatchConnector: connector,
+                    dispatchActionType: actionType,
+                    dispatchPayload: payload as Prisma.InputJsonValue,
+                    linkedConnector: connector,
+                    dispatchError: null,
+                },
+            });
+            return reply.send({
+                status: 'awaiting_approval',
+                approvalId: intake.approvalId,
+                approvalStatus: intake.status,
+                item: updated,
+            });
+        },
+    );
+
+    // -----------------------------------------------------------------------
+    // POST /v1/meetings/:sessionId/action-items/:itemId/execute
+    // Run the dispatched connector action. The connector-execute endpoint's
+    // approval gate blocks this until the Approval is granted (409); on success
+    // the item becomes done with the external id recorded in linkedTaskId.
+    // -----------------------------------------------------------------------
+    app.post<{ Params: { sessionId: string; itemId: string } }>(
+        '/v1/meetings/:sessionId/action-items/:itemId/execute',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'Unauthorized' });
+            }
+            const { sessionId, itemId } = request.params;
+            const prisma = await resolvePrisma();
+            const item = await prisma.meetingActionItem.findFirst({
+                where: { id: itemId, meetingSessionId: sessionId, tenantId: session.tenantId },
+            });
+            if (!item) {
+                return reply.code(404).send({ error: 'Action item not found' });
+            }
+            if (!item.dispatchConnector || !item.dispatchActionType) {
+                return reply.code(409).send({ error: 'not_dispatched', message: 'Dispatch this item first.' });
+            }
+            const meeting = await prisma.meetingSession.findFirst({
+                where: { id: sessionId, tenantId: session.tenantId },
+            });
+            if (!meeting) {
+                return reply.code(404).send({ error: 'Meeting session not found' });
+            }
+
+            const exec = await executeConnectorAction({
+                tenantId: session.tenantId,
+                workspaceId: meeting.workspaceId,
+                botId: meeting.agentId,
+                roleKey: roleForConnector(item.dispatchConnector),
+                connectorType: item.dispatchConnector,
+                actionType: item.dispatchActionType,
+                payload: (item.dispatchPayload ?? {}) as Record<string, unknown>,
+                approvalActionId: `mtg-ai:${itemId}`,
+            });
+
+            if (exec.blocked) {
+                return reply.code(409).send({
+                    error: 'awaiting_approval',
+                    message: 'Approval has not been granted for this action yet.',
+                });
+            }
+            if (!exec.ok) {
+                await prisma.meetingActionItem.update({
+                    where: { id: itemId },
+                    data: { status: 'failed', dispatchError: exec.error ?? 'execution_failed' },
+                });
+                return reply.code(502).send({ error: 'execution_failed', detail: exec.error });
+            }
+
+            const updated = await prisma.meetingActionItem.update({
+                where: { id: itemId },
+                data: { status: 'done', linkedTaskId: exec.externalId ?? null, dispatchError: null },
+            });
+            return reply.send({
+                status: 'done',
+                linkedTaskId: exec.externalId,
+                resultSummary: exec.resultSummary,
+                item: updated,
+            });
         },
     );
 
