@@ -165,12 +165,20 @@ try {
     ).first();
     await lobbyOrJoined.waitFor({ timeout: timeoutMs }).catch(() => undefined);
 
-    console.log('meet-join: join request submitted (or in meeting). Leaving browser running.');
-    // Detach: do not close the browser — the agent's vision/voice loops
-    // need the same Chromium instance alive. The process exits but the
-    // persistent context stays attached to the user's profile.
+    console.log('meet-join: join request submitted (or in meeting). Keeping browser alive.');
     clearTimeout(overall);
-    process.exit(0);
+    // Keep this process — and therefore the Playwright-launched Chromium —
+    // ALIVE so the bot stays in the meeting/lobby. Calling process.exit() here
+    // (the previous behaviour) tore down the browser a split-second after the
+    // join click, so the bot never persisted for the host to admit. The
+    // desktop-agent tracks this PID and sends SIGTERM on leave.
+    const shutdown = async () => {
+        try { await browser.close(); } catch { /* ignore */ }
+        process.exit(0);
+    };
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
+    await new Promise(() => {}); // hold open until the desktop-agent terminates us
 } catch (err) {
     console.error('meet-join: unexpected error:', err.message);
     process.exit(4);
