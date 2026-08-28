@@ -1133,7 +1133,8 @@ model MeetingSession {
   desktopSessionId  String?
   recordingUrl      String?
 
-  auditEvents      MeetingAuditEvent[]
+  auditEvents        MeetingAuditEvent[]
+  actionItemRecords  MeetingActionItem[]
 
   @@index([tenantId])
   @@index([workspaceId])
@@ -1162,6 +1163,33 @@ model MeetingAuditEvent {
   @@index([tenantId])
   @@index([tenantId, createdAt])
   @@index([tenantId, eventType])
+}
+
+// Structured action item extracted from a meeting — one row per item, so items
+// can be tracked and later acted on (Jira/Slack/email) via the approval flow.
+// Populated from MeetingSession.actionItems (the flat JSON) on write.
+model MeetingActionItem {
+  id               String    @id @default(cuid())
+  meetingSessionId String
+  tenantId         String
+  workspaceId      String
+  text             String
+  ownerName        String?
+  ownerEmail       String?
+  dueDate          DateTime?
+  priority         String    @default("medium")  // low | medium | high
+  status           String    @default("open")    // open | dispatched | done | dismissed
+  linkedTaskId     String?   // external tracker key once acted on (Jira/Linear/…)
+  linkedConnector  String?   // jira | slack | gmail | outlook | …
+  sortOrder        Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  session          MeetingSession @relation(fields: [meetingSessionId], references: [id], onDelete: Cascade)
+
+  @@index([meetingSessionId])
+  @@index([tenantId])
+  @@index([tenantId, status])
 }
 
 model Plan {

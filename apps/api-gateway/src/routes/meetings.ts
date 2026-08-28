@@ -66,6 +66,65 @@ type PostSpeakingAgentBody = {
     voiceId?: string;
 };
 
+type PatchActionItemBody = {
+    status?: string;
+    ownerName?: string | null;
+    ownerEmail?: string | null;
+    priority?: string;
+    dueDate?: string | null;
+    linkedTaskId?: string | null;
+    linkedConnector?: string | null;
+};
+
+/**
+ * Fan the flat MeetingSession.actionItems JSON out into structured
+ * MeetingActionItem rows so each item can be tracked and later acted on
+ * (Jira/Slack/email via the approval flow). Accepts a JSON array of either
+ * strings or `{ text, ownerName?, ownerEmail?, priority? }` objects. Replaces
+ * the session's existing item set (idempotent re-summarise). Best-effort —
+ * the caller wraps this in a catch so it never fails the PATCH.
+ */
+async function syncActionItemRows(
+    prisma: PrismaClient,
+    input: { meetingSessionId: string; tenantId: string; workspaceId: string; actionItemsJson: string },
+): Promise<void> {
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(input.actionItemsJson);
+    } catch {
+        return; // not JSON — leave structured rows untouched
+    }
+    if (!Array.isArray(parsed)) return;
+
+    const rows = parsed
+        .map((raw, i) => {
+            const obj = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+            const text =
+                typeof raw === 'string'
+                    ? raw
+                    : typeof obj['text'] === 'string'
+                      ? (obj['text'] as string)
+                      : '';
+            if (!text.trim()) return null;
+            return {
+                meetingSessionId: input.meetingSessionId,
+                tenantId: input.tenantId,
+                workspaceId: input.workspaceId,
+                text: text.trim(),
+                ownerName: typeof obj['ownerName'] === 'string' ? (obj['ownerName'] as string) : null,
+                ownerEmail: typeof obj['ownerEmail'] === 'string' ? (obj['ownerEmail'] as string) : null,
+                priority: typeof obj['priority'] === 'string' ? (obj['priority'] as string) : 'medium',
+                sortOrder: i,
+            };
+        })
+        .filter((r): r is NonNullable<typeof r> => r !== null);
+
+    await prisma.$transaction([
+        prisma.meetingActionItem.deleteMany({ where: { meetingSessionId: input.meetingSessionId } }),
+        ...(rows.length ? [prisma.meetingActionItem.createMany({ data: rows })] : []),
+    ]);
+}
+
 export type RegisterMeetingRoutesOptions = {
     getSession: (request: FastifyRequest) => SessionContext | null;
     prisma?: PrismaClient;
@@ -188,6 +247,19 @@ export async function registerMeetingRoutes(
                 data: updateData,
             });
 
+            // Fan the flat actionItems JSON out into structured MeetingActionItem
+            // rows so each item can be tracked and acted on individually. Non-fatal.
+            if (body.actionItems !== undefined) {
+                await syncActionItemRows(prisma, {
+                    meetingSessionId: sessionId,
+                    tenantId: session.tenantId,
+                    workspaceId: existing.workspaceId,
+                    actionItemsJson: body.actionItems,
+                }).catch((err: unknown) => {
+                    console.warn('[meetings] syncActionItemRows failed:', err);
+                });
+            }
+
             // Distribute meeting summary to Slack when summaryText was just set
             // and has not already been distributed. Failure is non-fatal.
             if (
@@ -236,6 +308,68 @@ export async function registerMeetingRoutes(
                     });
             }
 
+            return reply.send(updated);
+        },
+    );
+
+    // -----------------------------------------------------------------------
+    // GET /v1/meetings/:sessionId/action-items — structured action items
+    // -----------------------------------------------------------------------
+    app.get<{ Params: SessionIdParams }>(
+        '/v1/meetings/:sessionId/action-items',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'Unauthorized' });
+            }
+            const { sessionId } = request.params;
+            const prisma = await resolvePrisma();
+            const meeting = await prisma.meetingSession.findFirst({
+                where: { id: sessionId, tenantId: session.tenantId },
+            });
+            if (!meeting) {
+                return reply.code(404).send({ error: 'Meeting session not found' });
+            }
+            const items = await prisma.meetingActionItem.findMany({
+                where: { meetingSessionId: sessionId, tenantId: session.tenantId },
+                orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+            });
+            return reply.send({ items });
+        },
+    );
+
+    // -----------------------------------------------------------------------
+    // PATCH /v1/meetings/:sessionId/action-items/:itemId — update one item
+    // (status/owner/dueDate/linkedTaskId — foundation for the "act" phase)
+    // -----------------------------------------------------------------------
+    app.patch<{ Params: { sessionId: string; itemId: string }; Body: PatchActionItemBody }>(
+        '/v1/meetings/:sessionId/action-items/:itemId',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'Unauthorized' });
+            }
+            const { sessionId, itemId } = request.params;
+            const body = request.body ?? ({} as PatchActionItemBody);
+            const prisma = await resolvePrisma();
+            const item = await prisma.meetingActionItem.findFirst({
+                where: { id: itemId, meetingSessionId: sessionId, tenantId: session.tenantId },
+            });
+            if (!item) {
+                return reply.code(404).send({ error: 'Action item not found' });
+            }
+            const data: Record<string, unknown> = {};
+            if (body.status !== undefined) data['status'] = body.status;
+            if (body.ownerName !== undefined) data['ownerName'] = body.ownerName;
+            if (body.ownerEmail !== undefined) data['ownerEmail'] = body.ownerEmail;
+            if (body.priority !== undefined) data['priority'] = body.priority;
+            if (body.dueDate !== undefined) data['dueDate'] = body.dueDate ? new Date(body.dueDate) : null;
+            if (body.linkedTaskId !== undefined) data['linkedTaskId'] = body.linkedTaskId;
+            if (body.linkedConnector !== undefined) data['linkedConnector'] = body.linkedConnector;
+            if (Object.keys(data).length === 0) {
+                return reply.code(400).send({ error: 'No updatable fields provided' });
+            }
+            const updated = await prisma.meetingActionItem.update({ where: { id: itemId }, data });
             return reply.send(updated);
         },
     );
