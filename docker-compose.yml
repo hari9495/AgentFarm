@@ -173,6 +173,9 @@
       AF_OPENAI_API_KEY: ${POLICY_EXTRACT_OPENAI_API_KEY:-}
       AF_OPENAI_BASE_URL: ${POLICY_EXTRACT_OPENAI_BASE_URL:-https://api.openai.com/v1}
       AF_OPENAI_MODEL: ${POLICY_EXTRACT_OPENAI_MODEL:-gpt-4o-mini}
+      # Meeting transcript summarizer (async meeting intelligence) fallback key —
+      # the summarizer reads AF_OPENAI_API_KEY || OPENAI_API_KEY.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     volumes:
       - gateway_secrets:/data
     depends_on:
