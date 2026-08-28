@@ -219,12 +219,13 @@ async function kokoroTtsImpl(
     return { audioRef: `data:audio/mpeg;base64,${b64}`, durationMs: Date.now() - started };
 }
 
-// ── XTTS v2 TTS (Coqui — 17 languages, self-hosted) ──────────────────────────
+// ── XTTS v2 TTS (Coqui — 16 languages, self-hosted) ──────────────────────────
 
-// XTTS v2 supported language codes (ISO-639-1 subset)
+// XTTS v2 supported language codes (ISO-639-1 subset). Hindi is NOT supported by
+// XTTS v2 (the server 500s on 'hi'); Hindi/Indian languages must use mms_tts.
 const XTTS_SUPPORTED_LANGS = new Set([
     'en', 'es', 'fr', 'de', 'it', 'pt', 'pl', 'tr', 'ru', 'nl',
-    'cs', 'ar', 'zh', 'ja', 'hu', 'ko', 'hi',
+    'cs', 'ar', 'zh', 'ja', 'hu', 'ko',
 ]);
 
 async function xttsTtsImpl(

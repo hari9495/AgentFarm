@@ -10,7 +10,7 @@
  *   English (en-*)
  *     → kokoro      (self-hosted, zero cost, excellent quality)
  *
- *   17 XTTS-supported major languages (es, fr, de, it, pt, pl, tr, ru, nl, cs, ar, zh, ja, hu, ko, hi, en)
+ *   16 XTTS-supported major languages (en, es, fr, de, it, pt, pl, tr, ru, nl, cs, ar, zh, ja, hu, ko)
  *     → xtts        (self-hosted, zero cost, good quality)
  *
  *   Everything else (1100+ languages)
@@ -27,10 +27,12 @@ const INDIAN_LANG_PREFIXES = new Set([
     'hi', 'ta', 'te', 'kn', 'ml', 'mr', 'bn', 'gu', 'pa',
 ]);
 
-// Languages supported by XTTS v2 (ISO-639-1 codes)
+// Languages supported by XTTS v2 (ISO-639-1 codes). NOTE: XTTS v2 does NOT
+// support Hindi — its actual set is these 16; Hindi/Indian langs route to
+// sarvam_ai (above) or mms_tts. Do not add 'hi' here (the server 500s on it).
 const XTTS_LANGS = new Set([
     'en', 'es', 'fr', 'de', 'it', 'pt', 'pl', 'tr', 'ru', 'nl',
-    'cs', 'ar', 'zh', 'ja', 'hu', 'ko', 'hi',
+    'cs', 'ar', 'zh', 'ja', 'hu', 'ko',
 ]);
 
 export interface TtsRoutingDecision {
