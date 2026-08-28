@@ -5,6 +5,7 @@ import {
     distributeMeetingSummaryToSlack,
 } from '../lib/meeting-slack-notifier.js';
 import { generateProposalPdf, sendProposalEmail } from '../proposal-generator.js';
+import { createMeetingSummarizer, type SummarizeTranscriptFn } from '../lib/meeting-summarizer.js';
 
 const getPrisma = async () => {
     const db = await import('../lib/db.js');
@@ -64,6 +65,11 @@ type PostSpeakingAgentBody = {
     text: string;
     language?: string;
     voiceId?: string;
+};
+
+type AnalyzeTranscriptBody = {
+    transcript: string;
+    language?: string;
 };
 
 type PatchActionItemBody = {
@@ -130,6 +136,8 @@ export type RegisterMeetingRoutesOptions = {
     prisma?: PrismaClient;
     /** Overrides generateProposalPdf — used in tests. */
     generateProposalFn?: typeof generateProposalPdf;
+    /** Overrides the transcript summarizer — used in tests. */
+    summarizeFn?: SummarizeTranscriptFn;
 };
 
 export async function registerMeetingRoutes(
@@ -141,6 +149,7 @@ export async function registerMeetingRoutes(
         : getPrisma;
 
     const doGenerateProposal = options.generateProposalFn ?? generateProposalPdf;
+    const summarizeTranscript = options.summarizeFn ?? createMeetingSummarizer();
 
     // -----------------------------------------------------------------------
     // GET /v1/meetings/:sessionId
@@ -309,6 +318,80 @@ export async function registerMeetingRoutes(
             }
 
             return reply.send(updated);
+        },
+    );
+
+    // -----------------------------------------------------------------------
+    // POST /v1/meetings/:sessionId/analyze-transcript
+    // Async meeting intelligence: accept a raw transcript, summarise it via the
+    // LLM, store summary + action items on the session (which fans out into
+    // structured MeetingActionItem rows), and return the result.
+    // -----------------------------------------------------------------------
+    app.post<{ Params: SessionIdParams; Body: AnalyzeTranscriptBody }>(
+        '/v1/meetings/:sessionId/analyze-transcript',
+        async (request, reply) => {
+            const session = options.getSession(request);
+            if (!session) {
+                return reply.code(401).send({ error: 'Unauthorized' });
+            }
+            const { sessionId } = request.params;
+            const body = request.body ?? ({} as AnalyzeTranscriptBody);
+            const transcript = typeof body.transcript === 'string' ? body.transcript.trim() : '';
+            if (!transcript) {
+                return reply.code(400).send({ error: 'transcript is required' });
+            }
+
+            const prisma = await resolvePrisma();
+            const meeting = await prisma.meetingSession.findFirst({
+                where: { id: sessionId, tenantId: session.tenantId },
+            });
+            if (!meeting) {
+                return reply.code(404).send({ error: 'Meeting session not found' });
+            }
+
+            const language = body.language ?? meeting.language ?? 'en';
+            const result = await summarizeTranscript(transcript, language);
+            if (!result) {
+                return reply.code(503).send({
+                    error: 'summarizer_unavailable',
+                    message:
+                        'Transcript summarizer is not configured or the LLM call failed. Set AF_OPENAI_API_KEY / OPENAI_API_KEY.',
+                });
+            }
+
+            const actionItemsJson = JSON.stringify(result.actionItems);
+            await prisma.meetingSession.update({
+                where: { id: sessionId },
+                data: {
+                    transcriptRaw: transcript,
+                    summaryText: result.summary,
+                    actionItems: actionItemsJson,
+                    language,
+                    status: 'summarized',
+                },
+            });
+
+            // Fan out into structured, trackable rows (best-effort).
+            await syncActionItemRows(prisma, {
+                meetingSessionId: sessionId,
+                tenantId: session.tenantId,
+                workspaceId: meeting.workspaceId,
+                actionItemsJson,
+            }).catch((err: unknown) => {
+                console.warn('[meetings] syncActionItemRows failed:', err);
+            });
+
+            const items = await prisma.meetingActionItem.findMany({
+                where: { meetingSessionId: sessionId, tenantId: session.tenantId },
+                orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+            });
+
+            return reply.send({
+                sessionId,
+                summary: result.summary,
+                actionItems: result.actionItems,
+                items,
+            });
         },
     );
 
