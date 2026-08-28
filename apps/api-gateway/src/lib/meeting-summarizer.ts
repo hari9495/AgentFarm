@@ -12,7 +12,10 @@
  * in the gateway here to keep the transcript→summary path a single testable hop.
  */
 
-export type MeetingSummary = { summary: string; actionItems: string[] };
+/** One extracted action item — text with a separately-attributed owner. */
+export type ActionItemDraft = { text: string; ownerName: string | null };
+
+export type MeetingSummary = { summary: string; actionItems: ActionItemDraft[] };
 
 export type SummarizeTranscriptFn = (
     transcript: string,
@@ -22,9 +25,10 @@ export type SummarizeTranscriptFn = (
 const SUMMARY_SYSTEM_PROMPT =
     'You are a meeting assistant. Read the meeting transcript and produce concise, useful ' +
     'meeting intelligence. Extract a short summary (3-6 sentences) and a list of concrete, ' +
-    'actionable items. Each action item must be a single actionable sentence; when the transcript ' +
-    'names an owner, start the item with "Owner: ". Respond as JSON only: ' +
-    '{"summary": string, "actionItems": string[]}.';
+    'actionable items. For each action item, put ONLY the task in "text" (do NOT prefix the ' +
+    "owner's name into the text), and put the responsible person's name in \"owner\" when the " +
+    'transcript names one (otherwise null). Respond as JSON only: ' +
+    '{"summary": string, "actionItems": [{"text": string, "owner": string|null}]}.';
 
 export function createMeetingSummarizer(
     env: NodeJS.ProcessEnv = process.env,
@@ -60,8 +64,24 @@ export function createMeetingSummarizer(
             if (!content) return null;
             const parsed = JSON.parse(content) as { summary?: unknown; actionItems?: unknown };
             const summary = typeof parsed.summary === 'string' ? parsed.summary : '';
-            const actionItems = Array.isArray(parsed.actionItems)
-                ? parsed.actionItems.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+            const actionItems: ActionItemDraft[] = Array.isArray(parsed.actionItems)
+                ? parsed.actionItems
+                      .map((raw): ActionItemDraft | null => {
+                          // Accept both the structured shape {text, owner} and a
+                          // bare string (older prompt / model drift).
+                          if (typeof raw === 'string') {
+                              return raw.trim() ? { text: raw.trim(), ownerName: null } : null;
+                          }
+                          const obj = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+                          const text = typeof obj['text'] === 'string' ? (obj['text'] as string).trim() : '';
+                          if (!text) return null;
+                          const owner = obj['owner'] ?? obj['ownerName'];
+                          return {
+                              text,
+                              ownerName: typeof owner === 'string' && owner.trim() ? owner.trim() : null,
+                          };
+                      })
+                      .filter((x): x is ActionItemDraft => x !== null)
                 : [];
             if (!summary && actionItems.length === 0) return null;
             return { summary, actionItems };

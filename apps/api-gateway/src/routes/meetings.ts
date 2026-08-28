@@ -5,7 +5,11 @@ import {
     distributeMeetingSummaryToSlack,
 } from '../lib/meeting-slack-notifier.js';
 import { generateProposalPdf, sendProposalEmail } from '../proposal-generator.js';
-import { createMeetingSummarizer, type SummarizeTranscriptFn } from '../lib/meeting-summarizer.js';
+import {
+    createMeetingSummarizer,
+    type SummarizeTranscriptFn,
+    type ActionItemDraft,
+} from '../lib/meeting-summarizer.js';
 
 const getPrisma = async () => {
     const db = await import('../lib/db.js');
@@ -82,13 +86,42 @@ type PatchActionItemBody = {
     linkedConnector?: string | null;
 };
 
+type ActionItemContext = { meetingSessionId: string; tenantId: string; workspaceId: string };
+
+/**
+ * Replace a session's MeetingActionItem rows from structured drafts (idempotent
+ * re-summarise). Each draft carries a separately-attributed owner so the
+ * ownerName column is populated rather than the name being baked into the text.
+ */
+async function replaceActionItemRows(
+    prisma: PrismaClient,
+    ctx: ActionItemContext,
+    drafts: ActionItemDraft[],
+): Promise<void> {
+    const rows = drafts
+        .map((d, i) => ({ text: (d.text ?? '').trim(), ownerName: d.ownerName ?? null, i }))
+        .filter((r) => r.text.length > 0)
+        .map((r) => ({
+            meetingSessionId: ctx.meetingSessionId,
+            tenantId: ctx.tenantId,
+            workspaceId: ctx.workspaceId,
+            text: r.text,
+            ownerName: r.ownerName,
+            sortOrder: r.i,
+        }));
+
+    await prisma.$transaction([
+        prisma.meetingActionItem.deleteMany({ where: { meetingSessionId: ctx.meetingSessionId } }),
+        ...(rows.length ? [prisma.meetingActionItem.createMany({ data: rows })] : []),
+    ]);
+}
+
 /**
  * Fan the flat MeetingSession.actionItems JSON out into structured
- * MeetingActionItem rows so each item can be tracked and later acted on
- * (Jira/Slack/email via the approval flow). Accepts a JSON array of either
- * strings or `{ text, ownerName?, ownerEmail?, priority? }` objects. Replaces
- * the session's existing item set (idempotent re-summarise). Best-effort —
- * the caller wraps this in a catch so it never fails the PATCH.
+ * MeetingActionItem rows. Accepts a JSON array of either strings or
+ * `{ text, owner?/ownerName? }` objects (the Anthropic summarizeMeeting path
+ * stores strings; the OpenAI analyze-transcript path uses replaceActionItemRows
+ * directly). Best-effort — the caller wraps this in a catch.
  */
 async function syncActionItemRows(
     prisma: PrismaClient,
@@ -102,33 +135,19 @@ async function syncActionItemRows(
     }
     if (!Array.isArray(parsed)) return;
 
-    const rows = parsed
-        .map((raw, i) => {
-            const obj = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
-            const text =
-                typeof raw === 'string'
-                    ? raw
-                    : typeof obj['text'] === 'string'
-                      ? (obj['text'] as string)
-                      : '';
-            if (!text.trim()) return null;
-            return {
-                meetingSessionId: input.meetingSessionId,
-                tenantId: input.tenantId,
-                workspaceId: input.workspaceId,
-                text: text.trim(),
-                ownerName: typeof obj['ownerName'] === 'string' ? (obj['ownerName'] as string) : null,
-                ownerEmail: typeof obj['ownerEmail'] === 'string' ? (obj['ownerEmail'] as string) : null,
-                priority: typeof obj['priority'] === 'string' ? (obj['priority'] as string) : 'medium',
-                sortOrder: i,
-            };
-        })
-        .filter((r): r is NonNullable<typeof r> => r !== null);
+    const drafts: ActionItemDraft[] = parsed.map((raw) => {
+        if (typeof raw === 'string') return { text: raw, ownerName: null };
+        const obj = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+        const text = typeof obj['text'] === 'string' ? (obj['text'] as string) : '';
+        const owner = obj['owner'] ?? obj['ownerName'];
+        return { text, ownerName: typeof owner === 'string' && owner.trim() ? (owner as string) : null };
+    });
 
-    await prisma.$transaction([
-        prisma.meetingActionItem.deleteMany({ where: { meetingSessionId: input.meetingSessionId } }),
-        ...(rows.length ? [prisma.meetingActionItem.createMany({ data: rows })] : []),
-    ]);
+    await replaceActionItemRows(
+        prisma,
+        { meetingSessionId: input.meetingSessionId, tenantId: input.tenantId, workspaceId: input.workspaceId },
+        drafts,
+    );
 }
 
 export type RegisterMeetingRoutesOptions = {
@@ -359,26 +378,30 @@ export async function registerMeetingRoutes(
                 });
             }
 
-            const actionItemsJson = JSON.stringify(result.actionItems);
+            // Keep the flat actionItems column human-readable (string[]) for
+            // backward-compatible consumers (Slack/PDF/dashboard); the owner is
+            // preserved structurally in the MeetingActionItem rows below.
+            const flatActionItems = result.actionItems.map((d) =>
+                d.ownerName ? `${d.ownerName}: ${d.text}` : d.text,
+            );
             await prisma.meetingSession.update({
                 where: { id: sessionId },
                 data: {
                     transcriptRaw: transcript,
                     summaryText: result.summary,
-                    actionItems: actionItemsJson,
+                    actionItems: JSON.stringify(flatActionItems),
                     language,
                     status: 'summarized',
                 },
             });
 
-            // Fan out into structured, trackable rows (best-effort).
-            await syncActionItemRows(prisma, {
-                meetingSessionId: sessionId,
-                tenantId: session.tenantId,
-                workspaceId: meeting.workspaceId,
-                actionItemsJson,
-            }).catch((err: unknown) => {
-                console.warn('[meetings] syncActionItemRows failed:', err);
+            // Fan out into structured, trackable rows with attributed owners.
+            await replaceActionItemRows(
+                prisma,
+                { meetingSessionId: sessionId, tenantId: session.tenantId, workspaceId: meeting.workspaceId },
+                result.actionItems,
+            ).catch((err: unknown) => {
+                console.warn('[meetings] replaceActionItemRows failed:', err);
             });
 
             const items = await prisma.meetingActionItem.findMany({
