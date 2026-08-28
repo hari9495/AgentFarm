@@ -534,7 +534,7 @@
       # To replace VoxCPM2 with Kokoro: set SUPERTONIC_URL=http://kokoro:8880
       KOKORO_ENDPOINT: ${KOKORO_ENDPOINT:-http://kokoro:8880}
       # XTTS v2 â€” 17-language TTS. Active when --profile voice is used.
-      XTTS_ENDPOINT: ${XTTS_ENDPOINT:-http://xtts:5002}
+      XTTS_ENDPOINT: ${XTTS_ENDPOINT:-http://xtts:8020}
       # Meta MMS-TTS â€” 1100+ languages. Active when --profile voice is used.
       MMS_TTS_ENDPOINT: ${MMS_TTS_ENDPOINT:-http://mms-tts:5002}
       # â”€â”€ FreeSWITCH SIP â€” universal meeting dial-in â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -703,11 +703,13 @@
     container_name: agentfarm-xtts
     profiles: [ voice ]
     ports:
-      - '5004:5002'
+      # daswer123/xtts-api-server listens on 8020 (not 5002); map host 5004 -> 8020.
+      - '5004:8020'
     volumes:
       - xtts_models:/root/.local/share/tts
     healthcheck:
-      test: [ 'CMD-SHELL', 'wget -qO- http://127.0.0.1:5002/docs || exit 1' ]
+      # curl/wget are absent in this image; python3 is present. Probe the real port 8020.
+      test: [ 'CMD-SHELL', 'python3 -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen(''http://127.0.0.1:8020/docs'').status==200 else 1)" || exit 1' ]
       interval: 15s
       timeout: 5s
       retries: 5
