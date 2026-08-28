@@ -176,6 +176,9 @@
       # Meeting transcript summarizer (async meeting intelligence) fallback key —
       # the summarizer reads AF_OPENAI_API_KEY || OPENAI_API_KEY.
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Connector-execution simulate mode (off by default). Set to 1 to exercise
+      # the propose→approve→execute loop without real connector credentials.
+      AF_CONNECTOR_SIMULATE: ${AF_CONNECTOR_SIMULATE:-}
     volumes:
       - gateway_secrets:/data
     depends_on:

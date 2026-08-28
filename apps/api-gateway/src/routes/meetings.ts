@@ -596,7 +596,7 @@ export async function registerMeetingRoutes(
             if (!item) {
                 return reply.code(404).send({ error: 'Action item not found' });
             }
-            if (!item.dispatchConnector || !item.dispatchActionType) {
+            if (!item.dispatchConnector || !item.dispatchActionType || !item.approvalId) {
                 return reply.code(409).send({ error: 'not_dispatched', message: 'Dispatch this item first.' });
             }
             const meeting = await prisma.meetingSession.findFirst({
@@ -604,6 +604,24 @@ export async function registerMeetingRoutes(
             });
             if (!meeting) {
                 return reply.code(404).send({ error: 'Meeting session not found' });
+            }
+
+            // Enforce the human gate in the meeting flow: require the linked
+            // Approval to be granted before the connector action runs. (The
+            // global connector-execute gate is optional and may be unwired.)
+            const approval = await prisma.approval.findFirst({
+                where: { id: item.approvalId, tenantId: session.tenantId },
+                select: { decision: true },
+            });
+            if (!approval) {
+                return reply.code(409).send({ error: 'approval_missing', message: 'No approval found for this item.' });
+            }
+            if (approval.decision !== 'approved') {
+                return reply.code(409).send({
+                    error: 'awaiting_approval',
+                    message: `Approval is "${approval.decision}", not approved.`,
+                    decision: approval.decision,
+                });
             }
 
             const exec = await executeConnectorAction({
