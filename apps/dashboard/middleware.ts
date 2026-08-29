@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 
 type SessionScope = 'customer' | 'internal';
 
-const PUBLIC_PATHS = new Set(['/login', '/signup', '/onboarding', '/design-system', '/ui-kit', '/design-21st', '/design-hybrid']);
+const PUBLIC_PATHS = new Set(['/login', '/signup', '/onboarding', '/design-system', '/ui-kit', '/design-21st', '/design-hybrid', '/command-center-preview']);
 
 const decodeBase64Url = (value: string): string | null => {
     const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
