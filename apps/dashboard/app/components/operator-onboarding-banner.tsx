@@ -56,7 +56,7 @@ export function OperatorOnboardingBanner({
         <div style={{
             background: 'linear-gradient(135deg, rgba(0,82,204,0.04) 0%, rgba(0,82,204,0.02) 100%)',
             border: '1px solid rgba(0,82,204,0.15)',
-            borderRadius: '0.6rem',
+            borderRadius: 3,
             padding: '0.9rem 1.1rem',
             marginBottom: '1rem',
         }}>
@@ -65,8 +65,8 @@ export function OperatorOnboardingBanner({
                     <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--ink)' }}>
                         Getting started — {doneCount}/{steps.length} complete
                     </span>
-                    <div style={{ height: 4, background: 'var(--line)', borderRadius: 9999, overflow: 'hidden', marginTop: '0.3rem', width: 200 }}>
-                        <div style={{ height: '100%', width: `${(doneCount / steps.length) * 100}%`, background: 'var(--accent)', borderRadius: 9999, transition: 'width 0.4s' }} />
+                    <div style={{ height: 4, background: 'var(--line)', borderRadius: 0, overflow: 'hidden', marginTop: '0.3rem', width: 200 }}>
+                        <div style={{ height: '100%', width: `${(doneCount / steps.length) * 100}%`, background: 'var(--accent)', borderRadius: 0, transition: 'width 0.4s' }} />
                     </div>
                 </div>
                 <button type="button" onClick={dismiss} title="Dismiss" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-muted)', padding: 2 }}>
@@ -81,7 +81,7 @@ export function OperatorOnboardingBanner({
                         href={s.href}
                         style={{
                             display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                            padding: '0.2rem 0.6rem', borderRadius: 9999,
+                            padding: '0.2rem 0.6rem', borderRadius: 3,
                             fontSize: '0.75rem', fontWeight: 600, textDecoration: 'none',
                             background: s.done ? 'rgba(26,122,74,0.08)' : 'rgba(0,82,204,0.07)',
                             color: s.done ? 'var(--ok)' : 'var(--accent)',

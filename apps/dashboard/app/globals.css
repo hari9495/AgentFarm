@@ -711,8 +711,8 @@ body {
     overflow: hidden;
     background: var(--card);
     border: 1px solid var(--line);
-    border-radius: 18px;
-    box-shadow: var(--shadow-sm);
+    border-radius: 3px;
+    box-shadow: none;
     padding: 0.9rem 1.25rem;
     display: flex;
     align-items: center;
@@ -1175,9 +1175,9 @@ body {
     overflow: hidden;
     background: #ffffff;
     border: 1px solid var(--line);
-    border-radius: 18px;
+    border-radius: 3px;
     padding: 1.5rem 1.75rem;
-    box-shadow: var(--shadow-sm);
+    box-shadow: none;
 }
 
 .hero::after {

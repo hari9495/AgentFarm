@@ -100,11 +100,11 @@ export function OnboardingChecklist({ agentCount, taskCount, webhookCount }: Pro
             </div>
 
             {/* Progress bar */}
-            <div style={{ height: 4, borderRadius: 9999, background: 'var(--line)', marginBottom: '1rem', overflow: 'hidden' }}>
+            <div style={{ height: 4, borderRadius: 0, background: 'var(--line)', marginBottom: '1rem', overflow: 'hidden' }}>
                 <div style={{
                     height: '100%',
                     width: `${pct}%`,
-                    borderRadius: 9999,
+                    borderRadius: 0,
                     background: allDone
                         ? 'linear-gradient(90deg, #34d399, #059669)'
                         : 'linear-gradient(90deg, #d6301f, #d6301f)',
@@ -123,7 +123,7 @@ export function OnboardingChecklist({ agentCount, taskCount, webhookCount }: Pro
                                 alignItems: 'center',
                                 gap: '0.75rem',
                                 padding: '0.65rem 0.85rem',
-                                borderRadius: 10,
+                                borderRadius: 3,
                                 border: `1px solid ${done ? 'var(--ok-border)' : 'var(--line)'}`,
                                 background: done ? 'var(--ok-bg)' : 'var(--bg)',
                                 transition: 'all 0.2s ease',
