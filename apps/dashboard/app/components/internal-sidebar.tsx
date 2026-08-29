@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
     Cpu, Brain, ShoppingBag, LayoutDashboard, ClipboardCheck,
     Activity, FileText, Search, LogOut, HeartPulse,
-    ChevronDown, Bot, ListChecks, ShieldCheck, Link2,
+    ChevronDown, ListChecks, ShieldCheck, Link2,
     BarChart2, CreditCard, Wrench,
     MessageSquare, DollarSign, PieChart, LineChart, Trophy, Bell,
     ScrollText, Film, Waves, Lock,
@@ -27,23 +27,15 @@ type NavColor =
     | 'pink' | 'orange' | 'teal' | 'cyan' | 'indigo' | 'sky'
     | 'violet' | 'gold' | 'emerald' | 'slate';
 
+// Monochrome nav icons — a muted glyph, no colored square. Only the active item
+// gets the accent (handled in NavItem). Reads as premium ops software, not a
+// rainbow of AI-toy chips.
+const MONO_ICON = { bg: 'transparent', text: 'var(--sidebar-muted)' } as const;
 const COLOR_MAP: Record<NavColor, { bg: string; text: string }> = {
-    blue:    { bg: 'rgba(0,102,204,0.1)',    text: 'var(--accent)' },
-    purple:  { bg: 'rgba(124,58,237,0.1)',   text: 'var(--accent)' },
-    green:   { bg: 'rgba(5,150,105,0.1)',    text: 'var(--ok)' },
-    amber:   { bg: 'rgba(217,119,6,0.1)',    text: 'var(--warn)' },
-    red:     { bg: 'rgba(220,38,38,0.1)',    text: 'var(--danger)' },
-    rose:    { bg: 'rgba(225,29,72,0.1)',    text: 'var(--danger)' },
-    pink:    { bg: 'rgba(219,39,119,0.1)',   text: '#db2777' },
-    orange:  { bg: 'rgba(234,88,12,0.1)',    text: 'var(--warn)' },
-    teal:    { bg: 'rgba(13,148,136,0.1)',   text: 'var(--info)' },
-    cyan:    { bg: 'rgba(8,145,178,0.1)',    text: 'var(--info)' },
-    indigo:  { bg: 'rgba(79,70,229,0.1)',    text: 'var(--accent)' },
-    sky:     { bg: 'rgba(2,132,199,0.1)',    text: 'var(--info)' },
-    violet:  { bg: 'rgba(109,40,217,0.1)',   text: 'var(--accent)' },
-    gold:    { bg: 'rgba(202,138,4,0.1)',    text: 'var(--warn)' },
-    emerald: { bg: 'rgba(16,185,129,0.1)',   text: 'var(--ok)' },
-    slate:   { bg: 'rgba(71,85,105,0.1)',    text: 'var(--ink-muted)' },
+    blue: MONO_ICON, purple: MONO_ICON, green: MONO_ICON, amber: MONO_ICON,
+    red: MONO_ICON, rose: MONO_ICON, pink: MONO_ICON, orange: MONO_ICON,
+    teal: MONO_ICON, cyan: MONO_ICON, indigo: MONO_ICON, sky: MONO_ICON,
+    violet: MONO_ICON, gold: MONO_ICON, emerald: MONO_ICON, slate: MONO_ICON,
 };
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -277,13 +269,13 @@ export function InternalSidebar({
                     </div>
                 </div>
 
-                {/* ── Agents ────────────────────────────────────────── */}
+                {/* ── Workforce ─────────────────────────────────────── */}
                 <div>
-                    <SectionLabel>Agents</SectionLabel>
+                    <SectionLabel>Workforce</SectionLabel>
                     <div className="space-y-0.5">
-                        <SidebarLink href="/agents"          label="Agents"           Icon={Bot}         color="purple" />
-                        <SidebarLink href="/agents/health"   label="Agent Health"     Icon={HeartPulse}  color="green"  />
-                        <SidebarLink href="/agents/compare"  label="Agent Comparison" Icon={BarChart2}    color="blue"   />
+                        <SidebarLink href="/agents"          label="Team"             Icon={Users}       color="slate"  />
+                        <SidebarLink href="/agents/health"   label="Team Health"      Icon={HeartPulse}  color="slate"  />
+                        <SidebarLink href="/agents/compare"  label="Compare"          Icon={BarChart2}    color="slate"  />
                         <SidebarLink href="/tasks"           label="Tasks"            Icon={ListChecks}  color="amber"  />
                         <SidebarLink href="/tasks?tab=queue" label="Task Queue"       Icon={Layers}      color="orange" />
                         <SidebarLink href="/playbooks"       label="Playbooks"        Icon={BookOpen}    color="indigo" />
