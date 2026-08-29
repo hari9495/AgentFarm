@@ -2,7 +2,8 @@ import { redirect } from 'next/navigation';
 import { getSessionPayload, getInternalSessionAuthHeader } from '../lib/internal-session';
 import ApiKeysPanel from '../components/api-keys-panel';
 import MfaPanel from '../components/mfa-panel';
-import { PageHeader } from '../components/page-header';
+import { UiKit, Masthead, Stat } from '../components/ui-kit';
+import { WfThemeToggle } from '../components/editorial';
 
 const getApiBaseUrl = (): string => process.env.DASHBOARD_API_BASE_URL ?? 'http://localhost:3000';
 
@@ -42,31 +43,31 @@ export default async function SettingsPage() {
     const planLabel = subscription.status === 'none' ? 'No active plan' : subscription.status;
 
     return (
-        <main className="page-shell">
-            <PageHeader
-                eyebrow="Developer Access"
-                title="API Keys"
-                description="Create and manage API keys for CI pipelines, scripts, and external integrations."
+        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+            <Masthead
+                eyebrow="Account — Security & Access"
+                title="Settings"
+                actions={<WfThemeToggle />}
+                stats={<Stat n={planLabel} k="Current plan" tone={subscription.status === 'none' ? 'muted' : 'ok'} />}
             />
 
-            {/* Plan context strip */}
-            {subscription.status !== 'none' && (
-                <div className="card" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1.25rem' }}>
-                    <div>
-                        <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ink-muted)' }}>Current plan</p>
-                        <p style={{ margin: '0.15rem 0 0', fontSize: '0.95rem', fontWeight: 600, color: 'var(--ink)' }}>{planLabel}</p>
+            <div style={{ padding: 28, maxWidth: 1120, margin: '0 auto', width: '100%', display: 'grid', gap: 24 }}>
+                {/* Plan context strip */}
+                {subscription.status !== 'none' && (
+                    <div className="uk-panel" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                            <div className="uk-eyebrow">Current plan</div>
+                            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)', marginTop: 2 }}>{planLabel}</div>
+                        </div>
+                        <a href="/billing" className="uk-eyebrow" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
+                            Manage billing →
+                        </a>
                     </div>
-                    <a href="/billing" style={{ fontSize: '0.82rem', color: 'var(--brand)', fontWeight: 600, textDecoration: 'none' }}>
-                        Manage billing →
-                    </a>
-                </div>
-            )}
+                )}
 
-            <div style={{ marginBottom: '2rem' }}>
                 <MfaPanel />
+                <ApiKeysPanel tenantId={tenantId} />
             </div>
-
-            <ApiKeysPanel tenantId={tenantId} />
-        </main>
+        </UiKit>
     );
 }
