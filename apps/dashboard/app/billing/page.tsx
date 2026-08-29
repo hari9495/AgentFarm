@@ -1,12 +1,9 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { PageHeader } from '../components/page-header';
-import { SubscriptionStatusCard } from '../components/subscription-status-card';
-import { UsageSummaryCard } from '../components/usage-summary-card';
-import { CostTrendChart, type WeeklyTrendPoint } from '../components/cost-trend-chart';
-import { AgentCostTable, type ProviderCost } from '../components/agent-cost-table';
-import { UiKit, Masthead, Panel, Badge, Eyebrow, Display, Stat } from '../components/ui-kit';
+import { type WeeklyTrendPoint } from '../components/cost-trend-chart';
+import { type ProviderCost } from '../components/agent-cost-table';
+import { UiKit, Masthead, Panel, Badge, Eyebrow, Stat } from '../components/ui-kit';
 import { WfThemeToggle } from '../components/editorial';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -70,42 +67,6 @@ function Kv({ k, children }: { k: string; children: React.ReactNode }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderTop: '1px solid var(--line)', fontSize: 13 }}>
             <span style={{ color: 'var(--ink-muted)' }}>{k}</span>
             <span style={{ color: 'var(--ink)', fontWeight: 500 }}>{children}</span>
-        </div>
-    );
-}
-
-// ── MeteringBreakdownCard ─────────────────────────────────────────────────────
-
-function MeteringBreakdownCard({ data }: { data: MeteringData }) {
-    const rows: { label: string; value: string; highlight?: boolean }[] = [
-        { label: 'Total tasks', value: data.taskCount.toLocaleString() },
-        { label: 'Billable tasks', value: data.billableTaskCount.toLocaleString() },
-        { label: 'Platform fee ($0.10 / task)', value: `$${data.platformFeeUsd.toFixed(2)}` },
-        { label: 'LLM inference cost', value: `$${data.llmCostUsd.toFixed(4)}` },
-        { label: 'Total charge', value: `$${data.totalChargeUsd.toFixed(2)}`, highlight: true },
-    ];
-
-    return (
-        <div className="card" style={{ display: 'grid', gap: '0.5rem' }}>
-            <h2 style={{ margin: '0 0 0.25rem', fontSize: '1rem', fontWeight: 700 }}>Metering Breakdown</h2>
-            {rows.map(({ label, value, highlight }) => (
-                <div
-                    key={label}
-                    style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '0.4rem 0',
-                        borderBottom: '1px solid var(--line)',
-                        fontSize: highlight ? '0.9rem' : '0.83rem',
-                        fontWeight: highlight ? 700 : 400,
-                        color: highlight ? 'var(--ink)' : 'var(--ink-soft)',
-                    }}
-                >
-                    <span>{label}</span>
-                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{value}</span>
-                </div>
-            ))}
         </div>
     );
 }
