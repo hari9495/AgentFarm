@@ -38,8 +38,8 @@ type RecentEvent = {
 const PROVIDER_COLORS: Record<WebhookProvider, string> = {
     github: 'bg-zinc-700 text-zinc-200',
     gitlab: 'bg-orange-900/40 text-orange-300',
-    jira: 'bg-blue-900/40 text-blue-300',
-    linear: 'bg-blue-900/40 text-blue-300',
+    jira: 'bg-red-900/40 text-red-300',
+    linear: 'bg-red-900/40 text-red-300',
     pagerduty: 'bg-green-900/40 text-green-300',
     sentry: 'bg-red-900/40 text-red-300',
     custom: 'bg-zinc-700 text-zinc-400',
@@ -184,7 +184,7 @@ export function WebhookManagerPanel() {
                     </button>
                     <button
                         onClick={() => setShowForm(true)}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors"
+                        className="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-sm font-medium transition-colors"
                     >
                         + Register Webhook
                     </button>
@@ -240,7 +240,7 @@ export function WebhookManagerPanel() {
                                 <button
                                     key={event}
                                     onClick={() => toggleEvent(event)}
-                                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${selectedEvents.includes(event) ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'}`}
+                                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${selectedEvents.includes(event) ? 'bg-red-600 text-white' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'}`}
                                 >
                                     {event.replace('_', ' ')}
                                 </button>
@@ -254,7 +254,7 @@ export function WebhookManagerPanel() {
                         </span>
                         <button
                             onClick={() => copyWebhookUrl(`${BASE_WEBHOOK_URL}/${provider}`)}
-                            className="ml-auto text-xs text-blue-400 hover:text-blue-300 shrink-0"
+                            className="ml-auto text-xs text-red-400 hover:text-red-300 shrink-0"
                         >
                             {copied ? 'Copied!' : 'Copy URL'}
                         </button>
@@ -264,7 +264,7 @@ export function WebhookManagerPanel() {
                         <button
                             onClick={registerWebhook}
                             disabled={loading || selectedEvents.length === 0}
-                            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
+                            className="px-4 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
                         >
                             {loading ? 'Registering…' : 'Register'}
                         </button>
@@ -360,7 +360,7 @@ export function WebhookManagerPanel() {
                                     {new Date(event.received_at).toLocaleTimeString()}
                                 </span>
                                 {event.loop_triggered && (
-                                    <span className="px-2 py-0.5 bg-blue-900/40 text-blue-300 rounded text-xs">
+                                    <span className="px-2 py-0.5 bg-red-900/40 text-red-300 rounded text-xs">
                                         loop triggered
                                     </span>
                                 )}

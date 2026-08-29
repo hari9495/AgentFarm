@@ -23,8 +23,8 @@ type Suggestion = { skill_id: string; confidence: number; rationale: string };
 // ── Light-mode kind colours ───────────────────────────────────────────────────
 
 const KIND_BADGE: Record<GraphSymbol['kind'], { bg: string; color: string; border: string }> = {
-    function:  { bg: 'rgba(0,102,204,0.08)',   color: 'var(--accent)', border: 'rgba(0,102,204,0.2)'   },
-    class:     { bg: 'rgba(124,45,146,0.08)',  color: '#1d4ed8', border: 'rgba(124,45,146,0.2)'  },
+    function:  { bg: 'rgba(214, 48, 31,0.08)',   color: 'var(--accent)', border: 'rgba(214, 48, 31,0.2)'   },
+    class:     { bg: 'rgba(124,45,146,0.08)',  color: '#b8291a', border: 'rgba(124,45,146,0.2)'  },
     interface: { bg: 'rgba(0,155,199,0.08)',   color: 'var(--info)', border: 'rgba(0,155,199,0.2)'   },
     type:      { bg: 'rgba(26,122,74,0.08)',   color: 'var(--ok)', border: 'rgba(26,122,74,0.2)'   },
     variable:  { bg: 'rgba(110,110,115,0.08)', color: 'var(--ink-muted)', border: 'rgba(110,110,115,0.2)' },
@@ -32,7 +32,7 @@ const KIND_BADGE: Record<GraphSymbol['kind'], { bg: string; color: string; borde
 };
 
 const KIND_TEXT: Record<GraphSymbol['kind'], string> = {
-    function: 'var(--accent)', class: '#1d4ed8', interface: 'var(--info)',
+    function: 'var(--accent)', class: '#b8291a', interface: 'var(--info)',
     type: 'var(--ok)', variable: 'var(--ink-muted)', unknown: 'var(--ink-muted)',
 };
 
@@ -212,7 +212,7 @@ export function KnowledgeGraphExplorer() {
                             <div style={{ maxHeight: 480, overflowY: 'auto' }}>
                                 {displaySymbols.slice(0, 100).map(sym => (
                                     <button key={`${sym.file_path}:${sym.name}`} onClick={() => void selectSymbol(sym)}
-                                        style={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', textAlign: 'left', border: 'none', borderBottom: '1px solid #f5f5f7', background: selected?.name === sym.name ? 'rgba(0,102,204,0.05)' : 'transparent', cursor: 'pointer', transition: 'background 0.1s' }}>
+                                        style={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', textAlign: 'left', border: 'none', borderBottom: '1px solid #f5f5f7', background: selected?.name === sym.name ? 'rgba(214, 48, 31,0.05)' : 'transparent', cursor: 'pointer', transition: 'background 0.1s' }}>
                                         <span style={{ ...chip(sym.kind), flexShrink: 0, marginTop: 2 }}>{sym.kind.slice(0, 2).toUpperCase()}</span>
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ fontSize: 13, fontFamily: 'ui-monospace, monospace', fontWeight: 600, color: KIND_TEXT[sym.kind] }}>{sym.name}</div>

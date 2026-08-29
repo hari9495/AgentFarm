@@ -5,10 +5,10 @@ type MetricSparklineProps = {
 
 const STROKE_COLORS: Record<string, string> = {
     brand: 'var(--accent)',
-    sky: '#2563eb',
+    sky: '#d6301f',
     emerald: '#10b981',
     amber: 'var(--warn)',
-    violet: '#2563eb',
+    violet: '#d6301f',
 };
 
 const FILL_STOPS: Record<string, [string, string]> = {

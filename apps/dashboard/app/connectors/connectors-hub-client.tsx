@@ -151,7 +151,7 @@ function McpTab() {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Compact explainer */}
-            <div style={{ padding: '12px 16px', background: 'rgba(0,102,204,0.04)', border: '1px solid rgba(0,102,204,0.15)', borderRadius: 12 }}>
+            <div style={{ padding: '12px 16px', background: 'rgba(214, 48, 31,0.04)', border: '1px solid rgba(214, 48, 31,0.15)', borderRadius: 12 }}>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                     <Cpu size={15} color="var(--accent)" style={{ flexShrink: 0, marginTop: 2 }} />
                     <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.55 }}>
@@ -182,7 +182,7 @@ function McpTab() {
 
             {/* Add form */}
             {showForm && (
-                <div style={{ border: '1px solid rgba(0,102,204,0.25)', borderRadius: 16, background: 'var(--card)', padding: '18px 20px', boxShadow: '0 0 0 4px rgba(0,102,204,0.04)' }}>
+                <div style={{ border: '1px solid rgba(214, 48, 31,0.25)', borderRadius: 16, background: 'var(--card)', padding: '18px 20px', boxShadow: '0 0 0 4px rgba(214, 48, 31,0.04)' }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>Add MCP Server</div>
                     <form onSubmit={addServer} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}>
@@ -327,7 +327,7 @@ export default function ConnectorsHubClient({
                 </Link>
                 <span style={{ color: 'var(--line)', flexShrink: 0 }}>|</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(0,102,204,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(214, 48, 31,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Link2 size={14} color="var(--accent)" />
                     </div>
                     <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>Connectors & Integrations</span>
@@ -387,8 +387,8 @@ export default function ConnectorsHubClient({
                 {activeTab === 'marketplace' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                         {/* Clear identity banner */}
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '16px 18px', background: 'var(--card)', border: '2px solid rgba(0,102,204,0.2)', borderRadius: 16, boxShadow: '0 0 0 4px rgba(0,102,204,0.04)' }}>
-                            <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(0,102,204,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 20 }}>🔌</div>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '16px 18px', background: 'var(--card)', border: '2px solid rgba(214, 48, 31,0.2)', borderRadius: 16, boxShadow: '0 0 0 4px rgba(214, 48, 31,0.04)' }}>
+                            <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(214, 48, 31,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 20 }}>🔌</div>
                             <div style={{ flex: 1 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                                     <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Connector Marketplace</span>

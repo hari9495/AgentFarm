@@ -126,7 +126,7 @@ export function CostTrendChart({ data, height = 180 }: CostTrendChartProps) {
                                 height={barHeight}
                                 rx={3}
                                 ry={3}
-                                fill="#2563eb"
+                                fill="#d6301f"
                                 opacity={0.85}
                             />
                             {/* Cost value above bar */}
@@ -135,7 +135,7 @@ export function CostTrendChart({ data, height = 180 }: CostTrendChartProps) {
                                     x={labelX}
                                     y={y - 4}
                                     textAnchor="middle"
-                                    fill="#2563eb"
+                                    fill="#d6301f"
                                     fontSize={9}
                                     fontWeight={600}
                                 >

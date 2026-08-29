@@ -103,14 +103,14 @@ export function DisclosureSettingsPanel({ botId }: Props) {
     return (
         <div className="space-y-6">
             {/* Compliance badge */}
-            <div className="rounded-md bg-blue-50 border border-blue-200 p-4">
-                <h3 className="text-sm font-semibold text-blue-800 mb-1">AI Disclosure Compliance</h3>
-                <p className="text-xs text-blue-700">{config?.complianceNote}</p>
+            <div className="rounded-md bg-blue-50 border border-red-200 p-4">
+                <h3 className="text-sm font-semibold text-red-800 mb-1">AI Disclosure Compliance</h3>
+                <p className="text-xs text-red-700">{config?.complianceNote}</p>
                 <div className="flex flex-wrap gap-2 mt-2">
                     {config?.jurisdictions.map((j) => (
                         <span
                             key={j}
-                            className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800"
+                            className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800"
                         >
                             {j}
                         </span>
@@ -131,7 +131,7 @@ export function DisclosureSettingsPanel({ botId }: Props) {
                     rows={3}
                     value={draftStatement}
                     onChange={(e) => setDraftStatement(e.target.value)}
-                    className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
                 />
                 {saveError && (
                     <p className="text-xs text-red-600">{saveError}</p>
@@ -143,7 +143,7 @@ export function DisclosureSettingsPanel({ botId }: Props) {
                     <button
                         onClick={handleSave}
                         disabled={saving || draftStatement === config?.disclosureStatement}
-                        className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {saving ? 'Saving…' : 'Save'}
                     </button>

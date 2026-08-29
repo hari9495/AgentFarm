@@ -152,7 +152,7 @@ export default function MemoryBrowserPanel() {
         cursor: 'pointer',
         fontSize: '0.85rem',
         fontWeight: activeTab === t ? 600 : 400,
-        background: activeTab === t ? 'var(--accent, #2563eb)' : 'transparent',
+        background: activeTab === t ? 'var(--accent, #d6301f)' : 'transparent',
         color: activeTab === t ? 'var(--card)' : 'var(--ink-muted)',
         border: 'none',
     });
@@ -311,7 +311,7 @@ export default function MemoryBrowserPanel() {
                                                     <button
                                                         onClick={() => void handleReinforce(String(pid))}
                                                         disabled={reinforcing === String(pid)}
-                                                        style={{ fontSize: '0.78rem', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer', background: 'var(--bg-deep)', color: 'var(--info)', border: '1px solid #1d4ed8' }}
+                                                        style={{ fontSize: '0.78rem', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer', background: 'var(--bg-deep)', color: 'var(--info)', border: '1px solid #b8291a' }}
                                                     >
                                                         {reinforcing === String(pid) ? '…' : 'Reinforce'}
                                                     </button>

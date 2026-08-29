@@ -35,11 +35,11 @@ interface LeadsResponse {
 const STATUS_OPTIONS: LeadStatus[] = ['NEW', 'NURTURE', 'QUALIFIED', 'DISQUALIFIED', 'CONVERTED'];
 
 const STATUS_BADGE: Record<LeadStatus, string> = {
-    NEW: 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
+    NEW: 'bg-red-500/20 text-red-300 border border-red-500/30',
     NURTURE: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
     QUALIFIED: 'bg-green-500/20 text-green-300 border border-green-500/30',
     DISQUALIFIED: 'bg-red-500/20 text-red-300 border border-red-500/30',
-    CONVERTED: 'bg-blue-500/20 text-blue-300 border border-blue-500/30',
+    CONVERTED: 'bg-red-500/20 text-red-300 border border-red-500/30',
 };
 
 // ---------------------------------------------------------------------------

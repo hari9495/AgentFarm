@@ -220,9 +220,9 @@ export function SupportIssueFeed() {
                             style={{
                                 padding: '0.75rem 1rem',
                                 borderBottom: '1px solid var(--line)',
-                                borderLeft: isSelected ? '3px solid #2563eb' : '3px solid transparent',
+                                borderLeft: isSelected ? '3px solid #d6301f' : '3px solid transparent',
                                 cursor: 'pointer',
-                                background: isSelected ? 'rgba(0,102,204,0.04)' : undefined,
+                                background: isSelected ? 'rgba(214, 48, 31,0.04)' : undefined,
                             }}
                         >
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.35rem' }}>

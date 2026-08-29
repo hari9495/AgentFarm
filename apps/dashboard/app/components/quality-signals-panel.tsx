@@ -136,7 +136,7 @@ export default function QualitySignalsPanel() {
         cursor: 'pointer',
         fontSize: '0.85rem',
         fontWeight: activeTab === t ? 600 : 400,
-        background: activeTab === t ? 'var(--accent, #2563eb)' : 'transparent',
+        background: activeTab === t ? 'var(--accent, #d6301f)' : 'transparent',
         color: activeTab === t ? 'var(--card)' : 'var(--ink-muted)',
         border: 'none',
     });

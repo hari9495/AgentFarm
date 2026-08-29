@@ -430,7 +430,7 @@ export default function AgentPersonaPanel({ botId }: AgentPersonaPanelProps) {
                                                 fontSize: '0.78rem',
                                                 fontWeight: 500,
                                                 border: '1px solid var(--border, #d1d5db)',
-                                                background: active ? 'var(--accent, #2563eb)' : 'transparent',
+                                                background: active ? 'var(--accent, #d6301f)' : 'transparent',
                                                 color: active ? '#fff' : 'var(--ink)',
                                                 cursor: 'pointer',
                                             }}
@@ -461,7 +461,7 @@ export default function AgentPersonaPanel({ botId }: AgentPersonaPanelProps) {
                     style={{
                         padding: '0.55rem 1.25rem',
                         borderRadius: '0.375rem',
-                        background: 'var(--accent, #2563eb)',
+                        background: 'var(--accent, #d6301f)',
                         color: 'var(--card)',
                         fontWeight: 600,
                         fontSize: '0.9rem',

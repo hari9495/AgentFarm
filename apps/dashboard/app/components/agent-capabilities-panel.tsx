@@ -35,11 +35,11 @@ type CapabilitiesResponse = {
 // ─── Auth badge colours by method ──────────────────────────────────────────
 
 const AUTH_BADGE: Record<string, string> = {
-    oauth2: 'bg-blue-900/60 text-blue-300',
-    api_key: 'bg-blue-900/60 text-blue-300',
-    bearer_token: 'bg-blue-900/60 text-blue-300',
+    oauth2: 'bg-red-900/60 text-red-300',
+    api_key: 'bg-red-900/60 text-red-300',
+    bearer_token: 'bg-red-900/60 text-red-300',
     basic: 'bg-zinc-700 text-zinc-300',
-    generic_rest: 'bg-blue-900/60 text-blue-300',
+    generic_rest: 'bg-red-900/60 text-red-300',
 };
 
 const AUTH_LABEL: Record<string, string> = {
@@ -77,7 +77,7 @@ function ConnectorCard({ connector, onConfigure }: { connector: ConnectorEntry; 
                 {connector.configSchema && connector.configSchema.length > 0 && (
                     <button
                         onClick={onConfigure}
-                        className="flex-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium hover:bg-blue-500 transition-colors"
+                        className="flex-1 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium hover:bg-red-500 transition-colors"
                     >
                         Configure
                     </button>
@@ -130,7 +130,7 @@ function ConfigureDrawer({ connector, onClose }: { connector: ConnectorEntry; on
                         </label>
                         {field.type === 'select' ? (
                             <select
-                                className="rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-blue-500"
+                                className="rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-red-500"
                                 value={values[field.key] ?? ''}
                                 onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
                             >
@@ -143,7 +143,7 @@ function ConfigureDrawer({ connector, onClose }: { connector: ConnectorEntry; on
                             <input
                                 type={field.type === 'password' ? 'password' : field.type === 'url' ? 'url' : 'text'}
                                 placeholder={field.placeholder}
-                                className="rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-blue-500"
+                                className="rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-500"
                                 value={values[field.key] ?? ''}
                                 onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
                             />
@@ -156,7 +156,7 @@ function ConfigureDrawer({ connector, onClose }: { connector: ConnectorEntry; on
                     <button
                         onClick={handleSave}
                         disabled={saving || saved}
-                        className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-500 disabled:opacity-60 transition-colors"
+                        className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium hover:bg-red-500 disabled:opacity-60 transition-colors"
                     >
                         {saved ? 'Saved ✓' : saving ? 'Saving…' : 'Save Configuration'}
                     </button>
@@ -226,7 +226,7 @@ function PurchasedSection({ section }: { section: AgentCapabilitySection }) {
                                     <div className="flex gap-1.5 flex-wrap justify-end">
                                         <button
                                             onClick={() => setConnectorFilter('all')}
-                                            className={`px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${connectorFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'}`}
+                                            className={`px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${connectorFilter === 'all' ? 'bg-red-600 text-white' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'}`}
                                         >
                                             All
                                         </button>
@@ -234,7 +234,7 @@ function PurchasedSection({ section }: { section: AgentCapabilitySection }) {
                                             <button
                                                 key={cat}
                                                 onClick={() => setConnectorFilter(cat)}
-                                                className={`px-2.5 py-0.5 rounded-full text-xs font-medium capitalize transition-colors ${connectorFilter === cat ? 'bg-blue-600 text-white' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'}`}
+                                                className={`px-2.5 py-0.5 rounded-full text-xs font-medium capitalize transition-colors ${connectorFilter === cat ? 'bg-red-600 text-white' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'}`}
                                             >
                                                 {cat.replace(/_/g, ' ')}
                                             </button>
@@ -356,7 +356,7 @@ export function AgentCapabilitiesPanel({ capabilities, error }: Props) {
                     </p>
                 </div>
                 <div className="shrink-0 rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-center">
-                    <div className="text-2xl font-bold text-blue-400">{totalPurchased}</div>
+                    <div className="text-2xl font-bold text-red-400">{totalPurchased}</div>
                     <div className="text-xs text-zinc-500 mt-0.5">of {totalAvailable} agents hired</div>
                 </div>
             </div>
@@ -366,7 +366,7 @@ export function AgentCapabilitiesPanel({ capabilities, error }: Props) {
                 <div className="flex gap-2 flex-wrap">
                     <button
                         onClick={() => setGroupFilter('all')}
-                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${groupFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${groupFilter === 'all' ? 'bg-red-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
                     >
                         All groups
                     </button>
@@ -376,7 +376,7 @@ export function AgentCapabilitiesPanel({ capabilities, error }: Props) {
                             <button
                                 key={group}
                                 onClick={() => setGroupFilter(group)}
-                                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${groupFilter === group ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
+                                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${groupFilter === group ? 'bg-red-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
                             >
                                 {GROUP_ICON[group]} {label}
                             </button>

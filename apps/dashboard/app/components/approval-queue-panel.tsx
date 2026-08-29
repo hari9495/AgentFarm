@@ -1432,7 +1432,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                         padding: '0.5rem 0.75rem',
                                         background: drawerTab === 'negotiate' ? 'var(--info-bg)' : 'transparent',
                                         border: 'none',
-                                        borderBottom: drawerTab === 'negotiate' ? '2px solid #2563eb' : 'none',
+                                        borderBottom: drawerTab === 'negotiate' ? '2px solid #d6301f' : 'none',
                                         cursor: 'pointer',
                                         fontSize: '0.85rem',
                                         fontWeight: drawerTab === 'negotiate' ? 'bold' : 'normal',
@@ -1797,7 +1797,7 @@ export function ApprovalQueuePanel({ workspaceId, initialPending, initialRecent,
                                                 {/* Evidence count badge */}
                                                 {evidenceData.total > 0 && (
                                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', padding: '2px 8px', borderRadius: 9999, background: 'color-mix(in srgb, var(--accent) 7%, transparent)', border: '1px solid rgba(0,102,204,0.18)' }}>
+                                                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', padding: '2px 8px', borderRadius: 9999, background: 'color-mix(in srgb, var(--accent) 7%, transparent)', border: '1px solid rgba(214, 48, 31,0.18)' }}>
                                                             {evidenceData.total} evidence record{evidenceData.total !== 1 ? 's' : ''}
                                                         </span>
                                                         {evidenceData.total > 1 && (

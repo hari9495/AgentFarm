@@ -284,7 +284,7 @@ export function SupportVoiceWidget() {
             {issueId && (
                 <div style={{
                     padding: '0.3rem 1rem',
-                    background: 'rgba(0,102,204,0.05)',
+                    background: 'rgba(214, 48, 31,0.05)',
                     borderBottom: '1px solid var(--line)',
                     fontSize: '0.72rem', color: 'var(--accent)',
                 }}>

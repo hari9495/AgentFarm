@@ -193,7 +193,7 @@ export default function ApiKeysPanel({ tenantId: _tenantId }: { tenantId: string
                     </select>
                 </div>
                 <button type="submit" disabled={creating}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.46rem 1rem', background: 'var(--brand, #2563eb)', color: 'var(--card)', border: 'none', borderRadius: 6, fontSize: '0.875rem', fontWeight: 600, cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? 0.7 : 1 }}>
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0.46rem 1rem', background: 'var(--brand, #d6301f)', color: 'var(--card)', border: 'none', borderRadius: 6, fontSize: '0.875rem', fontWeight: 600, cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? 0.7 : 1 }}>
                     <Plus size={14} /> {creating ? 'Creating…' : 'Create'}
                 </button>
             </form>

@@ -75,7 +75,7 @@ export default function DevOpsHubClient({
                 <Link href="/" style={{ color: 'var(--ink-muted)', fontSize: 13, textDecoration: 'none', fontWeight: 500 }}>← Dashboard</Link>
                 <span style={{ color: 'var(--line-strong)' }}>|</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(0,102,204,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(214, 48, 31,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Wrench size={14} color="var(--accent)" />
                     </div>
                     <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>DevOps &amp; Developer Tools</span>

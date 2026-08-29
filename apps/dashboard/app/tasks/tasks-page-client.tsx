@@ -33,10 +33,10 @@ function BotIdInput({ botId, setBotId }: { botId: string; setBotId: (v: string) 
     return (
         <div style={{
             display: 'flex', alignItems: 'center', gap: 10,
-            padding: '12px 16px', background: 'rgba(0,102,204,0.04)',
-            border: '1px solid rgba(0,102,204,0.15)', borderRadius: 12, marginBottom: 16,
+            padding: '12px 16px', background: 'rgba(214, 48, 31,0.04)',
+            border: '1px solid rgba(214, 48, 31,0.15)', borderRadius: 12, marginBottom: 16,
         }}>
-            <div style={{ width: 30, height: 30, borderRadius: 9, background: 'rgba(0,102,204,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 9, background: 'rgba(214, 48, 31,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Bot size={14} color="var(--accent)" />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -101,7 +101,7 @@ export default function TasksPageClient({
                 </Link>
                 <span style={{ color: 'var(--line)', flexShrink: 0 }}>|</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(0,102,204,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(214, 48, 31,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <ListChecks size={14} color="var(--accent)" />
                     </div>
                     <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>

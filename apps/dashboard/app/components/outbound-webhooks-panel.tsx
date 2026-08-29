@@ -354,8 +354,8 @@ export default function OutboundWebhooksPanel({ tenantId: _tenantId }: OutboundW
                                                         style={{
                                                             fontSize: '0.75rem', fontWeight: 600,
                                                             padding: '0.3rem 0.8rem', borderRadius: '0.4rem',
-                                                            border: '1px solid var(--accent, #2563eb)',
-                                                            background: testing === wh.id ? 'var(--line)' : 'var(--accent, #2563eb)',
+                                                            border: '1px solid var(--accent, #d6301f)',
+                                                            background: testing === wh.id ? 'var(--line)' : 'var(--accent, #d6301f)',
                                                             color: testing === wh.id ? 'var(--ink-muted)' : 'var(--card)',
                                                             cursor: testing === wh.id ? 'not-allowed' : 'pointer',
                                                         }}

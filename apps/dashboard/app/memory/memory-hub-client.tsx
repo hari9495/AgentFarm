@@ -52,7 +52,7 @@ function TabShell({
 
 function BotIdInput({ botId, setBotId }: { botId: string; setBotId: (v: string) => void }) {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'rgba(0,102,204,0.04)', border: '1px solid rgba(0,102,204,0.15)', borderRadius: 12, marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'rgba(214, 48, 31,0.04)', border: '1px solid rgba(214, 48, 31,0.15)', borderRadius: 12, marginBottom: 14 }}>
             <Brain size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Bot ID (optional — leave blank to search all)</div>
@@ -93,7 +93,7 @@ export default function MemoryHubClient({
                 <Link href="/" style={{ color: 'var(--ink-muted)', fontSize: 13, textDecoration: 'none', fontWeight: 500 }}>← Dashboard</Link>
                 <span style={{ color: 'var(--line-strong)' }}>|</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(0,102,204,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(214, 48, 31,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Brain size={14} color="var(--accent)" />
                     </div>
                     <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>Memory & Knowledge</span>

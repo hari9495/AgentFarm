@@ -308,7 +308,7 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                                     style={{
                                         padding: '5px 10px',
                                         background: diffBase === v.id ? 'var(--info)' : 'var(--bg-deep)',
-                                        border: diffBase === v.id ? '1px solid #3b82f6' : '1px solid #334155',
+                                        border: diffBase === v.id ? '1px solid #e5484d' : '1px solid #334155',
                                         borderRadius: '5px',
                                         color: diffBase === v.id ? '#fff' : 'var(--ink-muted)',
                                         fontSize: '11px',
@@ -329,7 +329,7 @@ export default function AgentVersionHistory({ botId }: AgentVersionHistoryProps)
                                         style={{
                                             padding: '5px 10px',
                                             background: diffTarget === v.id ? 'var(--info)' : 'var(--bg-deep)',
-                                            border: diffTarget === v.id ? '1px solid #3b82f6' : '1px solid #334155',
+                                            border: diffTarget === v.id ? '1px solid #e5484d' : '1px solid #334155',
                                             borderRadius: '5px',
                                             color: diffTarget === v.id ? '#fff' : 'var(--ink-muted)',
                                             fontSize: '11px',

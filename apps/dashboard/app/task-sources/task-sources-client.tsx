@@ -207,7 +207,7 @@ export default function TaskSourcesClient() {
                     )}
                 </div>
                 <button
-                    className="mt-4 bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                    className="mt-4 bg-red-600 text-white px-4 py-2 rounded disabled:opacity-50"
                     disabled={saving || !form.assignee.trim()}
                     onClick={() => void create()}
                 >

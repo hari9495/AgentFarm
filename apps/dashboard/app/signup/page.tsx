@@ -179,7 +179,7 @@ export default function SignupPage() {
                                         color: 'var(--ink)', outline: 'none', boxSizing: 'border-box',
                                         transition: 'border-color 180ms ease, box-shadow 180ms ease',
                                     }}
-                                    onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,102,204,0.12)'; }}
+                                    onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(214, 48, 31,0.12)'; }}
                                     onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--line)'; e.currentTarget.style.boxShadow = 'none'; }}
                                 />
                             </div>
@@ -337,7 +337,7 @@ const pageStyle: React.CSSProperties = {
 const brandBadge = (
     <span style={{
         display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
-        background: 'rgba(0,102,204,0.06)', border: '1px solid rgba(0,102,204,0.18)',
+        background: 'rgba(214, 48, 31,0.06)', border: '1px solid rgba(214, 48, 31,0.18)',
         borderRadius: '9999px', padding: '0.25rem 0.75rem',
         fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.03em',
         color: 'var(--accent)', textTransform: 'uppercase',
@@ -403,7 +403,7 @@ const ghostBtnStyle: React.CSSProperties = {
 
 function onFocus(e: React.FocusEvent<HTMLInputElement>) {
     e.currentTarget.style.borderColor = 'var(--accent)';
-    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,102,204,0.12)';
+    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(214, 48, 31,0.12)';
 }
 
 function onBlur(e: React.FocusEvent<HTMLInputElement>) {

@@ -51,7 +51,7 @@ const ADAPTER_TYPES: { value: AdapterType; label: string }[] = [
 
 function statusDot(status: AdapterStatus) {
     if (status === 'healthy')      return { color: 'var(--ok)',       bg: 'rgba(26,122,74,0.08)',   border: 'rgba(26,122,74,0.2)',   label: 'Healthy'      };
-    if (status === 'registered')   return { color: 'var(--accent)',   bg: 'rgba(0,102,204,0.08)',   border: 'rgba(0,102,204,0.2)',   label: 'Registered'   };
+    if (status === 'registered')   return { color: 'var(--accent)',   bg: 'rgba(214, 48, 31,0.08)',   border: 'rgba(214, 48, 31,0.2)',   label: 'Registered'   };
     if (status === 'degraded')     return { color: 'var(--warn)',     bg: 'rgba(180,83,9,0.08)',    border: 'rgba(180,83,9,0.2)',    label: 'Degraded'     };
     if (status === 'failed')       return { color: 'var(--danger)',   bg: 'rgba(196,22,28,0.08)',   border: 'rgba(196,22,28,0.2)',   label: 'Failed'       };
     return                                { color: 'var(--ink-muted)',bg: 'rgba(110,110,115,0.08)', border: 'rgba(110,110,115,0.2)', label: 'Unregistered' };
@@ -129,7 +129,7 @@ function RegisterForm({
     };
 
     return (
-        <div style={{ border: '1px solid rgba(0,102,204,0.25)', borderRadius: 18, background: 'var(--card)', boxShadow: '0 0 0 4px rgba(0,102,204,0.04)', marginBottom: 20, overflow: 'hidden' }}>
+        <div style={{ border: '1px solid rgba(214, 48, 31,0.25)', borderRadius: 18, background: 'var(--card)', boxShadow: '0 0 0 4px rgba(214, 48, 31,0.04)', marginBottom: 20, overflow: 'hidden' }}>
             {/* Header */}
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
@@ -230,7 +230,7 @@ function RegisterForm({
                         </div>
 
                         {/* Summary */}
-                        <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(0,102,204,0.04)', border: '1px solid rgba(0,102,204,0.15)' }}>
+                        <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(214, 48, 31,0.04)', border: '1px solid rgba(214, 48, 31,0.15)' }}>
                             <p style={{ margin: '0 0 4px', fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Summary</p>
                             <div style={{ fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.6 }}>
                                 <strong>{displayName}</strong> · key: <code style={{ fontSize: 11 }}>{adapterKey}</code> · type: <strong>{adapterType}</strong> · v{version}<br />

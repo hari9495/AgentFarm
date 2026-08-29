@@ -56,7 +56,7 @@ export function EvidenceViewer({ item }: { item: EvidenceViewerItem }) {
                             <div style={{
                                 background: 'var(--bg-deep)',
                                 borderRadius: 10,
-                                border: `1px solid ${label === 'After' ? 'rgba(0,102,204,0.35)' : 'var(--line)'}`,
+                                border: `1px solid ${label === 'After' ? 'rgba(214, 48, 31,0.35)' : 'var(--line)'}`,
                                 overflow: 'hidden',
                                 boxShadow: 'var(--shadow-sm)',
                             }}>
