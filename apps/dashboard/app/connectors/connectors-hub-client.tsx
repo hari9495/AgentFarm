@@ -12,6 +12,8 @@ import { ConnectorMarketplacePanel } from '../components/connector-marketplace-p
 import HealthStatusPanel from '../components/health-status-panel';
 import InboundWebhooksPanel from '../components/inbound-webhooks-panel';
 import OutboundWebhooksPanel from '../components/outbound-webhooks-panel';
+import { UiKit, Masthead, Tabs, Badge } from '../components/ui-kit';
+import { WfThemeToggle } from '../components/editorial';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -42,7 +44,7 @@ const TABS: { key: Tab; label: string; icon: React.ElementType; desc: string }[]
 function AdaptersTab({ workspaceId }: { workspaceId: string }) {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '16px 18px', background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '16px 18px', background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 3, boxShadow: 'none' }}>
                 <div style={{ width: 40, height: 40, borderRadius: 11, background: 'color-mix(in srgb, var(--accent) 8%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <Layers size={18} color="var(--accent)" />
                 </div>
@@ -56,7 +58,7 @@ function AdaptersTab({ workspaceId }: { workspaceId: string }) {
                 </div>
             </div>
 
-            <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 3, overflow: 'hidden', boxShadow: 'none' }}>
                 {[
                     { title: 'Browse adapters',      desc: 'View all registered adapters and their health status',       href: `/adapters?workspaceId=${workspaceId}` },
                     { title: 'Register new adapter', desc: 'Add a custom adapter endpoint to this workspace',            href: `/adapters?workspaceId=${workspaceId}&action=register` },
@@ -182,7 +184,7 @@ function McpTab() {
 
             {/* Add form */}
             {showForm && (
-                <div style={{ border: '1px solid rgba(45, 138, 138,0.25)', borderRadius: 16, background: 'var(--card)', padding: '18px 20px', boxShadow: '0 0 0 4px rgba(45, 138, 138,0.04)' }}>
+                <div style={{ border: '1px solid rgba(45, 138, 138,0.25)', borderRadius: 3, background: 'var(--card)', padding: '18px 20px', boxShadow: 'none' }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>Add MCP Server</div>
                     <form onSubmit={addServer} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}>
@@ -217,7 +219,7 @@ function McpTab() {
 
             {/* Empty state */}
             {!loading && servers.length === 0 && !showForm && !error && (
-                <div style={{ padding: '36px', textAlign: 'center', border: '1px dashed #d2d2d7', borderRadius: 16, background: 'var(--bg)' }}>
+                <div style={{ padding: '36px', textAlign: 'center', border: '1px dashed #d2d2d7', borderRadius: 3, background: 'var(--bg)' }}>
                     <div style={{ fontSize: 28, marginBottom: 10 }}>⚙️</div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>No MCP servers registered</div>
                     <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--ink-muted)', lineHeight: 1.5, maxWidth: 340, marginLeft: 'auto', marginRight: 'auto' }}>
@@ -241,7 +243,7 @@ function McpTab() {
                 {servers.map(server => {
                     const ps = pingStates[server.id];
                     return (
-                        <div key={server.id} style={{ background: 'var(--card)', border: `1px solid ${server.isActive ? 'rgba(26,122,74,0.25)' : 'var(--line)'}`, borderRadius: 14, padding: '14px 16px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                        <div key={server.id} style={{ background: 'var(--card)', border: `1px solid ${server.isActive ? 'rgba(26,122,74,0.25)' : 'var(--line)'}`, borderRadius: 14, padding: '14px 16px', boxShadow: 'none' }}>
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                                 <div style={{ width: 9, height: 9, borderRadius: '50%', background: server.isActive ? 'var(--ok)' : 'var(--ink-muted)', flexShrink: 0, marginTop: 5 }} />
                                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -288,7 +290,7 @@ function TabShell({ title, icon: Icon, description, children }: {
                     <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--ink-muted)', lineHeight: 1.45 }}>{description}</p>
                 </div>
             </div>
-            <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 18, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 3, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                 {children}
             </div>
         </div>
@@ -310,68 +312,33 @@ export default function ConnectorsHubClient({
 }) {
     const [activeTab, setActiveTab] = useState<Tab>('config');
 
+    const connected = initialConnectors.filter(c => c.status === 'connected').length;
+    const total = initialConnectors.length;
+    const connTone = connected === total ? 'ok' : connected > 0 ? 'warn' : 'err';
+
     return (
-        <div style={{
-            minHeight: '100vh', background: 'var(--bg)',
-            fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-            display: 'flex', flexDirection: 'column',
-        }}>
-            {/* ── Top bar ──────────────────────────────────────────────── */}
-            <header style={{
-                height: 56, background: 'var(--card)', borderBottom: '1px solid var(--line)',
-                display: 'flex', alignItems: 'center', padding: '0 20px', gap: 12,
-                flexShrink: 0, position: 'sticky', top: 0, zIndex: 10,
-            }}>
-                <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--ink-muted)', fontSize: 13, textDecoration: 'none', fontWeight: 500, flexShrink: 0 }}>
-                    ← Dashboard
-                </Link>
-                <span style={{ color: 'var(--line)', flexShrink: 0 }}>|</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(45, 138, 138,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Link2 size={14} color="var(--accent)" />
-                    </div>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>Connectors & Integrations</span>
-                </div>
-                {/* Quick status summary */}
-                <div style={{ display: 'flex', gap: 8, marginLeft: 8 }}>
-                    {(() => {
-                        const connected = initialConnectors.filter(c => c.status === 'connected').length;
-                        const total     = initialConnectors.length;
-                        const color     = connected === total ? 'var(--ok)' : connected > 0 ? 'var(--warn)' : 'var(--danger)';
-                        const bg        = connected === total ? 'rgba(26,122,74,0.07)' : connected > 0 ? 'rgba(180,83,9,0.07)' : 'rgba(196,22,28,0.07)';
-                        const border    = connected === total ? 'rgba(26,122,74,0.2)' : connected > 0 ? 'rgba(180,83,9,0.2)' : 'rgba(196,22,28,0.2)';
-                        return (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 9999, background: bg, border: `1px solid ${border}` }}>
-                                <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                                <span style={{ fontSize: 12, fontWeight: 600, color }}>{connected}/{total} connected</span>
-                            </div>
-                        );
-                    })()}
-                </div>
-            </header>
+        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+            <Masthead
+                eyebrow="Integrations — Connector Registry"
+                title="Connectors"
+                actions={<>
+                    <Link href="/" className="uk-eyebrow" style={{ textDecoration: 'none', alignSelf: 'center' }}>← Dashboard</Link>
+                    <WfThemeToggle />
+                    <Badge tone={connTone}>{connected}/{total} connected</Badge>
+                </>}
+            />
 
             {/* ── Tab bar ──────────────────────────────────────────────── */}
-            <div style={{ background: 'var(--card)', borderBottom: '1px solid var(--line)', padding: '0 20px', display: 'flex', gap: 0, overflowX: 'auto' }}>
-                {TABS.map(({ key, label, icon: Icon }) => {
-                    const active = activeTab === key;
-                    return (
-                        <button key={key} type="button" onClick={() => setActiveTab(key)} style={{
-                            display: 'flex', alignItems: 'center', gap: 6,
-                            padding: '13px 14px', background: 'transparent', border: 'none',
-                            borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
-                            cursor: 'pointer', color: active ? 'var(--accent)' : 'var(--ink-muted)',
-                            fontSize: 13, fontWeight: active ? 600 : 500,
-                            transition: 'all 0.15s', marginBottom: -1, whiteSpace: 'nowrap',
-                        }}>
-                            <Icon size={13} />
-                            {label}
-                        </button>
-                    );
-                })}
+            <div style={{ padding: '0 28px' }}>
+                <Tabs
+                    tabs={TABS.map(t => ({ key: t.key, label: t.label, icon: <t.icon size={13} /> }))}
+                    active={activeTab}
+                    onChange={setActiveTab}
+                />
             </div>
 
             {/* ── Content ──────────────────────────────────────────────── */}
-            <div style={{ flex: 1, padding: 20, overflow: 'auto' }}>
+            <div style={{ flex: 1, padding: 28, overflow: 'auto' }}>
 
                 {activeTab === 'config' && (
                     <TabShell icon={Link2} title="Connector Configuration"
@@ -387,8 +354,8 @@ export default function ConnectorsHubClient({
                 {activeTab === 'marketplace' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                         {/* Clear identity banner */}
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '16px 18px', background: 'var(--card)', border: '2px solid rgba(45, 138, 138,0.2)', borderRadius: 16, boxShadow: '0 0 0 4px rgba(45, 138, 138,0.04)' }}>
-                            <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(45, 138, 138,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 20 }}>🔌</div>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '16px 18px', background: 'var(--card)', border: '2px solid rgba(45, 138, 138,0.2)', borderRadius: 3, boxShadow: 'none' }}>
+                            <div style={{ width: 42, height: 42, borderRadius: 3, background: 'rgba(45, 138, 138,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 20 }}>🔌</div>
                             <div style={{ flex: 1 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                                     <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Connector Marketplace</span>
@@ -412,7 +379,7 @@ export default function ConnectorsHubClient({
                             </p>
                         </div>
 
-                        <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 18, padding: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+                        <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 3, padding: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
                             <ConnectorMarketplacePanel agentRoles={[]} />
                         </div>
                     </div>
@@ -447,6 +414,6 @@ export default function ConnectorsHubClient({
                     </TabShell>
                 )}
             </div>
-        </div>
+        </UiKit>
     );
 }

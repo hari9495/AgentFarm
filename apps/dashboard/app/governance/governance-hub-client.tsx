@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { UiKit, Masthead, Tabs } from '../components/ui-kit';
+import { WfThemeToggle } from '../components/editorial';
 import {
     ShieldCheck, TrendingUp, GitBranch, ShieldAlert,
     Zap, Eye, RotateCcw, Database, Puzzle, Bot,
@@ -42,7 +44,7 @@ const TABS: { key: Tab; label: string; icon: React.ElementType; desc: string; ne
 
 function BotIdInput({ botId, setBotId }: { botId: string; setBotId: (v: string) => void }) {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'rgba(45, 138, 138,0.04)', border: '1px solid rgba(45, 138, 138,0.15)', borderRadius: 12, marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'rgba(45, 138, 138,0.04)', border: '1px solid rgba(45, 138, 138,0.15)', borderRadius: 3, marginBottom: 16 }}>
             <div style={{ width: 30, height: 30, borderRadius: 9, background: 'rgba(45, 138, 138,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Bot size={14} color="var(--accent)" />
             </div>
@@ -79,7 +81,7 @@ function TabShell({ title, icon: Icon, description, extra, children }: {
                 </div>
                 {extra}
             </div>
-            <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 18, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 3, padding: 20, boxShadow: 'none' }}>
                 {children}
             </div>
         </div>
@@ -99,68 +101,36 @@ export default function GovernanceHubClient({
     const [botId, setBotId] = useState('');
 
     return (
-        <div style={{
-            minHeight: '100vh', background: 'var(--bg)',
-            fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-            display: 'flex', flexDirection: 'column',
-        }}>
-
-            {/* ── Top bar ──────────────────────────────────────────────── */}
-            <header style={{
-                height: 56, background: 'var(--card)', borderBottom: '1px solid var(--line)',
-                display: 'flex', alignItems: 'center', padding: '0 20px', gap: 12,
-                flexShrink: 0, position: 'sticky', top: 0, zIndex: 10,
-            }}>
-                <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--ink-muted)', fontSize: 13, textDecoration: 'none', fontWeight: 500 }}>
-                    ← Dashboard
-                </Link>
-                <span style={{ color: 'var(--line-strong)' }}>|</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(45, 138, 138,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <ShieldCheck size={14} color="var(--accent)" />
-                    </div>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>Governance</span>
-                </div>
-
-                {/* Quick link to approval queue */}
-                <Link href="/?tab=approvals" style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 8, padding: '5px 12px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 12, fontWeight: 500, textDecoration: 'none' }}>
-                    <ExternalLink size={11} /> Approval Queue
-                </Link>
-
-                {/* Active bot pill */}
-                {botId.trim() && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 9999, background: 'color-mix(in srgb, var(--accent) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--accent) 20%, transparent)', fontSize: 12, color: 'var(--accent)', fontWeight: 600, fontFamily: 'monospace' }}>
-                        <Bot size={11} color="var(--accent)" />
-                        {botId.slice(0, 16)}{botId.length > 16 ? '…' : ''}
-                        <button onClick={() => setBotId('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', padding: 0, lineHeight: 1, marginLeft: 2, fontSize: 13 }}>×</button>
-                    </div>
-                )}
-            </header>
+        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+            <Masthead
+                eyebrow="Governance & Compliance"
+                title="Governance"
+                actions={<>
+                    <Link href="/" className="uk-eyebrow" style={{ textDecoration: 'none', alignSelf: 'center' }}>← Dashboard</Link>
+                    <WfThemeToggle />
+                    <Link href="/?tab=approvals" className="uk-btn uk-btn--ghost uk-btn--sm" style={{ textDecoration: 'none' }}>
+                        <ExternalLink size={11} /> Approval Queue
+                    </Link>
+                    {botId.trim() && (
+                        <span className="uk-mono" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 9px', border: '1px solid var(--accent)', color: 'var(--accent)', fontSize: 11 }}>
+                            <Bot size={11} />{botId.slice(0, 16)}{botId.length > 16 ? '…' : ''}
+                            <button onClick={() => setBotId('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', padding: 0, lineHeight: 1, marginLeft: 2, fontSize: 13 }}>×</button>
+                        </span>
+                    )}
+                </>}
+            />
 
             {/* ── Tab bar ──────────────────────────────────────────────── */}
-            <div style={{ background: 'var(--card)', borderBottom: '1px solid var(--line)', padding: '0 20px', display: 'flex', gap: 0, overflowX: 'auto' }}>
-                {TABS.map(({ key, label, icon: Icon, needsBot }) => {
-                    const active = activeTab === key;
-                    const unset  = needsBot && !botId.trim();
-                    return (
-                        <button key={key} type="button" onClick={() => setActiveTab(key)} style={{
-                            display: 'flex', alignItems: 'center', gap: 6,
-                            padding: '13px 14px', background: 'transparent', border: 'none',
-                            borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
-                            cursor: 'pointer', color: active ? 'var(--accent)' : unset ? 'var(--ink-muted)' : 'var(--ink-muted)',
-                            fontSize: 13, fontWeight: active ? 600 : 500,
-                            transition: 'all 0.15s', marginBottom: -1, whiteSpace: 'nowrap',
-                        }}>
-                            <Icon size={13} />
-                            {label}
-                            {unset && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--line-strong)', flexShrink: 0 }} />}
-                        </button>
-                    );
-                })}
+            <div style={{ padding: '0 28px' }}>
+                <Tabs
+                    tabs={TABS.map(t => ({ key: t.key, label: t.label, icon: <t.icon size={13} /> }))}
+                    active={activeTab}
+                    onChange={setActiveTab}
+                />
             </div>
 
             {/* ── Content ──────────────────────────────────────────────── */}
-            <div style={{ flex: 1, padding: 20, overflow: 'auto' }}>
+            <div style={{ flex: 1, padding: 28, overflow: 'auto' }}>
 
                 {activeTab === 'kpis' && (
                     <TabShell icon={TrendingUp} title="Governance KPIs" description="Real-time animated counters across approvals, audit, budget, providers and execution.">
@@ -241,6 +211,6 @@ export default function GovernanceHubClient({
                     </TabShell>
                 )}
             </div>
-        </div>
+        </UiKit>
     );
 }

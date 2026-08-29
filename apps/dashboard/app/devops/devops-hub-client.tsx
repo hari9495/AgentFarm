@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { UiKit, Masthead, Tabs } from '../components/ui-kit';
+import { WfThemeToggle } from '../components/editorial';
 import Link from 'next/link';
 import {
     Wrench, GitPullRequest, Cpu, RefreshCw, GitBranch, Beaker,
@@ -51,7 +53,7 @@ function TabShell({ title, icon: Icon, description, children }: {
                     <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--ink-muted)', lineHeight: 1.45 }}>{description}</p>
                 </div>
             </div>
-            <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 18, padding: 20, boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 3, padding: 20, boxShadow: 'none' }}>
                 {children}
             </div>
         </div>
@@ -69,46 +71,27 @@ export default function DevOpsHubClient({
     const active = TABS.find(t => t.key === activeTab)!;
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg)', fontFamily: 'var(--font-inter), -apple-system, sans-serif', display: 'flex', flexDirection: 'column' }}>
-            {/* Header */}
-            <header style={{ height: 56, background: 'var(--card)', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', padding: '0 20px', gap: 12, flexShrink: 0, position: 'sticky', top: 0, zIndex: 10 }}>
-                <Link href="/" style={{ color: 'var(--ink-muted)', fontSize: 13, textDecoration: 'none', fontWeight: 500 }}>← Dashboard</Link>
-                <span style={{ color: 'var(--line-strong)' }}>|</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(45, 138, 138,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Wrench size={14} color="var(--accent)" />
-                    </div>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>DevOps &amp; Developer Tools</span>
-                </div>
-            </header>
+        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+            <Masthead
+                eyebrow="DevOps & Developer Tools"
+                title="DevOps"
+                actions={<>
+                    <Link href="/" className="uk-eyebrow" style={{ textDecoration: 'none', alignSelf: 'center' }}>← Dashboard</Link>
+                    <WfThemeToggle />
+                </>}
+            />
 
             {/* Tab bar */}
-            <div style={{ background: 'var(--card)', borderBottom: '1px solid var(--line)', padding: '0 20px', display: 'flex', gap: 0, overflowX: 'auto' }}>
-                {TABS.map(({ key, label, icon: Icon }) => {
-                    const isActive = activeTab === key;
-                    return (
-                        <button
-                            key={key}
-                            type="button"
-                            onClick={() => setActiveTab(key)}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: 6,
-                                padding: '13px 14px', background: 'transparent', border: 'none',
-                                borderBottom: `2px solid ${isActive ? 'var(--accent)' : 'transparent'}`,
-                                cursor: 'pointer',
-                                color: isActive ? 'var(--accent)' : 'var(--ink-muted)',
-                                fontSize: 13, fontWeight: isActive ? 600 : 500,
-                                transition: 'all 0.15s', marginBottom: -1, whiteSpace: 'nowrap',
-                            }}
-                        >
-                            <Icon size={13} />{label}
-                        </button>
-                    );
-                })}
+            <div style={{ padding: '0 28px' }}>
+                <Tabs
+                    tabs={TABS.map(t => ({ key: t.key, label: t.label, icon: <t.icon size={13} /> }))}
+                    active={activeTab}
+                    onChange={setActiveTab}
+                />
             </div>
 
             {/* Content */}
-            <div style={{ flex: 1, padding: 20, overflow: 'auto' }}>
+            <div style={{ flex: 1, padding: 28, overflow: 'auto' }}>
                 {activeTab === 'ci' && (
                     <TabShell icon={Cpu} title="CI Triage" description="Intake CI pipeline failures, view AI-generated root-cause analysis, and track resolution status.">
                         <CiTriagePanel workspaceId={workspaceId} />
@@ -168,6 +151,6 @@ export default function DevOpsHubClient({
                     </TabShell>
                 )}
             </div>
-        </div>
+        </UiKit>
     );
 }

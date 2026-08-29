@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { UiKit, Masthead, Tabs } from '../components/ui-kit';
+import { WfThemeToggle } from '../components/editorial';
 import { Brain, BookOpen, Layers, Network, Search, FileText } from 'lucide-react';
 import MemoryBrowserPanel from '../components/memory-browser-panel';
 import AgentEpisodicMemoryPanel from '../components/agent-episodic-memory-panel';
@@ -41,7 +43,7 @@ function TabShell({
                     <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--ink-muted)', lineHeight: 1.45 }}>{description}</p>
                 </div>
             </div>
-            <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 18, padding: 20, boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 3, padding: 20, boxShadow: 'none' }}>
                 {children}
             </div>
         </div>
@@ -52,7 +54,7 @@ function TabShell({
 
 function BotIdInput({ botId, setBotId }: { botId: string; setBotId: (v: string) => void }) {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'rgba(45, 138, 138,0.04)', border: '1px solid rgba(45, 138, 138,0.15)', borderRadius: 12, marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'rgba(45, 138, 138,0.04)', border: '1px solid rgba(45, 138, 138,0.15)', borderRadius: 3, marginBottom: 14 }}>
             <Brain size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Bot ID (optional — leave blank to search all)</div>
@@ -79,54 +81,32 @@ export default function MemoryHubClient({
     const [botId, setBotId] = useState('');
 
     return (
-        <div style={{
-            minHeight: '100vh', background: 'var(--bg)',
-            fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-            display: 'flex', flexDirection: 'column',
-        }}>
-            {/* ── Top bar ──────────────────────────────────────────────── */}
-            <header style={{
-                height: 56, background: 'var(--card)', borderBottom: '1px solid var(--line)',
-                display: 'flex', alignItems: 'center', padding: '0 20px', gap: 12,
-                flexShrink: 0, position: 'sticky', top: 0, zIndex: 10,
-            }}>
-                <Link href="/" style={{ color: 'var(--ink-muted)', fontSize: 13, textDecoration: 'none', fontWeight: 500 }}>← Dashboard</Link>
-                <span style={{ color: 'var(--line-strong)' }}>|</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(45, 138, 138,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Brain size={14} color="var(--accent)" />
-                    </div>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>Memory & Knowledge</span>
-                </div>
-                {workspaceId && (
-                    <div style={{ marginLeft: 8, display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 9999, background: 'color-mix(in srgb, var(--accent) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--accent) 20%, transparent)', fontSize: 11, color: 'var(--accent)', fontWeight: 600, fontFamily: 'monospace' }}>
-                        ws: {workspaceId.slice(0, 18)}
-                    </div>
-                )}
-            </header>
+        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+            <Masthead
+                eyebrow="Memory & Knowledge"
+                title="Memory"
+                actions={<>
+                    <Link href="/" className="uk-eyebrow" style={{ textDecoration: 'none', alignSelf: 'center' }}>← Dashboard</Link>
+                    <WfThemeToggle />
+                    {workspaceId && (
+                        <span className="uk-mono" style={{ padding: '5px 9px', border: '1px solid var(--line)', color: 'var(--ink-muted)', fontSize: 11 }}>
+                            ws: {workspaceId.slice(0, 18)}
+                        </span>
+                    )}
+                </>}
+            />
 
             {/* ── Tab bar ──────────────────────────────────────────────── */}
-            <div style={{ background: 'var(--card)', borderBottom: '1px solid var(--line)', padding: '0 20px', display: 'flex', gap: 0, overflowX: 'auto' }}>
-                {TABS.map(({ key, label, icon: Icon }) => {
-                    const active = activeTab === key;
-                    return (
-                        <button key={key} type="button" onClick={() => setActiveTab(key)} style={{
-                            display: 'flex', alignItems: 'center', gap: 6,
-                            padding: '13px 14px', background: 'transparent', border: 'none',
-                            borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
-                            cursor: 'pointer', color: active ? 'var(--accent)' : 'var(--ink-muted)',
-                            fontSize: 13, fontWeight: active ? 600 : 500,
-                            transition: 'all 0.15s', marginBottom: -1, whiteSpace: 'nowrap',
-                        }}>
-                            <Icon size={13} />
-                            {label}
-                        </button>
-                    );
-                })}
+            <div style={{ padding: '0 28px' }}>
+                <Tabs
+                    tabs={TABS.map(t => ({ key: t.key, label: t.label, icon: <t.icon size={13} /> }))}
+                    active={activeTab}
+                    onChange={setActiveTab}
+                />
             </div>
 
             {/* ── Content ──────────────────────────────────────────────── */}
-            <div style={{ flex: 1, padding: 20, overflow: 'auto' }}>
+            <div style={{ flex: 1, padding: 28, overflow: 'auto' }}>
 
                 {/* Episodic Memory — long-term learned patterns per agent */}
                 {activeTab === 'episodic' && (
@@ -197,6 +177,6 @@ export default function MemoryHubClient({
                     </TabShell>
                 )}
             </div>
-        </div>
+        </UiKit>
     );
 }
