@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import type { ReactElement } from 'react';
 import { ApprovalQueuePanel } from './components/approval-queue-panel';
+import ApprovalsWorkspace from './components/approvals-workspace';
 import { AgentMemoryPatternPanel } from './components/agent-memory-pattern-panel';
 import { AgentQuestionPanel } from './components/agent-question-panel';
 import { ConnectorConfigPanel } from './components/connector-config-panel';
@@ -1337,13 +1338,9 @@ export default async function HomePage({
                                     {pendingAgentQuestions.length} pending question{pendingAgentQuestions.length === 1 ? '' : 's'}
                                 </span>
                             </div>
-                            <ApprovalQueuePanel
+                            <ApprovalsWorkspace
+                                initial={dashboardSlice.pendingApprovals}
                                 workspaceId={workspace.workspace_id}
-                                initialPending={dashboardSlice.pendingApprovals}
-                                initialRecent={dashboardSlice.recentDecisions}
-                                focusedApprovalId={focusedApprovalId}
-                                initialMetrics={dashboardSlice.approvalMetrics}
-                                currentUserId={sessionPayload?.userId}
                             />
                             <AgentQuestionPanel
                                 workspaceId={workspace.workspace_id}
