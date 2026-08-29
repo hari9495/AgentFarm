@@ -5,6 +5,7 @@ import { Suspense } from 'react';
 import type { ReactElement } from 'react';
 import { ApprovalQueuePanel } from './components/approval-queue-panel';
 import ApprovalsWorkspace from './components/approvals-workspace';
+import RuntimeObservabilityHybrid from './components/runtime-observability-hybrid';
 import { AgentMemoryPatternPanel } from './components/agent-memory-pattern-panel';
 import { AgentQuestionPanel } from './components/agent-question-panel';
 import { ConnectorConfigPanel } from './components/connector-config-panel';
@@ -1354,16 +1355,12 @@ export default async function HomePage({
                     {(unifiedView || activeTab === 'observability') && (
                         <section id="dashboard-panel-observability" role="tabpanel" aria-labelledby="dashboard-tab-observability" className="dashboard-panel mission-section" style={{ '--stagger-index': '2' } as React.CSSProperties}>
                             {unifiedView && <p className="mission-section-label">Section 03 · Runtime Observability</p>}
-                            <RuntimeObservabilityPanel
-                                botId={workspace.bot_id}
+                            <RuntimeObservabilityHybrid
+                                health={runtimeObs.health}
+                                logs={runtimeObs.logs}
+                                transitions={runtimeObs.transitions}
+                                currentState={runtimeObs.currentState}
                                 connectors={dashboardSlice.connectors}
-                                internalPolicy={internalPolicy}
-                                initialLogs={runtimeObs.logs}
-                                initialTransitions={runtimeObs.transitions}
-                                initialTranscripts={runtimeObs.transcripts}
-                                initialInterviewEvents={runtimeObs.interviewEvents}
-                                initialCurrentState={runtimeObs.currentState}
-                                initialHealth={runtimeObs.health}
                             />
                             <ConnectorConfigPanel
                                 workspaceId={workspace.workspace_id}
