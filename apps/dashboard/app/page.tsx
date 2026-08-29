@@ -6,6 +6,7 @@ import type { ReactElement } from 'react';
 import { ApprovalQueuePanel } from './components/approval-queue-panel';
 import ApprovalsWorkspace from './components/approvals-workspace';
 import RuntimeObservabilityHybrid from './components/runtime-observability-hybrid';
+import AuditWorkspace from './components/audit-workspace';
 import { AgentMemoryPatternPanel } from './components/agent-memory-pattern-panel';
 import { AgentQuestionPanel } from './components/agent-question-panel';
 import { ConnectorConfigPanel } from './components/connector-config-panel';
@@ -1374,10 +1375,9 @@ export default async function HomePage({
                     {(unifiedView || activeTab === 'audit') && (
                         <section id="dashboard-panel-audit" role="tabpanel" aria-labelledby="dashboard-tab-audit" className="dashboard-panel mission-section" style={{ '--stagger-index': '3' } as React.CSSProperties}>
                             {unifiedView && <p className="mission-section-label">Section 04 · Evidence and Compliance</p>}
-                            <EvidenceCompliancePanel
+                            <AuditWorkspace
+                                initial={dashboardSlice.events}
                                 workspaceId={workspace.workspace_id}
-                                initialEvents={dashboardSlice.events}
-                                focusedCorrelationId={focusedCorrelationId}
                             />
                         </section>
                     )}
