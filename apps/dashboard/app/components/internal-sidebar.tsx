@@ -92,7 +92,7 @@ function NavItem({
             onClick={onClick}
             aria-current={active ? 'page' : undefined}
             className={[
-                'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left',
+                'w-full flex items-center gap-3 px-3 py-2 rounded-sm text-sm font-medium transition-colors text-left',
                 active
                     ? 'font-semibold'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
@@ -100,7 +100,7 @@ function NavItem({
             style={active ? { background: 'color-mix(in srgb, var(--accent) 7%, transparent)', color: 'var(--accent)' } : {}}
         >
             <span
-                className="inline-flex h-7 w-7 items-center justify-center rounded-lg shrink-0"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-sm shrink-0"
                 style={active
                     ? { background: 'rgba(214, 48, 31,0.12)' }
                     : { background: c.bg }}
@@ -143,10 +143,10 @@ function SidebarLink({
     return (
         <Link
             href={href}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+            className="flex items-center gap-3 px-3 py-2 rounded-sm text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
         >
             <span
-                className="inline-flex h-7 w-7 items-center justify-center rounded-lg shrink-0"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-sm shrink-0"
                 style={{ background: c.bg }}
             >
                 <Icon className="w-3.5 h-3.5" style={{ color: c.text }} aria-hidden="true" />
@@ -209,7 +209,7 @@ export function InternalSidebar({
         <div className="flex flex-col h-screen sticky top-0 bg-white border-r border-slate-200 overflow-hidden">
             {/* Logo */}
             <div className="flex items-center gap-2.5 px-4 h-14 border-b border-slate-200 shrink-0">
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg shadow-sm shrink-0" style={{ background: 'var(--accent)' }}>
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-sm shadow-sm shrink-0" style={{ background: 'var(--accent)' }}>
                     <Cpu className="w-3.5 h-3.5 text-white" aria-hidden="true" />
                 </span>
                 <span className="text-sm font-bold tracking-tight text-slate-900 flex-1">AgentFarms Ops</span>
@@ -223,7 +223,7 @@ export function InternalSidebar({
                 <button
                     type="button"
                     onClick={handleSearchKey}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-sm border border-slate-200 bg-slate-50 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
                 >
                     <Search className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                     <span className="flex-1 text-left">Search pages…</span>
@@ -238,7 +238,7 @@ export function InternalSidebar({
                             <select
                                 value={workspaceId}
                                 onChange={(e) => handleWorkspaceChange(e.target.value)}
-                                className="w-full appearance-none bg-white border border-slate-200 rounded-lg px-3 py-2 pr-8 text-xs font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-red-400 cursor-pointer"
+                                className="w-full appearance-none bg-white border border-slate-200 rounded-sm px-3 py-2 pr-8 text-xs font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-red-400 cursor-pointer"
                             >
                                 {workspaces.map((ws) => (
                                     <option key={ws.workspaceId} value={ws.workspaceId}>
@@ -336,10 +336,10 @@ export function InternalSidebar({
                         ) : (
                             <Link
                                 href="/billing"
-                                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                                className="flex items-center gap-3 px-3 py-2 rounded-sm text-sm font-medium transition-colors"
                                 style={{ color: 'var(--ink-muted)' }}
                             >
-                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg shrink-0" style={{ background: 'rgba(148,163,184,0.1)' }}>
+                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-sm shrink-0" style={{ background: 'rgba(148,163,184,0.1)' }}>
                                     <Lock className="w-3.5 h-3.5" style={{ color: 'var(--ink-muted)' }} />
                                 </span>
                                 <span className="flex-1 text-slate-400">Upgrade to unlock</span>
@@ -398,7 +398,7 @@ export function InternalSidebar({
             {/* Footer */}
             <div className="border-t border-slate-200 px-3 py-3 space-y-0.5 shrink-0">
                 {workspaces.length <= 1 && (
-                    <div className="flex items-center gap-3 px-3 py-2 rounded-lg">
+                    <div className="flex items-center gap-3 px-3 py-2 rounded-sm">
                         <div className="h-7 w-7 rounded-full bg-red-100 flex items-center justify-center text-[10px] font-bold text-red-600 shrink-0">
                             {workspaceName.slice(0, 2).toUpperCase()}
                         </div>
@@ -417,7 +417,7 @@ export function InternalSidebar({
                         document.cookie = 'agentfarm_internal_session=; path=/; max-age=0; samesite=strict';
                         window.location.href = '/login';
                     }}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors w-full text-left"
+                    className="flex items-center gap-3 px-3 py-2 rounded-sm text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors w-full text-left"
                 >
                     <LogOut className="w-4 h-4 shrink-0" aria-hidden="true" />
                     <span>Sign out</span>
