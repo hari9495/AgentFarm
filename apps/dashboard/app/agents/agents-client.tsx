@@ -2,13 +2,29 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Users, Plus, RefreshCw, ChevronRight, Circle, Zap, Clock, AlertCircle } from 'lucide-react';
+import { Users, Plus, RefreshCw, ChevronRight, Circle, Zap, Clock, AlertCircle, Sun, Moon } from 'lucide-react';
 import AgentDetailPanel from '../components/agent-detail-panel';
 import type { Agent, BotStatus } from '../components/agent-card';
 
 // ── Dark-editorial / Swiss-print system (scoped to this page) ────────────────────
 const WF_CSS = `
-.wf { font-family: var(--font-inter), -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+/* Editorial palette — LIGHT default (Swiss black-on-white), DARK on toggle.
+   Remaps --bg/--card/--line/--ink/--accent so every token-driven inline style
+   on the page follows the theme automatically. */
+.wf {
+    --paper: #FBFAF7; --panel: #FFFFFF;
+    --ink: #14140F; --ink-soft: #4A4A44; --ink-muted: #8C8C84;
+    --rule: rgba(20,20,15,0.15); --signal: #D6301F;
+    --bg: var(--paper); --card: var(--panel); --line: var(--rule); --accent: var(--signal);
+    background: var(--paper); color: var(--ink);
+    font-family: var(--font-inter), -apple-system, sans-serif; -webkit-font-smoothing: antialiased;
+}
+[data-theme="dark"] .wf {
+    --paper: #0C0C0E; --panel: #141417;
+    --ink: #ECECEC; --ink-soft: #B4B4B8; --ink-muted: #7C7C82;
+    --rule: rgba(255,255,255,0.14); --signal: #E5484D;
+}
+.wf svg { stroke-width: 1.5px; }
 .wf .wf-display { font-family: var(--font-fraunces), Georgia, 'Times New Roman', serif; letter-spacing: -0.015em; font-weight: 600; }
 .wf .wf-eyebrow { font-family: var(--font-plex-mono), monospace; text-transform: uppercase; letter-spacing: 0.16em; font-size: 10px; color: var(--ink-muted); }
 .wf .wf-mono { font-family: var(--font-plex-mono), monospace; }
@@ -80,6 +96,29 @@ function EmployeeAvatar({ agent, size = 36 }: { agent: Agent; size?: number }) {
 }
 
 const roleLabelOf = (role: string): string => role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+// Light/dark toggle — shares the app-wide `af_theme` key so it syncs everywhere.
+function WfThemeToggle() {
+    const [dark, setDark] = useState(false);
+    useEffect(() => {
+        const stored = localStorage.getItem('af_theme');
+        const d = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        setDark(d);
+        document.documentElement.setAttribute('data-theme', d ? 'dark' : 'light');
+    }, []);
+    const toggle = () => {
+        const next = !dark;
+        setDark(next);
+        document.documentElement.setAttribute('data-theme', next ? 'dark' : 'light');
+        localStorage.setItem('af_theme', next ? 'dark' : 'light');
+    };
+    return (
+        <button className="wf-ghost" onClick={toggle} aria-label="Toggle light or dark mode"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', fontSize: 12, cursor: 'pointer' }}>
+            {dark ? <Sun size={13} /> : <Moon size={13} />} {dark ? 'Light' : 'Dark'}
+        </button>
+    );
+}
 
 const LLM_PROVIDERS = ['anthropic', 'openai', 'gemini', 'mistral', 'groq', 'cohere'];
 
@@ -319,25 +358,7 @@ export default function AgentsPageClient({ workspaceIds }: { workspaceIds: strin
     const failedCount = agents.filter((a) => a.status === 'failed').length;
 
     return (
-        <div className="wf" style={{
-            minHeight: '100vh',
-            // Dark-editorial tokens, scoped to this page — global tokens untouched.
-            // Remapping --bg/--card/--line/--ink/--accent flips every token-driven
-            // inline style on the page to the dark-editorial palette automatically.
-            ['--paper' as string]: '#0C0C0E',
-            ['--panel' as string]: '#131316',
-            ['--rule' as string]: 'rgba(255,255,255,0.11)',
-            ['--signal' as string]: '#E5484D',
-            ['--bg' as string]: '#0C0C0E',
-            ['--card' as string]: '#131316',
-            ['--line' as string]: 'rgba(255,255,255,0.11)',
-            ['--ink' as string]: '#ECECEC',
-            ['--ink-soft' as string]: '#B4B4B8',
-            ['--ink-muted' as string]: '#7A7A80',
-            ['--accent' as string]: '#E5484D',
-            background: 'var(--paper)', color: 'var(--ink)',
-            display: 'flex', flexDirection: 'column',
-        } as React.CSSProperties}>
+        <div className="wf" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             <style>{WF_CSS}</style>
 
             {/* ── Masthead ───────────────────────────────────────────────── */}
@@ -348,6 +369,7 @@ export default function AgentsPageClient({ workspaceIds }: { workspaceIds: strin
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                     <Link href="/" className="wf-eyebrow" style={{ textDecoration: 'none' }}>← Dashboard</Link>
                     <div style={{ display: 'flex', gap: 8 }}>
+                        <WfThemeToggle />
                         <button className="wf-ghost" onClick={loadAgents} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 10px', fontSize: 12, cursor: 'pointer' }}>
                             <RefreshCw size={12} />
                         </button>
