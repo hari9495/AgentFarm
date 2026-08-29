@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import MarketplaceGrid from "@/components/marketplace/MarketplaceGrid";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { marketplaceItemListSchema, aggregateRatingSchema, breadcrumbSchema } from "@/lib/seo-schemas";
 
 export const metadata: Metadata = {
@@ -111,12 +112,12 @@ export default function MarketplacePage() {
                             {stats.map((s) => (
                                 <div
                                     key={s.label}
-                                    className="rounded-[14px] p-5 flex flex-col gap-1"
+                                    className="op-lift rounded-[14px] p-5 flex flex-col gap-1"
                                     style={{ border: "1px solid var(--op-line)", background: "var(--op-paper-2)" }}
                                 >
                                     <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--op-muted)]">{s.label}</p>
-                                    <p className="font-semibold text-[var(--op-ink)]" style={{ fontSize: "1.8rem", letterSpacing: "-0.03em", lineHeight: 1 }}>
-                                        {s.value}
+                                    <p className="font-semibold" style={{ fontSize: "1.8rem", letterSpacing: "-0.03em", lineHeight: 1 }}>
+                                        <AnimatedNumber value={s.value} style={{ background: "linear-gradient(120deg, var(--op-ink) 45%, var(--op-indigo))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", display: "inline-block" }} />
                                     </p>
                                 </div>
                             ))}
@@ -128,7 +129,7 @@ export default function MarketplacePage() {
                         {launchPaths.map((path) => (
                             <div
                                 key={path.label}
-                                className="rounded-[14px] p-5"
+                                className="op-lift rounded-[14px] p-5"
                                 style={{ border: "1px solid var(--op-line)", background: "var(--op-paper-2)" }}
                             >
                                 <p className="font-semibold text-[15px] text-[var(--op-ink)] mb-2" style={{ letterSpacing: "-0.015em" }}>

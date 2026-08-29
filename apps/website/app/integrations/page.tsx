@@ -137,7 +137,7 @@ export default function IntegrationsPage() {
                                 {cat.connectors.map((connector) => (
                                     <div
                                         key={connector.name}
-                                        className="rounded-[18px] p-5"
+                                        className="op-lift rounded-[18px] p-5"
                                         style={{
                                             background: isDark ? "rgba(255,255,255,0.05)" : "#ffffff",
                                             border: isDark ? "1px solid var(--op-line)" : "1px solid var(--op-line)",
