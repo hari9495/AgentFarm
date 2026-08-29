@@ -64,23 +64,25 @@
   border-radius: 16px; padding: 24px;
   background: var(--op-paper);
   border: 1px solid var(--op-line);
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  /* soft layered resting shadow for gentle depth */
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 6px 16px -10px rgba(16, 24, 40, 0.10);
 }
 .op-soft .op-card, .op-dark .op-card { background: var(--op-paper); }
 
-/* Card hover interaction — lift + deepen shadow + warm the border to brand.
+/* Card hover interaction — premium lift: rise + soft brand-tinted glow, no hard ring.
    Reusable: apply .op-lift to any card element (op-card gets it for free). */
 .op-card, .op-lift {
-  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
-              box-shadow 0.18s ease, border-color 0.18s ease;
+  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.26s ease;
   will-change: transform;
 }
 .op-card:hover, .op-lift:hover {
-  transform: translateY(-4px);
-  /* deepen shadow + a soft blue ring (works even when border-color is set inline) */
-  box-shadow: 0 14px 34px rgba(16, 24, 40, 0.12),
-              0 0 0 1px color-mix(in srgb, var(--op-indigo) 45%, transparent);
-  border-color: color-mix(in srgb, var(--op-indigo) 35%, var(--op-line));
+  transform: translateY(-5px);
+  box-shadow: 0 2px 4px rgba(16, 24, 40, 0.04),
+              0 20px 44px -14px rgba(37, 99, 235, 0.24),
+              0 10px 22px -12px rgba(16, 24, 40, 0.18);
+  border-color: color-mix(in srgb, var(--op-indigo) 28%, var(--op-line));
 }
 
 /* Hero entrance — one orchestrated load sequence */
