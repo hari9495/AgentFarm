@@ -53,7 +53,7 @@ export default function ComplianceExportPanel() {
     const download = () => { window.open('/api/governance/compliance-export?format=download', '_blank'); };
 
     if (loading) return <div style={{ display: 'flex', gap: 8, color: 'var(--ink-muted)', fontSize: 13 }}><Loader2 size={15} className="spin" /> Loading compliance report…</div>;
-    if (error) return <div style={{ ...card, borderColor: '#e5484d', display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#e5484d' }}><AlertCircle size={15} />{error}</div>;
+    if (error) return <div style={{ ...card, borderColor: '#37A0A0', display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#37A0A0' }}><AlertCircle size={15} />{error}</div>;
     if (!report) return null;
 
     return (
@@ -70,12 +70,12 @@ export default function ComplianceExportPanel() {
             </div>
 
             {report.integrity && (
-                <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 10, borderColor: report.integrity.chainValid ? 'var(--accent)' : '#e5484d' }}>
+                <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 10, borderColor: report.integrity.chainValid ? 'var(--accent)' : '#37A0A0' }}>
                     {report.integrity.chainValid
                         ? <ShieldCheck size={18} color="var(--accent)" />
-                        : <Ban size={18} color="#e5484d" />}
+                        : <Ban size={18} color="#37A0A0" />}
                     <div>
-                        <div style={{ fontWeight: 700, fontSize: 13, color: report.integrity.chainValid ? 'var(--accent)' : '#e5484d' }}>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: report.integrity.chainValid ? 'var(--accent)' : '#37A0A0' }}>
                             {report.integrity.chainValid ? 'Audit trail verified — tamper-evident' : 'Audit trail INTEGRITY FAILURE'}
                         </div>
                         <div style={{ fontSize: 12, color: 'var(--ink-muted)' }}>
@@ -106,7 +106,7 @@ export default function ComplianceExportPanel() {
                         {report.violations.map((v) => (
                             <div key={v.id} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--line)' }}>
                                 <div style={{ fontSize: 13, ...mono }}>
-                                    <span style={{ color: '#e5484d', fontWeight: 700 }}>{v.effect}</span> {v.actionType}
+                                    <span style={{ color: '#37A0A0', fontWeight: 700 }}>{v.effect}</span> {v.actionType}
                                     {v.connector ? ` · ${v.connector}` : ''} · <span style={{ color: 'var(--ink-muted)' }}>{v.source}</span>
                                     {v.matchedPolicyId ? ` · ${v.matchedPolicyId}@v${v.policyVersion ?? '?'}` : ''}
                                 </div>

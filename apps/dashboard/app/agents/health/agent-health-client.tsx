@@ -165,7 +165,7 @@ export default function AgentHealthClient() {
                     <SummaryCard count={summary.paused}  label="Paused"        color="#d97706" bg="#fffbeb" Icon={PauseCircle}  />
                     <SummaryCard count={summary.failed}  label="Failed"        color="var(--danger)" bg="#fef2f2" Icon={XCircle}      />
                     <SummaryCard count={summary.other}   label="Other"         color="#64748b" bg="#f8fafc" Icon={Clock}        />
-                    <SummaryCard count={agents.length}   label="Total agents"  color="#d6301f" bg="#eff6ff" Icon={Zap}          />
+                    <SummaryCard count={agents.length}   label="Total agents"  color="#2C8A8A" bg="#eff6ff" Icon={Zap}          />
                 </div>
 
                 {/* Status filter pills */}

@@ -107,7 +107,7 @@ export function OnboardingChecklist({ agentCount, taskCount, webhookCount }: Pro
                     borderRadius: 0,
                     background: allDone
                         ? 'linear-gradient(90deg, #34d399, #059669)'
-                        : 'linear-gradient(90deg, #d6301f, #d6301f)',
+                        : 'linear-gradient(90deg, #2C8A8A, #2C8A8A)',
                     transition: 'width 0.4s ease',
                 }} />
             </div>

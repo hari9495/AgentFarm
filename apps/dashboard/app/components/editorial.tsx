@@ -13,17 +13,17 @@ import { Sun, Moon } from 'lucide-react';
  */
 export const WF_CSS = `
 .wf {
-    --paper: #FBFAF7; --panel: #FFFFFF;
-    --ink: #14140F; --ink-soft: #4A4A44; --ink-muted: #8C8C84;
-    --rule: rgba(20,20,15,0.15); --signal: #D6301F;
+    --paper: #F3F5F4; --panel: #FFFFFF;
+    --ink: #12181A; --ink-soft: #3A4448; --ink-muted: #5E6B70;
+    --rule: rgba(14,18,20,0.13); --signal: #1C6E6E;
     --bg: var(--paper); --card: var(--panel); --line: var(--rule); --accent: var(--signal);
     background: var(--paper); color: var(--ink);
     font-family: var(--font-inter), -apple-system, sans-serif; -webkit-font-smoothing: antialiased;
 }
 [data-theme="dark"] .wf {
-    --paper: #0C0C0E; --panel: #141417;
-    --ink: #ECECEC; --ink-soft: #B4B4B8; --ink-muted: #7C7C82;
-    --rule: rgba(255,255,255,0.14); --signal: #E5484D;
+    --paper: #0E1214; --panel: #151A1D;
+    --ink: #E6EAEC; --ink-soft: #A9B4B8; --ink-muted: #849096;
+    --rule: rgba(255,255,255,0.12); --signal: #37A0A0;
 }
 .wf svg { stroke-width: 1.5px; }
 .wf .wf-display { font-family: var(--font-fraunces), Georgia, 'Times New Roman', serif; letter-spacing: -0.015em; font-weight: 600; }

@@ -306,7 +306,7 @@ export function GovernanceKPIPanel({ workspaceId, language = 'en' }: Props) {
                         <Metric label="Approval rate" value={`${approvalRate.toFixed(0)}%`}
                             bar={{ value: approvalRate }} barColor="#1a7a4a" />
                         <Metric label="Auto-approved" value={`${n(kpis.approvals?.auto_approved_pct).toFixed(0)}%`}
-                            bar={{ value: n(kpis.approvals?.auto_approved_pct) }} barColor="#d6301f" />
+                            bar={{ value: n(kpis.approvals?.auto_approved_pct) }} barColor="#2C8A8A" />
                     </div>
                 </div>
             </div>
@@ -315,7 +315,7 @@ export function GovernanceKPIPanel({ workspaceId, language = 'en' }: Props) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
 
                 {/* Approvals detail */}
-                <Section title="Approval Performance" accent="#d6301f">
+                <Section title="Approval Performance" accent="#2C8A8A">
                     <Metric label="P95 Latency" value={ms(kpis.approvals?.p95_latency_ms)}
                         sub={`avg ${ms(kpis.approvals?.avg_latency_ms)}`}
                         why="agent wait time" />
@@ -343,16 +343,16 @@ export function GovernanceKPIPanel({ workspaceId, language = 'en' }: Props) {
                 </Section>
 
                 {/* Audit */}
-                <Section title="Audit & Evidence" accent="#b8291a">
+                <Section title="Audit & Evidence" accent="#20605F">
                     <Metric label="Completeness" value={pct(kpis.audit?.completeness_pct)}
                         sub={`${n(kpis.audit?.missing_evidence_count)} missing`}
-                        bar={{ value: n(kpis.audit?.completeness_pct) }} barColor="#b8291a"
+                        bar={{ value: n(kpis.audit?.completeness_pct) }} barColor="#20605F"
                         why="compliance coverage" />
                     <Metric label="Events (24h)" value={n(kpis.audit?.events_last_24h).toLocaleString()}
                         sub="audit trail entries" why="activity volume" />
                     <Metric label="Retention" value={`${n(kpis.audit?.retention_compliance_pct).toFixed(0)}%`}
                         sub="of policies met"
-                        bar={{ value: n(kpis.audit?.retention_compliance_pct) }} barColor="#b8291a" />
+                        bar={{ value: n(kpis.audit?.retention_compliance_pct) }} barColor="#20605F" />
                 </Section>
 
                 {/* Budget */}

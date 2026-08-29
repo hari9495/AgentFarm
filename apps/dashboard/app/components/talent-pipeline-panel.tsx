@@ -98,7 +98,7 @@ export default function TalentPipelinePanel({ workspaceId }: { workspaceId: stri
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                     {(['candidates', 'requisitions'] as const).map(v => (
-                        <button key={v} type="button" onClick={() => setView(v)} style={{ padding: '5px 14px', border: `1px solid ${view === v ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: view === v ? 'rgba(214, 48, 31,0.07)' : 'var(--card)', color: view === v ? 'var(--accent)' : 'var(--ink-muted)', fontSize: 12, fontWeight: view === v ? 600 : 400, cursor: 'pointer', textTransform: 'capitalize' }}>
+                        <button key={v} type="button" onClick={() => setView(v)} style={{ padding: '5px 14px', border: `1px solid ${view === v ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: view === v ? 'rgba(45, 138, 138,0.07)' : 'var(--card)', color: view === v ? 'var(--accent)' : 'var(--ink-muted)', fontSize: 12, fontWeight: view === v ? 600 : 400, cursor: 'pointer', textTransform: 'capitalize' }}>
                             {v}
                         </button>
                     ))}

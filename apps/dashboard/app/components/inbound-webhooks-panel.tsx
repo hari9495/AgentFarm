@@ -422,7 +422,7 @@ export default function InboundWebhooksPanel() {
                                     <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 5px' }}>Webhook URL</p>
                                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                                         <input readOnly value={newWebhookUrl} style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12, color: 'var(--ink)', background: 'var(--bg)', border: '1px solid var(--line)', padding: '6px 10px', borderRadius: 8, flex: 1 }} />
-                                        <button onClick={() => handleCopy(newWebhookUrl, 'new-url')} style={{ fontSize: 12, padding: '6px 14px', borderRadius: 9999, cursor: 'pointer', background: 'var(--card)', color: 'var(--accent)', border: '1px solid rgba(214, 48, 31,0.3)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                        <button onClick={() => handleCopy(newWebhookUrl, 'new-url')} style={{ fontSize: 12, padding: '6px 14px', borderRadius: 9999, cursor: 'pointer', background: 'var(--card)', color: 'var(--accent)', border: '1px solid rgba(45, 138, 138,0.3)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                                             {copiedId === 'new-url' ? '✓ Copied' : 'Copy'}
                                         </button>
                                     </div>
@@ -432,7 +432,7 @@ export default function InboundWebhooksPanel() {
                                 <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 5px' }}>Signing Secret</p>
                                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                                     <input readOnly value={newSecret} style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12, color: 'var(--ink)', background: 'var(--bg)', border: '1px solid var(--line)', padding: '6px 10px', borderRadius: 8, flex: 1 }} />
-                                    <button onClick={() => handleCopy(newSecret, 'secret')} style={{ fontSize: 12, padding: '6px 14px', borderRadius: 9999, cursor: 'pointer', background: 'var(--card)', color: 'var(--accent)', border: '1px solid rgba(214, 48, 31,0.3)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                    <button onClick={() => handleCopy(newSecret, 'secret')} style={{ fontSize: 12, padding: '6px 14px', borderRadius: 9999, cursor: 'pointer', background: 'var(--card)', color: 'var(--accent)', border: '1px solid rgba(45, 138, 138,0.3)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                                         {copiedId === 'secret' ? '✓ Copied' : 'Copy'}
                                     </button>
                                 </div>
@@ -458,7 +458,7 @@ export default function InboundWebhooksPanel() {
                     </div>
 
                     {showAddForm && (
-                        <div style={{ border: '1px solid rgba(214, 48, 31,0.25)', borderRadius: 16, background: 'var(--card)', padding: '18px 20px', marginBottom: 14, boxShadow: '0 0 0 4px rgba(214, 48, 31,0.04)' }}>
+                        <div style={{ border: '1px solid rgba(45, 138, 138,0.25)', borderRadius: 16, background: 'var(--card)', padding: '18px 20px', marginBottom: 14, boxShadow: '0 0 0 4px rgba(45, 138, 138,0.04)' }}>
                             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Register New Source</div>
                             <form onSubmit={e => void handleAddSource(e)} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -536,7 +536,7 @@ export default function InboundWebhooksPanel() {
                                                     </code>
                                                     <button
                                                         onClick={() => handleCopy(fullIngestUrl(source.inboundUrl), `url-${source.id}`)}
-                                                        style={{ fontSize: 11, padding: '3px 9px', borderRadius: 9999, cursor: 'pointer', background: 'var(--card)', color: 'var(--accent)', border: '1px solid rgba(214, 48, 31,0.3)', fontWeight: 600 }}
+                                                        style={{ fontSize: 11, padding: '3px 9px', borderRadius: 9999, cursor: 'pointer', background: 'var(--card)', color: 'var(--accent)', border: '1px solid rgba(45, 138, 138,0.3)', fontWeight: 600 }}
                                                     >
                                                         {copiedId === `url-${source.id}` ? '✓' : 'Copy URL'}
                                                     </button>
@@ -727,7 +727,7 @@ export default function InboundWebhooksPanel() {
                     </div>
 
                     {showRuleForm && (
-                        <div style={{ border: '1px solid rgba(214, 48, 31,0.25)', borderRadius: 16, background: 'var(--card)', padding: '18px 20px', marginBottom: 14 }}>
+                        <div style={{ border: '1px solid rgba(45, 138, 138,0.25)', borderRadius: 16, background: 'var(--card)', padding: '18px 20px', marginBottom: 14 }}>
                             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>New Trigger Rule</div>
                             <form onSubmit={e => void handleAddRule(e)} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

@@ -121,7 +121,7 @@ export default function ContentDraftsPanel({ workspaceId }: { workspaceId: strin
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                     {statusFilters.map(({ key, label }) => (
-                        <button key={key} type="button" onClick={() => setFilter(key)} style={{ padding: '5px 12px', border: `1px solid ${filter === key ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: filter === key ? 'rgba(214, 48, 31,0.07)' : 'var(--card)', color: filter === key ? 'var(--accent)' : 'var(--ink-muted)', fontSize: 12, fontWeight: filter === key ? 600 : 400, cursor: 'pointer' }}>
+                        <button key={key} type="button" onClick={() => setFilter(key)} style={{ padding: '5px 12px', border: `1px solid ${filter === key ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: filter === key ? 'rgba(45, 138, 138,0.07)' : 'var(--card)', color: filter === key ? 'var(--accent)' : 'var(--ink-muted)', fontSize: 12, fontWeight: filter === key ? 600 : 400, cursor: 'pointer' }}>
                             {label}
                         </button>
                     ))}

@@ -42,8 +42,8 @@ const TABS: { key: Tab; label: string; icon: React.ElementType; desc: string; ne
 
 function BotIdInput({ botId, setBotId }: { botId: string; setBotId: (v: string) => void }) {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'rgba(214, 48, 31,0.04)', border: '1px solid rgba(214, 48, 31,0.15)', borderRadius: 12, marginBottom: 16 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 9, background: 'rgba(214, 48, 31,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'rgba(45, 138, 138,0.04)', border: '1px solid rgba(45, 138, 138,0.15)', borderRadius: 12, marginBottom: 16 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 9, background: 'rgba(45, 138, 138,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Bot size={14} color="var(--accent)" />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -116,7 +116,7 @@ export default function GovernanceHubClient({
                 </Link>
                 <span style={{ color: 'var(--line-strong)' }}>|</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(214, 48, 31,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(45, 138, 138,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <ShieldCheck size={14} color="var(--accent)" />
                     </div>
                     <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>Governance</span>

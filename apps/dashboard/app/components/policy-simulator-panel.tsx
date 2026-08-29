@@ -29,7 +29,7 @@ const field = (w: number): React.CSSProperties => ({ display: 'flex', flexDirect
 type Result = { effect: 'deny' | 'require_approval' | 'allow'; reason: string; matchedRule?: Record<string, unknown>; timeDependentRules: unknown[] };
 
 const VERDICT: Record<Result['effect'], { color: string; label: string }> = {
-    deny: { color: '#e5484d', label: 'DENIED by customer policy' },
+    deny: { color: '#37A0A0', label: 'DENIED by customer policy' },
     require_approval: { color: '#b54708', label: 'REQUIRES APPROVAL per customer policy' },
     allow: { color: 'var(--accent)', label: 'Allowed by customer policy' },
 };
@@ -104,7 +104,7 @@ export default function PolicySimulatorPanel() {
                 </button>
             </div>
 
-            {error && <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#e5484d' }}><AlertCircle size={15} />{error}</div>}
+            {error && <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#37A0A0' }}><AlertCircle size={15} />{error}</div>}
 
             {result && verdict && (
                 <div style={{ marginTop: 14, padding: 12, borderRadius: 9, border: `1px solid ${verdict.color}`, background: `color-mix(in srgb, ${verdict.color} 6%, transparent)` }}>

@@ -28,7 +28,7 @@ const TYPE_CONFIG: Record<KillSwitchType, { label: string; color: string; bg: st
     emergency:         { label: 'Emergency',        color: 'var(--danger)', bg: 'rgba(196,22,28,0.08)',   border: 'rgba(196,22,28,0.25)'  },
     manual:            { label: 'Manual',           color: 'var(--warn)', bg: 'rgba(180,83,9,0.08)',    border: 'rgba(180,83,9,0.25)'   },
     threshold_breach:  { label: 'Threshold Breach', color: 'var(--warn)', bg: 'rgba(180,83,9,0.08)',    border: 'rgba(180,83,9,0.25)'   },
-    security_incident: { label: 'Security Incident',color: '#b8291a', bg: 'rgba(124,45,146,0.08)', border: 'rgba(124,45,146,0.25)' },
+    security_incident: { label: 'Security Incident',color: '#20605F', bg: 'rgba(124,45,146,0.08)', border: 'rgba(124,45,146,0.25)' },
 };
 
 const STATUS_CONFIG: Record<KillSwitchStatus, { label: string; color: string; bg: string }> = {

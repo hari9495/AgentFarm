@@ -59,7 +59,7 @@ export default function RoleBaselineBlocksPanel() {
                 </select>
             </div>
             {loading ? <div style={{ display: 'flex', gap: 8, color: 'var(--ink-muted)', fontSize: 13 }}><Loader2 size={15} className="spin" /> Loading…</div>
-                : error ? <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#e5484d' }}><AlertCircle size={15} />{error}</div>
+                : error ? <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#37A0A0' }}><AlertCircle size={15} />{error}</div>
                 : (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                         {actions.length === 0 ? <span style={{ fontSize: 13, color: 'var(--ink-muted)' }}>No built-in blocks for this role.</span>
