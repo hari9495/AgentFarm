@@ -1,8 +1,9 @@
 ﻿'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { PageHeader } from '../components/page-header';
+import Link from 'next/link';
 import { AuditUpgradeWall } from '../components/audit-upgrade-wall';
+import { WF_CSS, WfThemeToggle } from '../components/editorial';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -243,23 +244,34 @@ export default function AuditPage() {
 
     if (!auditAccess) {
         return (
-            <main className="page-shell">
-                <PageHeader eyebrow="Audit & Compliance" title="Audit Log" tone="violet" />
+            <main className="wf page-shell" style={{ minHeight: '100vh', padding: 24 }}>
+                <style>{WF_CSS}</style>
+                <div className="wf-eyebrow" style={{ marginBottom: 5 }}>Audit &amp; Compliance</div>
+                <h1 className="wf-display" style={{ margin: '0 0 20px', fontSize: 36, color: 'var(--ink)' }}>Audit Log</h1>
                 <AuditUpgradeWall planName={planName} />
             </main>
         );
     }
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-            <div style={{ padding: '1.5rem 1.5rem 0' }}>
-                <PageHeader
-                    eyebrow="Audit & Compliance"
-                    title="Audit Log"
-                    description="Filterable event log by workspace, bot, and event type. Download as CSV."
-                    tone="violet"
-                />
-            </div>
+        <div className="wf" style={{ minHeight: '100vh' }}>
+            <style>{WF_CSS}</style>
+            <header style={{ background: 'var(--paper)', borderBottom: '1px solid var(--rule)', padding: '14px 24px 18px', position: 'sticky', top: 0, zIndex: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                    <Link href="/" className="wf-eyebrow" style={{ textDecoration: 'none' }}>← Dashboard</Link>
+                    <WfThemeToggle />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24 }}>
+                    <div>
+                        <div className="wf-eyebrow" style={{ marginBottom: 5 }}>Audit &amp; Compliance — Ledger</div>
+                        <h1 className="wf-display" style={{ margin: 0, fontSize: 36, lineHeight: 0.95, color: 'var(--ink)' }}>Audit Log</h1>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                        <div className="wf-display" style={{ fontSize: 28, lineHeight: 1, color: 'var(--ink)' }}>{String(sortedEvents.length).padStart(2, '0')}</div>
+                        <div className="wf-eyebrow" style={{ marginTop: 5 }}>Events</div>
+                    </div>
+                </div>
+            </header>
 
             {/* ── Filter bar ── */}
             <div style={{
@@ -399,32 +411,25 @@ export default function AuditPage() {
                     {/* Table */}
                     {!loading && !fetchError && (
                         <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                            <table className="ledger" style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
-                                    <tr style={{ borderBottom: '2px solid var(--line)', background: 'var(--bg)' }}>
+                                    <tr>
                                         {columns.map((col) => (
-                                            <th
-                                                key={col.label}
-                                                style={{
-                                                    padding: '0.6rem 0.75rem',
-                                                    fontWeight: 600,
-                                                    color: 'var(--ink)',
-                                                    textAlign: 'left',
-                                                    whiteSpace: 'nowrap',
-                                                    userSelect: 'none',
-                                                }}
-                                            >
+                                            <th key={col.label}>
                                                 {col.key !== null ? (
                                                     <button
                                                         type="button"
                                                         onClick={() => handleSort(col.key as SortKey)}
+                                                        className="wf-mono"
                                                         style={{
                                                             background: 'none',
                                                             border: 'none',
                                                             padding: 0,
                                                             font: 'inherit',
-                                                            fontWeight: 600,
-                                                            color: sortKey === col.key ? 'var(--accent)' : 'var(--ink)',
+                                                            textTransform: 'uppercase',
+                                                            letterSpacing: '0.12em',
+                                                            fontSize: '10px',
+                                                            color: sortKey === col.key ? 'var(--signal)' : 'var(--ink-muted)',
                                                             cursor: 'pointer',
                                                             display: 'inline-flex',
                                                             alignItems: 'center',
@@ -456,7 +461,7 @@ export default function AuditPage() {
                                             const isExpanded = expandedId === ev.event_id;
                                             const rows = [
                                                 <tr key={ev.event_id} style={{ borderBottom: '1px solid var(--line)' }}>
-                                                    <td style={{ padding: '0.5rem 0.75rem', whiteSpace: 'nowrap', color: 'var(--ink-muted)' }}>
+                                                    <td className="wf-mono" style={{ whiteSpace: 'nowrap', color: 'var(--ink-muted)', fontSize: '11.5px' }}>
                                                         {new Date(ev.created_at).toLocaleString()}
                                                     </td>
                                                     <td style={{ padding: '0.5rem 0.75rem', fontFamily: 'monospace', color: 'var(--ink)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
