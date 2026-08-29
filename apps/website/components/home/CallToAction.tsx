@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { homeMarketingContent } from "@/lib/marketing-content";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 
 export default function CallToAction() {
     const { cta } = homeMarketingContent;
@@ -80,7 +81,7 @@ export default function CallToAction() {
                                 style={{ color: "var(--op-muted)" }}
                             >
                                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: m.color }} />
-                                {m.label}
+                                <AnimatedNumber value={m.label} />
                             </span>
                         ))}
                     </div>

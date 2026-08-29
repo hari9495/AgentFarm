@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { CheckCircle2, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { homeMarketingContent } from "@/lib/marketing-content";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 
 export default function PricingSection() {
     const { pricing } = homeMarketingContent;
@@ -38,7 +39,7 @@ export default function PricingSection() {
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true, margin: "-60px" }}
                             transition={{ duration: 0.5, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }}
-                            className="rounded-[18px] p-6 flex flex-col"
+                            className="op-lift rounded-[18px] p-6 flex flex-col"
                             style={{
                                 border: plan.highlighted ? "2px solid var(--op-indigo)" : "1px solid #d2d2d7",
                                 background: plan.highlighted ? "rgba(0,102,204,0.03)" : "#ffffff",
@@ -51,8 +52,8 @@ export default function PricingSection() {
                             )}
                             <p className="text-[13px] font-semibold text-[#6e6e73] uppercase tracking-[0.06em]">{plan.name}</p>
                             <div className="mt-2 flex items-end gap-1">
-                                <span className="text-[2.4rem] font-semibold text-[#1d1d1f]" style={{ letterSpacing: "-0.03em", lineHeight: 1 }}>
-                                    {plan.price}
+                                <span className="text-[2.4rem] font-semibold" style={{ letterSpacing: "-0.03em", lineHeight: 1 }}>
+                                    <AnimatedNumber value={plan.price} style={{ background: "linear-gradient(120deg, var(--op-ink) 45%, var(--op-indigo))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", display: "inline-block" }} />
                                 </span>
                                 {plan.price !== "Custom" && (
                                     <span className="mb-1 text-[14px] text-[#aeaeb2]">/month</span>
