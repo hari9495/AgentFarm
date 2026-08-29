@@ -29,6 +29,7 @@ type Props = {
 
 const toneVar = (t: string) => (t === 'low' || t === 'ok' ? 'var(--ok)' : t === 'high' || t === 'danger' || t === 'critical' ? 'var(--danger)' : t === 'neutral' ? 'var(--ink-muted)' : 'var(--warn)');
 const healthTone = (v: number) => (v >= 80 ? 'var(--ok)' : v >= 50 ? 'var(--warn)' : 'var(--danger)');
+const okStatus = (s: string) => ['active', 'ready', 'healthy', 'ok', 'live'].includes((s ?? '').toLowerCase());
 const riskTone = (r: string): 'ok' | 'warn' | 'err' => (r === 'low' ? 'ok' : r === 'high' ? 'err' : 'warn');
 const sevTone = (s: string): 'ok' | 'warn' | 'err' => (s === 'high' || s === 'critical' ? 'err' : s === 'medium' || s === 'warn' ? 'warn' : 'ok');
 const ago = (iso: string) => {
@@ -122,7 +123,7 @@ export default function CommandCenterOverview(p: Props) {
                     <Panel title="Tenant summary">
                         <Kv k="Tenant">{p.summary.tenant_name}</Kv>
                         <Kv k="Plan">{p.summary.plan_name}</Kv>
-                        <Kv k="Status"><Badge tone={p.summary.tenant_status === 'active' ? 'ok' : 'warn'}>{p.summary.tenant_status}</Badge></Kv>
+                        <Kv k="Status"><Badge tone={okStatus(p.summary.tenant_status) ? 'ok' : 'warn'}>{p.summary.tenant_status}</Badge></Kv>
                         <Kv k="Pending approvals">{p.summary.pending_approvals}</Kv>
                         <Kv k="Workspaces">{p.summary.total_workspaces}</Kv>
                         <Kv k="Est. monthly cost"><span className="uk-mono">${p.estimatedCost.toFixed(1)}</span></Kv>
@@ -130,7 +131,7 @@ export default function CommandCenterOverview(p: Props) {
                     <Panel title="Workspace & bot">
                         <Kv k="Workspace">{p.workspace.workspace_name}</Kv>
                         <Kv k="Role">{p.workspace.role_type}</Kv>
-                        <Kv k="Workspace status"><Badge tone={p.workspace.workspace_status === 'healthy' || p.workspace.workspace_status === 'active' ? 'ok' : 'warn'}>{p.workspace.workspace_status}</Badge></Kv>
+                        <Kv k="Workspace status"><Badge tone={okStatus(p.workspace.workspace_status) ? 'ok' : 'warn'}>{p.workspace.workspace_status}</Badge></Kv>
                         <Kv k="Bot status"><Badge tone={p.workspace.bot_status === 'active' ? 'accent' : 'warn'}>{p.workspace.bot_status}</Badge></Kv>
                         <Kv k="Runtime tier">{p.workspace.runtime_tier}</Kv>
                         <Kv k="Latest incident">{p.workspace.latest_incident_level}</Kv>
