@@ -35,6 +35,9 @@ export function AnimatedNumber({ value, className, style }: { value: string; cla
 
     useEffect(() => {
         if (num === null || !inView) return;
+        // Bare 4-digit years (e.g. "Founded 2025") shouldn't count up from 0.
+        const isYear = prefix === "" && suffix.trim() === "" && Number.isInteger(num) && num >= 1900 && num <= 2099;
+        if (isYear) return; // keep the static real value
         const reduced = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         if (reduced) return; // already showing finalStr
         mv.set(0);
