@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Star } from "lucide-react";
 import { customersPageContent } from "@/lib/marketing-content";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 
 export const metadata: Metadata = customersPageContent.metadata;
 
@@ -36,7 +37,7 @@ export default function CustomersPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
                         {stats.map((stat) => (
                             <div key={stat.label}>
-                                <p className="font-semibold text-[#1d1d1f]" style={{ fontSize: "2rem", letterSpacing: "-0.03em", lineHeight: 1 }}>{stat.value}</p>
+                                <p className="font-semibold" style={{ fontSize: "2rem", letterSpacing: "-0.03em", lineHeight: 1 }}><AnimatedNumber value={stat.value} style={{ background: "linear-gradient(120deg, #1d1d1f 45%, var(--op-indigo))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", display: "inline-block" }} /></p>
                                 <p className="mt-1.5 text-[13px] text-[#6e6e73]">{stat.label}</p>
                             </div>
                         ))}
@@ -71,7 +72,7 @@ export default function CustomersPage() {
                     </h2>
                     <div className="space-y-5">
                         {caseStudies.map((cs) => (
-                            <div key={cs.company} className="rounded-[18px] p-7" style={{ background: "#ffffff", border: "1px solid #d2d2d7" }}>
+                            <div key={cs.company} className="op-lift rounded-[18px] p-7" style={{ background: "#ffffff", border: "1px solid #d2d2d7" }}>
                                 <div className="grid lg:grid-cols-[1fr_1fr] gap-8">
                                     <div>
                                         <div className="flex items-center gap-3 mb-4">
@@ -123,7 +124,7 @@ export default function CustomersPage() {
                     </h2>
                     <div className="grid sm:grid-cols-3 gap-4">
                         {testimonials.map((t, i) => (
-                            <div key={i} className="rounded-[18px] p-6 flex flex-col gap-3" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                            <div key={i} className="op-lift rounded-[18px] p-6 flex flex-col gap-3" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
                                 <div className="flex gap-0.5">
                                     {[1,2,3,4,5].map((s) => <Star key={s} className="w-3.5 h-3.5 fill-[#2997ff] text-[#2997ff]" />)}
                                 </div>

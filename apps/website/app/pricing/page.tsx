@@ -3,6 +3,7 @@ import { Check, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { marketplaceBots, type Bot } from "@/lib/bots";
 import { pricingPageContent } from "@/lib/marketing-content";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { pricingFAQSchema, breadcrumbSchema } from "@/lib/seo-schemas";
 
 export const metadata: Metadata = {
@@ -144,11 +145,8 @@ export default function PricingPage() {
                                     {plan.name}
                                 </p>
                                 <div className="mt-2 flex items-end gap-1.5" style={{ fontFamily: "var(--font-mono)" }}>
-                                    <span
-                                        className="font-semibold"
-                                        style={{ fontSize: "2.6rem", letterSpacing: "-0.03em", lineHeight: 1, color: "var(--op-ink)" }}
-                                    >
-                                        {plan.price}
+                                    <span className="font-semibold" style={{ fontSize: "2.6rem", letterSpacing: "-0.03em", lineHeight: 1 }}>
+                                        <AnimatedNumber value={plan.price} style={{ background: "linear-gradient(120deg, var(--op-ink) 45%, var(--op-indigo))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", display: "inline-block" }} />
                                     </span>
                                     {plan.period && (
                                         <span className="mb-1.5 text-[13px]" style={{ color: "var(--op-muted)" }}>{plan.period}</span>

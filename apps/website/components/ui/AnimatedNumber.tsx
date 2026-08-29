@@ -16,18 +16,19 @@ import { useInView, useMotionValue, animate } from "motion/react";
 
 function parse(value: string) {
     const m = value.match(/^(\D*?)([\d,]*\.?\d+)(.*)$/);
-    if (!m) return { prefix: "", num: null as number | null, suffix: value, decimals: 0 };
+    if (!m) return { prefix: "", num: null as number | null, suffix: value, decimals: 0, grouped: false };
+    const grouped = m[2].includes(",");
     const raw = m[2].replace(/,/g, "");
     const decimals = raw.includes(".") ? raw.split(".")[1].length : 0;
-    return { prefix: m[1], num: parseFloat(raw), suffix: m[3], decimals };
+    return { prefix: m[1], num: parseFloat(raw), suffix: m[3], decimals, grouped };
 }
 
 export function AnimatedNumber({ value, className, style }: { value: string; className?: string; style?: React.CSSProperties }) {
     const ref = useRef<HTMLSpanElement>(null);
     const inView = useInView(ref, { once: true, margin: "-40px" });
     const mv = useMotionValue(0);
-    const { prefix, num, suffix, decimals } = parse(value);
-    const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    const { prefix, num, suffix, decimals, grouped } = parse(value);
+    const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals, useGrouping: grouped });
     const finalStr = num === null ? value : `${prefix}${fmt(num)}${suffix}`;
     // Default to the REAL value — never render a placeholder 0 if the animation never runs.
     const [display, setDisplay] = useState(finalStr);

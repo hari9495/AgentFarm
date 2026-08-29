@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Target, Zap, Users } from "lucide-react";
 import Link from "next/link";
 import { aboutPageContent } from "@/lib/marketing-content";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { organizationSchema, breadcrumbSchema } from "@/lib/seo-schemas";
 
 export const metadata: Metadata = {
@@ -59,11 +60,8 @@ export default function AboutPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
                         {stats.map((stat) => (
                             <div key={stat.label}>
-                                <p
-                                    className="font-semibold text-[var(--op-ink)]"
-                                    style={{ fontSize: "2rem", letterSpacing: "-0.03em", lineHeight: 1 }}
-                                >
-                                    {stat.value}
+                                <p className="font-semibold" style={{ fontSize: "2rem", letterSpacing: "-0.03em", lineHeight: 1 }}>
+                                    <AnimatedNumber value={stat.value} style={{ background: "linear-gradient(120deg, var(--op-ink) 45%, var(--op-indigo))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", display: "inline-block" }} />
                                 </p>
                                 <p className="mt-1.5 text-[13px] text-[var(--op-muted)]">{stat.label}</p>
                             </div>
@@ -142,7 +140,7 @@ export default function AboutPage() {
                             return (
                                 <div
                                     key={value.title}
-                                    className="rounded-[18px] p-6"
+                                    className="op-lift rounded-[18px] p-6"
                                     style={{ background: "#ffffff", border: "1px solid var(--op-line)" }}
                                 >
                                     <div
