@@ -80,7 +80,8 @@ export type ConnectorActionType =
     | 'update_content'
     | 'list_resources'
     | 'get_resource'
-    | 'list_deployments';
+    | 'list_deployments'
+    | 'create_task';
 
 export type ConnectorActionErrorCode =
     | 'rate_limit'
@@ -313,6 +314,63 @@ const executeJira = async (
             ok: true,
             providerResponseCode: String(res.status),
             resultSummary: `Issue ${data.key}: ${data.fields?.summary ?? '(no summary)'} [${data.fields?.status?.name ?? 'unknown'}]`,
+        };
+    }
+
+    if (actionType === 'create_task') {
+        const projectKey = String(payload['project_key'] ?? payload['project'] ?? '').trim();
+        const summary = String(payload['summary'] ?? payload['title'] ?? '').trim();
+        if (!projectKey || !summary) {
+            return {
+                ok: false,
+                providerResponseCode: '400',
+                resultSummary: 'Missing required field: project_key or summary',
+                errorCode: 'invalid_format',
+                errorMessage: 'project_key and summary are required for create_task',
+                remediationHint: 'Provide project_key (e.g. "PROJ") and summary in the payload.',
+            };
+        }
+        const issueType = String(payload['issue_type'] ?? 'Task').trim();
+        const description = String(payload['description'] ?? '').trim();
+        const url = `${baseUrl}/rest/api/3/issue`;
+        const fields: Record<string, unknown> = {
+            project: { key: projectKey },
+            summary,
+            issuetype: { name: issueType },
+        };
+        if (description) {
+            fields['description'] = {
+                type: 'doc',
+                version: 1,
+                content: [{ type: 'paragraph', content: [{ type: 'text', text: description }] }],
+            };
+        }
+        let res: Response;
+        try {
+            res = await fetcher(url, {
+                method: 'POST',
+                headers: { ...headers, 'content-type': 'application/json' },
+                body: JSON.stringify({ fields }),
+            });
+        } catch (err) {
+            return {
+                ok: false,
+                providerResponseCode: '0',
+                resultSummary: 'Network error reaching Jira',
+                transient: true,
+                errorCode: 'provider_unavailable',
+                errorMessage: String(err),
+                remediationHint: 'Check network connectivity to the Jira instance.',
+            };
+        }
+        if (!res.ok) {
+            return failFromStatus(res.status, `Jira returned ${res.status} creating issue in ${projectKey}`);
+        }
+        const data = (await res.json()) as { key?: string; id?: string };
+        return {
+            ok: true,
+            providerResponseCode: String(res.status),
+            resultSummary: `Created Jira issue ${data.key ?? data.id ?? '(unknown)'}`,
         };
     }
 

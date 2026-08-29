@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { PageHeader } from '../../components/page-header';
 import MeetingLivePanel from '../../components/meeting-live-panel';
+import MeetingActionItemsPanel from '../../components/meeting-action-items-panel';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -342,6 +343,9 @@ export default function MeetingDetailPage() {
                     </p>
                 )}
             </section>
+
+            {/* ── Action Items (async meeting intelligence: analyze → act) ─── */}
+            <MeetingActionItemsPanel sessionId={sessionId} />
 
             {/* ── Live Control (meeting-agent: join, live transcript, chat) ─── */}
             <MeetingLivePanel

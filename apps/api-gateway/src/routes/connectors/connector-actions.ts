@@ -59,7 +59,8 @@ type ConnectorActionType =
     | 'update_content'
     | 'list_resources'
     | 'get_resource'
-    | 'list_deployments';
+    | 'list_deployments'
+    | 'create_task';
 
 type ConnectorActionErrorCode =
     | 'rate_limit'
@@ -330,6 +331,7 @@ const SUPPORTED_ACTIONS: ConnectorActionType[] = [
     'list_resources',
     'get_resource',
     'list_deployments',
+    'create_task',
 ];
 
 const CONTRACT_VERSION = 'v1.0';
@@ -362,6 +364,7 @@ const CONNECTOR_ACTION_RISK: Record<ConnectorActionType, 'low' | 'medium' | 'hig
     list_deployments: 'low',
     create_pr: 'high',
     merge_pr: 'high',
+    create_task: 'medium',
 };
 
 const SUPPORTED_ROLE_KEYS: AgentRoleKey[] = [
@@ -428,6 +431,7 @@ const ACTION_ALIAS: Record<ConnectorActionType, NormalizedActionType> = {
     list_resources: 'list_resources',
     get_resource: 'get_resource',
     list_deployments: 'list_deployments',
+    create_task: 'create_task',
 };
 
 const getPrisma = async () => {
@@ -925,7 +929,7 @@ export const registerConnectorActionRoutes = async (
         if (!actionType) {
             return reply.code(400).send({
                 error: 'unsupported_action',
-                message: 'action_type must be one of read_task, create_comment, update_status, send_message, create_pr_comment, create_pr, merge_pr, list_prs, send_email',
+                message: 'action_type must be one of read_task, create_task, create_comment, update_status, send_message, create_pr_comment, create_pr, merge_pr, list_prs, send_email',
             });
         }
 
