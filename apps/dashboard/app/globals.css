@@ -735,9 +735,10 @@ body {
 
 .topbar-title {
     margin: 0;
-    font-size: 1.15rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
+    font-family: var(--font-fraunces), Georgia, 'Times New Roman', serif;
+    font-size: 1.7rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
     color: var(--ink);
 }
 
@@ -816,16 +817,15 @@ body {
     padding: 1.1rem 1.15rem 1rem;
     background: var(--card);
     border: 1px solid var(--line);
-    border-radius: 18px;
-    box-shadow: var(--shadow-sm);
-    transition: box-shadow 0.22s var(--ease-spring), transform 0.22s var(--ease-spring);
+    border-radius: 3px;
+    box-shadow: none;
+    transition: border-color 0.15s linear;
     position: relative;
     overflow: hidden;
 }
 
 .metric-card:hover {
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--ink) 22%, transparent);
 }
 
 .metric-card::before {
@@ -1007,7 +1007,7 @@ body {
     border-radius: 14px;
     padding: 0.65rem 0.75rem 0.55rem;
     background:
-        linear-gradient(180deg, rgba(99, 102, 241, 0.06) 0%, rgba(255, 255, 255, 0) 48%),
+        linear-gradient(180deg, rgba(214, 48, 31, 0.06) 0%, rgba(255, 255, 255, 0) 48%),
         var(--bg);
 }
 
@@ -1528,16 +1528,15 @@ body {
     position: relative;
     overflow: hidden;
     border: 1px solid var(--line);
-    border-radius: 18px;
+    border-radius: 3px;
     padding: 1.1rem 1.25rem;
     background: var(--card);
-    box-shadow: var(--shadow-sm);
-    transition: box-shadow 0.22s var(--ease-spring), transform 0.22s var(--ease-spring);
+    box-shadow: none;
+    transition: border-color 0.15s linear;
 }
 
 .card:hover {
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--ink) 22%, transparent);
 }
 
 .card::after {
@@ -1627,7 +1626,7 @@ body {
 
 .state-pill.active {
     background: var(--brand-light);
-    border-color: rgba(99, 102, 241, 0.35);
+    border-color: rgba(214, 48, 31, 0.35);
     color: var(--brand-dark);
     font-weight: 700;
 }
@@ -1641,7 +1640,7 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
-    border-radius: 6px;
+    border-radius: 2px;
     padding: 0.2rem 0.5rem;
     font-size: 0.72rem;
     border: 1px solid transparent;
@@ -1652,8 +1651,8 @@ body {
 .badge::before {
     content: '';
     display: inline-block;
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     flex-shrink: 0;
 }
@@ -1831,7 +1830,7 @@ textarea {
 .approval-input,
 .approval-select {
     border: 1px solid var(--line-strong);
-    border-radius: 8px;
+    border-radius: 3px;
     padding: 0.42rem 0.65rem;
     font-size: 0.82rem;
     background: var(--card);
@@ -1853,7 +1852,7 @@ textarea {
 .chip-button {
     border: 1px solid var(--line-strong);
     background: var(--card);
-    border-radius: 6px;
+    border-radius: 3px;
     padding: 0.34rem 0.7rem;
     font-size: 0.76rem;
     font-weight: 700;
@@ -1870,7 +1869,7 @@ textarea {
 
 .chip-button.active {
     background: var(--brand-light);
-    border-color: rgba(99, 102, 241, 0.35);
+    border-color: rgba(214, 48, 31, 0.35);
     color: var(--brand-dark);
 }
 
@@ -1878,19 +1877,19 @@ textarea {
     border: 1px solid var(--brand);
     background: var(--brand);
     color: #fff;
-    border-radius: 9999px;
+    border-radius: 3px;
     padding: 0.42rem 1rem;
     cursor: pointer;
-    font-weight: 500;
+    font-weight: 600;
     font-size: 0.82rem;
     letter-spacing: -0.01em;
-    transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+    transition: background 0.12s linear, color 0.12s linear;
     box-shadow: none;
 }
 
 .primary-action:hover {
-    background: var(--brand-dark);
-    box-shadow: var(--shadow-brand);
+    background: transparent;
+    color: var(--brand);
 }
 
 .primary-action:active {
@@ -1912,7 +1911,7 @@ textarea {
     border: 1px solid var(--line-strong);
     background: var(--card);
     color: var(--ink);
-    border-radius: 9999px;
+    border-radius: 3px;
     padding: 0.35rem 0.85rem;
     cursor: pointer;
     font-size: 0.8rem;
@@ -1932,7 +1931,7 @@ textarea {
     border: 1px solid var(--danger-border);
     background: var(--danger-bg);
     color: var(--danger);
-    border-radius: 8px;
+    border-radius: 3px;
     padding: 0.35rem 0.7rem;
     cursor: pointer;
     font-size: 0.8rem;
@@ -1948,7 +1947,7 @@ textarea {
     border: 1px solid var(--warn-border);
     background: var(--warn-bg);
     color: var(--warn);
-    border-radius: 8px;
+    border-radius: 3px;
     padding: 0.35rem 0.7rem;
     cursor: pointer;
     font-size: 0.8rem;
@@ -1960,7 +1959,7 @@ textarea {
     border: 1px solid var(--ok-border);
     background: var(--ok-bg);
     color: var(--ok);
-    border-radius: 8px;
+    border-radius: 3px;
     padding: 0.35rem 0.7rem;
     cursor: pointer;
     font-size: 0.8rem;

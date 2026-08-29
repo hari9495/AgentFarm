@@ -12,7 +12,7 @@ const STROKE_COLORS: Record<string, string> = {
 };
 
 const FILL_STOPS: Record<string, [string, string]> = {
-    brand: ['rgba(99,102,241,0.42)', 'rgba(99,102,241,0.03)'],
+    brand: ['rgba(214, 48, 31,0.42)', 'rgba(214, 48, 31,0.03)'],
     sky: ['rgba(14,165,233,0.42)', 'rgba(14,165,233,0.03)'],
     emerald: ['rgba(16,185,129,0.42)', 'rgba(16,185,129,0.03)'],
     amber: ['rgba(245,158,11,0.42)', 'rgba(245,158,11,0.03)'],

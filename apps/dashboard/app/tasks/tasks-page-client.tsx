@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
     Activity, History, List, RefreshCw, Layers,
-    Radio, Package, ChevronDown, Bot, Plug, ListChecks,
+    Radio, Package, ChevronDown, Bot, Plug,
 } from 'lucide-react';
 import { LiveTaskFeed } from '../components/live-task-feed';
 import TaskHistoryPanel from '../components/task-history-panel';
@@ -14,6 +14,7 @@ import TaskRetryPanel from '../components/task-retry-panel';
 import RuntimeObservabilityWrapper from '../components/runtime-observability-wrapper';
 import ReproPackPanel from '../components/repro-pack-panel';
 import SseStreamPanel from '../components/sse-stream-panel';
+import { WF_CSS, WfThemeToggle } from '../components/editorial';
 
 type Tab = 'live' | 'history' | 'queue' | 'retry' | 'runtime' | 'repro' | 'sse';
 
@@ -32,24 +33,24 @@ const TABS: { key: Tab; label: string; icon: React.ElementType; needsBot?: boole
 function BotIdInput({ botId, setBotId }: { botId: string; setBotId: (v: string) => void }) {
     return (
         <div style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '12px 16px', background: 'rgba(214, 48, 31,0.04)',
-            border: '1px solid rgba(214, 48, 31,0.15)', borderRadius: 12, marginBottom: 16,
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '14px 16px', background: 'color-mix(in srgb, var(--signal) 5%, transparent)',
+            borderLeft: '2px solid var(--signal)', border: '1px solid var(--rule)', marginBottom: 16,
         }}>
-            <div style={{ width: 30, height: 30, borderRadius: 9, background: 'rgba(214, 48, 31,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Bot size={14} color="var(--accent)" />
+            <div style={{ width: 30, height: 30, border: '1px solid var(--rule)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Bot size={14} color="var(--signal)" />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Bot ID required</div>
+                <div className="wf-eyebrow" style={{ color: 'var(--signal)', marginBottom: 5 }}>Bot ID required</div>
                 <input
                     value={botId}
                     onChange={e => setBotId(e.target.value)}
                     placeholder="Enter a Bot ID to load this panel…"
+                    className="wf-mono"
                     style={{
-                        width: '100%', maxWidth: 360, padding: '7px 11px', borderRadius: 9,
-                        border: '1px solid var(--line)', background: 'var(--card)',
+                        width: '100%', maxWidth: 360, padding: '7px 11px',
+                        border: '1px solid var(--rule)', background: 'var(--panel)',
                         color: 'var(--ink)', fontSize: 13, outline: 'none',
-                        fontFamily: 'ui-monospace, monospace',
                     }}
                     autoFocus
                 />
@@ -82,60 +83,57 @@ export default function TasksPageClient({
     }, [searchParams]);
 
     return (
-        <div style={{
+        <div className="wf" style={{
             minHeight: '100vh',
-            background: 'var(--bg)',
-            fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
             display: 'flex',
             flexDirection: 'column',
         }}>
+            <style>{WF_CSS}</style>
 
-            {/* ── Top bar ────────────────────────────────────────────────── */}
+            {/* ── Masthead ────────────────────────────────────────────────── */}
             <header style={{
-                height: 56, background: 'var(--card)', borderBottom: '1px solid var(--line)',
-                display: 'flex', alignItems: 'center', padding: '0 20px', gap: 12,
-                flexShrink: 0, position: 'sticky', top: 0, zIndex: 10,
+                background: 'var(--paper)', borderBottom: '1px solid var(--rule)',
+                padding: '14px 28px 18px', flexShrink: 0, position: 'sticky', top: 0, zIndex: 10,
             }}>
-                <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--ink-muted)', fontSize: 13, textDecoration: 'none', fontWeight: 500, flexShrink: 0 }}>
-                    ← Dashboard
-                </Link>
-                <span style={{ color: 'var(--line)', flexShrink: 0 }}>|</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(214, 48, 31,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <ListChecks size={14} color="var(--accent)" />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                    <Link href="/" className="wf-eyebrow" style={{ textDecoration: 'none' }}>← Dashboard</Link>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {/* Active bot pill — sharp, mono */}
+                        {botId.trim() && (
+                            <span className="wf-mono" style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 9px', border: '1px solid var(--signal)', color: 'var(--signal)', fontSize: 11 }}>
+                                <Bot size={11} />
+                                {botId.slice(0, 16)}{botId.length > 16 ? '…' : ''}
+                                <button onClick={() => setBotId('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--signal)', padding: 0, lineHeight: 1, marginLeft: 2, fontSize: 13 }}>×</button>
+                            </span>
+                        )}
+                        {/* Workspace selector */}
+                        {workspaceIds.length > 0 && (
+                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                <select
+                                    value={workspaceId}
+                                    onChange={e => setWorkspaceId(e.target.value)}
+                                    className="wf-mono"
+                                    style={{ padding: '6px 26px 6px 10px', border: '1px solid var(--rule)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 11, appearance: 'none', cursor: 'pointer', outline: 'none' }}
+                                >
+                                    <option value="">All workspaces</option>
+                                    {workspaceIds.map(id => <option key={id} value={id}>{id.slice(0, 20)}…</option>)}
+                                </select>
+                                <ChevronDown size={11} style={{ position: 'absolute', right: 9, pointerEvents: 'none', color: 'var(--ink-muted)' }} />
+                            </div>
+                        )}
+                        <WfThemeToggle />
                     </div>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>
-                        Tasks
-                    </span>
                 </div>
-
-                {/* Workspace selector — only relevant control in the header */}
-                {workspaceIds.length > 0 && (
-                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginLeft: 8 }}>
-                        <select
-                            value={workspaceId}
-                            onChange={e => setWorkspaceId(e.target.value)}
-                            style={{ padding: '5px 28px 5px 10px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: 12, fontWeight: 500, appearance: 'none', cursor: 'pointer', outline: 'none' }}
-                        >
-                            <option value="">All workspaces</option>
-                            {workspaceIds.map(id => <option key={id} value={id}>{id.slice(0, 20)}…</option>)}
-                        </select>
-                        <ChevronDown size={11} style={{ position: 'absolute', right: 9, pointerEvents: 'none', color: 'var(--ink-muted)' }} />
+                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24 }}>
+                    <div>
+                        <div className="wf-eyebrow" style={{ marginBottom: 5 }}>Task Execution — Runtime Ledger</div>
+                        <h1 className="wf-display" style={{ margin: 0, fontSize: 36, lineHeight: 0.95, color: 'var(--ink)' }}>Tasks</h1>
                     </div>
-                )}
-
-                {/* Active bot pill — shown only when bot is set */}
-                {botId.trim() && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 9999, background: 'color-mix(in srgb, var(--accent) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--accent) 20%, transparent)', fontSize: 12, color: 'var(--accent)', fontWeight: 600, fontFamily: 'monospace' }}>
-                        <Bot size={11} color="var(--accent)" />
-                        {botId.slice(0, 16)}{botId.length > 16 ? '…' : ''}
-                        <button onClick={() => setBotId('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', padding: 0, lineHeight: 1, marginLeft: 2, fontSize: 13 }}>×</button>
-                    </div>
-                )}
+                </div>
             </header>
 
-            {/* ── Tab bar ─────────────────────────────────────────────────── */}
-            <div style={{ background: 'var(--card)', borderBottom: '1px solid var(--line)', padding: '0 20px', display: 'flex', gap: 0, overflowX: 'auto' }}>
+            {/* ── Tab bar — Swiss index ───────────────────────────────────── */}
+            <div style={{ background: 'var(--paper)', borderBottom: '1px solid var(--rule)', padding: '0 28px', display: 'flex', gap: 0, overflowX: 'auto' }}>
                 {TABS.map(({ key, label, icon: Icon, needsBot }) => {
                     const active = activeTab === key;
                     const needsBotUnset = needsBot && !botId.trim();
@@ -144,22 +142,21 @@ export default function TasksPageClient({
                             key={key}
                             type="button"
                             onClick={() => setActiveTab(key)}
+                            className="wf-eyebrow"
                             style={{
                                 display: 'flex', alignItems: 'center', gap: 6,
-                                padding: '13px 14px',
-                                background: 'transparent', border: 'none',
-                                borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
+                                padding: '14px 14px',
+                                background: 'transparent', border: 'none', borderRadius: 0,
+                                borderBottom: `2px solid ${active ? 'var(--signal)' : 'transparent'}`,
                                 cursor: 'pointer',
-                                color: active ? 'var(--accent)' : needsBotUnset ? 'var(--ink-muted)' : 'var(--ink-muted)',
-                                fontSize: 13, fontWeight: active ? 600 : 500,
-                                transition: 'all 0.15s', marginBottom: -1,
-                                whiteSpace: 'nowrap',
+                                color: active ? 'var(--signal)' : 'var(--ink-muted)',
+                                marginBottom: -1, whiteSpace: 'nowrap',
                             }}
                         >
                             <Icon size={13} />
                             {label}
                             {needsBotUnset && (
-                                <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--line)', flexShrink: 0 }} />
+                                <span style={{ width: 5, height: 5, background: 'var(--ink-muted)', flexShrink: 0 }} />
                             )}
                         </button>
                     );
@@ -167,7 +164,7 @@ export default function TasksPageClient({
             </div>
 
             {/* ── Content ─────────────────────────────────────────────────── */}
-            <div style={{ flex: 1, padding: 20, overflow: 'auto' }}>
+            <div style={{ flex: 1, padding: 28, overflow: 'auto' }}>
 
                 {activeTab === 'live' && (
                     <TabShell title="Live Task Feed" icon={Radio} description="Real-time SSE stream. Events appear as they're emitted by the runtime engine.">
@@ -238,17 +235,17 @@ function TabShell({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Section header */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'color-mix(in srgb, var(--accent) 8%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
-                    <Icon size={16} color="var(--accent)" />
+                <div style={{ width: 34, height: 34, border: '1px solid var(--rule)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                    <Icon size={16} color="var(--signal)" />
                 </div>
                 <div>
-                    <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>{title}</h2>
+                    <h2 className="wf-display" style={{ margin: 0, fontSize: 20, color: 'var(--ink)' }}>{title}</h2>
                     <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--ink-muted)', lineHeight: 1.45 }}>{description}</p>
                 </div>
             </div>
 
-            {/* Content card */}
-            <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 18, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            {/* Content panel — hairline, no radius */}
+            <div className="wf-panel" style={{ padding: 20 }}>
                 {children}
             </div>
         </div>
