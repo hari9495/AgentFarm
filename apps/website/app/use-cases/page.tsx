@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Code2, Megaphone, HeadphonesIcon, Briefcase, Users, ShieldCheck, CheckCircle2, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 
 export const metadata: Metadata = {
     title: "AI Worker Use Cases — Engineering, Support, Operations",
@@ -137,9 +138,9 @@ export default function UseCasesPage() {
                     </div>
                     <div className="grid sm:grid-cols-3 gap-4 max-w-[800px] mx-auto">
                         {roi.map((r) => (
-                            <div key={r.tier} className="rounded-[18px] p-6 text-center" style={{ border: "1px solid var(--op-line)" }}>
+                            <div key={r.tier} className="op-lift rounded-[18px] p-6 text-center" style={{ border: "1px solid var(--op-line)" }}>
                                 <p className="text-[13px] font-semibold text-[var(--op-muted)] mb-3">{r.tier}</p>
-                                <p className="font-semibold text-[var(--op-ink)]" style={{ fontSize: "1.8rem", letterSpacing: "-0.025em", lineHeight: 1 }}>{r.hours}</p>
+                                <p className="font-semibold" style={{ fontSize: "1.8rem", letterSpacing: "-0.025em", lineHeight: 1 }}><AnimatedNumber value={r.hours} style={{ background: "linear-gradient(120deg, var(--op-ink) 45%, var(--op-indigo))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", display: "inline-block" }} /></p>
                                 <p className="text-[14px] font-semibold text-[var(--op-indigo)] mt-1">{r.cost} saved</p>
                                 <p className="text-[12px] text-[var(--op-muted)] mt-2">{r.note}</p>
                             </div>

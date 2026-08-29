@@ -126,7 +126,7 @@ export default function CareersPage() {
                             return (
                                 <div
                                     key={v.title}
-                                    className="rounded-[18px] p-6"
+                                    className="op-lift rounded-[18px] p-6"
                                     style={{ background: "#ffffff", border: "1px solid var(--op-line)" }}
                                 >
                                     <div
@@ -162,7 +162,7 @@ export default function CareersPage() {
                         {openRoles.map((role) => (
                             <div
                                 key={role.title}
-                                className="rounded-[18px] p-6"
+                                className="op-lift rounded-[18px] p-6"
                                 style={{ border: "1px solid var(--op-line)" }}
                             >
                                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -230,7 +230,7 @@ export default function CareersPage() {
                         {perks.map((perk) => (
                             <div
                                 key={perk}
-                                className="rounded-[14px] px-5 py-4 flex items-center gap-3"
+                                className="op-lift rounded-[14px] px-5 py-4 flex items-center gap-3"
                                 style={{ background: "#ffffff", border: "1px solid var(--op-line)" }}
                             >
                                 <span className="w-2 h-2 rounded-full shrink-0 bg-[var(--op-indigo)]" />
