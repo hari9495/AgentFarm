@@ -2,29 +2,84 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Bot, Plus, RefreshCw, ChevronRight, Circle, Zap, Clock, AlertCircle } from 'lucide-react';
+import { Users, Plus, RefreshCw, ChevronRight, Circle, Zap, Clock, AlertCircle } from 'lucide-react';
 import AgentDetailPanel from '../components/agent-detail-panel';
 import type { Agent, BotStatus } from '../components/agent-card';
+
+// ── Dark-editorial / Swiss-print system (scoped to this page) ────────────────────
+const WF_CSS = `
+.wf { font-family: var(--font-inter), -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+.wf .wf-display { font-family: var(--font-fraunces), Georgia, 'Times New Roman', serif; letter-spacing: -0.015em; font-weight: 600; }
+.wf .wf-eyebrow { font-family: var(--font-plex-mono), monospace; text-transform: uppercase; letter-spacing: 0.16em; font-size: 10px; color: var(--ink-muted); }
+.wf .wf-mono { font-family: var(--font-plex-mono), monospace; }
+/* Swiss: flat, sharp, no shadow, instant */
+.wf button, .wf input, .wf select, .wf textarea { border-radius: 2px !important; box-shadow: none !important; }
+.wf button { transition: background 60ms linear, color 60ms linear, border-color 60ms linear !important; }
+/* Magazine-index rows */
+.wf .wf-row { border-radius: 0 !important; border: 0 !important; border-top: 1px solid var(--rule) !important; background: transparent !important; }
+.wf .wf-row:last-child { border-bottom: 1px solid var(--rule) !important; }
+.wf .wf-row:hover { background: rgba(255,255,255,0.045) !important; }
+.wf .wf-row[data-selected="true"] { background: rgba(229,72,77,0.10) !important; box-shadow: inset 2px 0 0 var(--signal) !important; }
+/* Buttons: hard invert on hover */
+.wf .wf-primary { background: var(--signal) !important; color: #0C0C0E !important; border: 1px solid var(--signal) !important; font-weight: 600 !important; }
+.wf .wf-primary:hover { background: transparent !important; color: var(--signal) !important; }
+.wf .wf-ghost { background: transparent !important; color: var(--ink-soft) !important; border: 1px solid var(--rule) !important; }
+.wf .wf-ghost:hover { background: var(--ink) !important; color: var(--paper) !important; border-color: var(--ink) !important; }
+/* Panels: hairline, no radius */
+.wf .wf-panel { border-radius: 2px !important; box-shadow: none !important; border: 1px solid var(--rule) !important; background: var(--panel) !important; }
+`;
 
 // ── Status helpers ─────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<BotStatus, { label: string; color: string; bg: string; border: string }> = {
-    active:                    { label: 'Active',         color: 'var(--ok)', bg: 'rgba(26,122,74,0.07)',   border: 'rgba(26,122,74,0.22)'  },
-    created:                   { label: 'Created',        color: 'var(--accent)', bg: 'rgba(0,102,204,0.07)',   border: 'rgba(0,102,204,0.22)'  },
-    bootstrapping:             { label: 'Bootstrapping',  color: 'var(--warn)', bg: 'rgba(180,83,9,0.07)',    border: 'rgba(180,83,9,0.22)'   },
-    connector_setup_required:  { label: 'Setup Required', color: 'var(--warn)', bg: 'rgba(180,83,9,0.07)',    border: 'rgba(180,83,9,0.22)'   },
-    paused:                    { label: 'Paused',         color: 'var(--ink-muted)', bg: 'rgba(110,110,115,0.07)', border: 'rgba(110,110,115,0.22)'},
-    failed:                    { label: 'Failed',         color: 'var(--danger)', bg: 'rgba(196,22,28,0.07)',   border: 'rgba(196,22,28,0.22)'  },
+    active:                    { label: 'On shift',       color: 'var(--ok)', bg: 'rgba(26,122,74,0.07)',   border: 'rgba(26,122,74,0.22)'  },
+    created:                   { label: 'Onboarding',     color: 'var(--accent)', bg: 'rgba(0,102,204,0.07)',   border: 'rgba(0,102,204,0.22)'  },
+    bootstrapping:             { label: 'Onboarding',     color: 'var(--warn)', bg: 'rgba(180,83,9,0.07)',    border: 'rgba(180,83,9,0.22)'   },
+    connector_setup_required:  { label: 'Setup needed',   color: 'var(--warn)', bg: 'rgba(180,83,9,0.07)',    border: 'rgba(180,83,9,0.22)'   },
+    paused:                    { label: 'Off shift',      color: 'var(--ink-muted)', bg: 'rgba(110,110,115,0.07)', border: 'rgba(110,110,115,0.22)'},
+    failed:                    { label: 'Needs attention',color: 'var(--danger)', bg: 'rgba(196,22,28,0.07)',   border: 'rgba(196,22,28,0.22)'  },
 };
 
-const ROLE_ICONS: Record<string, string> = {
-    developer: '💻', fullstack_developer: '🖥️', tester: '🧪',
-    business_analyst: '📊', technical_writer: '✍️', content_writer: '📝',
-    sales_rep: '🤝', marketing_specialist: '📣', corporate_assistant: '🗓️',
-    customer_support_executive: '🎧',
-    project_manager_product_owner_scrum_master: '🗂️',
-    recruiter: '🔍',
+// Employee identity: a two-letter role monogram in a calm, deterministic tint —
+// a team-directory avatar, not a robot/emoji. Tints are muted (no rainbow).
+const ROLE_ABBR: Record<string, string> = {
+    developer: 'DV', fullstack_developer: 'FS', tester: 'QA',
+    business_analyst: 'BA', technical_writer: 'TW', content_writer: 'CW',
+    sales_rep: 'SL', marketing_specialist: 'MK', corporate_assistant: 'CA',
+    customer_support_executive: 'CS',
+    project_manager_product_owner_scrum_master: 'PM',
+    recruiter: 'RC', devops_engineer: 'DO', mobile: 'MB',
 };
+const AVATAR_TINTS = [
+    { bg: 'rgba(37,99,235,0.10)', fg: '#2563eb' },
+    { bg: 'rgba(13,148,136,0.10)', fg: '#0d9488' },
+    { bg: 'rgba(109,40,217,0.10)', fg: '#6d28d9' },
+    { bg: 'rgba(180,83,9,0.10)', fg: '#b45309' },
+    { bg: 'rgba(71,85,105,0.12)', fg: '#475569' },
+];
+const roleMonogram = (role: string): string => ROLE_ABBR[role] ?? role.slice(0, 2).toUpperCase();
+function avatarTint(seed: string) {
+    let h = 0;
+    for (const ch of seed) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    return AVATAR_TINTS[h % AVATAR_TINTS.length];
+}
+
+function EmployeeAvatar({ agent, size = 36 }: { agent: Agent; size?: number }) {
+    const t = avatarTint(agent.id || agent.role);
+    return (
+        <span style={{
+            width: size, height: size, borderRadius: 2, flexShrink: 0,
+            background: t.bg, color: t.fg, border: `1px solid ${t.fg}33`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: Math.round(size * 0.34), fontWeight: 700, letterSpacing: '0.04em',
+            fontFamily: 'var(--font-plex-mono), monospace',
+        }}>
+            {roleMonogram(agent.role)}
+        </span>
+    );
+}
+
+const roleLabelOf = (role: string): string => role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 const LLM_PROVIDERS = ['anthropic', 'openai', 'gemini', 'mistral', 'groq', 'cohere'];
 
@@ -48,37 +103,29 @@ function StatusBadge({ status }: { status: BotStatus }) {
 // ── Agent list item ─────────────────────────────────────────────────────────────
 
 function AgentListItem({ agent, selected, onClick }: { agent: Agent; selected: boolean; onClick: () => void }) {
-    const icon = ROLE_ICONS[agent.role] ?? '🤖';
-    const roleLabel = agent.role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const roleLabel = roleLabelOf(agent.role);
     const cfg = STATUS_CONFIG[agent.status] ?? STATUS_CONFIG.created;
 
     return (
         <button
             type="button"
+            className="wf-row"
+            data-selected={selected}
             onClick={onClick}
             style={{
-                width: '100%', textAlign: 'left', background: selected ? 'rgba(0,102,204,0.06)' : 'transparent',
-                border: `1px solid ${selected ? 'rgba(0,102,204,0.2)' : 'transparent'}`,
-                borderRadius: 12, padding: '10px 12px', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 10,
-                transition: 'all 0.15s ease',
+                width: '100%', textAlign: 'left', cursor: 'pointer',
+                padding: '11px 16px', display: 'flex', alignItems: 'center', gap: 11,
             }}
-            onMouseEnter={(e) => { if (!selected) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.03)'; }}
-            onMouseLeave={(e) => { if (!selected) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
         >
-            <span style={{
-                width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                background: selected ? 'rgba(0,102,204,0.12)' : 'var(--bg)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
-            }}>{icon}</span>
+            <EmployeeAvatar agent={agent} size={34} />
             <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: selected ? 'var(--accent)' : 'var(--ink)',
+                <div style={{ fontSize: 13, fontWeight: 600, color: selected ? 'var(--signal)' : 'var(--ink)',
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {roleLabel}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--ink-muted)', marginTop: 1,
+                <div className="wf-mono" style={{ fontSize: 10.5, color: 'var(--ink-muted)', marginTop: 2, letterSpacing: '0.04em',
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    #{agent.id.slice(-8).toUpperCase()}
+                    {cfg.label.toUpperCase()} · #{agent.id.slice(-6).toUpperCase()}
                 </div>
             </div>
             <span style={{
@@ -136,7 +183,7 @@ function CreateAgentModal({
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
                     <div>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>New Agent</div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>Add Teammate</div>
                         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>Create an Agent</h2>
                     </div>
                     <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: 'var(--ink-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
@@ -208,14 +255,14 @@ function EmptyState({ onNew }: { onNew: () => void }) {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 40, textAlign: 'center' }}>
             <div style={{ width: 64, height: 64, borderRadius: 18, background: 'color-mix(in srgb, var(--accent) 8%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-                <Bot size={28} color="var(--accent)" />
+                <Users size={28} color="var(--accent)" />
             </div>
-            <h3 style={{ margin: '0 0 6px', fontSize: 17, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>No agents yet</h3>
+            <h3 style={{ margin: '0 0 6px', fontSize: 17, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>No team members yet</h3>
             <p style={{ margin: '0 0 20px', fontSize: 14, color: 'var(--ink-muted)', maxWidth: 280, lineHeight: 1.5 }}>
-                Create your first AI agent. Each agent has a dedicated role, memory, and action capabilities.
+                Build your team. Each teammate has a dedicated role, its own memory, and the tools to do the work.
             </p>
             <button onClick={onNew} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 9999, border: 'none', background: 'var(--accent)', color: 'var(--card)', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
-                <Plus size={14} /> New Agent
+                <Plus size={14} /> Add teammate
             </button>
         </div>
     );
@@ -272,48 +319,62 @@ export default function AgentsPageClient({ workspaceIds }: { workspaceIds: strin
     const failedCount = agents.filter((a) => a.status === 'failed').length;
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg)', fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", display: 'flex', flexDirection: 'column' }}>
+        <div className="wf" style={{
+            minHeight: '100vh',
+            // Dark-editorial tokens, scoped to this page — global tokens untouched.
+            // Remapping --bg/--card/--line/--ink/--accent flips every token-driven
+            // inline style on the page to the dark-editorial palette automatically.
+            ['--paper' as string]: '#0C0C0E',
+            ['--panel' as string]: '#131316',
+            ['--rule' as string]: 'rgba(255,255,255,0.11)',
+            ['--signal' as string]: '#E5484D',
+            ['--bg' as string]: '#0C0C0E',
+            ['--card' as string]: '#131316',
+            ['--line' as string]: 'rgba(255,255,255,0.11)',
+            ['--ink' as string]: '#ECECEC',
+            ['--ink-soft' as string]: '#B4B4B8',
+            ['--ink-muted' as string]: '#7A7A80',
+            ['--accent' as string]: '#E5484D',
+            background: 'var(--paper)', color: 'var(--ink)',
+            display: 'flex', flexDirection: 'column',
+        } as React.CSSProperties}>
+            <style>{WF_CSS}</style>
 
-            {/* ── Top bar ────────────────────────────────────────────────── */}
+            {/* ── Masthead ───────────────────────────────────────────────── */}
             <header style={{
-                height: 56, background: 'var(--card)', borderBottom: '1px solid var(--line)',
-                display: 'flex', alignItems: 'center', padding: '0 24px', gap: 16, flexShrink: 0,
-                position: 'sticky', top: 0, zIndex: 10,
+                background: 'var(--paper)', borderBottom: '1px solid var(--rule)',
+                padding: '14px 28px 18px', flexShrink: 0, position: 'sticky', top: 0, zIndex: 10,
             }}>
-                <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--ink-muted)', fontSize: 13, textDecoration: 'none', fontWeight: 500 }}>
-                    ← Dashboard
-                </Link>
-                <span style={{ color: 'var(--line)' }}>|</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(0,102,204,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Bot size={14} color="var(--accent)" />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                    <Link href="/" className="wf-eyebrow" style={{ textDecoration: 'none' }}>← Dashboard</Link>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="wf-ghost" onClick={loadAgents} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 10px', fontSize: 12, cursor: 'pointer' }}>
+                            <RefreshCw size={12} />
+                        </button>
+                        <button className="wf-primary" onClick={() => setShowCreate(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 12, cursor: 'pointer' }}>
+                            <Plus size={13} /> Add teammate
+                        </button>
                     </div>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>Agent Management</span>
                 </div>
-
-                {/* Stats */}
-                {agents.length > 0 && (
-                    <div style={{ display: 'flex', gap: 12, marginLeft: 16 }}>
-                        {[
-                            { icon: Zap, color: 'var(--ok)', bg: 'rgba(26,122,74,0.07)', val: activeCount, label: 'Active' },
-                            { icon: Clock, color: 'var(--ink-muted)', bg: 'rgba(110,110,115,0.07)', val: pausedCount, label: 'Paused' },
-                            { icon: AlertCircle, color: 'var(--danger)', bg: 'rgba(196,22,28,0.07)', val: failedCount, label: 'Failed' },
-                        ].map(({ icon: Icon, color, bg, val, label }) => val > 0 ? (
-                            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 9999, background: bg, border: `1px solid ${color}33` }}>
-                                <Icon size={11} color={color} />
-                                <span style={{ fontSize: 12, fontWeight: 600, color }}>{val} {label}</span>
-                            </div>
-                        ) : null)}
+                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24 }}>
+                    <div>
+                        <div className="wf-eyebrow" style={{ marginBottom: 5 }}>The Workforce — {agents.length} on the roster</div>
+                        <h1 className="wf-display" style={{ margin: 0, fontSize: 36, lineHeight: 0.95, color: 'var(--ink)' }}>Workforce</h1>
                     </div>
-                )}
-
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-                    <button onClick={loadAgents} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-                        <RefreshCw size={12} />
-                    </button>
-                    <button onClick={() => setShowCreate(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 16px', borderRadius: 9999, border: 'none', background: 'var(--accent)', color: 'var(--card)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-                        <Plus size={13} /> New Agent
-                    </button>
+                    {agents.length > 0 && (
+                        <div style={{ display: 'flex', gap: 32 }}>
+                            {[
+                                { val: activeCount, label: 'On shift', color: 'var(--ok)' },
+                                { val: pausedCount, label: 'Off shift', color: 'var(--ink-muted)' },
+                                { val: failedCount, label: 'Attention', color: 'var(--signal)' },
+                            ].map(({ val, label, color }) => (
+                                <div key={label} style={{ textAlign: 'right' }}>
+                                    <div className="wf-display" style={{ fontSize: 28, lineHeight: 1, color }}>{String(val).padStart(2, '0')}</div>
+                                    <div className="wf-eyebrow" style={{ marginTop: 5 }}>{label}</div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </header>
 
@@ -321,7 +382,8 @@ export default function AgentsPageClient({ workspaceIds }: { workspaceIds: strin
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
 
                 {/* Left column — agent list */}
-                <div style={{ width: 260, flexShrink: 0, borderRight: '1px solid var(--line)', background: 'var(--card)', overflowY: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <div style={{ width: 272, flexShrink: 0, borderRight: '1px solid var(--rule)', background: 'var(--paper)', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                    <div className="wf-eyebrow" style={{ padding: '14px 16px 8px' }}>Roster — Index</div>
                     {loading && (
                         <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
                             {[1, 2, 3].map((i) => (
@@ -343,7 +405,7 @@ export default function AgentsPageClient({ workspaceIds }: { workspaceIds: strin
                     )}
                     {!loading && !error && agents.length === 0 && (
                         <div style={{ padding: '20px 12px', textAlign: 'center', color: 'var(--ink-muted)', fontSize: 13 }}>
-                            No agents yet
+                            No team members yet
                         </div>
                     )}
                     {agents.map((agent) => (
@@ -351,11 +413,9 @@ export default function AgentsPageClient({ workspaceIds }: { workspaceIds: strin
                     ))}
 
                     {agents.length > 0 && (
-                        <div style={{ marginTop: 'auto', paddingTop: 12 }}>
-                            <Link href="/agents" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 10, color: 'var(--accent)', fontSize: 12, fontWeight: 600, textDecoration: 'none', background: 'rgba(0,102,204,0.04)' }}>
-                                View all agents <ChevronRight size={12} />
-                            </Link>
-                        </div>
+                        <Link href="/agents" className="wf-eyebrow wf-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', marginTop: 'auto', textDecoration: 'none' }}>
+                            View full roster <ChevronRight size={12} />
+                        </Link>
                     )}
                 </div>
 
@@ -364,15 +424,13 @@ export default function AgentsPageClient({ workspaceIds }: { workspaceIds: strin
                     {loading ? null : selectedAgent ? (
                         <div style={{ padding: 20 }}>
                             {/* Agent header */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 18, marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                                <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(0,102,204,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
-                                    {ROLE_ICONS[selectedAgent.role] ?? '🤖'}
-                                </div>
+                            <div className="wf-panel" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '18px 20px', marginBottom: 16 }}>
+                                <EmployeeAvatar agent={selectedAgent} size={52} />
                                 <div style={{ flex: 1 }}>
-                                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em', marginBottom: 3 }}>
-                                        {selectedAgent.role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                                    <div className="wf-eyebrow" style={{ marginBottom: 6 }}>{selectedAgent.status === 'active' ? 'On shift' : roleLabelOf(selectedAgent.status)} · #{selectedAgent.id.slice(-6).toUpperCase()}</div>
+                                    <div className="wf-display" style={{ fontSize: 24, lineHeight: 1, color: 'var(--ink)' }}>
+                                        {roleLabelOf(selectedAgent.role)}
                                     </div>
-                                    <div style={{ fontSize: 12, color: 'var(--ink-muted)', fontFamily: 'monospace' }}>#{selectedAgent.id.slice(-8).toUpperCase()}</div>
                                 </div>
                                 <StatusBadge status={selectedAgent.status} />
                                 <Link href={`/agents/${selectedAgent.id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 12, fontWeight: 500, textDecoration: 'none' }}>

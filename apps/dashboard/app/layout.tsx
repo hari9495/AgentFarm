@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { Inter, IBM_Plex_Mono } from 'next/font/google';
+import { Inter, IBM_Plex_Mono, Fraunces } from 'next/font/google';
 import { SubscriptionBanner } from './components/subscription-banner';
 import { SuspensionWall } from './components/suspension-wall';
 import { getSessionPayload } from './lib/internal-session';
@@ -17,6 +17,14 @@ const plexMono = IBM_Plex_Mono({
     subsets: ['latin'],
     weight: ['400', '500', '600'],
     variable: '--font-plex-mono',
+});
+
+// Editorial display serif — headings + big figures only (Swiss-print / dark-editorial).
+const fraunces = Fraunces({
+    subsets: ['latin'],
+    variable: '--font-fraunces',
+    display: 'swap',
+    weight: ['400', '500', '600', '700', '900'],
 });
 
 // NOTE: despite the legacy "internal" naming on the session cookie/helpers in
@@ -37,7 +45,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     const session = await getSessionPayload();
     const tenantId = session?.tenantId ?? '';
     return (
-        <html lang="en" className={`${inter.variable} ${plexMono.variable}`} suppressHydrationWarning>
+        <html lang="en" className={`${inter.variable} ${plexMono.variable} ${fraunces.variable}`} suppressHydrationWarning>
             <body suppressHydrationWarning className="ops-shell">
                 <SuspensionWall tenantId={tenantId}>
                     <SubscriptionBanner tenantId={tenantId} />
