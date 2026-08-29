@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import { homeMarketingContent } from "@/lib/marketing-content";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 
 export default function Problem() {
     const { problem } = homeMarketingContent;
@@ -39,16 +40,17 @@ export default function Problem() {
                             viewport={{ once: true, margin: "-60px" }}
                             transition={{ duration: 0.5, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
                             className="op-lift rounded-[18px] p-6 flex flex-col gap-4"
-                            style={{ background: "var(--op-paper)", border: "1px solid var(--op-line)", boxShadow: "0 1px 2px rgba(16,24,40,0.04)" }}
+                            style={{ background: "var(--op-paper)", border: "1px solid var(--op-line)", boxShadow: "0 1px 2px rgba(16,24,40,0.04), 0 8px 20px -12px rgba(16,24,40,0.10)" }}
                         >
                             <div>
-                                <p
-                                    className="font-semibold leading-none"
-                                    style={{ fontSize: "2.4rem", letterSpacing: "-0.03em", color: "var(--op-ink)" }}
-                                >
-                                    {item.stat}
+                                <p className="font-semibold leading-none" style={{ fontSize: "2.4rem", letterSpacing: "-0.03em" }}>
+                                    <AnimatedNumber
+                                        value={item.stat}
+                                        style={{ background: "linear-gradient(120deg, var(--op-ink) 40%, var(--op-indigo))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", display: "inline-block" }}
+                                    />
                                 </p>
-                                <p className="mt-1 text-[12px] text-[var(--op-muted)] uppercase tracking-[0.05em] font-medium">
+                                <p className="mt-1.5 flex items-center gap-1.5 text-[12px] text-[var(--op-muted)] uppercase tracking-[0.05em] font-medium">
+                                    <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-[2px]" style={{ background: "var(--op-indigo)", opacity: 0.55 }} />
                                     {item.statLabel}
                                 </p>
                             </div>
