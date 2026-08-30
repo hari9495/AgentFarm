@@ -223,11 +223,14 @@ export function InternalSidebar({
 
     return (
         <div className="flex flex-col h-screen sticky top-0 bg-white border-r border-slate-200 overflow-hidden">
-            {/* Logo */}
-            <div className={`flex items-center h-14 border-b border-slate-200 shrink-0 ${collapsed ? 'flex-col justify-center gap-1 px-2' : 'gap-2.5 px-4'}`}>
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-sm shadow-sm shrink-0" style={{ background: 'var(--accent)' }}>
-                    <Cpu className="w-3.5 h-3.5 text-white" aria-hidden="true" />
-                </span>
+            {/* Logo / header — when collapsed, the expand toggle takes the top
+                line (same row as expanded) so it's easy to find. */}
+            <div className={`flex items-center h-14 border-b border-slate-200 shrink-0 ${collapsed ? 'justify-center px-2' : 'gap-2.5 px-4'}`}>
+                {!collapsed && (
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-sm shadow-sm shrink-0" style={{ background: 'var(--accent)' }}>
+                        <Cpu className="w-3.5 h-3.5 text-white" aria-hidden="true" />
+                    </span>
+                )}
                 {!collapsed && <span className="text-sm font-bold tracking-tight text-slate-900 flex-1">AgentFarms Ops</span>}
                 {!collapsed && <NotificationBell workspaceId={workspaceId} />}
                 <button

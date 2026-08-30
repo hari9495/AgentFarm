@@ -281,21 +281,21 @@ function SidebarContent({
             {/* CommandPalette listener — renders nothing visible */}
             <CommandPalette />
 
-            {/* ── Logo row ─────────────────────────────────────────────── */}
-            <div className={`flex items-center gap-2 py-5 border-b border-[color:var(--line)] shrink-0 ${collapsed ? "flex-col px-2" : "px-4"}`}>
-                <Link
-                    href="/"
-                    onClick={onClose}
-                    title={collapsed ? "AgentFarms" : undefined}
-                    className={`flex items-center gap-3 group min-w-0 ${collapsed ? "" : "flex-1"}`}
-                >
-                    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[3px] bg-[var(--accent)] shadow-md shadow-blue-600/20">
-                        <svg width="16" height="16" viewBox="0 0 12 12" fill="none" aria-hidden>
-                            <circle cx="6" cy="6" r="5" stroke="white" strokeWidth="1.5" />
-                            <path d="M4 6h4M6 4v4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-                        </svg>
-                    </span>
-                    {!collapsed && (
+            {/* ── Logo row — when collapsed, the expand toggle takes the top
+                line (same row as expanded) so it's easy to find. ─────────── */}
+            <div className={`flex items-center gap-2 py-5 border-b border-[color:var(--line)] shrink-0 ${collapsed ? "justify-center px-2" : "px-4"}`}>
+                {!collapsed && (
+                    <Link
+                        href="/"
+                        onClick={onClose}
+                        className="flex items-center gap-3 group min-w-0 flex-1"
+                    >
+                        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[3px] bg-[var(--accent)] shadow-md shadow-blue-600/20">
+                            <svg width="16" height="16" viewBox="0 0 12 12" fill="none" aria-hidden>
+                                <circle cx="6" cy="6" r="5" stroke="white" strokeWidth="1.5" />
+                                <path d="M4 6h4M6 4v4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                            </svg>
+                        </span>
                         <div className="min-w-0">
                             <span className="block text-[15px] font-bold text-[color:var(--ink)] tracking-tight group-hover:text-[color:var(--accent)] transition-colors truncate leading-tight">
                                 AgentFarms
@@ -304,8 +304,8 @@ function SidebarContent({
                                 Dashboard
                             </span>
                         </div>
-                    )}
-                </Link>
+                    </Link>
+                )}
                 {/* Desktop collapse/expand toggle */}
                 {onToggleCollapse && (
                     <button
