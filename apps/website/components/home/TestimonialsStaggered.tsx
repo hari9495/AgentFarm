@@ -1,9 +1,10 @@
 'use client';
 
 /**
- * PREVIEW — adaptation of 21st.dev `efferd/testimonials-3` (Staggered
- * Testimonials Grid) to the Operations Console palette + real AgentFarm
- * testimonials. Three staggered columns, quote glyph, metric line, avatar.
+ * Home testimonials — staggered editorial grid. Adapted from 21st.dev
+ * `efferd/testimonials-3`: three staggered columns, quote glyph, a highlighted
+ * metric line, and avatar initials. Retinted to the Operations Console palette;
+ * content is the real homeMarketingContent testimonials.
  */
 
 import * as React from 'react';
@@ -40,15 +41,14 @@ function Card({ t }: { t: Item }) {
   );
 }
 
-export function TestimonialsStaggered() {
+export default function TestimonialsStaggered() {
   const { testimonials } = homeMarketingContent;
   const items: Item[] = testimonials.items.slice(0, 6);
-  // 3 columns, round-robin so heights balance; each column staggered on md+.
   const cols: Item[][] = [[], [], []];
   items.forEach((t, i) => cols[i % 3].push(t));
 
   return (
-    <section className="w-full px-6 py-20 sm:py-28" style={{ background: 'var(--op-paper-2)', color: 'var(--op-ink)' }}>
+    <section className="w-full px-6 py-20 sm:py-28" style={{ background: 'var(--op-paper-2)', color: 'var(--op-ink)' }} aria-label="Customer testimonials">
       <div className="mx-auto max-w-5xl">
         <div className="mx-auto mb-16 max-w-xl text-center">
           <p className="text-sm font-medium uppercase tracking-widest" style={{ color: 'var(--op-indigo)' }}>{testimonials.eyebrow}</p>
@@ -71,5 +71,3 @@ export function TestimonialsStaggered() {
     </section>
   );
 }
-
-export default TestimonialsStaggered;

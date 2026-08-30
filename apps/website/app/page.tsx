@@ -7,7 +7,7 @@ import Features from "@/components/home/FeaturesBento";
 import { siteMarketingMetadata } from "@/lib/marketing-content";
 import { homeFAQSchema, homeSpeakableSchema, aggregateRatingSchema } from "@/lib/seo-schemas";
 
-const Testimonials = dynamic(() => import("@/components/home/Testimonials"));
+const Testimonials = dynamic(() => import("@/components/home/TestimonialsStaggered"));
 const PricingSection = dynamic(() => import("@/components/home/PricingSection"));
 const FAQ = dynamic(() => import("@/components/home/FAQ"));
 const CallToAction = dynamic(() => import("@/components/home/CallToAction"));
