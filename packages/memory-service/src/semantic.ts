@@ -172,11 +172,12 @@ export async function searchSemanticMemory(
     `;
 
     const now = Date.now();
+    type ScoredRow = { row: RawSemanticRow; score: number };
     return rows
-        .map((row: RawSemanticRow) => ({ row, score: rerankScore(row, now) }))
-        .sort((a, b) => b.score - a.score)
+        .map((row: RawSemanticRow): ScoredRow => ({ row, score: rerankScore(row, now) }))
+        .sort((a: ScoredRow, b: ScoredRow) => b.score - a.score)
         .slice(0, topK)
-        .map(({ row }) => ({
+        .map(({ row }: ScoredRow) => ({
             memory:     rowToRecord(row),
             similarity: Number(row.similarity),
         }));
