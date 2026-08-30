@@ -1,9 +1,13 @@
 ﻿"use client";
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { ArrowUp } from "lucide-react";
 
 export default function ScrollToTop() {
     const [visible, setVisible] = useState(false);
+    const pathname = usePathname();
+    // Editorial (Ink & Petrol) product surfaces use petrol; marketing stays blue.
+    const editorial = pathname?.startsWith("/dashboard") || pathname?.startsWith("/portal");
 
     useEffect(() => {
         const onScroll = () => setVisible(window.scrollY > 400);
@@ -16,7 +20,11 @@ export default function ScrollToTop() {
     return (
         <button
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="fixed bottom-6 right-6 z-40 w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-colors cursor-pointer"
+            className={`fixed bottom-6 right-6 z-40 w-10 h-10 text-white shadow-lg flex items-center justify-center transition-colors cursor-pointer ${
+                editorial
+                    ? "bg-[#1C6E6E] hover:bg-[#14504F] rounded-[3px]"
+                    : "bg-blue-600 hover:bg-blue-700 rounded-full"
+            }`}
             aria-label="Scroll to top"
         >
             <ArrowUp className="w-4 h-4" />

@@ -786,3 +786,8 @@ dialog[open]::backdrop {
 /* Editorial scope — page hero titles in Fraunces (matches internal dashboard). */
 .editorial-app h1 { font-family: var(--font-fraunces), Georgia, serif; font-weight: 600; letter-spacing: -0.02em; }
 .editorial-app .uk-eyebrow, .editorial-app [class*="uppercase"][class*="tracking-wid"] { font-family: var(--font-plex-mono), ui-monospace, monospace; }
+
+/* Editorial scope — retune shared PremiumIcon blue tones (sky/violet/indigo/
+   cyan) to petrol so dashboard/portal icons match; marketing keeps blue. */
+.editorial-app [class~="bg-blue-100"] { background-color: color-mix(in srgb, var(--accent) 14%, transparent) !important; }
+.editorial-app [class~="text-blue-700"], .editorial-app [class~="text-blue-600"] { color: var(--accent) !important; }
