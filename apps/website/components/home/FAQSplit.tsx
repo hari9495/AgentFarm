@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * PREVIEW — split FAQ (editorial): sticky heading + description on the left,
- * an animated accordion on the right. Operations Console palette; reads the real
- * homeMarketingContent.faq. (21st.dev family: shadcnblocks/faq3 + ruixen faq.)
+ * Home FAQ — split editorial layout: sticky heading + description + a
+ * "Book a demo" card on the left, an animated accordion on the right.
+ * Operations Console palette; reads the real homeMarketingContent.faq.
  */
 
 import * as React from 'react';
@@ -12,7 +12,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Plus, Minus } from 'lucide-react';
 import { homeMarketingContent } from '@/lib/marketing-content';
 
-export function FAQSplit() {
+export default function FAQSplit() {
   const { faq } = homeMarketingContent;
   const [open, setOpen] = React.useState<number | null>(0);
 
@@ -58,5 +58,3 @@ export function FAQSplit() {
     </section>
   );
 }
-
-export default FAQSplit;
