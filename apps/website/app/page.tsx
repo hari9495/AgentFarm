@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
-import Hero from "@/components/home/Hero";
-import LogosStrip from "@/components/home/LogosStrip";
+import Hero from "@/components/home/HeroSwitch";
 import Problem from "@/components/home/Problem";
 import Solution from "@/components/home/Solution";
 import Features from "@/components/home/Features";
@@ -42,7 +41,6 @@ export default function Home() {
       />
       <main aria-label="AgentFarms home">
         <Hero />
-        <LogosStrip />
         <Problem />
         <Solution />
         <Features />

@@ -1,12 +1,12 @@
 'use client';
 
 /**
- * PREVIEW — adaptation of 21st.dev `ruixen.ui/preview-switch-hero` to AgentFarm.
- * Component logic is the author's (icon-rail switches the product preview,
- * scroll-driven on desktop, click-driven on mobile / reduced-motion); only the
- * cn import path is changed. Content is AgentFarm: agents as tabs, the approval
- * gate as each preview, connectors as the logo strip. Isolated preview — not
- * wired into the live home page.
+ * Home hero — agent preview switcher. Adapted from 21st.dev
+ * `ruixen.ui/preview-switch-hero`: an icon-rail switches the product preview
+ * (scroll-driven on desktop, click-driven on mobile / reduced-motion), a
+ * lead column with ratings + CTAs, and a connector logo strip below.
+ * Retinted to the Operations Console palette; content is AgentFarm's agents,
+ * the approval gate, and real connectors.
  */
 
 import * as React from 'react';
@@ -15,7 +15,6 @@ import { ArrowUpRight, Star, Check, Clock } from 'lucide-react';
 import { useMotionValueEvent, useReducedMotion, useScroll } from 'motion/react';
 import { cn } from '@/lib/cn';
 
-/* ── types ───────────────────────────────────────────────────── */
 interface PreviewTab { id: string; label: string; media: React.ReactNode }
 interface HeroRating { source: string; score: string; icon?: React.ReactNode }
 interface HeroLogo { name: string; logo?: React.ReactNode }
@@ -119,12 +118,10 @@ function PreviewSwitchHero({ badge, title, description, ratings, primaryCta, sec
       <div className={cn(scrollDriven && 'sticky top-0 flex h-screen flex-col overflow-hidden')}>
         <div className={cn('mx-auto flex w-full max-w-7xl flex-col justify-center px-6 py-10 lg:py-14', scrollDriven && 'min-h-0 flex-1')}>
           <div className="flex flex-col-reverse justify-center gap-8 md:flex-row md:items-start md:gap-6 lg:gap-10 xl:gap-[72px]">
-            {/* left: rail + preview */}
             <div className={cn('flex min-w-0 flex-col gap-5 md:w-[400px] md:shrink-0 md:flex-row md:gap-4 lg:w-[520px] lg:gap-6', badge && 'md:mt-11')}>
               <TabRail tabs={tabs} active={active} onSelect={handleSelect} />
               <PreviewStack tabs={tabs} active={active} />
             </div>
-            {/* right: content */}
             <div className="flex min-w-0 flex-col items-center text-center md:max-w-[496px] md:flex-1 md:items-start md:text-left">
               {badge && (
                 <div className="mb-4 flex w-fit items-center gap-2 rounded-lg bg-muted py-1 pl-1.5 pr-2.5">
@@ -189,7 +186,6 @@ function PreviewSwitchHero({ badge, title, description, ratings, primaryCta, sec
   );
 }
 
-/* ── AgentFarm preview panel (one per agent tab, fixed size) ─────────── */
 function AgentPanel({ agent, action, tone }: { agent: string; action: string; tone: 'pending' | 'approved' }) {
   const pending = tone === 'pending';
   return (
@@ -235,21 +231,22 @@ const TABS: PreviewTab[] = [
   { id: 'sales', label: 'Sales', media: <AgentPanel agent="Sales" action="Send the tailored proposal to Acme Corp and book a follow-up call." tone="pending" /> },
 ];
 
-export function HeroPreviewSwitch() {
+export function HeroSwitch() {
   return (
     <PreviewSwitchHero
       badge={{ tag: 'New', label: '14 AI teammates, one control plane' }}
       title="One AI teammate for every job — you stay in control."
       description="Recruiters, developers, support, sales. They work across your tools and wait for your approval on anything risky — every step logged."
       ratings={[{ source: 'setup', score: '10 min' }, { source: 'oversight', score: '100%' }, { source: 'audit', score: 'Full' }]}
-      primaryCta={{ label: 'Start free', href: '#' }}
-      secondaryCta={{ label: 'Book a demo', href: '#' }}
+      primaryCta={{ label: 'Start free', href: '/signup' }}
+      secondaryCta={{ label: 'Book a demo', href: '/contact' }}
       avatars={[{ initials: 'RC' }, { initials: 'DV' }, { initials: 'SP' }, { initials: 'SL' }, { initials: 'BA' }]}
       socialProof="trusted by lean teams shipping real work"
       tabs={TABS}
       logos={CONNECTORS}
+      scrollLength="220vh"
     />
   );
 }
 
-export default HeroPreviewSwitch;
+export default HeroSwitch;
