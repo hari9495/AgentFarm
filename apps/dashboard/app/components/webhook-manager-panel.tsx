@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { UiKit, Masthead, Panel, Badge, Button } from './ui-kit';
+import { WfThemeToggle } from './editorial';
 
 type WebhookProvider = 'github' | 'gitlab' | 'jira' | 'linear' | 'pagerduty' | 'sentry' | 'custom';
 type WebhookEventType =
@@ -33,16 +35,6 @@ type RecentEvent = {
     received_at: string;
     signature_valid: boolean;
     loop_triggered: boolean;
-};
-
-const PROVIDER_COLORS: Record<WebhookProvider, string> = {
-    github: 'bg-zinc-700 text-zinc-200',
-    gitlab: 'bg-orange-900/40 text-orange-300',
-    jira: 'bg-red-900/40 text-red-300',
-    linear: 'bg-red-900/40 text-red-300',
-    pagerduty: 'bg-green-900/40 text-green-300',
-    sentry: 'bg-red-900/40 text-red-300',
-    custom: 'bg-zinc-700 text-zinc-400',
 };
 
 const PROVIDER_EVENTS: Record<WebhookProvider, WebhookEventType[]> = {
@@ -166,214 +158,142 @@ export function WebhookManagerPanel() {
     };
 
     return (
-        <div className="flex flex-col gap-6 p-6 bg-zinc-900 min-h-screen text-zinc-100">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Webhook Manager</h1>
-                    <p className="text-zinc-400 text-sm mt-1">
-                        Register and monitor inbound webhooks from external services
-                    </p>
-                </div>
-                <div className="flex gap-2">
-                    <button
-                        onClick={loadEvents}
-                        disabled={loadingEvents}
-                        className="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-sm transition-colors disabled:opacity-50"
-                    >
-                        {loadingEvents ? 'Loading…' : 'Refresh Events'}
-                    </button>
-                    <button
-                        onClick={() => setShowForm(true)}
-                        className="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-sm font-medium transition-colors"
-                    >
-                        + Register Webhook
-                    </button>
-                </div>
-            </div>
+        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+            <Masthead
+                eyebrow="Developer Tools — Inbound"
+                title="Webhook Manager"
+                actions={
+                    <>
+                        <Button variant="ghost" size="sm" disabled={loadingEvents} onClick={loadEvents}>
+                            {loadingEvents ? 'Loading…' : 'Refresh Events'}
+                        </Button>
+                        <Button variant="primary" size="sm" onClick={() => setShowForm(true)}>+ Register Webhook</Button>
+                        <WfThemeToggle />
+                    </>
+                }
+            />
 
-            {error && (
-                <div className="p-3 bg-red-900/40 border border-red-700 rounded-lg text-red-300 text-sm">
-                    {error}
-                </div>
-            )}
+            <div style={{ padding: 28, maxWidth: 1000, margin: '0 auto', width: '100%', display: 'grid', gap: 18 }}>
+                {error && (
+                    <div className="uk-panel" style={{ padding: 14, borderLeft: '2px solid var(--danger)', color: 'var(--danger)', fontSize: 13 }}>{error}</div>
+                )}
 
-            {/* Registration form */}
-            {showForm && (
-                <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-5 flex flex-col gap-4">
-                    <h2 className="font-semibold text-sm">New Webhook Registration</h2>
+                {/* Registration form */}
+                {showForm && (
+                    <Panel title="New webhook registration">
+                        <div style={{ display: 'grid', gap: 16, marginTop: 4 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                                <label style={{ display: 'grid', gap: 5 }}>
+                                    <span className="uk-eyebrow">Provider</span>
+                                    <select
+                                        className="uk-input"
+                                        value={provider}
+                                        onChange={(e) => { setProvider(e.target.value as WebhookProvider); setSelectedEvents([]); }}
+                                    >
+                                        {(Object.keys(PROVIDER_EVENTS) as WebhookProvider[]).map((p) => (
+                                            <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <label style={{ display: 'grid', gap: 5 }}>
+                                    <span className="uk-eyebrow">Signing secret</span>
+                                    <input
+                                        type="password"
+                                        className="uk-input"
+                                        style={{ fontFamily: 'var(--font-plex-mono), monospace' }}
+                                        value={secret}
+                                        onChange={(e) => setSecret(e.target.value)}
+                                        placeholder="Leave blank to auto-generate"
+                                    />
+                                </label>
+                            </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label className="text-xs text-zinc-400 mb-1 block">Provider</label>
-                            <select
-                                value={provider}
-                                onChange={(e) => {
-                                    setProvider(e.target.value as WebhookProvider);
-                                    setSelectedEvents([]);
-                                }}
-                                className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-3 py-2 text-sm"
-                            >
-                                {(Object.keys(PROVIDER_EVENTS) as WebhookProvider[]).map((p) => (
-                                    <option key={p} value={p}>
-                                        {p.charAt(0).toUpperCase() + p.slice(1)}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                            <div>
+                                <span className="uk-eyebrow" style={{ display: 'block', marginBottom: 8 }}>Events to listen for</span>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                    {PROVIDER_EVENTS[provider].map((event) => {
+                                        const on = selectedEvents.includes(event);
+                                        return (
+                                            <button
+                                                key={event}
+                                                onClick={() => toggleEvent(event)}
+                                                style={{
+                                                    padding: '5px 11px', borderRadius: 3, fontSize: 12, cursor: 'pointer',
+                                                    border: `1px solid ${on ? 'var(--accent)' : 'var(--line)'}`,
+                                                    background: on ? 'var(--accent)' : 'transparent',
+                                                    color: on ? 'var(--card)' : 'var(--ink-muted)',
+                                                }}
+                                            >
+                                                {event.replace('_', ' ')}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
 
-                        <div>
-                            <label className="text-xs text-zinc-400 mb-1 block">Signing Secret</label>
-                            <input
-                                type="password"
-                                value={secret}
-                                onChange={(e) => setSecret(e.target.value)}
-                                placeholder="Leave blank to auto-generate"
-                                className="w-full bg-zinc-700 border border-zinc-600 rounded-lg px-3 py-2 text-sm font-mono"
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="text-xs text-zinc-400 mb-2 block">Events to listen for</label>
-                        <div className="flex flex-wrap gap-2">
-                            {PROVIDER_EVENTS[provider].map((event) => (
-                                <button
-                                    key={event}
-                                    onClick={() => toggleEvent(event)}
-                                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${selectedEvents.includes(event) ? 'bg-red-600 text-white' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'}`}
-                                >
-                                    {event.replace('_', ' ')}
+                            <div className="uk-panel" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px' }}>
+                                <span className="uk-mono" style={{ fontSize: 12, color: 'var(--ink-muted)', wordBreak: 'break-all' }}>{BASE_WEBHOOK_URL}/{provider}</span>
+                                <button onClick={() => copyWebhookUrl(`${BASE_WEBHOOK_URL}/${provider}`)} style={{ marginLeft: 'auto', flexShrink: 0, background: 'none', border: 'none', color: 'var(--accent)', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+                                    {copied ? 'Copied!' : 'Copy URL'}
                                 </button>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: 10 }}>
+                                <Button variant="primary" size="sm" disabled={loading || selectedEvents.length === 0} onClick={registerWebhook}>
+                                    {loading ? 'Registering…' : 'Register'}
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => setShowForm(false)}>Cancel</Button>
+                            </div>
+                        </div>
+                    </Panel>
+                )}
+
+                {/* Registrations */}
+                <Panel title="Registered webhooks" action={<button onClick={loadRegistrations} disabled={loading} className="uk-eyebrow" style={{ background: 'none', border: 'none', color: 'var(--ink-muted)', cursor: 'pointer' }}>{loading ? 'Loading…' : 'Reload'}</button>}>
+                    {registrations.length === 0 ? (
+                        <div style={{ padding: '20px 0', textAlign: 'center', color: 'var(--ink-muted)', fontSize: 13 }}>No webhooks registered yet. Click “+ Register Webhook” to add one.</div>
+                    ) : (
+                        <div style={{ display: 'grid' }}>
+                            {registrations.map((reg) => (
+                                <div key={reg.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 0', borderTop: '1px solid var(--line)' }}>
+                                    <Badge tone="neutral">{reg.provider}</Badge>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <p className="uk-mono" style={{ margin: 0, fontSize: 12, color: 'var(--ink-soft)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{reg.target_url}</p>
+                                        <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--ink-muted)' }}>
+                                            {reg.events.join(', ')} · {reg.total_received} received
+                                            {reg.last_received_at && ` · last: ${new Date(reg.last_received_at).toLocaleTimeString()}`}
+                                        </p>
+                                    </div>
+                                    <Badge tone={reg.active ? 'ok' : 'neutral'}>{reg.active ? 'active' : 'paused'}</Badge>
+                                    <div style={{ display: 'flex', gap: 6 }}>
+                                        {reg.active && <Button variant="ghost" size="sm" onClick={() => deactivateWebhook(reg.id)}>Pause</Button>}
+                                        <Button variant="danger" size="sm" onClick={() => deleteWebhook(reg.id)}>Delete</Button>
+                                    </div>
+                                </div>
                             ))}
                         </div>
-                    </div>
+                    )}
+                </Panel>
 
-                    <div className="flex items-center gap-2 p-3 bg-zinc-700/40 rounded-lg">
-                        <span className="text-xs text-zinc-400 font-mono break-all">
-                            {BASE_WEBHOOK_URL}/{provider}
-                        </span>
-                        <button
-                            onClick={() => copyWebhookUrl(`${BASE_WEBHOOK_URL}/${provider}`)}
-                            className="ml-auto text-xs text-red-400 hover:text-red-300 shrink-0"
-                        >
-                            {copied ? 'Copied!' : 'Copy URL'}
-                        </button>
-                    </div>
-
-                    <div className="flex gap-3">
-                        <button
-                            onClick={registerWebhook}
-                            disabled={loading || selectedEvents.length === 0}
-                            className="px-4 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
-                        >
-                            {loading ? 'Registering…' : 'Register'}
-                        </button>
-                        <button
-                            onClick={() => setShowForm(false)}
-                            className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg text-sm transition-colors"
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Registrations table */}
-            <div className="bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700">
-                    <h2 className="font-semibold text-sm">Registered Webhooks</h2>
-                    <button
-                        onClick={loadRegistrations}
-                        disabled={loading}
-                        className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
-                    >
-                        {loading ? 'Loading…' : 'Reload'}
-                    </button>
-                </div>
-                {registrations.length === 0 ? (
-                    <div className="p-8 text-center text-zinc-500 text-sm">
-                        No webhooks registered yet. Click "+ Register Webhook" to add one.
-                    </div>
-                ) : (
-                    <div className="divide-y divide-zinc-700">
-                        {registrations.map((reg) => (
-                            <div key={reg.id} className="flex items-center gap-4 px-4 py-3">
-                                <span
-                                    className={`px-2 py-0.5 rounded text-xs font-medium ${PROVIDER_COLORS[reg.provider]}`}
-                                >
-                                    {reg.provider}
-                                </span>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-mono text-zinc-300 truncate">{reg.target_url}</p>
-                                    <p className="text-xs text-zinc-500 mt-0.5">
-                                        {reg.events.join(', ')} · {reg.total_received} received
-                                        {reg.last_received_at && ` · last: ${new Date(reg.last_received_at).toLocaleTimeString()}`}
-                                    </p>
+                {/* Recent events */}
+                <Panel title="Recent events">
+                    {recentEvents.length === 0 ? (
+                        <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--ink-muted)', fontSize: 13 }}>No recent events. Click “Refresh Events” to load.</div>
+                    ) : (
+                        <div style={{ display: 'grid' }}>
+                            {recentEvents.map((event) => (
+                                <div key={event.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderTop: '1px solid var(--line)' }}>
+                                    <Badge tone="neutral">{event.provider}</Badge>
+                                    <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>{event.event_type.replace('_', ' ')}</span>
+                                    <span className="uk-mono" style={{ fontSize: 11, color: 'var(--ink-muted)', marginLeft: 'auto' }}>{new Date(event.received_at).toLocaleTimeString()}</span>
+                                    {event.loop_triggered && <Badge tone="accent">loop triggered</Badge>}
+                                    <Badge tone={event.signature_valid ? 'ok' : 'err'}>{event.signature_valid ? '✓ verified' : '✗ unverified'}</Badge>
                                 </div>
-                                <span
-                                    className={`text-xs font-medium ${reg.active ? 'text-green-400' : 'text-zinc-500'}`}
-                                >
-                                    {reg.active ? 'active' : 'paused'}
-                                </span>
-                                <div className="flex gap-1">
-                                    {reg.active && (
-                                        <button
-                                            onClick={() => deactivateWebhook(reg.id)}
-                                            className="px-2 py-1 bg-zinc-700 hover:bg-zinc-600 rounded text-xs transition-colors"
-                                        >
-                                            Pause
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={() => deleteWebhook(reg.id)}
-                                        className="px-2 py-1 bg-red-900/40 hover:bg-red-900/60 text-red-400 rounded text-xs transition-colors"
-                                    >
-                                        Delete
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
+                            ))}
+                        </div>
+                    )}
+                </Panel>
             </div>
-
-            {/* Recent events */}
-            <div className="bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden">
-                <div className="px-4 py-3 border-b border-zinc-700">
-                    <h2 className="font-semibold text-sm">Recent Events</h2>
-                </div>
-                {recentEvents.length === 0 ? (
-                    <div className="p-6 text-center text-zinc-500 text-sm">
-                        No recent events. Click "Refresh Events" to load.
-                    </div>
-                ) : (
-                    <div className="divide-y divide-zinc-700">
-                        {recentEvents.map((event) => (
-                            <div key={event.id} className="flex items-center gap-4 px-4 py-3">
-                                <span
-                                    className={`px-2 py-0.5 rounded text-xs font-medium ${PROVIDER_COLORS[event.provider]}`}
-                                >
-                                    {event.provider}
-                                </span>
-                                <span className="text-xs text-zinc-300">{event.event_type.replace('_', ' ')}</span>
-                                <span className="text-xs text-zinc-500 ml-auto">
-                                    {new Date(event.received_at).toLocaleTimeString()}
-                                </span>
-                                {event.loop_triggered && (
-                                    <span className="px-2 py-0.5 bg-red-900/40 text-red-300 rounded text-xs">
-                                        loop triggered
-                                    </span>
-                                )}
-                                <span
-                                    className={`px-2 py-0.5 rounded text-xs ${event.signature_valid ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'}`}
-                                >
-                                    {event.signature_valid ? '✓ verified' : '✗ unverified'}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-        </div>
+        </UiKit>
     );
 }
