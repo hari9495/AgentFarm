@@ -78,7 +78,16 @@ function useSidebarState() {
         try { localStorage.setItem(LS_WIDTH, String(clamped)); } catch { /* noop */ }
     }, []);
 
-    return { collapsed, width, ready, toggle, setWidth, persistWidth };
+    // Until ready (post-hydration) expose the SSR defaults so the first client
+    // render matches the server; the persisted collapse/width apply after.
+    return {
+        collapsed: ready ? collapsed : false,
+        width: ready ? width : SIDEBAR_DEFAULT,
+        ready,
+        toggle,
+        setWidth,
+        persistWidth,
+    };
 }
 import { useTheme } from "@/components/shared/ThemeProvider";
 import CommandPalette from "@/components/shared/CommandPalette";

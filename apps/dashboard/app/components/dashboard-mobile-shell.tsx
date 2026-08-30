@@ -22,18 +22,27 @@ export function DashboardMobileShell({ sidebar, workspaceName, children }: Dashb
     const [collapsed, setCollapsed] = useState(false);
     const [width, setWidth] = useState(SB_DEFAULT);
     const [dragging, setDragging] = useState(false);
+    // Until hydrated we render the SSR default (expanded, default width) so the
+    // first client render matches the server; persisted state applies after.
+    const [hydrated, setHydrated] = useState(false);
     const asideRef = useRef<HTMLElement>(null);
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
-    // Restore persisted collapse/width.
+    // Restore persisted collapse/width (after hydration).
     useEffect(() => {
         try {
             if (localStorage.getItem(LS_COLLAPSED) === '1') setCollapsed(true);
             const w = Number(localStorage.getItem(LS_WIDTH));
             if (w >= SB_MIN && w <= SB_MAX) setWidth(w);
         } catch { /* private mode */ }
+        setHydrated(true);
     }, []);
+
+    // Effective values: SSR/first-render use defaults so hydration matches;
+    // the persisted collapse/width only take effect once hydrated.
+    const effectiveCollapsed = hydrated ? collapsed : false;
+    const effectiveWidth = hydrated ? width : SB_DEFAULT;
 
     const toggleCollapse = useCallback(() => {
         setCollapsed((prev) => {
@@ -106,10 +115,10 @@ export function DashboardMobileShell({ sidebar, workspaceName, children }: Dashb
     }, []);
 
     return (
-        <SidebarCollapseContext.Provider value={{ collapsed, toggle: toggleCollapse }}>
+        <SidebarCollapseContext.Provider value={{ collapsed: effectiveCollapsed, toggle: toggleCollapse }}>
         <main
             className={`dashboard-layout ${isDrawerOpen ? 'drawer-open' : ''}`}
-            style={{ ['--dash-sidebar-w' as keyof CSSProperties]: collapsed ? `${SB_RAIL}px` : `${width}px` } as CSSProperties}
+            style={{ ['--dash-sidebar-w' as keyof CSSProperties]: effectiveCollapsed ? `${SB_RAIL}px` : `${effectiveWidth}px` } as CSSProperties}
         >
             <button
                 type="button"
@@ -124,7 +133,7 @@ export function DashboardMobileShell({ sidebar, workspaceName, children }: Dashb
             <aside ref={asideRef} className="dashboard-sidebar" id="dashboard-navigation-drawer" data-testid="dashboard-sidebar-drawer">
                 {sidebar}
                 {/* Desktop resize handle (expanded only) */}
-                {!collapsed && (
+                {!effectiveCollapsed && (
                     <div
                         onMouseDown={startResize}
                         onDoubleClick={() => { setWidth(SB_DEFAULT); try { localStorage.setItem(LS_WIDTH, String(SB_DEFAULT)); } catch { /* noop */ } }}
