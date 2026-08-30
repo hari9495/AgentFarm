@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * PREVIEW — clean CTA: a centered light closing section with badge, headline
- * (blue accent), dual buttons, trust items and live-metric dots. Operations
- * Console palette; reads homeMarketingContent.cta. (21st.dev family: felipe/cta-01.)
+ * Home CTA — clean light closing section: badge, headline (blue accent), dual
+ * buttons, trust items and live-metric dots. Operations Console palette; reads
+ * the real homeMarketingContent.cta.
  */
 
 import * as React from 'react';
@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { Check, ArrowRight } from 'lucide-react';
 import { homeMarketingContent } from '@/lib/marketing-content';
 
-export function CTAClean() {
+export default function CTAClean() {
   const { cta } = homeMarketingContent;
   return (
     <section className="w-full px-6 py-20 sm:py-28 text-center" style={{ background: 'var(--op-paper-2)', color: 'var(--op-ink)' }} aria-label="Get started">
@@ -54,5 +54,3 @@ export function CTAClean() {
     </section>
   );
 }
-
-export default CTAClean;
