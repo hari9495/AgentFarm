@@ -487,18 +487,33 @@ body {
     display: none;
 }
 
-/* Drag-to-resize handle on the sidebar's right edge (desktop only). */
-.sidebar-resize-handle {
+/* Drag-to-resize handle on the sidebar's right edge (desktop only).
+   Sits fully inside the sidebar (right:0) so the parent's overflow:hidden
+   doesn't clip it; a wide hit area with a hairline that lights up on hover.
+   Selector is scoped under .dashboard-sidebar to beat the generic
+   `.dashboard-sidebar > *` rule that would otherwise force position:relative. */
+.dashboard-sidebar > .sidebar-resize-handle {
     position: absolute;
     top: 0;
-    right: -3px;
-    width: 6px;
+    right: 0;
+    left: auto;
+    width: 10px;
     height: 100%;
     cursor: col-resize;
-    z-index: 30;
+    z-index: 40;
+    background: transparent;
+}
+.sidebar-resize-handle::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 2px;
+    height: 100%;
+    background: transparent;
     transition: background 90ms linear;
 }
-.sidebar-resize-handle:hover {
+.sidebar-resize-handle:hover::after {
     background: var(--accent);
 }
 @media (max-width: 860px) {

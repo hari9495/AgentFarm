@@ -586,10 +586,9 @@ export default function AppSidebar({
                         onMouseDown={startResize}
                         onDoubleClick={() => persistWidth(SIDEBAR_DEFAULT)}
                         title="Drag to resize · double-click to reset"
-                        className={`absolute top-0 right-0 h-full w-1.5 cursor-col-resize z-10 group ${dragging ? "" : ""}`}
-                        style={{ transform: "translateX(50%)" }}
+                        className="absolute top-0 right-0 h-full w-2.5 cursor-col-resize z-20 group flex justify-end"
                     >
-                        <div className={`mx-auto h-full w-px transition-colors ${dragging ? "bg-[var(--accent)]" : "bg-transparent group-hover:bg-[var(--accent)]"}`} />
+                        <div className={`h-full w-0.5 transition-colors ${dragging ? "bg-[var(--accent)]" : "bg-transparent group-hover:bg-[var(--accent)]"}`} />
                     </div>
                 )}
             </div>
