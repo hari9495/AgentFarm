@@ -225,7 +225,10 @@ export default function SkillsHubClient({
                     <div style={{ width: 28, height: 28, borderRadius: 8, background: 'color-mix(in srgb, var(--accent) 10%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <ShoppingBag size={14} color="var(--accent)" />
                     </div>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>Skill Marketplace</span>
+                    <div>
+                        <div style={{ fontFamily: 'var(--font-plex-mono), monospace', textTransform: 'uppercase', letterSpacing: '0.16em', fontSize: 9, color: 'var(--accent)', lineHeight: 1 }}>Capabilities</div>
+                        <span style={{ display: 'block', fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '1.15rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginTop: 3, lineHeight: 1 }}>Skill Marketplace</span>
+                    </div>
                 </div>
                 <div style={{ marginLeft: 8, display: 'flex', gap: 6 }}>
                     <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: 9999, background: 'color-mix(in srgb, var(--accent) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--accent) 20%, transparent)', color: 'var(--accent)', fontWeight: 600, fontFamily: 'monospace' }}>ws: {workspaceId.slice(0, 18)}</span>

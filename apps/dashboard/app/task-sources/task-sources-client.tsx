@@ -111,7 +111,8 @@ export default function TaskSourcesClient() {
 
     return (
         <div className="p-6 max-w-5xl mx-auto">
-            <h1 className="text-2xl font-semibold mb-1">Task Sources</h1>
+            <div style={{ fontFamily: 'var(--font-plex-mono), monospace', textTransform: 'uppercase', letterSpacing: '0.16em', fontSize: 9, color: 'var(--accent)', lineHeight: 1, marginBottom: 5 }}>Intake</div>
+            <h1 style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '1.6rem', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ink)', margin: '0 0 4px', lineHeight: 1 }}>Task Sources</h1>
             <p className="text-sm text-gray-500 mb-6">
                 Let an agent pull tickets assigned to it from a tracker. First-class (Jira, Linear, GitHub) or any
                 REST tracker via a custom field-mapping. Off-shift tickets are deferred to the next shift.

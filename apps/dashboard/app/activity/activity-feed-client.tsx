@@ -264,7 +264,8 @@ export default function ActivityFeedClient({ workspaceIds }: { workspaceIds: str
                             <Activity size={18} color="var(--card)" />
                         </div>
                         <div>
-                            <h1 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: 'var(--ink)' }}>Activity Feed</h1>
+                            <div style={{ fontFamily: 'var(--font-plex-mono), monospace', textTransform: 'uppercase', letterSpacing: '0.16em', fontSize: 9, color: 'var(--accent)', lineHeight: 1, marginBottom: 3 }}>Timeline</div>
+                            <h1 style={{ margin: 0, fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: 22, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ink)', lineHeight: 1 }}>Activity Feed</h1>
                             <p style={{ margin: 0, fontSize: 12, color: 'var(--ink-muted)' }}>
                                 Unified timeline — tasks, approvals, CI, connectors across all agents
                                 {lastRefreshed && ` · updated ${timeAgo(lastRefreshed.toISOString())}`}

@@ -410,7 +410,10 @@ export default function PlatformMcpPage() {
                     <div style={{ width: 28, height: 28, borderRadius: 8, background: 'color-mix(in srgb, var(--accent) 10%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Cpu size={14} color="var(--accent)" />
                     </div>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>Platform MCP Configuration</span>
+                    <div>
+                        <div style={{ fontFamily: 'var(--font-plex-mono), monospace', textTransform: 'uppercase', letterSpacing: '0.16em', fontSize: 9, color: 'var(--accent)', lineHeight: 1 }}>Integrations</div>
+                        <span style={{ display: 'block', fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '1.15rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginTop: 3, lineHeight: 1 }}>Platform MCP Configuration</span>
+                    </div>
                 </div>
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
                     <button onClick={load} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>

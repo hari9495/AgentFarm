@@ -432,9 +432,12 @@ export default function AnalyticsPage() {
                 >
                     ← Dashboard
                 </Link>
-                <h1 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--ink)', margin: 0, marginRight: 'auto', whiteSpace: 'nowrap' }}>
-                    Analytics
-                </h1>
+                <div style={{ marginRight: 'auto' }}>
+                    <div style={{ fontFamily: 'var(--font-plex-mono), monospace', textTransform: 'uppercase', letterSpacing: '0.16em', fontSize: 9, color: 'var(--accent)', lineHeight: 1 }}>Intelligence</div>
+                    <h1 style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '1.2rem', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ink)', margin: '3px 0 0', lineHeight: 1, whiteSpace: 'nowrap' }}>
+                        Analytics
+                    </h1>
+                </div>
 
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', color: 'var(--ink)', fontWeight: 500 }}>
                     From
