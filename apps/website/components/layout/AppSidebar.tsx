@@ -213,7 +213,7 @@ function NavLink({
                 <Icon className="w-[17px] h-[17px]" />
                 {/* Collapsed: badge as a dot on the icon */}
                 {collapsed && count > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[var(--danger)] ring-2 ring-white" />
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[var(--danger)] ring-2 ring-[color:var(--card)]" />
                 )}
             </span>
 
@@ -285,7 +285,7 @@ function SidebarContent({
     };
 
     return (
-        <aside style={{ width: collapsed ? RAIL_WIDTH : width }} className="flex flex-col h-full bg-white border-r border-[color:var(--line)] shrink-0 transition-[width] duration-150 ease-out">
+        <aside style={{ width: collapsed ? RAIL_WIDTH : width }} className="flex flex-col h-full bg-[var(--card)] border-r border-[color:var(--line)] shrink-0 transition-[width] duration-150 ease-out">
 
             {/* CommandPalette listener — renders nothing visible */}
             <CommandPalette />
@@ -345,7 +345,7 @@ function SidebarContent({
                 >
                     <Search className="w-4 h-4 shrink-0 group-hover:text-[color:var(--ink-soft)] transition-colors" />
                     {!collapsed && <span className="flex-1 text-left">Search…</span>}
-                    {!collapsed && <kbd className="text-[10px] font-mono bg-white text-[color:var(--ink-muted)] px-1.5 py-0.5 rounded-[3px] border border-[color:var(--line)]">⌘K</kbd>}
+                    {!collapsed && <kbd className="text-[10px] font-mono bg-[var(--card)] text-[color:var(--ink-muted)] px-1.5 py-0.5 rounded-[3px] border border-[color:var(--line)]">⌘K</kbd>}
                 </button>
             </div>
 
@@ -490,9 +490,9 @@ function SidebarContent({
                 <button
                     onClick={() => void handleLogout()}
                     title={collapsed ? "Sign out" : undefined}
-                    className={`flex items-center rounded-[3px] text-[13px] font-medium text-[color:var(--ink-muted)] hover:bg-rose-50 hover:text-rose-600 transition-all group ${collapsed ? "justify-center w-8 h-8" : "w-full gap-3 px-3 py-2"}`}
+                    className={`flex items-center rounded-[3px] text-[13px] font-medium text-[color:var(--ink-muted)] hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] hover:text-[color:var(--danger)] transition-all group ${collapsed ? "justify-center w-8 h-8" : "w-full gap-3 px-3 py-2"}`}
                 >
-                    <span className={`flex items-center justify-center rounded-[3px] group-hover:bg-rose-100 transition-all ${collapsed ? "w-8 h-8" : "w-8 h-8"}`}>
+                    <span className={`flex items-center justify-center rounded-[3px] group-hover:bg-[color-mix(in_srgb,var(--danger)_16%,transparent)] transition-all ${collapsed ? "w-8 h-8" : "w-8 h-8"}`}>
                         <LogOut className="w-[15px] h-[15px]" />
                     </span>
                     {!collapsed && <span className="tracking-[-0.01em]">Sign out</span>}
@@ -547,7 +547,7 @@ export default function AppSidebar({
             {/* Mobile toggle button */}
             <button
                 onClick={() => setOpen(true)}
-                className="md:hidden fixed top-3.5 left-3.5 z-40 p-2 bg-white border border-[color:var(--line)] rounded-[3px] shadow-sm"
+                className="md:hidden fixed top-3.5 left-3.5 z-40 p-2 bg-[var(--card)] border border-[color:var(--line)] rounded-[3px] shadow-sm"
                 aria-label="Open navigation"
             >
                 <Menu className="w-4 h-4 text-[color:var(--ink-muted)]" />
