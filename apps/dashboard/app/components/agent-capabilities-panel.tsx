@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { UiKit, Masthead, Panel, Badge, Button, Stat } from './ui-kit';
-import { WfThemeToggle } from './editorial';
+import { UiKit, Badge, Button, Stat } from './ui-kit';
 
 // ─── Types (mirror of API response) ────────────────────────────────────────
 
@@ -275,16 +274,16 @@ export function AgentCapabilitiesPanel({ capabilities, error }: Props) {
 
     if (error) {
         return (
-            <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div className="uk-panel" style={{ padding: 24, borderLeft: '2px solid var(--danger)', color: 'var(--danger)', fontSize: 13, maxWidth: 420, textAlign: 'center' }}>{error}</div>
+            <UiKit style={{ background: 'transparent' }}>
+                <div className="uk-panel" style={{ padding: 20, borderLeft: '2px solid var(--danger)', color: 'var(--danger)', fontSize: 13 }}>{error}</div>
             </UiKit>
         );
     }
 
     if (!capabilities) {
         return (
-            <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ color: 'var(--ink-muted)', fontSize: 13 }}>Loading capabilities…</span>
+            <UiKit style={{ background: 'transparent' }}>
+                <div className="uk-panel" style={{ padding: 20, color: 'var(--ink-muted)', fontSize: 13 }}>Loading capabilities…</div>
             </UiKit>
         );
     }
@@ -306,18 +305,15 @@ export function AgentCapabilitiesPanel({ capabilities, error }: Props) {
         : lockedSections.filter((s) => s.group === groupFilter);
 
     return (
-        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
-            <Masthead
-                eyebrow="Workforce — Capabilities"
-                title="Agent Capabilities"
-                actions={<WfThemeToggle />}
-                stats={<Stat n={`${totalPurchased}`} k={`of ${totalAvailable} agents hired`} tone="accent" />}
-            />
-
-            <div style={{ padding: 28, maxWidth: 1200, margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', gap: 20 }}>
-                <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-muted)' }}>
-                    View and configure the integrations available to each agent you have hired.
-                </p>
+        <UiKit style={{ background: 'transparent' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {/* Lightweight header — the tab already provides the page masthead + theme toggle */}
+                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-muted)', maxWidth: '60ch' }}>
+                        View and configure the integrations available to each agent you have hired.
+                    </p>
+                    <Stat n={`${totalPurchased}`} k={`of ${totalAvailable} agents hired`} tone="accent" />
+                </div>
 
                 {/* Group filter */}
                 {allGroups.length > 1 && (
