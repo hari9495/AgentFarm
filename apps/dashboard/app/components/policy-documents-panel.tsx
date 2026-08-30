@@ -38,7 +38,7 @@ const mono: React.CSSProperties = { fontFamily: 'ui-monospace, monospace' };
 const inputS: React.CSSProperties = { padding: '8px 11px', borderRadius: 9, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontSize: 13, outline: 'none' };
 const btn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 9, border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink-soft)', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
 
-const statusColor = (s: string) => (s === 'parsed' ? 'var(--accent)' : s === 'failed' ? '#37A0A0' : 'var(--ink-muted)');
+const statusColor = (s: string) => (s === 'parsed' ? 'var(--accent)' : s === 'failed' ? '#2563EB' : 'var(--ink-muted)');
 
 export default function PolicyDocumentsPanel() {
     const [docs, setDocs] = useState<DocSummary[]>([]);
@@ -141,7 +141,7 @@ export default function PolicyDocumentsPanel() {
             </div>
 
             {notice && <div style={{ ...card, borderColor: 'var(--accent)', display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}><CheckCircle2 size={15} color="var(--accent)" />{notice}</div>}
-            {error && <div style={{ ...card, borderColor: '#37A0A0', display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#37A0A0' }}><AlertCircle size={15} />{error}</div>}
+            {error && <div style={{ ...card, borderColor: '#2563EB', display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, color: '#2563EB' }}><AlertCircle size={15} />{error}</div>}
 
             {/* List */}
             <div style={card}>
@@ -172,7 +172,7 @@ export default function PolicyDocumentsPanel() {
                         Select the rules to enforce. Only <strong>deny</strong> rules are enforceable via direct policy; other
                         effects are shown for context but skipped on apply.
                     </p>
-                    {selected.failureReason && <div style={{ color: '#37A0A0', fontSize: 13 }}>Parse failed: {selected.failureReason}</div>}
+                    {selected.failureReason && <div style={{ color: '#2563EB', fontSize: 13 }}>Parse failed: {selected.failureReason}</div>}
                     {selected.candidates.length === 0 ? <div style={{ color: 'var(--ink-muted)', fontSize: 13 }}>No candidate rules extracted.</div> : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
                             {selected.candidates.map((c) => {

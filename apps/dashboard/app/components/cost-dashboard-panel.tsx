@@ -70,7 +70,7 @@ type CostSummary = {
 
 const TONE_COLORS: Record<string, string> = {
     brand: 'var(--accent)',
-    sky: '#2C8A8A',
+    sky: '#2563EB',
     emerald: 'var(--ok)',
     amber: 'var(--warn)',
     violet: 'var(--accent)',

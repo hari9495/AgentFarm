@@ -54,7 +54,7 @@ function TabShell({
 
 function BotIdInput({ botId, setBotId }: { botId: string; setBotId: (v: string) => void }) {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'rgba(45, 138, 138,0.04)', border: '1px solid rgba(45, 138, 138,0.15)', borderRadius: 3, marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'rgba(37, 99, 235,0.04)', border: '1px solid rgba(37, 99, 235,0.15)', borderRadius: 3, marginBottom: 14 }}>
             <Brain size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Bot ID (optional — leave blank to search all)</div>

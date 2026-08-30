@@ -22,7 +22,7 @@ export default function ScrollToTop() {
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             className={`fixed bottom-6 right-6 z-40 w-10 h-10 text-white shadow-lg flex items-center justify-center transition-colors cursor-pointer ${
                 editorial
-                    ? "bg-[#1C6E6E] hover:bg-[#14504F] rounded-[3px]"
+                    ? "bg-[#2563EB] hover:bg-[#1D4ED8] rounded-[3px]"
                     : "bg-blue-600 hover:bg-blue-700 rounded-full"
             }`}
             aria-label="Scroll to top"

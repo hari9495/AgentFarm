@@ -108,7 +108,7 @@ function NavItem({
             <span
                 className="relative inline-flex h-7 w-7 items-center justify-center rounded-sm shrink-0"
                 style={active
-                    ? { background: 'rgba(45, 138, 138,0.12)' }
+                    ? { background: 'rgba(37, 99, 235,0.12)' }
                     : { background: c.bg }}
             >
                 <Icon

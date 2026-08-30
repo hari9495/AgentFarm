@@ -89,7 +89,7 @@ export default function KnowledgeBaseUploadPanel({ botId }: { botId?: string }) 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {error && (
-                <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 8, color: '#37A0A0', borderColor: '#37A0A0' }}>
+                <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 8, color: '#2563EB', borderColor: '#2563EB' }}>
                     <AlertCircle size={14} /> {error}
                 </div>
             )}

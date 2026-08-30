@@ -752,11 +752,11 @@ dialog[open]::backdrop {
   --ink-muted: #5E6B70;
   --line: #D2D8D6;
   --line-strong: #AEB6B4;
-  --accent: #1C6E6E;
-  --ok: #3E7D4F;
-  --warn: #A9791E;
-  --danger: #B4483C;
-  --danger-border: rgba(180, 72, 60, 0.22);
+  --accent: #2563EB;
+  --ok: #15803D;
+  --warn: #B45309;
+  --danger: #DC2626;
+  --danger-border: rgba(220, 38, 38, 0.22);
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-inter), -apple-system, sans-serif;
@@ -770,11 +770,11 @@ dialog[open]::backdrop {
   --ink-muted: #849096;
   --line: rgba(255, 255, 255, 0.10);
   --line-strong: rgba(255, 255, 255, 0.20);
-  --accent: #37A0A0;
-  --ok: #6FA06B;
-  --warn: #D2A24E;
-  --danger: #D06A5E;
-  --danger-border: rgba(208, 106, 94, 0.30);
+  --accent: #60A5FA;
+  --ok: #4ADE80;
+  --warn: #FBBF24;
+  --danger: #F87171;
+  --danger-border: rgba(248, 113, 113, 0.30);
 }
 
 /* Editorial scope — retune shared components (ButtonLink etc.) that use the

@@ -27,7 +27,16 @@ type Props = {
     source: 'live' | 'fallback';
 };
 
-const toneVar = (t: string) => (t === 'low' || t === 'ok' ? 'var(--ok)' : t === 'high' || t === 'danger' || t === 'critical' ? 'var(--danger)' : t === 'neutral' ? 'var(--ink-muted)' : 'var(--warn)');
+const toneVar = (t: string) => {
+    const v = (t ?? '').toLowerCase();
+    if (v === 'low' || v === 'ok' || v === 'good') return 'var(--ok)';
+    if (v === 'high' || v === 'danger' || v === 'critical' || v === 'err' || v === 'bad') return 'var(--danger)';
+    if (v === 'warn' || v === 'medium' || v === 'warning') return 'var(--warn)';
+    if (v === 'accent' || v === 'info' || v === 'primary') return 'var(--accent)';
+    return 'var(--ink-muted)';
+};
+// KPI value: colored by state, but neutral stays full ink (it's the headline number).
+const valueColor = (t: string) => (!t || (t ?? '').toLowerCase() === 'neutral' ? 'var(--ink)' : toneVar(t));
 const healthTone = (v: number) => (v >= 80 ? 'var(--ok)' : v >= 50 ? 'var(--warn)' : 'var(--danger)');
 const okStatus = (s: string) => ['active', 'ready', 'healthy', 'ok', 'live'].includes((s ?? '').toLowerCase());
 const riskTone = (r: string): 'ok' | 'warn' | 'err' => (r === 'low' ? 'ok' : r === 'high' ? 'err' : 'warn');
@@ -70,9 +79,9 @@ export default function CommandCenterOverview(p: Props) {
                     <Eyebrow style={{ marginBottom: 12 }}>Key metrics</Eyebrow>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 14 }}>
                         {p.kpis.map((k) => (
-                            <div key={k.label} className="uk-panel" style={{ padding: 16 }}>
+                            <div key={k.label} className="uk-panel" style={{ padding: 16, borderLeft: `2px solid ${toneVar(k.statusTone)}` }}>
                                 <Eyebrow style={{ marginBottom: 8 }}>{k.label}</Eyebrow>
-                                <Display size={24} style={{ marginBottom: 8 }}>{k.value}</Display>
+                                <Display size={24} style={{ marginBottom: 8, color: valueColor(k.statusTone) }}>{k.value}</Display>
                                 <div style={{ fontSize: 11.5, color: 'var(--ink-muted)', marginBottom: 8 }}>{k.trend}</div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                     <span className="uk-mono" style={{ fontSize: 10, color: toneVar(k.deltaTone) }}>{k.delta}</span>

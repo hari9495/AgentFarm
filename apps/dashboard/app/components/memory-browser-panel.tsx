@@ -152,7 +152,7 @@ export default function MemoryBrowserPanel() {
         cursor: 'pointer',
         fontSize: '0.85rem',
         fontWeight: activeTab === t ? 600 : 400,
-        background: activeTab === t ? 'var(--accent, #2C8A8A)' : 'transparent',
+        background: activeTab === t ? 'var(--accent, #2563EB)' : 'transparent',
         color: activeTab === t ? 'var(--card)' : 'var(--ink-muted)',
         border: 'none',
     });

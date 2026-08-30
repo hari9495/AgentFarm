@@ -12,7 +12,7 @@ import { WF_CSS, WfThemeToggle } from '../components/editorial';
 
 const STATUS_CONFIG: Record<BotStatus, { label: string; color: string; bg: string; border: string }> = {
     active:                    { label: 'On shift',       color: 'var(--ok)', bg: 'rgba(26,122,74,0.07)',   border: 'rgba(26,122,74,0.22)'  },
-    created:                   { label: 'Onboarding',     color: 'var(--accent)', bg: 'rgba(45, 138, 138,0.07)',   border: 'rgba(45, 138, 138,0.22)'  },
+    created:                   { label: 'Onboarding',     color: 'var(--accent)', bg: 'rgba(37, 99, 235,0.07)',   border: 'rgba(37, 99, 235,0.22)'  },
     bootstrapping:             { label: 'Onboarding',     color: 'var(--warn)', bg: 'rgba(180,83,9,0.07)',    border: 'rgba(180,83,9,0.22)'   },
     connector_setup_required:  { label: 'Setup needed',   color: 'var(--warn)', bg: 'rgba(180,83,9,0.07)',    border: 'rgba(180,83,9,0.22)'   },
     paused:                    { label: 'Off shift',      color: 'var(--ink-muted)', bg: 'rgba(110,110,115,0.07)', border: 'rgba(110,110,115,0.22)'},
@@ -30,7 +30,7 @@ const ROLE_ABBR: Record<string, string> = {
     recruiter: 'RC', devops_engineer: 'DO', mobile: 'MB',
 };
 const AVATAR_TINTS = [
-    { bg: 'rgba(45, 138, 138,0.10)', fg: '#2C8A8A' },
+    { bg: 'rgba(37, 99, 235,0.10)', fg: '#2563EB' },
     { bg: 'rgba(13,148,136,0.10)', fg: '#0d9488' },
     { bg: 'rgba(109,40,217,0.10)', fg: '#6d28d9' },
     { bg: 'rgba(180,83,9,0.10)', fg: '#b45309' },

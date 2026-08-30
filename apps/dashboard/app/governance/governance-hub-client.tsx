@@ -44,8 +44,8 @@ const TABS: { key: Tab; label: string; icon: React.ElementType; desc: string; ne
 
 function BotIdInput({ botId, setBotId }: { botId: string; setBotId: (v: string) => void }) {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'rgba(45, 138, 138,0.04)', border: '1px solid rgba(45, 138, 138,0.15)', borderRadius: 3, marginBottom: 16 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 9, background: 'rgba(45, 138, 138,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'rgba(37, 99, 235,0.04)', border: '1px solid rgba(37, 99, 235,0.15)', borderRadius: 3, marginBottom: 16 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 9, background: 'rgba(37, 99, 235,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Bot size={14} color="var(--accent)" />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>

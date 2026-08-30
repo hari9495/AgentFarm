@@ -91,7 +91,7 @@ export default function ProjectPlansPanel({ workspaceId }: { workspaceId: string
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                     {(['in_review', 'approved', 'active', 'all'] as const).map(k => (
-                        <button key={k} type="button" onClick={() => setFilter(k)} style={{ padding: '5px 12px', border: `1px solid ${filter === k ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: filter === k ? 'rgba(45, 138, 138,0.07)' : 'var(--card)', color: filter === k ? 'var(--accent)' : 'var(--ink-muted)', fontSize: 12, fontWeight: filter === k ? 600 : 400, cursor: 'pointer' }}>
+                        <button key={k} type="button" onClick={() => setFilter(k)} style={{ padding: '5px 12px', border: `1px solid ${filter === k ? 'var(--accent)' : 'var(--bg)'}`, borderRadius: 20, background: filter === k ? 'rgba(37, 99, 235,0.07)' : 'var(--card)', color: filter === k ? 'var(--accent)' : 'var(--ink-muted)', fontSize: 12, fontWeight: filter === k ? 600 : 400, cursor: 'pointer' }}>
                             {k === 'all' ? 'All' : k.replace('_', ' ')}
                         </button>
                     ))}

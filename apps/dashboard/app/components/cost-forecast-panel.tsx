@@ -55,7 +55,7 @@ function ForecastChart({ data, today }: { data: DailyPoint[]; today: string }) {
                         <g key={d.date}>
                             <rect x={x} y={y} width={barW} height={h} rx={2} fill={fill} opacity={d.isProjected ? 0.55 : 0.85} />
                             {isToday && (
-                                <line x1={x + barW / 2} y1={0} x2={x + barW / 2} y2={chartH} stroke="#2C8A8A" strokeWidth={1} strokeDasharray="3 2" opacity={0.4} />
+                                <line x1={x + barW / 2} y1={0} x2={x + barW / 2} y2={chartH} stroke="#2563EB" strokeWidth={1} strokeDasharray="3 2" opacity={0.4} />
                             )}
                         </g>
                     );

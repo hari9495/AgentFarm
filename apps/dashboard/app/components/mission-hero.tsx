@@ -149,7 +149,7 @@ export function MissionHero({
             >
                 {/* Left: workspace identity */}
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(45, 138, 138,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(37, 99, 235,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         <Zap size={18} color="var(--accent)" />
                     </div>
                     <div>
@@ -219,7 +219,7 @@ export function MissionHero({
                     label="Active Agents"
                     value={activeBots}
                     sub={activeBots === 0 ? "No agents running" : `${activeBots} agent${activeBots !== 1 ? "s" : ""} online`}
-                    accent="#2C8A8A"
+                    accent="#2563EB"
                     href="/agents"
                     delay={0.05}
                 />

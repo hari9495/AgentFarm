@@ -153,7 +153,7 @@ function McpTab() {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Compact explainer */}
-            <div style={{ padding: '12px 16px', background: 'rgba(45, 138, 138,0.04)', border: '1px solid rgba(45, 138, 138,0.15)', borderRadius: 12 }}>
+            <div style={{ padding: '12px 16px', background: 'rgba(37, 99, 235,0.04)', border: '1px solid rgba(37, 99, 235,0.15)', borderRadius: 12 }}>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                     <Cpu size={15} color="var(--accent)" style={{ flexShrink: 0, marginTop: 2 }} />
                     <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.55 }}>
@@ -184,7 +184,7 @@ function McpTab() {
 
             {/* Add form */}
             {showForm && (
-                <div style={{ border: '1px solid rgba(45, 138, 138,0.25)', borderRadius: 3, background: 'var(--card)', padding: '18px 20px', boxShadow: 'none' }}>
+                <div style={{ border: '1px solid rgba(37, 99, 235,0.25)', borderRadius: 3, background: 'var(--card)', padding: '18px 20px', boxShadow: 'none' }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>Add MCP Server</div>
                     <form onSubmit={addServer} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}>
@@ -354,8 +354,8 @@ export default function ConnectorsHubClient({
                 {activeTab === 'marketplace' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                         {/* Clear identity banner */}
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '16px 18px', background: 'var(--card)', border: '2px solid rgba(45, 138, 138,0.2)', borderRadius: 3, boxShadow: 'none' }}>
-                            <div style={{ width: 42, height: 42, borderRadius: 3, background: 'rgba(45, 138, 138,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 20 }}>🔌</div>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '16px 18px', background: 'var(--card)', border: '2px solid rgba(37, 99, 235,0.2)', borderRadius: 3, boxShadow: 'none' }}>
+                            <div style={{ width: 42, height: 42, borderRadius: 3, background: 'rgba(37, 99, 235,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 20 }}>🔌</div>
                             <div style={{ flex: 1 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                                     <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Connector Marketplace</span>

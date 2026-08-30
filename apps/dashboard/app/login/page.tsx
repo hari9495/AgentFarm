@@ -375,7 +375,7 @@ const pageStyle: React.CSSProperties = {
 const brandBadge = (
     <span style={{
         display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
-        background: 'rgba(45, 138, 138,0.06)', border: '1px solid rgba(45, 138, 138,0.18)',
+        background: 'rgba(37, 99, 235,0.06)', border: '1px solid rgba(37, 99, 235,0.18)',
         borderRadius: '9999px', padding: '0.25rem 0.75rem',
         fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.03em',
         color: 'var(--accent)', textTransform: 'uppercase',
@@ -449,7 +449,7 @@ const linkStyle: React.CSSProperties = { color: 'var(--accent)', textDecoration:
 
 function onFocus(e: React.FocusEvent<HTMLInputElement>) {
     e.currentTarget.style.borderColor = 'var(--accent)';
-    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(45, 138, 138,0.12)';
+    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(37, 99, 235,0.12)';
 }
 
 function onBlur(e: React.FocusEvent<HTMLInputElement>) {

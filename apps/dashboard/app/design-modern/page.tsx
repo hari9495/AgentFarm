@@ -39,9 +39,9 @@ export default function DesignModernPage() {
                 .aurora { position:absolute; border-radius:9999px; filter: blur(90px); pointer-events:none; }
                 @media (prefers-reduced-motion: reduce) { .aurora { animation: none !important; } }
             `}</style>
-            <div className="aurora" style={{ width: 620, height: 620, top: -180, left: -120, background: 'radial-gradient(circle, rgba(55,160,160,0.42), transparent 62%)', animation: 'drift1 18s ease-in-out infinite' }} />
+            <div className="aurora" style={{ width: 620, height: 620, top: -180, left: -120, background: 'radial-gradient(circle, rgba(96, 165, 250,0.42), transparent 62%)', animation: 'drift1 18s ease-in-out infinite' }} />
             <div className="aurora" style={{ width: 560, height: 560, top: -140, right: -160, background: 'radial-gradient(circle, rgba(94,230,208,0.24), transparent 62%)', animation: 'drift2 22s ease-in-out infinite' }} />
-            <div className="aurora" style={{ width: 520, height: 520, bottom: -220, left: '40%', background: 'radial-gradient(circle, rgba(28,110,110,0.30), transparent 62%)', animation: 'drift1 26s ease-in-out infinite' }} />
+            <div className="aurora" style={{ width: 520, height: 520, bottom: -220, left: '40%', background: 'radial-gradient(circle, rgba(37, 99, 235,0.30), transparent 62%)', animation: 'drift1 26s ease-in-out infinite' }} />
 
             <div style={{ position: 'relative', zIndex: 1, maxWidth: 1180, margin: '0 auto', padding: '40px 28px 64px' }}>
                 {/* Header */}
@@ -50,13 +50,13 @@ export default function DesignModernPage() {
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '4px 11px', borderRadius: 9999, background: 'rgba(94,230,208,0.12)', border: '1px solid rgba(94,230,208,0.25)', fontSize: 11, fontWeight: 600, color: '#5EE6D0', marginBottom: 14 }}>
                             <Circle size={7} fill="#5EE6D0" stroke="none" style={{ animation: 'pulse 1.6s ease-in-out infinite' }} /> LIVE OPERATIONS
                         </div>
-                        <h1 style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-0.03em', margin: 0, lineHeight: 1, background: 'linear-gradient(120deg, #ffffff, #5EE6D0 55%, #37A0A0)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+                        <h1 style={{ fontSize: 40, fontWeight: 700, letterSpacing: '-0.03em', margin: 0, lineHeight: 1, background: 'linear-gradient(120deg, #ffffff, #5EE6D0 55%, #2563EB)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
                             Command Center
                         </h1>
                         <p style={{ color: '#8A9998', fontSize: 14, marginTop: 8 }}>Your digital workforce, in real time.</p>
                     </div>
                     <div style={{ display: 'flex', gap: 22 }}>
-                        {[{ n: '08', k: 'On shift', c: '#5EE6D0' }, { n: '14', k: 'Tasks live', c: '#37A0A0' }, { n: '99.2%', k: 'Uptime', c: '#8A9998' }].map((s) => (
+                        {[{ n: '08', k: 'On shift', c: '#5EE6D0' }, { n: '14', k: 'Tasks live', c: '#2563EB' }, { n: '99.2%', k: 'Uptime', c: '#8A9998' }].map((s) => (
                             <div key={s.k} style={{ textAlign: 'right' }}>
                                 <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.02em', color: s.c }}>{s.n}</div>
                                 <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#677675' }}>{s.k}</div>
@@ -79,7 +79,7 @@ export default function DesignModernPage() {
                     {/* Animated chart card */}
                     <Panel i={2} style={{ gridColumn: 'span 4', padding: 0, overflow: 'hidden' }}>
                         <AnimatedCard className="!border-0 !bg-transparent !rounded-[18px]">
-                            <CardVisual><Visual3 mainColor="#37A0A0" secondaryColor="#D2A24E" gridColor="#5EE6D015" /></CardVisual>
+                            <CardVisual><Visual3 mainColor="#2563EB" secondaryColor="#D2A24E" gridColor="#5EE6D015" /></CardVisual>
                             <CardBody className="!border-white/10">
                                 <CardTitle className="!text-white">Throughput</CardTitle>
                                 <CardDescription>Hover — 1,204 tasks routed in the last 24h.</CardDescription>
@@ -105,7 +105,7 @@ export default function DesignModernPage() {
                     </Panel>
                     <Panel i={6} style={{ gridColumn: 'span 6', padding: 20 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14, display: 'flex', justifyContent: 'space-between' }}><span>Top performers today</span><span style={{ color: '#5EE6D0', fontSize: 12 }}>view all</span></div>
-                        {[{ n: 'Recruiter', v: 342, c: '#5EE6D0' }, { n: 'Sales agent', v: 289, c: '#37A0A0' }, { n: 'Support exec', v: 201, c: '#D2A24E' }].map((r) => (
+                        {[{ n: 'Recruiter', v: 342, c: '#5EE6D0' }, { n: 'Sales agent', v: 289, c: '#2563EB' }, { n: 'Support exec', v: 201, c: '#D2A24E' }].map((r) => (
                             <div key={r.n} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
                                 <span style={{ fontSize: 13, width: 96, color: '#C7D2D0' }}>{r.n}</span>
                                 <div style={{ flex: 1, height: 6, borderRadius: 9999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>

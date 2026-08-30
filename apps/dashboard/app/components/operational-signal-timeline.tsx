@@ -107,8 +107,8 @@ export function OperationalSignalTimeline({ points, source }: OperationalSignalT
                     <svg viewBox={`0 0 ${timelineWidth} ${timelineHeight}`} className="signal-chart-svg" aria-hidden="true" data-testid="timeline-chart-svg">
                         <defs>
                             <linearGradient id="signalTimelineFill" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="rgba(45, 138, 138, 0.28)" />
-                                <stop offset="100%" stopColor="rgba(45, 138, 138, 0.02)" />
+                                <stop offset="0%" stopColor="rgba(37, 99, 235, 0.28)" />
+                                <stop offset="100%" stopColor="rgba(37, 99, 235, 0.02)" />
                             </linearGradient>
                         </defs>
                         {/* Warning threshold band */}
@@ -128,9 +128,9 @@ export function OperationalSignalTimeline({ points, source }: OperationalSignalT
                         <path d={timelineAreaPath} className="signal-chart-area" />
                         <path d={timelineLinePath} className="signal-chart-line" />
                         {/* Forecast ghost-line */}
-                        <path d={forecastPath} fill="none" stroke="rgba(45, 138, 138,0.3)" strokeWidth="1.8" strokeDasharray="5 4" strokeLinecap="round" />
+                        <path d={forecastPath} fill="none" stroke="rgba(37, 99, 235,0.3)" strokeWidth="1.8" strokeDasharray="5 4" strokeLinecap="round" />
                         {forecastPoints.map((fp, i) => (
-                            <circle key={`forecast-${i}`} cx={fp.x} cy={fp.y} r="3" fill="none" stroke="rgba(45, 138, 138,0.35)" strokeWidth="1.5" />
+                            <circle key={`forecast-${i}`} cx={fp.x} cy={fp.y} r="3" fill="none" stroke="rgba(37, 99, 235,0.35)" strokeWidth="1.5" />
                         ))}
                         {/* Anomaly markers */}
                         {anomalyCoords.map((c) => (

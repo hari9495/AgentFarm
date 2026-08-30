@@ -281,7 +281,7 @@ export default function AgentDetailPanel({ agent, onStatusChange }: AgentDetailP
                             padding: '8px 14px',
                             background: 'transparent',
                             border: 'none',
-                            borderBottom: activeTab === tab.key ? '2px solid #37A0A0' : '2px solid transparent',
+                            borderBottom: activeTab === tab.key ? '2px solid #2563EB' : '2px solid transparent',
                             color: activeTab === tab.key ? 'var(--info)' : 'var(--ink-muted)',
                             fontSize: '13px',
                             fontWeight: activeTab === tab.key ? 600 : 400,

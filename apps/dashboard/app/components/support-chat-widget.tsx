@@ -85,7 +85,7 @@ function StepBubble({ text, status }: { text: string; status?: string }) {
                 {isRunning ? (
                     <span style={{
                         width: 7, height: 7,
-                        border: '1.5px solid #2C8A8A', borderTopColor: 'transparent',
+                        border: '1.5px solid #2563EB', borderTopColor: 'transparent',
                         borderRadius: '50%',
                         animation: 'spin 0.7s linear infinite',
                         display: 'inline-block', flexShrink: 0,
@@ -240,7 +240,7 @@ export function SupportChatWidget() {
             {issueId && (
                 <div style={{
                     padding: '0.3rem 1rem',
-                    background: 'rgba(45, 138, 138,0.05)',
+                    background: 'rgba(37, 99, 235,0.05)',
                     borderBottom: '1px solid var(--line)',
                     fontSize: '0.72rem', color: 'var(--accent)',
                 }}>
@@ -274,7 +274,7 @@ export function SupportChatWidget() {
                     <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', padding: '0.3rem 0' }}>
                         <span style={{
                             width: 7, height: 7,
-                            border: '1.5px solid #2C8A8A', borderTopColor: 'transparent',
+                            border: '1.5px solid #2563EB', borderTopColor: 'transparent',
                             borderRadius: '50%',
                             animation: 'spin 0.7s linear infinite',
                             display: 'inline-block',

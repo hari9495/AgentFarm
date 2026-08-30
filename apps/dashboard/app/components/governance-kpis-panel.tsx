@@ -306,7 +306,7 @@ export function GovernanceKPIPanel({ workspaceId, language = 'en' }: Props) {
                         <Metric label="Approval rate" value={`${approvalRate.toFixed(0)}%`}
                             bar={{ value: approvalRate }} barColor="#1a7a4a" />
                         <Metric label="Auto-approved" value={`${n(kpis.approvals?.auto_approved_pct).toFixed(0)}%`}
-                            bar={{ value: n(kpis.approvals?.auto_approved_pct) }} barColor="#2C8A8A" />
+                            bar={{ value: n(kpis.approvals?.auto_approved_pct) }} barColor="#2563EB" />
                     </div>
                 </div>
             </div>
@@ -315,7 +315,7 @@ export function GovernanceKPIPanel({ workspaceId, language = 'en' }: Props) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
 
                 {/* Approvals detail */}
-                <Section title="Approval Performance" accent="#2C8A8A">
+                <Section title="Approval Performance" accent="#2563EB">
                     <Metric label="P95 Latency" value={ms(kpis.approvals?.p95_latency_ms)}
                         sub={`avg ${ms(kpis.approvals?.avg_latency_ms)}`}
                         why="agent wait time" />

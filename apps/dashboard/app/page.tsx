@@ -1394,7 +1394,7 @@ export default async function HomePage({
                             </header>
 
                             {/* Disambiguation notice */}
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', borderRadius: 12, background: 'rgba(45, 138, 138,0.06)', border: '1px solid rgba(45, 138, 138,0.18)', marginBottom: 16 }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', borderRadius: 12, background: 'rgba(37, 99, 235,0.06)', border: '1px solid rgba(37, 99, 235,0.18)', marginBottom: 16 }}>
                                 <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>💡</span>
                                 <div style={{ fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.55 }}>
                                     <strong style={{ color: 'var(--accent)' }}>Not what you're looking for?</strong>
