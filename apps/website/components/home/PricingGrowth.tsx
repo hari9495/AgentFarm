@@ -1,9 +1,10 @@
 'use client';
 
 /**
- * PREVIEW — adaptation of 21st.dev `uilayout.contact/growth-plans` to the
- * Operations Console palette + real homeMarketingContent pricing. Prominent
- * monthly/annual switch, bold prices, the highlighted plan as a solid-blue card.
+ * Home pricing — growth plans. Adapted from 21st.dev `uilayout.contact/growth-plans`:
+ * prominent monthly/annual switch, bold prices, the highlighted plan as a
+ * solid-blue card. Retinted to the Operations Console palette; reads the real
+ * homeMarketingContent.pricing (Starter / Pro / Enterprise). Annual = -20%.
  */
 
 import * as React from 'react';
@@ -18,7 +19,7 @@ function priceParts(price: string, annual: boolean) {
   return { main: `$${val}`, sub: annual ? '/mo billed annually' : '/monthly' };
 }
 
-export function PricingGrowth() {
+export default function PricingGrowth() {
   const { pricing } = homeMarketingContent;
   const [annual, setAnnual] = React.useState(false);
 
@@ -31,7 +32,6 @@ export function PricingGrowth() {
           <p className="mt-4" style={{ color: 'var(--op-muted)' }}>{pricing.description}</p>
         </div>
 
-        {/* switch */}
         <div className="mb-14 flex justify-center">
           <div className="inline-flex items-center gap-3 rounded-full px-4 py-2" style={{ background: 'var(--op-paper)', border: '1px solid var(--op-line)' }}>
             <span className="text-sm font-medium" style={{ color: annual ? 'var(--op-muted)' : 'var(--op-ink)' }}>{pricing.monthlyLabel}</span>
@@ -90,5 +90,3 @@ export function PricingGrowth() {
     </section>
   );
 }
-
-export default PricingGrowth;
