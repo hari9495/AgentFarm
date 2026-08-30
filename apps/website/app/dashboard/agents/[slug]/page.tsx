@@ -30,11 +30,11 @@ interface PortalAgent {
 type BotStatus = "active" | "paused" | "error" | "maintenance" | "created";
 
 const statusMeta: Record<string, { label: string; color: string }> = {
-    active: { label: "Active", color: "bg-emerald-500" },
-    created: { label: "Provisioning", color: "bg-blue-500" },
-    paused: { label: "Paused", color: "bg-amber-500" },
-    error: { label: "Needs review", color: "bg-rose-500" },
-    maintenance: { label: "Maintenance", color: "bg-slate-400" },
+    active: { label: "Active", color: "bg-[var(--ok)]" },
+    created: { label: "Provisioning", color: "bg-[var(--accent)]" },
+    paused: { label: "Paused", color: "bg-[var(--warn)]" },
+    error: { label: "Needs review", color: "bg-[var(--danger)]" },
+    maintenance: { label: "Maintenance", color: "bg-[var(--bg-deep)]" },
 };
 
 function initialsFromName(name: string): string {
@@ -70,31 +70,31 @@ export default async function AgentDetailPage({
     const lastActivityTs = new Date(agent.updatedAt).getTime();
 
     const kpis = [
-        { label: "Tasks completed", value: "0", icon: CheckCircle2, iconBg: "bg-blue-100 dark:bg-blue-900/40", iconColor: "text-blue-600 dark:text-blue-400" },
-        { label: "Reliability", value: "—", icon: Shield, iconBg: "bg-emerald-100 dark:bg-emerald-900/40", iconColor: "text-emerald-600 dark:text-emerald-400" },
-        { label: "Pending approvals", value: "0", icon: GitPullRequest, iconBg: "bg-blue-100 dark:bg-blue-900/40", iconColor: "text-blue-600 dark:text-blue-400" },
-        { label: "Last active", value: formatRelativeTime(lastActivityTs), icon: Clock3, iconBg: "bg-amber-100 dark:bg-amber-900/40", iconColor: "text-amber-600 dark:text-amber-400" },
-        { label: "Working hours", value: "09:00–18:00", icon: Timer, iconBg: "bg-rose-100 dark:bg-rose-900/40", iconColor: "text-rose-600 dark:text-rose-400" },
+        { label: "Tasks completed", value: "0", icon: CheckCircle2, iconBg: "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40", iconColor: "text-[color:var(--accent)] dark:text-[color:var(--accent)]" },
+        { label: "Reliability", value: "—", icon: Shield, iconBg: "bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40", iconColor: "text-[color:var(--ok)] dark:text-[color:var(--ok)]" },
+        { label: "Pending approvals", value: "0", icon: GitPullRequest, iconBg: "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40", iconColor: "text-[color:var(--accent)] dark:text-[color:var(--accent)]" },
+        { label: "Last active", value: formatRelativeTime(lastActivityTs), icon: Clock3, iconBg: "bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40", iconColor: "text-[color:var(--warn)] dark:text-[color:var(--warn)]" },
+        { label: "Working hours", value: "09:00–18:00", icon: Timer, iconBg: "bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40", iconColor: "text-[color:var(--danger)] dark:text-[color:var(--danger)]" },
     ];
 
     return (
         <div className="site-shell min-h-screen">
             {/* Header */}
-            <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-5 md:px-8">
+            <div className="bg-[var(--card)] dark:bg-[var(--card)] border-b border-[color:var(--line)] dark:border-[color:var(--line)] px-6 py-5 md:px-8">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-base font-bold text-blue-600 dark:text-blue-400">
+                        <div className="h-12 w-12 rounded-[4px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 flex items-center justify-center text-base font-bold text-[color:var(--accent)] dark:text-[color:var(--accent)]">
                             {initials}
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
-                                <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">{agentName}</h1>
-                                <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                <h1 className="text-lg font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{agentName}</h1>
+                                <span className="flex items-center gap-1.5 text-xs font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                                     <span className={`h-1.5 w-1.5 rounded-full ${meta.color}`} />
                                     {meta.label}
                                 </span>
                             </div>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">{agent.role}</p>
+                            <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">{agent.role}</p>
                         </div>
                     </div>
                     <div className="flex gap-2">
@@ -109,43 +109,43 @@ export default async function AgentDetailPage({
                 {/* KPI cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-4">
                     {kpis.map(({ label, value, icon: Icon, iconBg, iconColor }) => (
-                        <div key={label} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-                            <PremiumIcon icon={Icon} tone="sky" containerClassName={`h-8 w-8 rounded-xl ${iconBg} ${iconColor} mb-3`} iconClassName="w-4 h-4" />
-                            <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">{value}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{label}</p>
+                        <div key={label} className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-4">
+                            <PremiumIcon icon={Icon} tone="sky" containerClassName={`h-8 w-8 rounded-[3px] ${iconBg} ${iconColor} mb-3`} iconClassName="w-4 h-4" />
+                            <p className="text-2xl font-extrabold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{value}</p>
+                            <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">{label}</p>
                         </div>
                     ))}
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                     {/* Approval history */}
-                    <div className="xl:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
-                        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                            <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Approval Activity</h2>
-                            <span className="text-xs text-slate-400">0 recent</span>
+                    <div className="xl:col-span-2 bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)]">
+                        <div className="px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)] flex items-center justify-between">
+                            <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Approval Activity</h2>
+                            <span className="text-xs text-[color:var(--ink-muted)]">0 recent</span>
                         </div>
                         <div className="px-5 py-10 text-center">
-                            <p className="text-sm text-slate-500 dark:text-slate-400">No approval activity yet for this agent.</p>
-                            <p className="text-xs text-slate-400 mt-1">Requests this agent raises for risky actions will appear here.</p>
+                            <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">No approval activity yet for this agent.</p>
+                            <p className="text-xs text-[color:var(--ink-muted)] mt-1">Requests this agent raises for risky actions will appear here.</p>
                         </div>
                     </div>
 
                     {/* Configuration & quality */}
                     <div className="space-y-4">
-                        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
-                            <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-4">Configuration</h2>
+                        <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-5">
+                            <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-4">Configuration</h2>
                             <dl className="space-y-3 text-xs">
                                 <div className="flex items-start justify-between gap-3">
-                                    <dt className="text-slate-500 dark:text-slate-400 shrink-0">Status</dt>
-                                    <dd className="text-right font-medium text-slate-800 dark:text-slate-200 capitalize">{agent.status}</dd>
+                                    <dt className="text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] shrink-0">Status</dt>
+                                    <dd className="text-right font-medium text-[color:var(--ink)] dark:text-[color:var(--ink)] capitalize">{agent.status}</dd>
                                 </div>
                                 <div className="flex items-start justify-between gap-3">
-                                    <dt className="text-slate-500 dark:text-slate-400 shrink-0">Role</dt>
-                                    <dd className="text-right font-medium text-slate-800 dark:text-slate-200">{agent.role}</dd>
+                                    <dt className="text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] shrink-0">Role</dt>
+                                    <dd className="text-right font-medium text-[color:var(--ink)] dark:text-[color:var(--ink)]">{agent.role}</dd>
                                 </div>
                                 <div className="flex items-start justify-between gap-3">
-                                    <dt className="text-slate-500 dark:text-slate-400 shrink-0">Last updated</dt>
-                                    <dd className="text-right font-medium text-slate-800 dark:text-slate-200">{formatRelativeTime(lastActivityTs)}</dd>
+                                    <dt className="text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] shrink-0">Last updated</dt>
+                                    <dd className="text-right font-medium text-[color:var(--ink)] dark:text-[color:var(--ink)]">{formatRelativeTime(lastActivityTs)}</dd>
                                 </div>
                             </dl>
                             <div className="mt-4">
@@ -155,12 +155,12 @@ export default async function AgentDetailPage({
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-950/20 dark:to-blue-950/20 rounded-2xl border border-emerald-200 dark:border-emerald-900/40 p-5">
+                        <div className="bg-gradient-to-br from-[color-mix(in_srgb,var(--ok)_8%,transparent)] to-[color-mix(in_srgb,var(--accent)_8%,transparent)] dark:from-[color-mix(in_srgb,var(--ok)_14%,transparent)]/20 dark:to-[color-mix(in_srgb,var(--accent)_14%,transparent)]/20 rounded-[4px] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/40 p-5">
                             <div className="flex items-center gap-2 mb-2">
-                                <PremiumIcon icon={ArrowUpRight} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400" iconClassName="w-3.5 h-3.5" />
-                                <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Lifetime summary</span>
+                                <PremiumIcon icon={ArrowUpRight} tone="emerald" containerClassName="w-6 h-6 rounded-[3px] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="w-3.5 h-3.5" />
+                                <span className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Lifetime summary</span>
                             </div>
-                            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                            <p className="text-xs text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] leading-relaxed">
                                 Agent active since {new Date(agent.createdAt).toLocaleDateString()}. Last seen {formatRelativeTime(lastActivityTs).toLowerCase()}.
                             </p>
                             <div className="mt-3">

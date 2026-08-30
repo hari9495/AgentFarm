@@ -23,10 +23,10 @@ export type ShiftScheduleAgent = {
 const allDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const toneAccent: Record<string, { bg: string; text: string }> = {
-    sky: { bg: "bg-blue-100 dark:bg-blue-900/40", text: "text-blue-600 dark:text-blue-400" },
-    violet: { bg: "bg-blue-100 dark:bg-blue-900/40", text: "text-blue-600 dark:text-blue-400" },
-    amber: { bg: "bg-amber-100 dark:bg-amber-900/40", text: "text-amber-600 dark:text-amber-400" },
-    rose: { bg: "bg-rose-100 dark:bg-rose-900/40", text: "text-rose-600 dark:text-rose-400" },
+    sky: { bg: "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40", text: "text-[color:var(--accent)] dark:text-[color:var(--accent)]" },
+    violet: { bg: "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40", text: "text-[color:var(--accent)] dark:text-[color:var(--accent)]" },
+    amber: { bg: "bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40", text: "text-[color:var(--warn)] dark:text-[color:var(--warn)]" },
+    rose: { bg: "bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40", text: "text-[color:var(--danger)] dark:text-[color:var(--danger)]" },
 };
 
 function EditRow({ agent, onCancel, onSaved }: { agent: ShiftScheduleAgent; onCancel: () => void; onSaved: () => void }) {
@@ -67,23 +67,23 @@ function EditRow({ agent, onCancel, onSaved }: { agent: ShiftScheduleAgent; onCa
     };
 
     return (
-        <tr className="bg-blue-50/60 dark:bg-blue-950/20">
+        <tr className="bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]/60 dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/20">
             <td className="px-5 py-3" colSpan={6}>
                 <div className="flex flex-col lg:flex-row lg:items-center gap-3">
                     <div className="flex items-center gap-2">
-                        <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Start</label>
+                        <label className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">Start</label>
                         <input
                             type="time"
                             value={start}
                             onChange={(e) => setStart(e.target.value)}
-                            className="text-xs font-mono rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 text-slate-700 dark:text-slate-200"
+                            className="text-xs font-mono rounded-[3px] border border-[color:var(--line-strong)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-2 py-1.5 text-[color:var(--ink-soft)] dark:text-[color:var(--ink)]"
                         />
-                        <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">End</label>
+                        <label className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">End</label>
                         <input
                             type="time"
                             value={end}
                             onChange={(e) => setEnd(e.target.value)}
-                            className="text-xs font-mono rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 text-slate-700 dark:text-slate-200"
+                            className="text-xs font-mono rounded-[3px] border border-[color:var(--line-strong)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-2 py-1.5 text-[color:var(--ink-soft)] dark:text-[color:var(--ink)]"
                         />
                     </div>
                     <div className="flex gap-1">
@@ -93,8 +93,8 @@ function EditRow({ agent, onCancel, onSaved }: { agent: ShiftScheduleAgent; onCa
                                 type="button"
                                 onClick={() => toggleDay(d)}
                                 className={`inline-flex items-center justify-center h-6 w-7 rounded text-[9px] font-semibold transition-colors ${days.includes(d)
-                                    ? "bg-blue-500 text-white"
-                                    : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                    ? "bg-[var(--accent)] text-white"
+                                    : "bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--line)] dark:hover:bg-[var(--card)]"
                                     }`}
                             >
                                 {d[0]}
@@ -102,12 +102,12 @@ function EditRow({ agent, onCancel, onSaved }: { agent: ShiftScheduleAgent; onCa
                         ))}
                     </div>
                     <div className="flex items-center gap-2 lg:ml-auto">
-                        {error && <span className="text-[11px] text-rose-600 dark:text-rose-400">{error}</span>}
+                        {error && <span className="text-[11px] text-[color:var(--danger)] dark:text-[color:var(--danger)]">{error}</span>}
                         <button
                             type="button"
                             onClick={onCancel}
                             disabled={saving}
-                            className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:underline disabled:opacity-50"
+                            className="text-xs font-medium text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] hover:underline disabled:opacity-50"
                         >
                             Cancel
                         </button>
@@ -115,7 +115,7 @@ function EditRow({ agent, onCancel, onSaved }: { agent: ShiftScheduleAgent; onCa
                             type="button"
                             onClick={save}
                             disabled={saving}
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-60 rounded-lg px-3 py-1.5 transition-colors"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-60 rounded-[3px] px-3 py-1.5 transition-colors"
                         >
                             {saving && <LoaderCircle className="w-3 h-3 animate-spin" />}
                             Save
@@ -134,8 +134,8 @@ export default function ShiftScheduleTable({ agents }: { agents: ShiftScheduleAg
     if (agents.length === 0) {
         return (
             <div className="px-5 py-12 text-center">
-                <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">No agents deployed yet</p>
-                <p className="text-xs text-slate-400 mt-1">Deploy an agent to configure its working hours and active days.</p>
+                <p className="text-sm font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">No agents deployed yet</p>
+                <p className="text-xs text-[color:var(--ink-muted)] mt-1">Deploy an agent to configure its working hours and active days.</p>
             </div>
         );
     }
@@ -144,7 +144,7 @@ export default function ShiftScheduleTable({ agents }: { agents: ShiftScheduleAg
         <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[600px]">
                 <thead>
-                    <tr className="bg-slate-50 dark:bg-slate-800/50 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <tr className="bg-[var(--bg-deep)] dark:bg-[var(--card)]/50 text-xs font-semibold uppercase tracking-wide text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                         <th className="text-left px-5 py-3">Agent</th>
                         <th className="text-left px-5 py-3">Start</th>
                         <th className="text-left px-5 py-3">End</th>
@@ -153,7 +153,7 @@ export default function ShiftScheduleTable({ agents }: { agents: ShiftScheduleAg
                         <th className="px-5 py-3" />
                     </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
+                <tbody className="divide-y divide-[color:var(--line)] dark:divide-[color:var(--line)]/70">
                     {agents.map((agent) => {
                         const accent = toneAccent[agent.tone] ?? toneAccent.sky!;
                         if (editingSlug === agent.slug) {
@@ -170,26 +170,26 @@ export default function ShiftScheduleTable({ agents }: { agents: ShiftScheduleAg
                             );
                         }
                         return (
-                            <tr key={agent.slug} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                            <tr key={agent.slug} className="hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]/40 transition-colors">
                                 <td className="px-5 py-3">
                                     <div className="flex items-center gap-2">
-                                        <div className={`h-7 w-7 rounded-lg ${accent.bg} flex items-center justify-center text-[10px] font-bold ${accent.text} shrink-0`}>
+                                        <div className={`h-7 w-7 rounded-[3px] ${accent.bg} flex items-center justify-center text-[10px] font-bold ${accent.text} shrink-0`}>
                                             {initialsFromName(agent.name)}
                                         </div>
-                                        <span className="font-medium text-slate-800 dark:text-slate-200 text-xs">{agent.name}</span>
+                                        <span className="font-medium text-[color:var(--ink)] dark:text-[color:var(--ink)] text-xs">{agent.name}</span>
                                     </div>
                                 </td>
-                                <td className="px-5 py-3 font-mono text-sm text-slate-700 dark:text-slate-300">{agent.start}</td>
-                                <td className="px-5 py-3 font-mono text-sm text-slate-700 dark:text-slate-300">{agent.end}</td>
-                                <td className="px-5 py-3 text-xs text-slate-500 dark:text-slate-400">Workspace local time</td>
+                                <td className="px-5 py-3 font-mono text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">{agent.start}</td>
+                                <td className="px-5 py-3 font-mono text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">{agent.end}</td>
+                                <td className="px-5 py-3 text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">Workspace local time</td>
                                 <td className="px-5 py-3">
                                     <div className="flex gap-0.5">
                                         {allDays.map((d) => (
                                             <span
                                                 key={d}
                                                 className={`inline-flex items-center justify-center h-5 w-6 rounded text-[9px] font-semibold ${agent.days.includes(d)
-                                                    ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"
-                                                    : "bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600"
+                                                    ? "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]"
+                                                    : "bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-soft)]"
                                                     }`}
                                             >
                                                 {d[0]}
@@ -201,7 +201,7 @@ export default function ShiftScheduleTable({ agents }: { agents: ShiftScheduleAg
                                     <button
                                         type="button"
                                         onClick={() => setEditingSlug(agent.slug)}
-                                        className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                                        className="text-xs font-medium text-[color:var(--accent)] dark:text-[color:var(--accent)] hover:underline"
                                     >
                                         Edit
                                     </button>

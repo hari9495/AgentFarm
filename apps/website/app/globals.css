@@ -776,3 +776,13 @@ dialog[open]::backdrop {
   --danger: #D06A5E;
   --danger-border: rgba(208, 106, 94, 0.30);
 }
+
+/* Editorial scope — retune shared components (ButtonLink etc.) that use the
+   marketing --accent-blue so primary buttons read as petrol with light text. */
+.editorial-app { --accent-blue: var(--accent); }
+.editorial-app .text-\[\#07080a\] { color: #fff !important; }
+.editorial-app .hover\:bg-\[\#8dd7ff\]:hover { background-color: color-mix(in srgb, var(--accent) 80%, #ffffff) !important; }
+
+/* Editorial scope — page hero titles in Fraunces (matches internal dashboard). */
+.editorial-app h1 { font-family: var(--font-fraunces), Georgia, serif; font-weight: 600; letter-spacing: -0.02em; }
+.editorial-app .uk-eyebrow, .editorial-app [class*="uppercase"][class*="tracking-wid"] { font-family: var(--font-plex-mono), ui-monospace, monospace; }

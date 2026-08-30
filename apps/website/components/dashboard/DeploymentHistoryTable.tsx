@@ -22,11 +22,11 @@ export type DeploymentJob = {
 };
 
 const statusClass: Record<DeploymentStatus, string> = {
-    queued: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-    running: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-    succeeded: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-    failed: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
-    canceled: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
+    queued: "bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] text-[color:var(--warn)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40 dark:text-[color:var(--warn)]",
+    running: "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[color:var(--accent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 dark:text-[color:var(--accent)]",
+    succeeded: "bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] text-[color:var(--ok)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 dark:text-[color:var(--ok)]",
+    failed: "bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] text-[color:var(--danger)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 dark:text-[color:var(--danger)]",
+    canceled: "bg-[var(--line)] text-[color:var(--ink-soft)] dark:bg-[var(--card)] dark:text-[color:var(--ink)]",
 };
 
 const relative = (timestamp: number): string => {
@@ -61,35 +61,35 @@ export function DeploymentHistoryContent({
     onRefresh,
 }: DeploymentHistoryContentProps) {
     return (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
-                <p className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                    <PremiumIcon icon={Rocket} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400" iconClassName="w-3.5 h-3.5" />
+        <div className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)]">
+                <p className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] flex items-center gap-2">
+                    <PremiumIcon icon={Rocket} tone="emerald" containerClassName="w-6 h-6 rounded-[3px] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="w-3.5 h-3.5" />
                     Deployment History
                 </p>
                 <button
                     onClick={onRefresh}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    className="inline-flex items-center gap-1 rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-2.5 py-1.5 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"
                 >
-                    <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="w-3.5 h-3.5" /> Refresh
+                    <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-3.5 h-3.5" /> Refresh
                 </button>
             </div>
 
             {loading ? (
-                <div className="p-5 text-xs text-slate-500 dark:text-slate-400 inline-flex items-center gap-2">
-                    <PremiumIcon icon={LoaderCircle} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="h-3.5 w-3.5 animate-spin" /> Loading deployment history...
+                <div className="p-5 text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] inline-flex items-center gap-2">
+                    <PremiumIcon icon={LoaderCircle} tone="slate" containerClassName="w-6 h-6 rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="h-3.5 w-3.5 animate-spin" /> Loading deployment history...
                 </div>
             ) : error ? (
-                <div className="p-5 text-xs text-rose-600 dark:text-rose-400">{error}</div>
+                <div className="p-5 text-xs text-[color:var(--danger)] dark:text-[color:var(--danger)]">{error}</div>
             ) : items.length === 0 ? (
-                <div className="p-8 text-center text-sm text-slate-600 dark:text-slate-300">
+                <div className="p-8 text-center text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
                     No deployments found yet. Trigger one from marketplace.
                 </div>
             ) : (
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[720px] text-sm">
                         <thead>
-                            <tr className="bg-slate-50 dark:bg-slate-800/50 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            <tr className="bg-[var(--bg-deep)] dark:bg-[var(--card)]/50 text-xs font-semibold uppercase tracking-wide text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                                 <th className="text-left px-4 py-3">Deployment</th>
                                 <th className="text-left px-4 py-3">Agent</th>
                                 <th className="text-left px-4 py-3">Status</th>
@@ -99,30 +99,30 @@ export function DeploymentHistoryContent({
                                 <th className="text-left px-4 py-3">Details</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
+                        <tbody className="divide-y divide-[color:var(--line)] dark:divide-[color:var(--line)]/70">
                             {items.map((job) => {
                                 const pendingAction = actionPendingById[job.id];
                                 const showDetails = openDetailsId === job.id;
 
                                 return (
                                     <React.Fragment key={job.id}>
-                                        <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                                            <td className="px-4 py-3 text-xs font-mono text-slate-500 dark:text-slate-400">{job.id}</td>
-                                            <td className="px-4 py-3 font-semibold text-slate-900 dark:text-slate-100">{job.botName}</td>
+                                        <tr className="hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]/40 transition-colors">
+                                            <td className="px-4 py-3 text-xs font-mono text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">{job.id}</td>
+                                            <td className="px-4 py-3 font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{job.botName}</td>
                                             <td className="px-4 py-3">
                                                 <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass[job.status]}`}>
                                                     {job.status}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{job.statusMessage}</td>
-                                            <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">{relative(job.updatedAt)}</td>
+                                            <td className="px-4 py-3 text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">{job.statusMessage}</td>
+                                            <td className="px-4 py-3 text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">{relative(job.updatedAt)}</td>
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-2">
                                                     {job.status === "failed" ? (
                                                         <button
                                                             onClick={() => onAction(job.id, "retry")}
                                                             disabled={Boolean(pendingAction)}
-                                                            className="inline-flex items-center rounded-lg border border-emerald-200 dark:border-emerald-700 px-2 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 disabled:opacity-60"
+                                                            className="inline-flex items-center rounded-[3px] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] px-2 py-1 text-xs font-semibold text-[color:var(--ok)] dark:text-[color:var(--ok)] hover:bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/20 disabled:opacity-60"
                                                         >
                                                             {pendingAction === "retry" ? "Retrying..." : "Retry"}
                                                         </button>
@@ -131,7 +131,7 @@ export function DeploymentHistoryContent({
                                                         <button
                                                             onClick={() => onAction(job.id, "cancel")}
                                                             disabled={Boolean(pendingAction)}
-                                                            className="inline-flex items-center rounded-lg border border-rose-200 dark:border-rose-700 px-2 py-1 text-xs font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-900/20 disabled:opacity-60"
+                                                            className="inline-flex items-center rounded-[3px] border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] px-2 py-1 text-xs font-semibold text-[color:var(--danger)] dark:text-[color:var(--danger)] hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 disabled:opacity-60"
                                                         >
                                                             {pendingAction === "cancel" ? "Canceling..." : "Cancel"}
                                                         </button>
@@ -141,7 +141,7 @@ export function DeploymentHistoryContent({
                                             <td className="px-4 py-3">
                                                 <button
                                                     onClick={() => onToggleDetails(job.id)}
-                                                    className="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                                    className="inline-flex items-center rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-2 py-1 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"
                                                 >
                                                     {showDetails ? "Hide" : "View"}
                                                 </button>
@@ -150,7 +150,7 @@ export function DeploymentHistoryContent({
                                         {showDetails ? (
                                             <tr>
                                                 <td colSpan={7} className="px-4 pb-4 pt-1">
-                                                    <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-3 text-xs text-slate-600 dark:text-slate-300 space-y-1">
+                                                    <div className="rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)]/50 p-3 text-xs text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] space-y-1">
                                                         <p><span className="font-semibold">Deployment:</span> {job.id}</p>
                                                         <p><span className="font-semibold">Reason / Message:</span> {job.statusMessage}</p>
                                                         <p><span className="font-semibold">Created:</span> {new Date(job.createdAt).toLocaleString()}</p>

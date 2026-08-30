@@ -61,9 +61,9 @@ export default function NotificationPreferencesPanel({ initialPrefs }: Props) {
     };
 
     return (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800/70">
+        <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] divide-y divide-[color:var(--line)] dark:divide-[color:var(--line)]/70">
             {error && (
-                <p className="px-5 py-2.5 text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30">{error}</p>
+                <p className="px-5 py-2.5 text-xs font-medium text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30">{error}</p>
             )}
             {PREF_ORDER.map((key) => {
                 const enabled = prefs[key];
@@ -74,18 +74,18 @@ export default function NotificationPreferencesPanel({ initialPrefs }: Props) {
                         type="button"
                         onClick={() => toggle(key)}
                         disabled={isPending}
-                        className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors text-left disabled:opacity-60"
+                        className="w-full flex items-center justify-between px-5 py-4 hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]/40 transition-colors text-left disabled:opacity-60"
                     >
-                        <p className="text-sm text-slate-700 dark:text-slate-300">{PREF_LABELS[key]}</p>
-                        <div className={`flex items-center gap-1.5 text-xs font-semibold ${enabled ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500"}`}>
+                        <p className="text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">{PREF_LABELS[key]}</p>
+                        <div className={`flex items-center gap-1.5 text-xs font-semibold ${enabled ? "text-[color:var(--ok)] dark:text-[color:var(--ok)]" : "text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]"}`}>
                             {enabled ? (
                                 <>
-                                    <PremiumIcon icon={ToggleRight} tone="emerald" containerClassName="w-5 h-5 rounded-md bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400" iconClassName="w-4 h-4" />
+                                    <PremiumIcon icon={ToggleRight} tone="emerald" containerClassName="w-5 h-5 rounded-[2px] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="w-4 h-4" />
                                     {isPending ? "Saving…" : "On"}
                                 </>
                             ) : (
                                 <>
-                                    <PremiumIcon icon={ToggleLeft} tone="slate" containerClassName="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="w-4 h-4" />
+                                    <PremiumIcon icon={ToggleLeft} tone="slate" containerClassName="w-5 h-5 rounded-[2px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-4 h-4" />
                                     {isPending ? "Saving…" : "Off"}
                                 </>
                             )}

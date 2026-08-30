@@ -141,11 +141,11 @@ export default async function BillingPage() {
         : null;
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="min-h-screen bg-[var(--bg-deep)] dark:bg-[var(--bg)]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
                 {/* Hero header */}
-                <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-50 via-white to-white">
+                <section className="relative overflow-hidden rounded-[4px] border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
                     <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(16,185,129,0.18)_0%,transparent_60%)]" />
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(14,165,233,0.12)_0%,transparent_60%)]" />
@@ -153,23 +153,23 @@ export default async function BillingPage() {
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-emerald-400">
+                            <div className="flex items-center gap-2 rounded-[3px] bg-[var(--ok)]/10 border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--ok)]">
                                 <CreditCard className="w-3.5 h-3.5" />
                                 Billing
                             </div>
-                            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-                            <span className="text-xs text-slate-500">Plan & Invoices</span>
+                            <ChevronRight className="w-3.5 h-3.5 text-[color:var(--ink-soft)]" />
+                            <span className="text-xs text-[color:var(--ink-muted)]">Plan & Invoices</span>
                         </div>
                         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
                             <div>
-                                <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">Billing & plan</h1>
-                                <p className="mt-2 text-slate-600 text-base max-w-lg">
+                                <h1 className="text-3xl sm:text-4xl font-extrabold text-[color:var(--ink)] tracking-tight leading-tight">Billing & plan</h1>
+                                <p className="mt-2 text-[color:var(--ink-soft)] text-base max-w-lg">
                                     See your current plan, worker seat usage, spend trend, and invoice history.
                                 </p>
                             </div>
                             {canManagePlan && (
                                 <div className="flex flex-wrap gap-3">
-                                    <ButtonLink href="/book-demo" size="sm" className="!bg-white !text-slate-900 hover:!brightness-95">
+                                    <ButtonLink href="/book-demo" size="sm" className="!bg-[var(--card)] !text-[color:var(--ink)] hover:!brightness-95">
                                         Talk to Sales
                                     </ButtonLink>
                                 </div>
@@ -180,64 +180,64 @@ export default async function BillingPage() {
 
                 {/* Spend / seats / plan KPI cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+                    <div className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
                         <div className="flex items-center justify-between mb-4">
-                            <PremiumIcon icon={TrendingUp} tone="emerald" containerClassName="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400" iconClassName="w-5 h-5" />
+                            <PremiumIcon icon={TrendingUp} tone="emerald" containerClassName="w-10 h-10 rounded-[3px] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/50 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="w-5 h-5" />
                             {trendChangePct !== null && (
-                                <span className={`inline-flex items-center gap-1 text-xs font-bold rounded-full px-2.5 py-1 ${trendChangePct >= 0 ? "text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30" : "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30"}`}>
-                                    <PremiumIcon icon={trendChangePct >= 0 ? ArrowUpRight : ArrowDownRight} tone={trendChangePct >= 0 ? "rose" : "emerald"} containerClassName={`w-5 h-5 rounded-md ${trendChangePct >= 0 ? "bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400" : "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400"}`} iconClassName="w-3 h-3" />
+                                <span className={`inline-flex items-center gap-1 text-xs font-bold rounded-full px-2.5 py-1 ${trendChangePct >= 0 ? "text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30" : "text-[color:var(--ok)] dark:text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/30"}`}>
+                                    <PremiumIcon icon={trendChangePct >= 0 ? ArrowUpRight : ArrowDownRight} tone={trendChangePct >= 0 ? "rose" : "emerald"} containerClassName={`w-5 h-5 rounded-[2px] ${trendChangePct >= 0 ? "bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 text-[color:var(--danger)] dark:text-[color:var(--danger)]" : "bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]"}`} iconClassName="w-3 h-3" />
                                     {trendChangePct >= 0 ? "+" : ""}{trendChangePct}%
                                 </span>
                             )}
                         </div>
-                        <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tabular-nums">
+                        <p className="text-2xl font-extrabold text-[color:var(--ink)] dark:text-[color:var(--ink)] tabular-nums">
                             {monthlySpend !== null ? formatUsd(monthlySpend) : "—"}
                         </p>
-                        <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-300">Spend (last 30 days)</p>
-                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                        <p className="mt-1 text-sm font-medium text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">Spend (last 30 days)</p>
+                        <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">
                             {trendChangePct !== null ? "vs 6 months ago" : "Live metering data"}
                         </p>
                     </div>
 
-                    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+                    <div className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
                         <div className="flex items-center justify-between mb-4">
-                            <PremiumIcon icon={Users} tone="sky" containerClassName="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400" iconClassName="w-5 h-5" />
+                            <PremiumIcon icon={Users} tone="sky" containerClassName="w-10 h-10 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/50 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-5 h-5" />
                             {seatPct !== null && (
-                                <span className="text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 rounded-full px-2.5 py-1">
+                                <span className="text-xs font-bold text-[color:var(--warn)] dark:text-[color:var(--warn)] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/30 rounded-full px-2.5 py-1">
                                     {seatPct}% used
                                 </span>
                             )}
                         </div>
-                        <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tabular-nums">
+                        <p className="text-2xl font-extrabold text-[color:var(--ink)] dark:text-[color:var(--ink)] tabular-nums">
                             {seatLimit !== null ? `${seatsUsed} / ${seatLimit}` : seatsUsed}
                         </p>
-                        <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-300">Worker Seats</p>
+                        <p className="mt-1 text-sm font-medium text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">Worker Seats</p>
                         {seatLimit !== null ? (
                             <>
-                                <div className="mt-2 w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-700">
-                                    <div className="h-1.5 rounded-full bg-amber-500" style={{ width: `${seatPct}%` }} />
+                                <div className="mt-2 w-full h-1.5 rounded-full bg-[var(--line)] dark:bg-[var(--card)]">
+                                    <div className="h-1.5 rounded-full bg-[var(--warn)]" style={{ width: `${seatPct}%` }} />
                                 </div>
-                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{seatsRemaining} seats remaining</p>
+                                <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1">{seatsRemaining} seats remaining</p>
                             </>
                         ) : (
-                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">No active plan on file</p>
+                            <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">No active plan on file</p>
                         )}
                     </div>
 
-                    <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800/50 bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-950/30 dark:to-blue-950/20 p-5">
+                    <div className="rounded-[4px] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/50 bg-gradient-to-br from-[color-mix(in_srgb,var(--ok)_8%,transparent)] to-[color-mix(in_srgb,var(--accent)_8%,transparent)] dark:from-[color-mix(in_srgb,var(--ok)_14%,transparent)]/30 dark:to-[color-mix(in_srgb,var(--accent)_14%,transparent)]/20 p-5">
                         <div className="flex items-center justify-between mb-4">
-                            <PremiumIcon icon={Zap} tone="emerald" containerClassName="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400" iconClassName="w-5 h-5" />
+                            <PremiumIcon icon={Zap} tone="emerald" containerClassName="w-10 h-10 rounded-[3px] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/50 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="w-5 h-5" />
                             {subscription && subscription.status && subscription.status !== "none" && (
-                                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 rounded-full px-2.5 py-1 capitalize">
+                                <span className="text-xs font-bold text-[color:var(--ok)] dark:text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 rounded-full px-2.5 py-1 capitalize">
                                     {subscription.status}
                                 </span>
                             )}
                         </div>
-                        <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">
+                        <p className="text-2xl font-extrabold text-[color:var(--ink)] dark:text-[color:var(--ink)]">
                             {currentPlan?.name ?? "No active plan"}
                         </p>
-                        <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-300">Current Plan</p>
-                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                        <p className="mt-1 text-sm font-medium text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">Current Plan</p>
+                        <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">
                             {renewalLabel ? `Renews ${renewalLabel}` : "No renewal date on file"}
                         </p>
                     </div>
@@ -245,10 +245,10 @@ export default async function BillingPage() {
 
                 {/* Plan comparison + seat controls */}
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                    <div className="xl:col-span-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-                        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
-                            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Plan Options</h2>
-                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Compare plans available on your account</p>
+                    <div className="xl:col-span-2 rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden">
+                        <div className="px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)]">
+                            <h2 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Plan Options</h2>
+                            <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">Compare plans available on your account</p>
                         </div>
                         {plans.length > 0 ? (
                             <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -256,27 +256,27 @@ export default async function BillingPage() {
                                     const isCurrent = currentPlan?.id === plan.id;
                                     const features = parsePlanFeatures(plan.features);
                                     return (
-                                        <div key={plan.id} className={`rounded-xl border p-4 flex flex-col gap-3 transition-all ${isCurrent ? "border-emerald-400 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 ring-2 ring-emerald-200 dark:ring-emerald-900" : "border-slate-200 dark:border-slate-700"}`}>
+                                        <div key={plan.id} className={`rounded-[3px] border p-4 flex flex-col gap-3 transition-all ${isCurrent ? "border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/30 ring-2 ring-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:ring-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]" : "border-[color:var(--line)] dark:border-[color:var(--line)]"}`}>
                                             <div className="flex items-start justify-between">
                                                 <div>
-                                                    <p className="font-bold text-slate-900 dark:text-slate-100">{plan.name}</p>
-                                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{plan.agentSlots} agent slots</p>
+                                                    <p className="font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{plan.name}</p>
+                                                    <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">{plan.agentSlots} agent slots</p>
                                                 </div>
                                                 {isCurrent && (
-                                                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 rounded-full px-2 py-0.5 whitespace-nowrap">
+                                                    <span className="text-xs font-bold text-[color:var(--ok)] dark:text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/50 rounded-full px-2 py-0.5 whitespace-nowrap">
                                                         Current
                                                     </span>
                                                 )}
                                             </div>
                                             <div>
-                                                <span className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">${plan.priceUsd}</span>
-                                                <span className="text-xs text-slate-500 dark:text-slate-400 ml-1">/ worker / mo</span>
+                                                <span className="text-2xl font-extrabold text-[color:var(--ink)] dark:text-[color:var(--ink)]">${plan.priceUsd}</span>
+                                                <span className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] ml-1">/ worker / mo</span>
                                             </div>
                                             {features.length > 0 && (
                                                 <ul className="space-y-1.5">
                                                     {features.map((f) => (
-                                                        <li key={f} className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                                        <li key={f} className="flex items-center gap-1.5 text-xs text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--ok)] shrink-0" />
                                                             {f}
                                                         </li>
                                                     ))}
@@ -285,7 +285,7 @@ export default async function BillingPage() {
                                             {!isCurrent && canManagePlan && (
                                                 <Link
                                                     href={`/checkout/billing?planId=${plan.id}&country=IN`}
-                                                    className="mt-auto text-xs font-bold rounded-lg border border-emerald-400 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 py-1.5 transition-colors text-center block"
+                                                    className="mt-auto text-xs font-bold rounded-[3px] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] text-[color:var(--ok)] dark:text-[color:var(--ok)] hover:bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/30 py-1.5 transition-colors text-center block"
                                                 >
                                                     {currentPlan ? "Switch Plan" : "Choose Plan"}
                                                 </Link>
@@ -295,21 +295,21 @@ export default async function BillingPage() {
                                 })}
                             </div>
                         ) : (
-                            <p className="px-5 py-6 text-sm text-slate-400 dark:text-slate-500">
+                            <p className="px-5 py-6 text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                                 Plan options are unavailable right now. Try refreshing, or contact support if this persists.
                             </p>
                         )}
                         {!canManagePlan && (
-                            <p className="px-5 pb-4 text-xs text-slate-400 dark:text-slate-500">
+                            <p className="px-5 pb-4 text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                                 Ask an org admin to change plans or seat counts.
                             </p>
                         )}
                     </div>
 
-                    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-                        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
-                            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Seat Usage</h2>
-                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Current capacity on your plan</p>
+                    <div className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden">
+                        <div className="px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)]">
+                            <h2 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Seat Usage</h2>
+                            <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">Current capacity on your plan</p>
                         </div>
                         <div className="p-4 space-y-3">
                             {[
@@ -329,12 +329,12 @@ export default async function BillingPage() {
                                     icon: TrendingUp,
                                 },
                             ].map(({ label, value, icon: Icon }) => (
-                                <div key={label} className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-4 py-3 gap-3">
+                                <div key={label} className="flex items-center justify-between rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)]/50 px-4 py-3 gap-3">
                                     <div className="flex items-center gap-2.5 min-w-0">
-                                        <PremiumIcon icon={Icon} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 shrink-0" iconClassName="w-4 h-4" />
-                                        <p className="text-sm text-slate-600 dark:text-slate-300 truncate">{label}</p>
+                                        <PremiumIcon icon={Icon} tone="slate" containerClassName="w-6 h-6 rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] shrink-0" iconClassName="w-4 h-4" />
+                                        <p className="text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] truncate">{label}</p>
                                     </div>
-                                    <span className="text-xs font-bold shrink-0 text-slate-700 dark:text-slate-300">{value}</span>
+                                    <span className="text-xs font-bold shrink-0 text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">{value}</span>
                                 </div>
                             ))}
                             {canManagePlan && (
@@ -347,14 +347,14 @@ export default async function BillingPage() {
                 </div>
 
                 {/* 6-month spend trend */}
-                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+                <div className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                            <PremiumIcon icon={TrendingUp} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400" iconClassName="w-3.5 h-3.5" />
+                        <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] flex items-center gap-2">
+                            <PremiumIcon icon={TrendingUp} tone="emerald" containerClassName="w-6 h-6 rounded-[3px] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="w-3.5 h-3.5" />
                             6-Month Spend Trend
                         </h2>
                         {trendChangePct !== null && (
-                            <span className={`text-xs font-semibold ${trendChangePct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                            <span className={`text-xs font-semibold ${trendChangePct >= 0 ? "text-[color:var(--ok)] dark:text-[color:var(--ok)]" : "text-[color:var(--danger)] dark:text-[color:var(--danger)]"}`}>
                                 {trendChangePct >= 0 ? "+" : ""}{trendChangePct}% over 6 months
                             </span>
                         )}
@@ -365,22 +365,22 @@ export default async function BillingPage() {
                                 const pct = amount !== null ? Math.round((amount / trendMax) * 100) : 0;
                                 return (
                                     <div key={month} className="flex-1 flex flex-col items-center gap-1.5">
-                                        <span className="text-[9px] font-semibold text-slate-500 dark:text-slate-400">
+                                        <span className="text-[9px] font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                                             {amount !== null ? `$${(amount / 1000).toFixed(1)}k` : "—"}
                                         </span>
                                         <div className="w-full relative flex items-end justify-center" style={{ height: "36px" }}>
                                             <div
-                                                className={`w-full rounded-t-sm transition-colors ${amount !== null ? "bg-emerald-400 dark:bg-emerald-500 hover:bg-emerald-500 dark:hover:bg-emerald-400" : "bg-slate-200 dark:bg-slate-700"}`}
+                                                className={`w-full rounded-t-sm transition-colors ${amount !== null ? "bg-[var(--ok)] dark:bg-[var(--ok)] hover:bg-[var(--ok)] dark:hover:bg-[var(--ok)]" : "bg-[var(--line)] dark:bg-[var(--card)]"}`}
                                                 style={{ height: `${Math.max(pct, amount !== null ? 4 : 0)}%` }}
                                             />
                                         </div>
-                                        <span className="text-[9px] text-slate-400">{month}</span>
+                                        <span className="text-[9px] text-[color:var(--ink-muted)]">{month}</span>
                                     </div>
                                 );
                             })}
                         </div>
                     ) : (
-                        <p className="text-sm text-slate-400 dark:text-slate-500">
+                        <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                             Spend history is unavailable right now. This chart populates from live task-metering records once usage data is reachable.
                         </p>
                     )}

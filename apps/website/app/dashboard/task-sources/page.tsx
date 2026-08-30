@@ -35,7 +35,7 @@ const EMPTY = {
 };
 
 const inputCls =
-    "mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500";
+    "mt-1 w-full rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-3 py-2 text-sm text-[color:var(--ink)] dark:text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]";
 
 export default function TaskSourcesPage() {
     const [sources, setSources] = useState<PollSource[]>([]);
@@ -122,8 +122,8 @@ export default function TaskSourcesPage() {
         <div className="max-w-4xl mx-auto p-6">
             <div className="flex items-start justify-between mb-2">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Task Sources</h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
+                    <h1 className="text-2xl font-bold text-[color:var(--ink)] dark:text-white">Task Sources</h1>
+                    <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1 max-w-2xl">
                         Have an agent pull tickets assigned to it. Use Jira, Linear, or GitHub out of the box, or any
                         other tracker via a custom REST mapping. Tickets that arrive outside the agent&apos;s shift are
                         deferred to its next working window.
@@ -132,13 +132,13 @@ export default function TaskSourcesPage() {
                 <div className="flex gap-2">
                     <button
                         onClick={() => void load()}
-                        className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm text-slate-600 dark:text-slate-300 hover:border-slate-400"
+                        className="flex items-center gap-1.5 rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2 text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:border-[color:var(--line)]"
                     >
                         <RefreshCw className="w-4 h-4" /> Refresh
                     </button>
                     <button
                         onClick={() => setShowForm((v) => !v)}
-                        className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                        className="flex items-center gap-1.5 rounded-[3px] bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white hover:bg-[var(--accent)]"
                     >
                         <Plus className="w-4 h-4" /> Add source
                     </button>
@@ -146,15 +146,15 @@ export default function TaskSourcesPage() {
             </div>
 
             {error && (
-                <div className="my-4 flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-900/30 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+                <div className="my-4 flex items-center gap-2 rounded-[3px] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 px-3 py-2 text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)]">
                     <AlertCircle className="w-4 h-4" /> {error}
                 </div>
             )}
 
             {showForm && (
-                <div className="my-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-5">
+                <div className="my-5 rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)]/40 p-5">
                     <div className="grid grid-cols-2 gap-4">
-                        <label className="text-sm text-slate-600 dark:text-slate-300">
+                        <label className="text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
                             Tracker
                             <select
                                 className={inputCls}
@@ -168,7 +168,7 @@ export default function TaskSourcesPage() {
                                 ))}
                             </select>
                         </label>
-                        <label className="text-sm text-slate-600 dark:text-slate-300">
+                        <label className="text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
                             Assignee
                             <input
                                 className={inputCls}
@@ -177,7 +177,7 @@ export default function TaskSourcesPage() {
                                 onChange={(e) => setForm({ ...form, assignee: e.target.value })}
                             />
                         </label>
-                        <label className="text-sm text-slate-600 dark:text-slate-300">
+                        <label className="text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
                             Agent / Bot ID (optional)
                             <input
                                 className={inputCls}
@@ -186,7 +186,7 @@ export default function TaskSourcesPage() {
                                 onChange={(e) => setForm({ ...form, agentId: e.target.value })}
                             />
                         </label>
-                        <label className="text-sm text-slate-600 dark:text-slate-300">
+                        <label className="text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
                             Base URL {form.tracker === "github" ? "(optional)" : ""}
                             <input
                                 className={inputCls}
@@ -195,7 +195,7 @@ export default function TaskSourcesPage() {
                                 onChange={(e) => setForm({ ...form, baseUrl: e.target.value })}
                             />
                         </label>
-                        <label className="text-sm text-slate-600 dark:text-slate-300">
+                        <label className="text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
                             Project filter {form.tracker === "github" ? "(owner/repo)" : "(optional)"}
                             <input
                                 className={inputCls}
@@ -204,7 +204,7 @@ export default function TaskSourcesPage() {
                                 onChange={(e) => setForm({ ...form, projectFilter: e.target.value })}
                             />
                         </label>
-                        <label className="text-sm text-slate-600 dark:text-slate-300">
+                        <label className="text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
                             API token / secret ref
                             <input
                                 className={inputCls}
@@ -214,7 +214,7 @@ export default function TaskSourcesPage() {
                                 onChange={(e) => setForm({ ...form, secretRef: e.target.value })}
                             />
                         </label>
-                        <label className="text-sm text-slate-600 dark:text-slate-300">
+                        <label className="text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
                             Poll interval (seconds)
                             <input
                                 className={inputCls}
@@ -225,7 +225,7 @@ export default function TaskSourcesPage() {
                             />
                         </label>
                         {form.tracker === "custom" && (
-                            <label className="col-span-2 text-sm text-slate-600 dark:text-slate-300">
+                            <label className="col-span-2 text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
                                 Custom config (JSON)
                                 <textarea
                                     className={`${inputCls} font-mono text-xs`}
@@ -240,7 +240,7 @@ export default function TaskSourcesPage() {
                     <button
                         onClick={() => void create()}
                         disabled={saving || !form.assignee.trim()}
-                        className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                        className="mt-4 rounded-[3px] bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--accent)] disabled:opacity-50"
                     >
                         {saving ? "Adding…" : "Save source"}
                     </button>
@@ -249,50 +249,50 @@ export default function TaskSourcesPage() {
 
             <div className="mt-6 space-y-3">
                 {loading ? (
-                    <p className="text-sm text-slate-500">Loading…</p>
+                    <p className="text-sm text-[color:var(--ink-muted)]">Loading…</p>
                 ) : sources.length === 0 ? (
-                    <p className="text-sm text-slate-500">No task sources configured yet.</p>
+                    <p className="text-sm text-[color:var(--ink-muted)]">No task sources configured yet.</p>
                 ) : (
                     sources.map((s) => (
                         <div
                             key={s.id}
-                            className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3"
+                            className="flex items-center justify-between rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-4 py-3"
                         >
                             <div>
                                 <div className="flex items-center gap-2">
-                                    <span className="rounded-md bg-slate-100 dark:bg-slate-700 px-2 py-0.5 text-xs font-semibold uppercase text-slate-600 dark:text-slate-300">
+                                    <span className="rounded-[2px] bg-[var(--bg-deep)] dark:bg-[var(--card)] px-2 py-0.5 text-xs font-semibold uppercase text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
                                         {s.tracker}
                                     </span>
-                                    <span className="font-medium text-slate-800 dark:text-slate-100">{s.assignee}</span>
+                                    <span className="font-medium text-[color:var(--ink)] dark:text-[color:var(--ink)]">{s.assignee}</span>
                                     {s.projectFilter && (
-                                        <span className="text-xs text-slate-400">· {s.projectFilter}</span>
+                                        <span className="text-xs text-[color:var(--ink-muted)]">· {s.projectFilter}</span>
                                     )}
                                 </div>
-                                <div className="mt-1 flex items-center gap-3 text-xs text-slate-400">
+                                <div className="mt-1 flex items-center gap-3 text-xs text-[color:var(--ink-muted)]">
                                     <span className="flex items-center gap-1">
                                         <Clock className="w-3 h-3" /> every {s.intervalSec}s
                                     </span>
                                     <span>
                                         last poll: {s.lastPolledAt ? new Date(s.lastPolledAt).toLocaleString() : "never"}
                                     </span>
-                                    {!s.hasSecret && <span className="text-amber-500">no credentials</span>}
+                                    {!s.hasSecret && <span className="text-[color:var(--warn)]">no credentials</span>}
                                 </div>
-                                {s.lastError && <p className="mt-1 text-xs text-red-500">{s.lastError}</p>}
+                                {s.lastError && <p className="mt-1 text-xs text-[color:var(--danger)]">{s.lastError}</p>}
                             </div>
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={() => void toggle(s)}
                                     className={`rounded-full px-3 py-1 text-xs font-semibold ${
                                         s.enabled
-                                            ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300"
-                                            : "bg-slate-100 dark:bg-slate-700 text-slate-500"
+                                            ? "bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]"
+                                            : "bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-muted)]"
                                     }`}
                                 >
                                     {s.enabled ? "enabled" : "disabled"}
                                 </button>
                                 <button
                                     onClick={() => void remove(s)}
-                                    className="text-slate-400 hover:text-red-500"
+                                    className="text-[color:var(--ink-muted)] hover:text-[color:var(--danger)]"
                                     aria-label="delete"
                                 >
                                     <Trash2 className="w-4 h-4" />

@@ -59,41 +59,41 @@ export default function PortalSignupPage() {
     }
 
     const fieldClass = (field: string) =>
-        `w-full pl-9 pr-3 py-2.5 rounded-xl border bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 transition ${
+        `w-full pl-9 pr-3 py-2.5 rounded-[3px] border bg-[var(--bg-deep)] dark:bg-[var(--card)] text-sm text-[color:var(--ink)] dark:text-[color:var(--ink)] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] disabled:opacity-60 transition ${
             fieldError === field
-                ? "border-rose-400 dark:border-rose-700 focus:border-rose-500"
-                : "border-slate-200 dark:border-slate-700 focus:border-blue-500"
+                ? "border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] focus:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]"
+                : "border-[color:var(--line)] dark:border-[color:var(--line)] focus:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]"
         }`;
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center px-4 py-10">
+        <div className="min-h-screen bg-[var(--bg-deep)] dark:bg-[var(--bg)] flex flex-col items-center justify-center px-4 py-10">
             <div className="w-full max-w-md">
                 <div className="flex flex-col items-center mb-8 gap-3">
-                    <div className="h-12 w-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <div className="h-12 w-12 rounded-[4px] bg-[var(--accent)] flex items-center justify-center shadow-lg shadow-blue-500/20">
                         <LayoutDashboard className="h-6 w-6 text-white" />
                     </div>
                     <div className="text-center">
-                        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Create your portal account</h1>
-                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        <h1 className="text-2xl font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Create your portal account</h1>
+                        <p className="mt-1 text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                             Access your AgentFarms workspace and support
                         </p>
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl shadow-slate-900/5 border border-slate-200 dark:border-slate-800 p-8">
+                <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] shadow-xl shadow-slate-900/5 border border-[color:var(--line)] dark:border-[color:var(--line)] p-8">
                     {error && (
-                        <div className="mb-5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 px-4 py-3 text-sm text-rose-700 dark:text-rose-400">
+                        <div className="mb-5 rounded-[3px] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] px-4 py-3 text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)]">
                             {error}
                         </div>
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
                         <div>
-                            <label htmlFor="su-tenant-id" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                            <label htmlFor="su-tenant-id" className="block text-xs font-medium text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] mb-1.5">
                                 Tenant ID
                             </label>
                             <div className="relative">
-                                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[color:var(--ink-muted)]" />
                                 <input
                                     id="su-tenant-id"
                                     type="text"
@@ -106,15 +106,15 @@ export default function PortalSignupPage() {
                                     className={fieldClass("tenantId")}
                                 />
                             </div>
-                            <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">Provided by your AgentFarm administrator</p>
+                            <p className="mt-1.5 text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">Provided by your AgentFarm administrator</p>
                         </div>
 
                         <div>
-                            <label htmlFor="su-email" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                            <label htmlFor="su-email" className="block text-xs font-medium text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] mb-1.5">
                                 Email
                             </label>
                             <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[color:var(--ink-muted)]" />
                                 <input
                                     id="su-email"
                                     type="email"
@@ -130,11 +130,11 @@ export default function PortalSignupPage() {
                         </div>
 
                         <div>
-                            <label htmlFor="su-password" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                            <label htmlFor="su-password" className="block text-xs font-medium text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] mb-1.5">
                                 Password
                             </label>
                             <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[color:var(--ink-muted)]" />
                                 <input
                                     id="su-password"
                                     type="password"
@@ -151,11 +151,11 @@ export default function PortalSignupPage() {
                         </div>
 
                         <div>
-                            <label htmlFor="su-display-name" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                                Display name <span className="font-normal text-slate-400">(optional)</span>
+                            <label htmlFor="su-display-name" className="block text-xs font-medium text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] mb-1.5">
+                                Display name <span className="font-normal text-[color:var(--ink-muted)]">(optional)</span>
                             </label>
                             <div className="relative">
-                                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[color:var(--ink-muted)]" />
                                 <input
                                     id="su-display-name"
                                     type="text"
@@ -172,7 +172,7 @@ export default function PortalSignupPage() {
                         <button
                             type="submit"
                             disabled={loading || !form.tenantId.trim() || !form.email.trim() || form.password.length < 8}
-                            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-semibold shadow-sm transition-colors"
+                            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-[3px] bg-[var(--accent)] hover:bg-[var(--accent)] disabled:bg-[var(--accent)] text-white text-sm font-semibold shadow-sm transition-colors"
                         >
                             {loading ? (
                                 <>
@@ -186,9 +186,9 @@ export default function PortalSignupPage() {
                     </form>
                 </div>
 
-                <p className="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">
+                <p className="mt-6 text-center text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                     Already have an account?{" "}
-                    <Link href="/portal/login" className="text-blue-600 hover:underline">
+                    <Link href="/portal/login" className="text-[color:var(--accent)] hover:underline">
                         Sign in
                     </Link>
                 </p>

@@ -23,7 +23,7 @@ function VerifyEmailContent() {
 
     if (status === "loading") {
         return (
-            <div className="flex flex-col items-center gap-2 text-slate-400 dark:text-slate-500">
+            <div className="flex flex-col items-center gap-2 text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                 <Loader2 className="h-6 w-6 animate-spin" />
                 <p className="text-sm">Verifying your email…</p>
             </div>
@@ -33,12 +33,12 @@ function VerifyEmailContent() {
     if (status === "error") {
         return (
             <div className="text-center space-y-3">
-                <XCircle className="h-9 w-9 text-rose-500 mx-auto" />
-                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Verification failed</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <XCircle className="h-9 w-9 text-[color:var(--danger)] mx-auto" />
+                <h2 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Verification failed</h2>
+                <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                     This link is invalid or has already been used. Try requesting a new link from the login page.
                 </p>
-                <Link href="/portal/login" className="inline-block text-sm text-blue-600 hover:underline">
+                <Link href="/portal/login" className="inline-block text-sm text-[color:var(--accent)] hover:underline">
                     Back to login
                 </Link>
             </div>
@@ -47,18 +47,18 @@ function VerifyEmailContent() {
 
     return (
         <div className="text-center space-y-3">
-            <CheckCircle2 className="h-9 w-9 text-emerald-500 mx-auto" />
-            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+            <CheckCircle2 className="h-9 w-9 text-[color:var(--ok)] mx-auto" />
+            <h2 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">
                 {status === "already" ? "Already verified" : "Email verified!"}
             </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                 {status === "already"
                     ? "Your email address was already verified."
                     : "Your account is now active. You can sign in."}
             </p>
             <Link
                 href="/portal/login?verified=1"
-                className="inline-flex items-center justify-center gap-2 py-2 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-colors"
+                className="inline-flex items-center justify-center gap-2 py-2 px-5 rounded-[3px] bg-[var(--accent)] hover:bg-[var(--accent)] text-white text-sm font-semibold shadow-sm transition-colors"
             >
                 Sign in →
             </Link>
@@ -69,15 +69,15 @@ function VerifyEmailContent() {
 export default function VerifyEmailPage() {
     return (
         <Suspense fallback={null}>
-            <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center px-4">
+            <div className="min-h-screen bg-[var(--bg-deep)] dark:bg-[var(--bg)] flex flex-col items-center justify-center px-4">
                 <div className="w-full max-w-md">
                     <div className="flex flex-col items-center mb-8 gap-3">
-                        <div className="h-12 w-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                        <div className="h-12 w-12 rounded-[4px] bg-[var(--accent)] flex items-center justify-center shadow-lg shadow-blue-500/20">
                             <LayoutDashboard className="h-6 w-6 text-white" />
                         </div>
-                        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">AgentFarms Portal</h1>
+                        <h1 className="text-2xl font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">AgentFarms Portal</h1>
                     </div>
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl shadow-slate-900/5 border border-slate-200 dark:border-slate-800 p-8">
+                    <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] shadow-xl shadow-slate-900/5 border border-[color:var(--line)] dark:border-[color:var(--line)] p-8">
                         <VerifyEmailContent />
                     </div>
                 </div>

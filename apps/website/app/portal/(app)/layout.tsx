@@ -107,15 +107,15 @@ export default async function PortalAppLayout({
     `;
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+        <div className="min-h-screen bg-[var(--bg-deep)] dark:bg-[var(--bg)] flex flex-col">
             {/* Inject brand CSS */}
             <style dangerouslySetInnerHTML={{ __html: brandCss }} />
 
             {/* Top nav */}
-            <header className="sticky top-0 z-30 h-14 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center px-4 sm:px-6 gap-4">
+            <header className="sticky top-0 z-30 h-14 bg-[var(--card)] dark:bg-[var(--card)]/90 backdrop-blur-md border-b border-[color:var(--line)] dark:border-[color:var(--line)] flex items-center px-4 sm:px-6 gap-4">
                 <Link
                     href="/portal/agents"
-                    className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100 hover:opacity-80 transition-opacity"
+                    className="flex items-center gap-2 font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] hover:opacity-80 transition-opacity"
                 >
                     {logoUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -128,18 +128,18 @@ export default async function PortalAppLayout({
 
                 <div className="flex-1" />
 
-                <span className="hidden sm:block text-xs text-slate-500 dark:text-slate-400">
+                <span className="hidden sm:block text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                     {session.tenantId}
                 </span>
 
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-300 hidden sm:block">
+                <span className="text-sm font-medium text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hidden sm:block">
                     {displayName}
                 </span>
 
                 <form action="/api/portal/auth/logout" method="POST">
                     <button
                         type="submit"
-                        className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors px-2 py-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                        className="flex items-center gap-1.5 text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] hover:text-[color:var(--danger)] dark:hover:text-[color:var(--danger)] transition-colors px-2 py-1 rounded-[2px] hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30"
                     >
                         <LogOut className="h-3.5 w-3.5" />
                         <span>Sign out</span>
@@ -149,12 +149,12 @@ export default async function PortalAppLayout({
 
             <div className="flex flex-1 overflow-hidden">
                 {/* Sidebar */}
-                <nav className="hidden md:flex flex-col w-56 shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 pt-4 pb-8 px-3 gap-1">
+                <nav className="hidden md:flex flex-col w-56 shrink-0 bg-[var(--card)] dark:bg-[var(--card)] border-r border-[color:var(--line)] dark:border-[color:var(--line)] pt-4 pb-8 px-3 gap-1">
                     {navItems.map((item) => (
                         <Link
                             key={item.href}
                             href={item.href}
-                            className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+                            className="flex items-center gap-3 px-3 py-2 rounded-[3px] text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] hover:text-[color:var(--ink)] dark:hover:text-[color:var(--ink)] transition-colors"
                         >
                             <item.icon className="h-4 w-4 shrink-0" />
                             {item.label}
@@ -163,12 +163,12 @@ export default async function PortalAppLayout({
                 </nav>
 
                 {/* Mobile bottom nav */}
-                <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center justify-around px-2 py-2">
+                <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-[var(--card)] dark:bg-[var(--card)] border-t border-[color:var(--line)] dark:border-[color:var(--line)] flex items-center justify-around px-2 py-2">
                     {navItems.map((item) => (
                         <Link
                             key={item.href}
                             href={item.href}
-                            className="flex flex-col items-center gap-0.5 text-xs text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors px-3 py-1"
+                            className="flex flex-col items-center gap-0.5 text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] hover:text-[color:var(--accent)] dark:hover:text-[color:var(--accent)] transition-colors px-3 py-1"
                         >
                             <item.icon className="h-5 w-5" />
                             <span>{item.label}</span>

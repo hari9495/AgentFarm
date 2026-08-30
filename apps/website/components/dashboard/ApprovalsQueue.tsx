@@ -35,9 +35,9 @@ type Props = {
 };
 
 const riskClass: Record<Risk, string> = {
-    low: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-    medium: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-    high: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
+    low: "bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] text-[color:var(--ok)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 dark:text-[color:var(--ok)]",
+    medium: "bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] text-[color:var(--warn)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40 dark:text-[color:var(--warn)]",
+    high: "bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] text-[color:var(--danger)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 dark:text-[color:var(--danger)]",
 };
 
 const fromNow = (timestamp: number): string => {
@@ -152,21 +152,21 @@ export default function ApprovalsQueue({ scope, agentSlug, headerTitle, headerSu
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-            <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-5 md:px-8">
+        <div className="min-h-screen bg-[var(--bg-deep)] dark:bg-[var(--bg)]">
+            <div className="bg-[var(--card)] dark:bg-[var(--card)] border-b border-[color:var(--line)] dark:border-[color:var(--line)] px-6 py-5 md:px-8">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">{headerTitle}</h1>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{headerSubtitle}</p>
+                        <h1 className="text-lg font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{headerTitle}</h1>
+                        <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">{headerSubtitle}</p>
                     </div>
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => void loadApprovals()}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                            className="inline-flex items-center gap-1.5 rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-1.5 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"
                         >
-                            <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="w-3.5 h-3.5" /> Refresh
+                            <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-3.5 h-3.5" /> Refresh
                         </button>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 px-2 py-1 text-xs font-bold">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] text-[color:var(--danger)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 dark:text-[color:var(--danger)] px-2 py-1 text-xs font-bold">
                             {pendingCount} pending
                         </span>
                     </div>
@@ -175,20 +175,20 @@ export default function ApprovalsQueue({ scope, agentSlug, headerTitle, headerSu
 
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-3">
                 {flash ? (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-medium text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
+                    <div className="rounded-[3px] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] px-4 py-3 text-xs font-medium text-[color:var(--ok)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/50 dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 dark:text-[color:var(--ok)]">
                         {flash}
                     </div>
                 ) : null}
 
                 {error ? (
-                    <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 dark:border-rose-900/50 dark:bg-rose-950/30">
-                        <p className="text-sm font-semibold text-rose-700 dark:text-rose-300">Unable to load approval queue</p>
-                        <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{error}</p>
+                    <div className="rounded-[4px] border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] p-5 dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/50 dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30">
+                        <p className="text-sm font-semibold text-[color:var(--danger)] dark:text-[color:var(--danger)]">Unable to load approval queue</p>
+                        <p className="mt-1 text-xs text-[color:var(--danger)] dark:text-[color:var(--danger)]">{error}</p>
                         <button
                             onClick={() => void loadApprovals()}
-                            className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-rose-300 dark:border-rose-700 px-3 py-1.5 text-xs font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/30"
+                            className="mt-3 inline-flex items-center gap-1.5 rounded-[3px] border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] px-3 py-1.5 text-xs font-semibold text-[color:var(--danger)] dark:text-[color:var(--danger)] hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30"
                         >
-                            <PremiumIcon icon={RefreshCw} tone="rose" containerClassName="w-6 h-6 rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400" iconClassName="h-3.5 w-3.5" /> Retry
+                            <PremiumIcon icon={RefreshCw} tone="rose" containerClassName="w-6 h-6 rounded-[3px] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 text-[color:var(--danger)] dark:text-[color:var(--danger)]" iconClassName="h-3.5 w-3.5" /> Retry
                         </button>
                     </div>
                 ) : null}
@@ -198,64 +198,64 @@ export default function ApprovalsQueue({ scope, agentSlug, headerTitle, headerSu
                         {[1, 2, 3].map((key) => (
                             <div
                                 key={key}
-                                className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 animate-pulse"
+                                className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5 animate-pulse"
                             >
-                                <div className="h-3 w-20 rounded bg-slate-200 dark:bg-slate-700" />
-                                <div className="mt-3 h-4 w-2/3 rounded bg-slate-200 dark:bg-slate-700" />
-                                <div className="mt-2 h-3 w-1/2 rounded bg-slate-200 dark:bg-slate-700" />
+                                <div className="h-3 w-20 rounded bg-[var(--line)] dark:bg-[var(--card)]" />
+                                <div className="mt-3 h-4 w-2/3 rounded bg-[var(--line)] dark:bg-[var(--card)]" />
+                                <div className="mt-2 h-3 w-1/2 rounded bg-[var(--line)] dark:bg-[var(--card)]" />
                             </div>
                         ))}
                     </div>
                 ) : items.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-10 text-center">
-                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Inbox clear</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">No pending approval requests right now.</p>
+                    <div className="rounded-[4px] border border-dashed border-[color:var(--line-strong)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-10 text-center">
+                        <p className="text-sm font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink)]">Inbox clear</p>
+                        <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1">No pending approval requests right now.</p>
                     </div>
                 ) : (
                     items.map((item) => (
-                        <div key={item.id} className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+                        <div key={item.id} className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
                             <div className="flex flex-wrap items-start justify-between gap-3">
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">{item.id}</span>
+                                        <span className="text-[10px] font-mono text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">{item.id}</span>
                                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${riskClass[item.risk]}`}>
                                             {item.risk}
                                         </span>
-                                        <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                        <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-[var(--bg-deep)] text-[color:var(--ink-soft)] dark:bg-[var(--card)] dark:text-[color:var(--ink-muted)]">
                                             Pending {fromNow(item.createdAt)}
                                         </span>
                                         {Date.now() - item.createdAt > item.escalationTimeoutSeconds * 1000 ? (
-                                            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
+                                            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] text-[color:var(--danger)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 dark:text-[color:var(--danger)]">
                                                 SLA overdue
                                             </span>
                                         ) : null}
                                         {item.escalatedAt ? (
-                                            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                                            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] text-[color:var(--warn)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40 dark:text-[color:var(--warn)]">
                                                 Escalated
                                             </span>
                                         ) : null}
                                     </div>
-                                    <div className="rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 px-3 py-2">
-                                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 mb-0.5">Customer asked</p>
-                                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{item.title}</p>
+                                    <div className="rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)]/60 border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2">
+                                        <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mb-0.5">Customer asked</p>
+                                        <p className="text-sm font-medium text-[color:var(--ink)] dark:text-[color:var(--ink)]">{item.title}</p>
                                     </div>
                                     {item.reason && (
-                                        <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-1.5">
+                                        <p className="text-xs text-[color:var(--warn)] dark:text-[color:var(--warn)] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/20 border border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] rounded-[3px] px-3 py-1.5">
                                             <span className="font-semibold">Why approval needed: </span>{item.reason}
                                         </p>
                                     )}
-                                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                                         <span>
-                                            <strong className="text-slate-700 dark:text-slate-300">Agent:</strong> {item.agent}
+                                            <strong className="text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">Agent:</strong> {item.agent}
                                         </span>
                                         <span>
-                                            <strong className="text-slate-700 dark:text-slate-300">Channel:</strong> {item.channel}
+                                            <strong className="text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">Channel:</strong> {item.channel}
                                         </span>
                                         <span>
-                                            <strong className="text-slate-700 dark:text-slate-300">Requested by:</strong> {item.requestedBy}
+                                            <strong className="text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">Requested by:</strong> {item.requestedBy}
                                         </span>
                                         <span className="inline-flex items-center gap-1">
-                                            <PremiumIcon icon={Clock3} tone="slate" containerClassName="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="w-3 h-3" />
+                                            <PremiumIcon icon={Clock3} tone="slate" containerClassName="w-5 h-5 rounded-[2px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-3 h-3" />
                                             {fromNow(item.createdAt)}
                                         </span>
                                     </div>
@@ -279,48 +279,48 @@ export default function ApprovalsQueue({ scope, agentSlug, headerTitle, headerSu
                                         }}
                                         placeholder="Decision reason (required for reject)"
                                         aria-invalid={Boolean(actionErrorById[item.id])}
-                                        className={`w-full rounded-lg border bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-700 dark:text-slate-200 ${actionErrorById[item.id] ? "border-rose-400 dark:border-rose-600" : "border-slate-300 dark:border-slate-700"}`}
+                                        className={`w-full rounded-[3px] border bg-[var(--card)] dark:bg-[var(--bg)] px-3 py-2 text-xs text-[color:var(--ink-soft)] dark:text-[color:var(--ink)] ${actionErrorById[item.id] ? "border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]" : "border-[color:var(--line-strong)] dark:border-[color:var(--line)]"}`}
                                     />
                                     {actionErrorById[item.id] ? (
-                                        <p className="w-full text-xs font-medium text-rose-600 dark:text-rose-400">{actionErrorById[item.id]}</p>
+                                        <p className="w-full text-xs font-medium text-[color:var(--danger)] dark:text-[color:var(--danger)]">{actionErrorById[item.id]}</p>
                                     ) : null}
                                     <button
                                         disabled={activeId === item.id}
                                         onClick={() => void mutateApproval(item.id, "approve")}
-                                        className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                                        className="inline-flex items-center gap-1 rounded-[3px] bg-[var(--ok)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--ok)] disabled:opacity-60"
                                     >
                                         {activeId === item.id ? (
-                                            <PremiumIcon icon={LoaderCircle} tone="emerald" containerClassName="w-5 h-5 rounded-md bg-white/15 text-white border-white/30" iconClassName="w-3 h-3 animate-spin" />
+                                            <PremiumIcon icon={LoaderCircle} tone="emerald" containerClassName="w-5 h-5 rounded-[2px] bg-[var(--card)] text-white border-[color:var(--line)]" iconClassName="w-3 h-3 animate-spin" />
                                         ) : (
-                                            <PremiumIcon icon={Check} tone="emerald" containerClassName="w-5 h-5 rounded-md bg-white/15 text-white border-white/30" iconClassName="w-3 h-3" />
+                                            <PremiumIcon icon={Check} tone="emerald" containerClassName="w-5 h-5 rounded-[2px] bg-[var(--card)] text-white border-[color:var(--line)]" iconClassName="w-3 h-3" />
                                         )}
                                         {activeId === item.id ? "Processing..." : "Approve"}
                                     </button>
                                     <button
                                         disabled={activeId === item.id}
                                         onClick={() => void mutateApproval(item.id, "reject")}
-                                        className="inline-flex items-center gap-1 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-60"
+                                        className="inline-flex items-center gap-1 rounded-[3px] border border-[color:var(--line-strong)] dark:border-[color:var(--line)] px-3 py-2 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] disabled:opacity-60"
                                     >
                                         {activeId === item.id ? (
-                                            <PremiumIcon icon={LoaderCircle} tone="slate" containerClassName="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="w-3 h-3 animate-spin" />
+                                            <PremiumIcon icon={LoaderCircle} tone="slate" containerClassName="w-5 h-5 rounded-[2px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-3 h-3 animate-spin" />
                                         ) : (
-                                            <PremiumIcon icon={X} tone="slate" containerClassName="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="w-3 h-3" />
+                                            <PremiumIcon icon={X} tone="slate" containerClassName="w-5 h-5 rounded-[2px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-3 h-3" />
                                         )}
                                         {activeId === item.id ? "Processing..." : "Reject"}
                                     </button>
                                     {canAudit ? (
                                         <Link
                                             href={`/dashboard/activity?ref=${item.id}`}
-                                            className="inline-flex items-center gap-1 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                            className="inline-flex items-center gap-1 rounded-[3px] border border-[color:var(--line-strong)] dark:border-[color:var(--line)] px-3 py-2 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"
                                         >
-                                            <PremiumIcon icon={ShieldAlert} tone="slate" containerClassName="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="w-3 h-3" /> Audit trail
+                                            <PremiumIcon icon={ShieldAlert} tone="slate" containerClassName="w-5 h-5 rounded-[2px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-3 h-3" /> Audit trail
                                         </Link>
                                     ) : (
                                         <span
                                             title="Audit trail requires admin access"
-                                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-800 px-3 py-2 text-xs font-semibold text-slate-400 dark:text-slate-600 cursor-not-allowed select-none"
+                                            className="inline-flex items-center gap-1 rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2 text-xs font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-soft)] cursor-not-allowed select-none"
                                         >
-                                            <PremiumIcon icon={ShieldAlert} tone="slate" containerClassName="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600" iconClassName="w-3 h-3" /> Audit trail
+                                            <PremiumIcon icon={ShieldAlert} tone="slate" containerClassName="w-5 h-5 rounded-[2px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-soft)]" iconClassName="w-3 h-3" /> Audit trail
                                         </span>
                                     )}
                                 </div>
@@ -332,7 +332,7 @@ export default function ApprovalsQueue({ scope, agentSlug, headerTitle, headerSu
                 {backHref ? (
                     <Link
                         href={backHref}
-                        className="inline-flex rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                        className="inline-flex rounded-[3px] border border-[color:var(--line-strong)] dark:border-[color:var(--line)] px-3 py-2 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"
                     >
                         Back to agent details
                     </Link>

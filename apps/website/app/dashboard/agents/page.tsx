@@ -168,34 +168,34 @@ function getWeekMonthLabel(weekIdx: number, cells: HeatCell[]): string | null {
 }
 
 function heatCellClass(seed: number, idx: number, fromDate: Date, active: boolean): string {
-    if (!active) return "bg-slate-100 dark:bg-slate-800/40";
+    if (!active) return "bg-[var(--bg-deep)] dark:bg-[var(--card)]/40";
     const epochWeeks = Math.floor(fromDate.getTime() / (7 * 24 * 60 * 60 * 1000));
     const v = ((seed * 17 + idx * 31 + idx * seed + epochWeeks * 3) % 10);
-    if (v <= 1) return "bg-slate-200 dark:bg-slate-700";
-    if (v <= 3) return "bg-emerald-200 dark:bg-emerald-900/50";
-    if (v <= 6) return "bg-emerald-400 dark:bg-emerald-600";
-    return "bg-emerald-600 dark:bg-emerald-400";
+    if (v <= 1) return "bg-[var(--line)] dark:bg-[var(--card)]";
+    if (v <= 3) return "bg-[color-mix(in_srgb,var(--ok)_16%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/50";
+    if (v <= 6) return "bg-[var(--ok)] dark:bg-[var(--ok)]";
+    return "bg-[var(--ok)] dark:bg-[var(--ok)]";
 }
 
 // ── Tone / status ──────────────────────────────────────────────────────────────
 
 const toneClass: Record<string, string> = {
-    sky:    "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-    violet: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-    amber:  "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-    rose:   "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
+    sky:    "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[color:var(--accent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 dark:text-[color:var(--accent)]",
+    violet: "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[color:var(--accent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 dark:text-[color:var(--accent)]",
+    amber:  "bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] text-[color:var(--warn)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40 dark:text-[color:var(--warn)]",
+    rose:   "bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] text-[color:var(--danger)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 dark:text-[color:var(--danger)]",
 };
 
 const toneDot: Record<string, string> = {
-    sky: "bg-blue-500", violet: "bg-blue-500", amber: "bg-amber-500", rose: "bg-rose-500",
+    sky: "bg-[var(--accent)]", violet: "bg-[var(--accent)]", amber: "bg-[var(--warn)]", rose: "bg-[var(--danger)]",
 };
 
 const statusConfig: Record<string, { dot: string; text: string; pulse: boolean }> = {
-    "Active":       { dot: "bg-emerald-400", text: "text-emerald-600 dark:text-emerald-400", pulse: true  },
-    "Provisioning": { dot: "bg-blue-400",     text: "text-blue-600 dark:text-blue-400",         pulse: true  },
-    "Needs review": { dot: "bg-rose-400",    text: "text-rose-600 dark:text-rose-400",       pulse: false },
-    "Paused":       { dot: "bg-amber-400",   text: "text-amber-600 dark:text-amber-400",     pulse: false },
-    "Maintenance":  { dot: "bg-slate-400",   text: "text-slate-500 dark:text-slate-400",     pulse: false },
+    "Active":       { dot: "bg-[var(--ok)]", text: "text-[color:var(--ok)] dark:text-[color:var(--ok)]", pulse: true  },
+    "Provisioning": { dot: "bg-[var(--accent)]",     text: "text-[color:var(--accent)] dark:text-[color:var(--accent)]",         pulse: true  },
+    "Needs review": { dot: "bg-[var(--danger)]",    text: "text-[color:var(--danger)] dark:text-[color:var(--danger)]",       pulse: false },
+    "Paused":       { dot: "bg-[var(--warn)]",   text: "text-[color:var(--warn)] dark:text-[color:var(--warn)]",     pulse: false },
+    "Maintenance":  { dot: "bg-[var(--bg-deep)]",   text: "text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]",     pulse: false },
 };
 
 // ── Page ───────────────────────────────────────────────────────────────────────
@@ -257,11 +257,11 @@ export default async function AgentsIndexPage({
     const numWeeks = cells.length / 7;
 
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen bg-[var(--bg-deep)]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
                 {/* Dark hero */}
-                <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-50 via-white to-white">
+                <section className="relative overflow-hidden rounded-[4px] border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
                     <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.07)_0%,transparent_60%)]" />
@@ -269,17 +269,17 @@ export default async function AgentsIndexPage({
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center gap-2 rounded-xl bg-blue-50 border border-blue-200 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-700">
+                            <div className="flex items-center gap-2 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
                                 <Cpu className="w-3.5 h-3.5" />
                                 Agents
                             </div>
-                            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-                            <span className="text-xs text-slate-500">AI Workers</span>
+                            <ChevronRight className="w-3.5 h-3.5 text-[color:var(--ink-soft)]" />
+                            <span className="text-xs text-[color:var(--ink-muted)]">AI Workers</span>
                         </div>
                         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
                             <div>
-                                <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">AI Workers</h1>
-                                <p className="mt-2 text-slate-600 text-base max-w-lg">Inspect each worker's task history, quality, and approvals.</p>
+                                <h1 className="text-3xl sm:text-4xl font-extrabold text-[color:var(--ink)] tracking-tight leading-tight">AI Workers</h1>
+                                <p className="mt-2 text-[color:var(--ink-soft)] text-base max-w-lg">Inspect each worker's task history, quality, and approvals.</p>
                             </div>
                         </div>
 
@@ -287,32 +287,32 @@ export default async function AgentsIndexPage({
                         <div className="mt-5 flex flex-wrap gap-6">
                             <div className="text-center">
                                 <p className="text-xl font-bold text-white leading-none">{activeCount}</p>
-                                <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wide">Active</p>
+                                <p className="text-[10px] text-[color:var(--ink-muted)] mt-0.5 uppercase tracking-wide">Active</p>
                             </div>
-                            <div className="w-px h-8 bg-slate-700 self-center" />
+                            <div className="w-px h-8 bg-[var(--card)] self-center" />
                             <div className="text-center">
                                 <p className="text-xl font-bold text-white leading-none">{totalTasks}</p>
-                                <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wide">Total Tasks</p>
+                                <p className="text-[10px] text-[color:var(--ink-muted)] mt-0.5 uppercase tracking-wide">Total Tasks</p>
                             </div>
-                            <div className="w-px h-8 bg-slate-700 self-center" />
+                            <div className="w-px h-8 bg-[var(--card)] self-center" />
                             <div className="text-center">
                                 <p className="text-xl font-bold text-white leading-none">{avgReliability === "—" ? "—" : `${avgReliability}%`}</p>
-                                <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wide">Avg Reliability</p>
+                                <p className="text-[10px] text-[color:var(--ink-muted)] mt-0.5 uppercase tracking-wide">Avg Reliability</p>
                             </div>
                         </div>
                     </div>
                 </section>
 
                 {/* Period navigator */}
-                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 px-4 py-3">
+                <div className="flex items-center gap-2 bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-4 py-3">
                     {/* Prev */}
                     <Link
                         href={isEarliest ? "#" : `?from=${prevFrom}&to=${prevTo}`}
                         aria-disabled={isEarliest}
-                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors
+                        className={`inline-flex items-center gap-1.5 rounded-[3px] border px-3 py-1.5 text-xs font-medium transition-colors
                             ${isEarliest
-                                ? "border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-600 pointer-events-none"
-                                : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                ? "border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-soft)] pointer-events-none"
+                                : "border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"
                             }`}
                     >
                         <ChevronLeft className="h-3.5 w-3.5" />
@@ -321,12 +321,12 @@ export default async function AgentsIndexPage({
 
                     {/* Date range label */}
                     <div className="flex-1 flex items-center justify-center gap-2">
-                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{rangeLabel}</span>
-                        <span className="text-[10px] text-slate-400">({rangeDays}d)</span>
+                        <span className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{rangeLabel}</span>
+                        <span className="text-[10px] text-[color:var(--ink-muted)]">({rangeDays}d)</span>
                         {!isLatest && (
                             <Link
                                 href={`?from=${toDateStr(addDays(today, -(DEFAULT_RANGE - 1)))}&to=${toDateStr(today)}`}
-                                className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 px-2 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-colors"
+                                className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-2 py-0.5 text-[10px] font-semibold text-[color:var(--accent)] dark:text-[color:var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] transition-colors"
                             >
                                 <RotateCcw className="h-2.5 w-2.5" />
                                 Today
@@ -346,10 +346,10 @@ export default async function AgentsIndexPage({
                     <Link
                         href={isLatest ? "#" : `?from=${nextFrom}&to=${nextTo}`}
                         aria-disabled={isLatest}
-                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors
+                        className={`inline-flex items-center gap-1.5 rounded-[3px] border px-3 py-1.5 text-xs font-medium transition-colors
                             ${isLatest
-                                ? "border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-600 pointer-events-none"
-                                : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                ? "border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-soft)] pointer-events-none"
+                                : "border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"
                             }`}
                     >
                         Next
@@ -359,15 +359,15 @@ export default async function AgentsIndexPage({
 
                 {/* Agent cards grid */}
                 {agents.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-16 text-center">
-                        <Cpu className="mx-auto h-8 w-8 text-slate-300 dark:text-slate-700" />
-                        <h2 className="mt-3 text-sm font-bold text-slate-900 dark:text-slate-100">No agents deployed yet</h2>
-                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                    <div className="rounded-[4px] border border-dashed border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-6 py-16 text-center">
+                        <Cpu className="mx-auto h-8 w-8 text-[color:var(--ink-muted)] dark:text-[color:var(--ink-soft)]" />
+                        <h2 className="mt-3 text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">No agents deployed yet</h2>
+                        <p className="mt-1 text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] max-w-sm mx-auto">
                             Deploy an AI worker from the marketplace to see its task history, quality metrics, and approvals here.
                         </p>
                         <Link
                             href="/dashboard/deployments"
-                            className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900 hover:bg-blue-700 dark:hover:bg-white/90 transition-colors"
+                            className="mt-4 inline-flex items-center gap-1.5 rounded-[3px] bg-[var(--accent)] px-4 py-2.5 text-xs font-semibold text-white dark:bg-[var(--bg-deep)] dark:text-[color:var(--ink)] hover:bg-[var(--accent)] dark:hover:bg-[var(--card)] transition-colors"
                         >
                             Go to Deployments
                             <ArrowRight className="h-3.5 w-3.5" />
@@ -376,11 +376,11 @@ export default async function AgentsIndexPage({
                 ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {agents.map((agent) => {
-                        const sc = statusConfig[agent.status] ?? { dot: "bg-slate-400", text: "text-slate-500", pulse: false };
+                        const sc = statusConfig[agent.status] ?? { dot: "bg-[var(--bg-deep)]", text: "text-[color:var(--ink-muted)]", pulse: false };
                         return (
                             <article
                                 key={agent.slug}
-                                className="group rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+                                className="group rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
                             >
                                 {/* Role + status */}
                                 <div className="flex items-center justify-between">
@@ -395,7 +395,7 @@ export default async function AgentsIndexPage({
                                 </div>
 
                                 {/* Name */}
-                                <h2 className="mt-3 text-base font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                <h2 className="mt-3 text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] group-hover:text-[color:var(--accent)] dark:group-hover:text-[color:var(--accent)] transition-colors">
                                     {agent.name}
                                 </h2>
 
@@ -404,12 +404,12 @@ export default async function AgentsIndexPage({
                                     {/* Legend */}
                                     <div className="flex items-center justify-end mb-2">
                                         <div className="flex items-center gap-1">
-                                            <span className="text-[9px] text-slate-400 mr-0.5">Less</span>
-                                            <div className="h-2.5 w-2.5 rounded-sm bg-slate-200 dark:bg-slate-700" />
-                                            <div className="h-2.5 w-2.5 rounded-sm bg-emerald-200 dark:bg-emerald-900/50" />
-                                            <div className="h-2.5 w-2.5 rounded-sm bg-emerald-400 dark:bg-emerald-600" />
-                                            <div className="h-2.5 w-2.5 rounded-sm bg-emerald-600 dark:bg-emerald-400" />
-                                            <span className="text-[9px] text-slate-400 ml-0.5">More</span>
+                                            <span className="text-[9px] text-[color:var(--ink-muted)] mr-0.5">Less</span>
+                                            <div className="h-2.5 w-2.5 rounded-sm bg-[var(--line)] dark:bg-[var(--card)]" />
+                                            <div className="h-2.5 w-2.5 rounded-sm bg-[color-mix(in_srgb,var(--ok)_16%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/50" />
+                                            <div className="h-2.5 w-2.5 rounded-sm bg-[var(--ok)] dark:bg-[var(--ok)]" />
+                                            <div className="h-2.5 w-2.5 rounded-sm bg-[var(--ok)] dark:bg-[var(--ok)]" />
+                                            <span className="text-[9px] text-[color:var(--ink-muted)] ml-0.5">More</span>
                                         </div>
                                     </div>
 
@@ -418,7 +418,7 @@ export default async function AgentsIndexPage({
                                         <div className="w-6 shrink-0" />
                                         <div className="flex-1 grid grid-cols-7 gap-1">
                                             {['M','T','W','T','F','S','S'].map((d, idx) => (
-                                                <div key={idx} className="text-center text-[9px] font-semibold text-slate-400">{d}</div>
+                                                <div key={idx} className="text-center text-[9px] font-semibold text-[color:var(--ink-muted)]">{d}</div>
                                             ))}
                                         </div>
                                     </div>
@@ -431,7 +431,7 @@ export default async function AgentsIndexPage({
                                                 <div key={week} className="flex items-center gap-1">
                                                     <div className="w-6 shrink-0 text-right">
                                                         {monthLabel && (
-                                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide leading-none">
+                                                            <span className="text-[9px] font-bold text-[color:var(--ink-muted)] uppercase tracking-wide leading-none">
                                                                 {monthLabel}
                                                             </span>
                                                         )}
@@ -447,7 +447,7 @@ export default async function AgentsIndexPage({
                                                             return (
                                                                 <div
                                                                     key={idx}
-                                                                    className={`h-3.5 rounded-sm ${heatCellClass(agent.heatSeed, idx, fromDate, cell.active)} ${cell.active ? "hover:ring-1 hover:ring-emerald-400" : ""} transition-all cursor-default`}
+                                                                    className={`h-3.5 rounded-sm ${heatCellClass(agent.heatSeed, idx, fromDate, cell.active)} ${cell.active ? "hover:ring-1 hover:ring-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]" : ""} transition-all cursor-default`}
                                                                     title={label}
                                                                 />
                                                             );
@@ -461,22 +461,22 @@ export default async function AgentsIndexPage({
 
                                 {/* Stats */}
                                 <div className="mt-4 grid grid-cols-2 gap-2">
-                                    <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/50 px-3 py-2.5 flex items-center gap-2.5">
-                                        <div className="h-7 w-7 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0">
-                                            <ClipboardCheck className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                                    <div className="rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)]/60 border border-[color:var(--line)] dark:border-[color:var(--line)]/50 px-3 py-2.5 flex items-center gap-2.5">
+                                        <div className="h-7 w-7 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 flex items-center justify-center shrink-0">
+                                            <ClipboardCheck className="h-3.5 w-3.5 text-[color:var(--accent)] dark:text-[color:var(--accent)]" />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">{agent.tasks}</p>
-                                            <p className="text-[10px] text-slate-400 mt-0.5">tasks done</p>
+                                            <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] leading-none">{agent.tasks}</p>
+                                            <p className="text-[10px] text-[color:var(--ink-muted)] mt-0.5">tasks done</p>
                                         </div>
                                     </div>
-                                    <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/50 px-3 py-2.5 flex items-center gap-2.5">
-                                        <div className="h-7 w-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shrink-0">
-                                            <Shield className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                                    <div className="rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)]/60 border border-[color:var(--line)] dark:border-[color:var(--line)]/50 px-3 py-2.5 flex items-center gap-2.5">
+                                        <div className="h-7 w-7 rounded-[3px] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 flex items-center justify-center shrink-0">
+                                            <Shield className="h-3.5 w-3.5 text-[color:var(--ok)] dark:text-[color:var(--ok)]" />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">{agent.reliability !== null ? `${agent.reliability}%` : "—"}</p>
-                                            <p className="text-[10px] text-slate-400 mt-0.5">reliability</p>
+                                            <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] leading-none">{agent.reliability !== null ? `${agent.reliability}%` : "—"}</p>
+                                            <p className="text-[10px] text-[color:var(--ink-muted)] mt-0.5">reliability</p>
                                         </div>
                                     </div>
                                 </div>
@@ -485,14 +485,14 @@ export default async function AgentsIndexPage({
                                 <div className="mt-4 flex gap-2">
                                     <Link
                                         href={`/dashboard/agents/${agent.slug}`}
-                                        className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2.5 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900 hover:bg-blue-700 dark:hover:bg-white/90 transition-colors"
+                                        className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-[3px] bg-[var(--accent)] px-3 py-2.5 text-xs font-semibold text-white dark:bg-[var(--bg-deep)] dark:text-[color:var(--ink)] hover:bg-[var(--accent)] dark:hover:bg-[var(--card)] transition-colors"
                                     >
                                         View details
                                         <ArrowRight className="h-3.5 w-3.5" />
                                     </Link>
                                     <Link
                                         href={`/dashboard/agents/${agent.slug}/approvals`}
-                                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                                        className="inline-flex items-center gap-1.5 rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2.5 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition-colors"
                                     >
                                         <Timer className="h-3.5 w-3.5" />
                                         Approvals

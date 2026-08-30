@@ -81,12 +81,12 @@ const ROLE_NAMES: Record<string, string> = {
 };
 
 const ROLE_STYLES = [
-    { color: "text-blue-600",    ring: "ring-blue-200 bg-blue-50"    },
-    { color: "text-blue-600", ring: "ring-blue-200 bg-blue-50" },
-    { color: "text-amber-600",  ring: "ring-amber-200 bg-amber-50"  },
-    { color: "text-rose-600",   ring: "ring-rose-200 bg-rose-50"    },
-    { color: "text-emerald-600",ring: "ring-emerald-200 bg-emerald-50" },
-    { color: "text-blue-600", ring: "ring-blue-200 bg-blue-50" },
+    { color: "text-[color:var(--accent)]",    ring: "ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]"    },
+    { color: "text-[color:var(--accent)]", ring: "ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]" },
+    { color: "text-[color:var(--warn)]",  ring: "ring-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)]"  },
+    { color: "text-[color:var(--danger)]",   ring: "ring-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]"    },
+    { color: "text-[color:var(--ok)]",ring: "ring-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)]" },
+    { color: "text-[color:var(--accent)]", ring: "ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]" },
 ];
 
 function botDisplayName(role: string): string {
@@ -126,9 +126,9 @@ function messageToTimelineEvent(msg: MessageRecord): { time: string; event: stri
 }
 
 const riskStyles = {
-    low:    { badge: "text-emerald-700 bg-emerald-100", dot: "bg-emerald-500" },
-    medium: { badge: "text-amber-700 bg-amber-100",     dot: "bg-amber-500"   },
-    high:   { badge: "text-rose-700 bg-rose-100",       dot: "bg-rose-500"    },
+    low:    { badge: "text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)]", dot: "bg-[var(--ok)]" },
+    medium: { badge: "text-[color:var(--warn)] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)]",     dot: "bg-[var(--warn)]"   },
+    high:   { badge: "text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]",       dot: "bg-[var(--danger)]"    },
 };
 
 // ── Page ─────────────────────────────────────────────────────────────────────
@@ -183,11 +183,11 @@ export default async function DashboardPage() {
     const activeCount = bots.filter(b => b.status === "active").length;
 
     return (
-        <div className="site-shell min-h-screen bg-slate-50">
+        <div className="site-shell min-h-screen bg-[var(--bg-deep)]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
             {/* ── Hero ──────────────────────────────────────────────────────── */}
-            <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-50 via-white to-white">
+            <section className="relative overflow-hidden rounded-[4px] border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
                 <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.07)_0%,transparent_60%)]" />
@@ -195,20 +195,20 @@ export default async function DashboardPage() {
 
                 <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                     <div className="flex items-center gap-2 mb-5">
-                        <div className="flex items-center gap-2 rounded-xl bg-blue-50 border border-blue-200 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-700">
-                            <PremiumIcon icon={LayoutGrid} tone="sky" containerClassName="w-4 h-4 rounded bg-blue-100 text-blue-600" iconClassName="w-2.5 h-2.5" />
+                        <div className="flex items-center gap-2 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
+                            <PremiumIcon icon={LayoutGrid} tone="sky" containerClassName="w-4 h-4 rounded bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[color:var(--accent)]" iconClassName="w-2.5 h-2.5" />
                             Customer Dashboard
                         </div>
-                        <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="text-xs text-slate-500">Overview</span>
+                        <ChevronRight className="w-3.5 h-3.5 text-[color:var(--ink-muted)]" />
+                        <span className="text-xs text-[color:var(--ink-muted)]">Overview</span>
                     </div>
 
                     <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
                         <div>
-                            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                            <h1 className="text-3xl sm:text-4xl font-extrabold text-[color:var(--ink)] tracking-tight leading-tight">
                                 AI Teammate Operations
                             </h1>
-                            <p className="mt-2 text-slate-600 text-base max-w-lg">
+                            <p className="mt-2 text-[color:var(--ink-soft)] text-base max-w-lg">
                                 Monitor tasks, approvals, and delivery outcomes across every AI teammate in real time.
                             </p>
                         </div>
@@ -217,22 +217,22 @@ export default async function DashboardPage() {
                                 <Zap className="w-3.5 h-3.5" />
                                 Add AI Teammate
                             </ButtonLink>
-                            <ButtonLink href="/dashboard/billing" size="sm" variant="outline" className="!bg-white !text-slate-900 !border-slate-200 hover:!bg-slate-50">
+                            <ButtonLink href="/dashboard/billing" size="sm" variant="outline" className="!bg-[var(--card)] !text-[color:var(--ink)] !border-[color:var(--line)] hover:!bg-[var(--bg-deep)]">
                                 Manage Plan
                             </ButtonLink>
                         </div>
                     </div>
 
                     {/* Mini stats bar */}
-                    <div className="mt-5 flex flex-wrap items-center gap-6 border-t border-slate-200 pt-4">
+                    <div className="mt-5 flex flex-wrap items-center gap-6 border-t border-[color:var(--line)] pt-4">
                         {[
-                            { icon: <Users className="w-3.5 h-3.5 text-blue-600" />,            label: `${activeCount > 0 ? activeCount : bots.length || "—"} active teammate${activeCount !== 1 ? "s" : ""}` },
-                            { icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />,  label: `${thisWeekTasks > 0 ? thisWeekTasks : "—"} tasks this week` },
-                            { icon: <Clock3 className="w-3.5 h-3.5 text-amber-600" />,          label: successRatePct !== null ? `${successRatePct}% success rate` : "No task data yet" },
-                            { icon: <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />,    label: "Task isolation enforced" },
-                            { icon: <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />,    label: usage?.totalCostUsd != null ? `$${usage.totalCostUsd.toFixed(0)} AI cost this month` : "No billing data" },
+                            { icon: <Users className="w-3.5 h-3.5 text-[color:var(--accent)]" />,            label: `${activeCount > 0 ? activeCount : bots.length || "—"} active teammate${activeCount !== 1 ? "s" : ""}` },
+                            { icon: <CheckCircle2 className="w-3.5 h-3.5 text-[color:var(--ok)]" />,  label: `${thisWeekTasks > 0 ? thisWeekTasks : "—"} tasks this week` },
+                            { icon: <Clock3 className="w-3.5 h-3.5 text-[color:var(--warn)]" />,          label: successRatePct !== null ? `${successRatePct}% success rate` : "No task data yet" },
+                            { icon: <ShieldCheck className="w-3.5 h-3.5 text-[color:var(--accent)]" />,    label: "Task isolation enforced" },
+                            { icon: <TrendingUp className="w-3.5 h-3.5 text-[color:var(--ok)]" />,    label: usage?.totalCostUsd != null ? `$${usage.totalCostUsd.toFixed(0)} AI cost this month` : "No billing data" },
                         ].map(({ icon, label }) => (
-                            <div key={label} className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                            <div key={label} className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-soft)]">
                                 {icon}
                                 {label}
                             </div>
@@ -257,70 +257,70 @@ export default async function DashboardPage() {
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
                     {/* Workers table */}
-                    <div className="xl:col-span-2 rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-                        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <div className="xl:col-span-2 rounded-[4px] border border-[color:var(--line)] bg-[var(--card)] overflow-hidden shadow-sm">
+                        <div className="px-6 py-4 border-b border-[color:var(--line)] flex items-center justify-between bg-[var(--bg-deep)]/50">
                             <div className="flex items-center gap-3">
-                                <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
-                                    <Users className="w-3.5 h-3.5 text-blue-600" />
+                                <div className="w-7 h-7 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] flex items-center justify-center">
+                                    <Users className="w-3.5 h-3.5 text-[color:var(--accent)]" />
                                 </div>
-                                <h2 className="text-sm font-bold text-slate-900">Active AI Teammates</h2>
+                                <h2 className="text-sm font-bold text-[color:var(--ink)]">Active AI Teammates</h2>
                             </div>
-                            <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="flex items-center gap-1.5 text-xs font-semibold text-[color:var(--ok)]">
+                                <span className="w-2 h-2 rounded-full bg-[var(--ok)] animate-pulse" />
                                 Live
                             </span>
                         </div>
 
                         {workers.length === 0 ? (
                             <div className="px-6 py-10 text-center">
-                                <p className="text-sm text-slate-500">No AI teammates yet.</p>
+                                <p className="text-sm text-[color:var(--ink-muted)]">No AI teammates yet.</p>
                                 <ButtonLink href="/marketplace" size="sm" className="mt-3">Browse Marketplace</ButtonLink>
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm min-w-[520px]" role="grid">
                                     <thead>
-                                        <tr className="border-b border-slate-100">
+                                        <tr className="border-b border-[color:var(--line)]">
                                             {["Teammate", "Status", "Tasks", "Reliability"].map((h) => (
-                                                <th key={h} className="text-left px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                                <th key={h} className="text-left px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--ink-muted)]">
                                                     {h}
                                                 </th>
                                             ))}
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-100">
+                                    <tbody className="divide-y divide-[color:var(--line)]">
                                         {workers.map((w) => (
-                                            <tr key={w.slug} className="hover:bg-slate-50 transition-colors group cursor-pointer">
+                                            <tr key={w.slug} className="hover:bg-[var(--bg-deep)] transition-colors group cursor-pointer">
                                                 <td className="px-5 py-3.5">
                                                     <Link href={`/dashboard/agents/${w.slug}`} className="flex items-center gap-3">
-                                                        <div className={`w-9 h-9 rounded-xl ring-1 ${w.ring} flex items-center justify-center text-xs font-bold shrink-0 ${w.color}`}>
+                                                        <div className={`w-9 h-9 rounded-[3px] ring-1 ${w.ring} flex items-center justify-center text-xs font-bold shrink-0 ${w.color}`}>
                                                             {w.initials}
                                                         </div>
                                                         <div>
-                                                            <p className="font-semibold text-slate-900 text-sm group-hover:text-blue-600 transition-colors">{w.name}</p>
-                                                            <p className="text-xs text-slate-400">{w.role}</p>
+                                                            <p className="font-semibold text-[color:var(--ink)] text-sm group-hover:text-[color:var(--accent)] transition-colors">{w.name}</p>
+                                                            <p className="text-xs text-[color:var(--ink-muted)]">{w.role}</p>
                                                         </div>
                                                     </Link>
                                                 </td>
                                                 <td className="px-5 py-3.5">
-                                                    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-1 ${w.status === "Active" ? "text-emerald-700 bg-emerald-100" : "text-amber-700 bg-amber-100"}`}>
-                                                        <span className={`w-1.5 h-1.5 rounded-full ${w.status === "Active" ? "bg-emerald-500" : "bg-amber-500"}`} />
+                                                    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-1 ${w.status === "Active" ? "text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)]" : "text-[color:var(--warn)] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)]"}`}>
+                                                        <span className={`w-1.5 h-1.5 rounded-full ${w.status === "Active" ? "bg-[var(--ok)]" : "bg-[var(--warn)]"}`} />
                                                         {w.status}
                                                     </span>
                                                 </td>
                                                 <td className="px-5 py-3.5">
-                                                    <span className="font-bold text-slate-800 tabular-nums">{w.tasks}</span>
+                                                    <span className="font-bold text-[color:var(--ink)] tabular-nums">{w.tasks}</span>
                                                 </td>
                                                 <td className="px-5 py-3.5">
                                                     {w.reliability > 0 ? (
                                                         <div className="flex items-center gap-3">
-                                                            <div className="w-20 h-1.5 rounded-full bg-slate-200 overflow-hidden">
-                                                                <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-blue-500" style={{ width: `${w.reliability}%` }} />
+                                                            <div className="w-20 h-1.5 rounded-full bg-[var(--line)] overflow-hidden">
+                                                                <div className="h-full rounded-full bg-gradient-to-r from-[color-mix(in_srgb,var(--ok)_14%,transparent)] to-[color-mix(in_srgb,var(--accent)_14%,transparent)]" style={{ width: `${w.reliability}%` }} />
                                                             </div>
-                                                            <span className="text-xs font-bold text-slate-700 tabular-nums">{w.reliability}%</span>
+                                                            <span className="text-xs font-bold text-[color:var(--ink-soft)] tabular-nums">{w.reliability}%</span>
                                                         </div>
                                                     ) : (
-                                                        <span className="text-xs text-slate-400">No data</span>
+                                                        <span className="text-xs text-[color:var(--ink-muted)]">No data</span>
                                                     )}
                                                 </td>
                                             </tr>
@@ -329,7 +329,7 @@ export default async function DashboardPage() {
                                 </table>
                             </div>
                         )}
-                        <div className="px-6 py-3 border-t border-slate-100 bg-slate-50/50">
+                        <div className="px-6 py-3 border-t border-[color:var(--line)] bg-[var(--bg-deep)]/50">
                             <ButtonLink href="/dashboard/agents" size="sm" variant="ghost" className="w-full justify-center">
                                 View all agents <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
                             </ButtonLink>
@@ -344,10 +344,10 @@ export default async function DashboardPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                     {/* Weekly task activity */}
-                    <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-                        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                            <h2 className="text-sm font-bold text-slate-900">Weekly Task Activity</h2>
-                            <p className="text-xs text-slate-400 mt-0.5">Tasks completed per day — last 7 days</p>
+                    <div className="rounded-[4px] border border-[color:var(--line)] bg-[var(--card)] overflow-hidden shadow-sm">
+                        <div className="px-6 py-4 border-b border-[color:var(--line)] bg-[var(--bg-deep)]/50">
+                            <h2 className="text-sm font-bold text-[color:var(--ink)]">Weekly Task Activity</h2>
+                            <p className="text-xs text-[color:var(--ink-muted)] mt-0.5">Tasks completed per day — last 7 days</p>
                         </div>
                         <div className="p-5">
                             <div className="flex items-end gap-[6px]" style={{ height: "96px" }}>
@@ -372,30 +372,30 @@ export default async function DashboardPage() {
                                     );
                                 })}
                             </div>
-                            <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-2 gap-3">
-                                <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 text-center">
-                                    <p className="text-lg font-extrabold text-slate-900 tabular-nums">{thisWeekTasks > 0 ? thisWeekTasks : "—"}</p>
-                                    <p className="text-[11px] text-slate-400 font-medium">Tasks this week</p>
+                            <div className="mt-4 pt-4 border-t border-[color:var(--line)] grid grid-cols-2 gap-3">
+                                <div className="rounded-[3px] bg-[var(--bg-deep)] border border-[color:var(--line)] px-3 py-2.5 text-center">
+                                    <p className="text-lg font-extrabold text-[color:var(--ink)] tabular-nums">{thisWeekTasks > 0 ? thisWeekTasks : "—"}</p>
+                                    <p className="text-[11px] text-[color:var(--ink-muted)] font-medium">Tasks this week</p>
                                 </div>
-                                <div className="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2.5 text-center">
-                                    <p className="text-lg font-extrabold text-slate-900 tabular-nums">{usage?.totalTasks ?? "—"}</p>
-                                    <p className="text-[11px] text-slate-400 font-medium">Total (30 days)</p>
+                                <div className="rounded-[3px] bg-[var(--bg-deep)] border border-[color:var(--line)] px-3 py-2.5 text-center">
+                                    <p className="text-lg font-extrabold text-[color:var(--ink)] tabular-nums">{usage?.totalTasks ?? "—"}</p>
+                                    <p className="text-[11px] text-[color:var(--ink-muted)] font-medium">Total (30 days)</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     {/* Execution timeline */}
-                    <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-                        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                            <h2 className="text-sm font-bold text-slate-900">Agent Messages</h2>
-                            <p className="text-xs text-slate-400 mt-0.5">
+                    <div className="rounded-[4px] border border-[color:var(--line)] bg-[var(--card)] overflow-hidden shadow-sm">
+                        <div className="px-6 py-4 border-b border-[color:var(--line)] bg-[var(--bg-deep)]/50">
+                            <h2 className="text-sm font-bold text-[color:var(--ink)]">Agent Messages</h2>
+                            <p className="text-xs text-[color:var(--ink-muted)] mt-0.5">
                                 {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                             </p>
                         </div>
                         <div className="p-5 overflow-y-auto max-h-[340px]">
                             {timeline.length === 0 ? (
-                                <p className="text-sm text-slate-400 text-center py-6">No agent messages yet.</p>
+                                <p className="text-sm text-[color:var(--ink-muted)] text-center py-6">No agent messages yet.</p>
                             ) : (
                                 <div className="space-y-0">
                                     {timeline.map((item, i) => (
@@ -403,17 +403,17 @@ export default async function DashboardPage() {
                                             <div className="flex flex-col items-center shrink-0 pt-0.5">
                                                 <span className={`w-2.5 h-2.5 rounded-full ring-2 ring-white shadow-sm shrink-0 ${riskStyles[item.risk].dot}`} />
                                                 {i < timeline.length - 1 && (
-                                                    <div className="w-px flex-1 mt-1 bg-gradient-to-b from-slate-200 to-transparent" style={{ minHeight: "36px" }} />
+                                                    <div className="w-px flex-1 mt-1 bg-gradient-to-b from-[var(--line)] to-transparent" style={{ minHeight: "36px" }} />
                                                 )}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-[11px] font-mono font-semibold text-slate-500 tabular-nums">{item.time}</span>
+                                                    <span className="text-[11px] font-mono font-semibold text-[color:var(--ink-muted)] tabular-nums">{item.time}</span>
                                                     <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 uppercase tracking-wide ${riskStyles[item.risk].badge}`}>
                                                         {item.risk}
                                                     </span>
                                                 </div>
-                                                <p className="text-xs text-slate-700 leading-snug">{item.event}</p>
+                                                <p className="text-xs text-[color:var(--ink-soft)] leading-snug">{item.event}</p>
                                             </div>
                                         </div>
                                     ))}
@@ -423,15 +423,15 @@ export default async function DashboardPage() {
                     </div>
 
                     {/* Ops Health */}
-                    <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-blue-50 overflow-hidden shadow-sm">
-                        <div className="px-6 py-4 border-b border-emerald-100 bg-emerald-50/50">
+                    <div className="rounded-[4px] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] bg-gradient-to-br from-[color-mix(in_srgb,var(--ok)_8%,transparent)] via-[var(--card)] to-[color-mix(in_srgb,var(--accent)_8%,transparent)] overflow-hidden shadow-sm">
+                        <div className="px-6 py-4 border-b border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)]/50">
                             <div className="flex items-center gap-2.5">
-                                <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center">
-                                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                <div className="w-7 h-7 rounded-[3px] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] flex items-center justify-center">
+                                    <ShieldCheck className="w-3.5 h-3.5 text-[color:var(--ok)]" />
                                 </div>
                                 <div>
-                                    <h2 className="text-sm font-bold text-slate-900">Ops Health</h2>
-                                    <p className="text-xs text-emerald-600 font-semibold">
+                                    <h2 className="text-sm font-bold text-[color:var(--ink)]">Ops Health</h2>
+                                    <p className="text-xs text-[color:var(--ok)] font-semibold">
                                         {bots.length === 0 ? "No agents yet" : "Live metrics"}
                                     </p>
                                 </div>
@@ -440,12 +440,12 @@ export default async function DashboardPage() {
 
                         <div className="p-4 space-y-2">
                             {healthItems.map(({ label, value, good }) => (
-                                <div key={label} className="flex items-center justify-between rounded-xl bg-white/80 border border-white px-4 py-2.5 shadow-sm">
-                                    <p className="text-xs text-slate-600">{label}</p>
-                                    <span className={`font-bold text-xs flex items-center gap-1.5 ${good ? "text-emerald-600" : "text-amber-600"}`}>
+                                <div key={label} className="flex items-center justify-between rounded-[3px] bg-[var(--card)] border border-[color:var(--line)] px-4 py-2.5 shadow-sm">
+                                    <p className="text-xs text-[color:var(--ink-soft)]">{label}</p>
+                                    <span className={`font-bold text-xs flex items-center gap-1.5 ${good ? "text-[color:var(--ok)]" : "text-[color:var(--warn)]"}`}>
                                         {good
-                                            ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                                            : <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />}
+                                            ? <CheckCircle2 className="w-3.5 h-3.5 text-[color:var(--ok)]" />
+                                            : <AlertTriangle className="w-3.5 h-3.5 text-[color:var(--warn)]" />}
                                         {value}
                                     </span>
                                 </div>

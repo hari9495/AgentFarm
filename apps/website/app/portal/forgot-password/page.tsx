@@ -39,51 +39,51 @@ export default function ForgotPasswordPage() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center px-4">
+        <div className="min-h-screen bg-[var(--bg-deep)] dark:bg-[var(--bg)] flex flex-col items-center justify-center px-4">
             <div className="w-full max-w-md">
                 <div className="flex flex-col items-center mb-8 gap-3">
-                    <div className="h-12 w-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <div className="h-12 w-12 rounded-[4px] bg-[var(--accent)] flex items-center justify-center shadow-lg shadow-blue-500/20">
                         <LayoutDashboard className="h-6 w-6 text-white" />
                     </div>
                     <div className="text-center">
-                        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Reset your password</h1>
-                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        <h1 className="text-2xl font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Reset your password</h1>
+                        <p className="mt-1 text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                             Enter your tenant ID and email to receive a reset link
                         </p>
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl shadow-slate-900/5 border border-slate-200 dark:border-slate-800 p-8">
+                <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] shadow-xl shadow-slate-900/5 border border-[color:var(--line)] dark:border-[color:var(--line)] p-8">
                     {submitted ? (
                         <div className="space-y-4">
-                            <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400">
+                            <div className="rounded-[3px] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] px-4 py-3 text-sm text-[color:var(--ok)] dark:text-[color:var(--ok)]">
                                 If an account exists for <strong>{email}</strong>, a reset link has been sent.
                             </div>
                             {devResetUrl && (
-                                <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-4 py-3 text-xs text-amber-800 dark:text-amber-300 break-all">
+                                <div className="rounded-[3px] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] px-4 py-3 text-xs text-[color:var(--warn)] dark:text-[color:var(--warn)] break-all">
                                     <strong>Dev mode — reset link:</strong>
                                     <br />
-                                    <a href={devResetUrl} className="text-blue-600 hover:underline">{devResetUrl}</a>
+                                    <a href={devResetUrl} className="text-[color:var(--accent)] hover:underline">{devResetUrl}</a>
                                 </div>
                             )}
-                            <Link href="/portal/login" className="block text-center text-sm text-blue-600 hover:underline">
+                            <Link href="/portal/login" className="block text-center text-sm text-[color:var(--accent)] hover:underline">
                                 ← Back to sign in
                             </Link>
                         </div>
                     ) : (
                         <>
                             {error && (
-                                <div className="mb-5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 px-4 py-3 text-sm text-rose-700 dark:text-rose-400">
+                                <div className="mb-5 rounded-[3px] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] px-4 py-3 text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)]">
                                     {error}
                                 </div>
                             )}
                             <form onSubmit={handleSubmit} className="space-y-4" noValidate>
                                 <div>
-                                    <label htmlFor="fp-tenant-id" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                                    <label htmlFor="fp-tenant-id" className="block text-xs font-medium text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] mb-1.5">
                                         Tenant ID
                                     </label>
                                     <div className="relative">
-                                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[color:var(--ink-muted)]" />
                                         <input
                                             id="fp-tenant-id"
                                             type="text"
@@ -92,16 +92,16 @@ export default function ForgotPasswordPage() {
                                             required
                                             value={tenantId}
                                             onChange={(e) => setTenantId(e.target.value)}
-                                            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                            className="w-full pl-9 pr-3 py-2.5 rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-sm text-[color:var(--ink)] dark:text-[color:var(--ink)] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] focus:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] transition"
                                         />
                                     </div>
                                 </div>
                                 <div>
-                                    <label htmlFor="fp-email" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                                    <label htmlFor="fp-email" className="block text-xs font-medium text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] mb-1.5">
                                         Email
                                     </label>
                                     <div className="relative">
-                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[color:var(--ink-muted)]" />
                                         <input
                                             id="fp-email"
                                             type="email"
@@ -110,14 +110,14 @@ export default function ForgotPasswordPage() {
                                             required
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                            className="w-full pl-9 pr-3 py-2.5 rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-sm text-[color:var(--ink)] dark:text-[color:var(--ink)] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] focus:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] transition"
                                         />
                                     </div>
                                 </div>
                                 <button
                                     type="submit"
                                     disabled={loading || !tenantId.trim() || !email.trim()}
-                                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-semibold shadow-sm transition-colors"
+                                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-[3px] bg-[var(--accent)] hover:bg-[var(--accent)] disabled:bg-[var(--accent)] text-white text-sm font-semibold shadow-sm transition-colors"
                                 >
                                     {loading ? (
                                         <>
@@ -129,8 +129,8 @@ export default function ForgotPasswordPage() {
                                     )}
                                 </button>
                             </form>
-                            <p className="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">
-                                <Link href="/portal/login" className="text-blue-600 hover:underline">← Back to sign in</Link>
+                            <p className="mt-6 text-center text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
+                                <Link href="/portal/login" className="text-[color:var(--accent)] hover:underline">← Back to sign in</Link>
                             </p>
                         </>
                     )}

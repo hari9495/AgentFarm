@@ -83,14 +83,14 @@ export default function OnboardingChecklist({
     return (
         <div className="space-y-4">
             {/* Progress header */}
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm">
+            <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    <span className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">
                         {allDone ? "All steps complete" : `${doneCount} of ${steps.length} complete`}
                     </span>
-                    <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{pct}%</span>
+                    <span className="text-sm font-bold text-[color:var(--accent)] dark:text-[color:var(--accent)]">{pct}%</span>
                 </div>
-                <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-2 bg-[var(--bg-deep)] dark:bg-[var(--card)] rounded-full overflow-hidden">
                     <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{
@@ -102,14 +102,14 @@ export default function OnboardingChecklist({
                     />
                 </div>
                 {allDone && (
-                    <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                    <p className="mt-3 text-sm text-[color:var(--ok)] dark:text-[color:var(--ok)] font-medium">
                         🎉 All set! Your agents are fully configured and running.
                     </p>
                 )}
             </div>
 
             {/* Steps */}
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm divide-y divide-slate-100 dark:divide-slate-800">
+            <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] overflow-hidden shadow-sm divide-y divide-[color:var(--line)] dark:divide-[color:var(--line)]">
                 {steps.map((step) => {
                     const Icon = step.icon;
                     return (
@@ -120,21 +120,21 @@ export default function OnboardingChecklist({
                             {/* Status icon */}
                             <div className="mt-0.5 shrink-0">
                                 {step.done ? (
-                                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                                    <CheckCircle2 className="h-5 w-5 text-[color:var(--ok)]" />
                                 ) : (
-                                    <Circle className="h-5 w-5 text-slate-300 dark:text-slate-600" />
+                                    <Circle className="h-5 w-5 text-[color:var(--ink-muted)] dark:text-[color:var(--ink-soft)]" />
                                 )}
                             </div>
 
                             {/* Content */}
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-0.5">
-                                    <Icon className={`h-3.5 w-3.5 shrink-0 ${step.done ? "text-slate-400" : "text-blue-600 dark:text-blue-400"}`} />
-                                    <span className={`text-sm font-semibold ${step.done ? "line-through text-slate-400 dark:text-slate-500" : "text-slate-900 dark:text-slate-100"}`}>
+                                    <Icon className={`h-3.5 w-3.5 shrink-0 ${step.done ? "text-[color:var(--ink-muted)]" : "text-[color:var(--accent)] dark:text-[color:var(--accent)]"}`} />
+                                    <span className={`text-sm font-semibold ${step.done ? "line-through text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]" : "text-[color:var(--ink)] dark:text-[color:var(--ink)]"}`}>
                                         {step.title}
                                     </span>
                                 </div>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] leading-relaxed">
                                     {step.description}
                                 </p>
                             </div>
@@ -143,7 +143,7 @@ export default function OnboardingChecklist({
                             {!step.done && (
                                 <Link
                                     href={step.href}
-                                    className="flex items-center gap-1 shrink-0 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors mt-0.5"
+                                    className="flex items-center gap-1 shrink-0 text-xs font-semibold text-[color:var(--accent)] dark:text-[color:var(--accent)] hover:text-[color:var(--accent)] dark:hover:text-[color:var(--accent)] transition-colors mt-0.5"
                                 >
                                     {step.cta}
                                     <ChevronRight className="h-3 w-3" />
@@ -156,7 +156,7 @@ export default function OnboardingChecklist({
 
             {/* Quick links */}
             <div>
-                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2 px-1">
+                <p className="text-xs font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] uppercase tracking-wide mb-2 px-1">
                     Explore
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -168,14 +168,14 @@ export default function OnboardingChecklist({
                         <Link
                             key={href}
                             href={href}
-                            className="flex items-center gap-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors shadow-sm"
+                            className="flex items-center gap-3 bg-[var(--card)] dark:bg-[var(--card)] rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-4 py-3 hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]/70 transition-colors shadow-sm"
                         >
-                            <div className="h-8 w-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center shrink-0">
-                                <Icon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            <div className="h-8 w-8 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 flex items-center justify-center shrink-0">
+                                <Icon className="h-4 w-4 text-[color:var(--accent)] dark:text-[color:var(--accent)]" />
                             </div>
                             <div>
-                                <div className="text-sm font-medium text-slate-900 dark:text-slate-100">{label}</div>
-                                <div className="text-xs text-slate-400 dark:text-slate-500">{desc}</div>
+                                <div className="text-sm font-medium text-[color:var(--ink)] dark:text-[color:var(--ink)]">{label}</div>
+                                <div className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">{desc}</div>
                             </div>
                         </Link>
                     ))}

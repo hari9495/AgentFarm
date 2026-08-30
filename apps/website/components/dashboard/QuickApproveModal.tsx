@@ -23,19 +23,19 @@ type Props = {
 
 const riskStyles: Record<Risk, { badge: string; border: string; iconColor: string }> = {
     low: {
-        badge: "text-emerald-700 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-900/40",
-        border: "border-emerald-200 dark:border-emerald-800/60",
-        iconColor: "text-emerald-500",
+        badge: "text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:text-[color:var(--ok)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40",
+        border: "border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/60",
+        iconColor: "text-[color:var(--ok)]",
     },
     medium: {
-        badge: "text-amber-700 bg-amber-100 dark:text-amber-300 dark:bg-amber-900/40",
-        border: "border-amber-200 dark:border-amber-800/60",
-        iconColor: "text-amber-500",
+        badge: "text-[color:var(--warn)] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:text-[color:var(--warn)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40",
+        border: "border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)]/60",
+        iconColor: "text-[color:var(--warn)]",
     },
     high: {
-        badge: "text-rose-700 bg-rose-100 dark:text-rose-300 dark:bg-rose-900/40",
-        border: "border-rose-200 dark:border-rose-800/60",
-        iconColor: "text-rose-500",
+        badge: "text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:text-[color:var(--danger)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40",
+        border: "border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/60",
+        iconColor: "text-[color:var(--danger)]",
     },
 };
 
@@ -95,7 +95,7 @@ export default function QuickApproveModal({ approval, onClose, onApproved }: Pro
         // Always mounted so the ref is stable; content conditionally rendered inside
         <dialog
             ref={dialogRef}
-            className="m-auto w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-0 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.25)]"
+            className="m-auto w-full max-w-lg rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-0 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.25)]"
             onClick={(e) => { if (e.target === dialogRef.current) dialogRef.current?.close(); }}
         >
             {approval && (
@@ -109,9 +109,9 @@ export default function QuickApproveModal({ approval, onClose, onApproved }: Pro
                                     <span className={`text-[11px] font-bold uppercase tracking-wide rounded-full px-2.5 py-0.5 ${styles.badge}`}>
                                         {approval.risk} risk
                                     </span>
-                                    <span className="text-[11px] text-slate-400 dark:text-slate-500">{approval.age}</span>
+                                    <span className="text-[11px] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">{approval.age}</span>
                                 </div>
-                                <p className="mt-1.5 text-sm font-bold text-slate-900 dark:text-slate-100 leading-snug">
+                                <p className="mt-1.5 text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] leading-snug">
                                     {approval.title}
                                 </p>
                             </div>
@@ -119,7 +119,7 @@ export default function QuickApproveModal({ approval, onClose, onApproved }: Pro
                         <button
                             onClick={() => dialogRef.current?.close()}
                             aria-label="Close"
-                            className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            className="shrink-0 w-7 h-7 rounded-[3px] flex items-center justify-center text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition-colors"
                         >
                             <X className="w-4 h-4" />
                         </button>
@@ -128,36 +128,36 @@ export default function QuickApproveModal({ approval, onClose, onApproved }: Pro
                     {/* ── Body ───────────────────────────────────────── */}
                     <div className="px-6 py-5 space-y-4">
                         {/* Reason / context block */}
-                        <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 px-4 py-3 space-y-1.5">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                        <div className="rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)]/60 border border-[color:var(--line)] dark:border-[color:var(--line)]/60 px-4 py-3 space-y-1.5">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                                 What the agent wants to do
                             </p>
-                            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                            <p className="text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] leading-relaxed">
                                 {approval.reason}
                             </p>
                         </div>
 
                         {/* Agent + Channel meta */}
                         <div className="grid grid-cols-2 gap-3">
-                            <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 px-4 py-3">
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                            <div className="rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)]/60 border border-[color:var(--line)] dark:border-[color:var(--line)]/60 px-4 py-3">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mb-1">
                                     Agent
                                 </p>
-                                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{approval.agent}</p>
+                                <p className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{approval.agent}</p>
                             </div>
-                            <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 px-4 py-3">
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+                            <div className="rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)]/60 border border-[color:var(--line)] dark:border-[color:var(--line)]/60 px-4 py-3">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mb-1">
                                     Channel
                                 </p>
-                                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{approval.channel}</p>
+                                <p className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{approval.channel}</p>
                             </div>
                         </div>
 
                         {/* Extra caution banner for HIGH risk */}
                         {approval.risk === "high" && (
-                            <div className="rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/50 px-4 py-3 flex gap-2.5">
-                                <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
-                                <p className="text-xs text-rose-700 dark:text-rose-300 leading-relaxed">
+                            <div className="rounded-[3px] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/50 px-4 py-3 flex gap-2.5">
+                                <AlertTriangle className="w-4 h-4 text-[color:var(--danger)] shrink-0 mt-0.5" />
+                                <p className="text-xs text-[color:var(--danger)] dark:text-[color:var(--danger)] leading-relaxed">
                                     This is a <strong>high-risk action</strong>. Review the context above carefully.
                                     This decision is audit-logged and cannot be undone.
                                 </p>
@@ -166,7 +166,7 @@ export default function QuickApproveModal({ approval, onClose, onApproved }: Pro
 
                         {/* Error */}
                         {error && (
-                            <p className="rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/50 px-4 py-3 text-xs font-medium text-rose-700 dark:text-rose-300">
+                            <p className="rounded-[3px] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/50 px-4 py-3 text-xs font-medium text-[color:var(--danger)] dark:text-[color:var(--danger)]">
                                 {error}
                             </p>
                         )}
@@ -177,14 +177,14 @@ export default function QuickApproveModal({ approval, onClose, onApproved }: Pro
                         <button
                             onClick={() => dialogRef.current?.close()}
                             disabled={loading}
-                            className="flex-1 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 text-sm font-semibold py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-[0.97] [transition:background-color_180ms_cubic-bezier(0.22,1,0.36,1),transform_120ms_cubic-bezier(0.22,1,0.36,1)] disabled:opacity-50"
+                            className="flex-1 rounded-[3px] border border-[color:var(--line-strong)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] text-sm font-semibold py-2.5 hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] active:scale-[0.97] [transition:background-color_180ms_cubic-bezier(0.22,1,0.36,1),transform_120ms_cubic-bezier(0.22,1,0.36,1)] disabled:opacity-50"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={() => void handleApprove()}
                             disabled={loading}
-                            className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.97] text-white text-sm font-bold py-2.5 [transition:background-color_180ms_cubic-bezier(0.22,1,0.36,1),transform_120ms_cubic-bezier(0.22,1,0.36,1)] shadow-sm shadow-emerald-500/20 disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                            className="flex-1 rounded-[3px] bg-[var(--ok)] hover:bg-[var(--ok)] active:scale-[0.97] text-white text-sm font-bold py-2.5 [transition:background-color_180ms_cubic-bezier(0.22,1,0.36,1),transform_120ms_cubic-bezier(0.22,1,0.36,1)] shadow-sm shadow-emerald-500/20 disabled:opacity-60 inline-flex items-center justify-center gap-2"
                         >
                             {loading ? (
                                 <>

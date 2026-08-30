@@ -122,41 +122,41 @@ export default function EvidenceCompliancePanel() {
 
     return (
         <div className="space-y-6">
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+            <div className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">Evidence & Compliance</h1>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                        <h1 className="text-lg font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Evidence & Compliance</h1>
+                        <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                             Approval SLA, audit freshness, and export-ready evidence pack.
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => void loadSummary()}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                            className="inline-flex items-center gap-1.5 rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-1.5 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"
                         >
-                            <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="h-3.5 w-3.5" /> Refresh
+                            <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="h-3.5 w-3.5" /> Refresh
                         </button>
                         <a
                             href="/api/evidence/export?format=json"
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                            className="inline-flex items-center gap-1.5 rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-1.5 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"
                         >
-                            <PremiumIcon icon={FileArchive} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="h-3.5 w-3.5" /> Export JSON
+                            <PremiumIcon icon={FileArchive} tone="slate" containerClassName="w-6 h-6 rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="h-3.5 w-3.5" /> Export JSON
                         </a>
                         <a
                             href="/api/evidence/export?format=csv"
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 dark:bg-slate-100 px-3 py-1.5 text-xs font-semibold text-white dark:text-slate-900"
+                            className="inline-flex items-center gap-1.5 rounded-[3px] bg-[var(--accent)] dark:bg-[var(--bg-deep)] px-3 py-1.5 text-xs font-semibold text-white dark:text-[color:var(--ink)]"
                         >
-                            <PremiumIcon icon={Download} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-white/15 text-white border-white/30 dark:bg-slate-900/10 dark:text-slate-900 dark:border-slate-900/20" iconClassName="h-3.5 w-3.5" /> Export CSV
+                            <PremiumIcon icon={Download} tone="slate" containerClassName="w-6 h-6 rounded-[3px] bg-[var(--card)] text-white border-[color:var(--line)] dark:bg-[var(--card)]/10 dark:text-[color:var(--ink)] dark:border-[color:var(--line)]/20" iconClassName="h-3.5 w-3.5" /> Export CSV
                         </a>
                     </div>
                 </div>
             </div>
 
             {error ? (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 dark:border-rose-900/50 dark:bg-rose-950/30">
-                    <p className="text-sm font-semibold text-rose-700 dark:text-rose-300">Unable to load evidence metrics</p>
-                    <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{error}</p>
+                <div className="rounded-[4px] border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] p-5 dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/50 dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30">
+                    <p className="text-sm font-semibold text-[color:var(--danger)] dark:text-[color:var(--danger)]">Unable to load evidence metrics</p>
+                    <p className="mt-1 text-xs text-[color:var(--danger)] dark:text-[color:var(--danger)]">{error}</p>
                 </div>
             ) : null}
 
@@ -183,31 +183,31 @@ export default function EvidenceCompliancePanel() {
                         sub: "Since latest audit/approval event",
                     },
                 ].map((card) => (
-                    <div key={card.label} className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
-                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{card.label}</p>
-                        <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">{loading ? "..." : card.value}</p>
-                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{card.sub}</p>
+                    <div key={card.label} className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-4">
+                        <p className="text-xs font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">{card.label}</p>
+                        <p className="mt-2 text-2xl font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{loading ? "..." : card.value}</p>
+                        <p className="mt-1 text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">{card.sub}</p>
                     </div>
                 ))}
             </div>
 
-            <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50 dark:bg-emerald-950/20 p-4">
-                <p className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                    <PremiumIcon icon={ShieldCheck} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400" iconClassName="w-3.5 h-3.5" /> Compliance pack ready
+            <div className="rounded-[4px] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/40 bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/20 p-4">
+                <p className="inline-flex items-center gap-2 text-sm font-semibold text-[color:var(--ok)] dark:text-[color:var(--ok)]">
+                    <PremiumIcon icon={ShieldCheck} tone="emerald" containerClassName="w-6 h-6 rounded-[3px] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="w-3.5 h-3.5" /> Compliance pack ready
                 </p>
-                <p className="mt-1 text-xs text-emerald-700/90 dark:text-emerald-300/90">
+                <p className="mt-1 text-xs text-[color:var(--ok)]/90 dark:text-[color:var(--ok)]/90">
                     Exports include approval decisions, decision latency, escalation markers, and append-only audit events for evidence review.
                 </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-4">
+            <div className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5 space-y-4">
                 <div className="flex items-center justify-between gap-3">
-                    <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Audit Event Query</h2>
+                    <h2 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Audit Event Query</h2>
                     <button
                         onClick={() => void loadAuditEvents()}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                        className="inline-flex items-center gap-1.5 rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-1.5 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"
                     >
-                        <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400" iconClassName="h-3.5 w-3.5" /> Refresh events
+                        <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="h-3.5 w-3.5" /> Refresh events
                     </button>
                 </div>
 
@@ -216,32 +216,32 @@ export default function EvidenceCompliancePanel() {
                         value={actionFilter}
                         onChange={(event) => setActionFilter(event.target.value)}
                         placeholder="Filter by event type (action)"
-                        className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-700 dark:text-slate-200"
+                        className="rounded-[3px] border border-[color:var(--line-strong)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--bg)] px-3 py-2 text-xs text-[color:var(--ink-soft)] dark:text-[color:var(--ink)]"
                     />
                     <input
                         value={actorFilter}
                         onChange={(event) => setActorFilter(event.target.value)}
                         placeholder="Filter by actor email"
-                        className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-700 dark:text-slate-200"
+                        className="rounded-[3px] border border-[color:var(--line-strong)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--bg)] px-3 py-2 text-xs text-[color:var(--ink-soft)] dark:text-[color:var(--ink)]"
                     />
                     <input
                         type="datetime-local"
                         value={fromFilter}
                         onChange={(event) => setFromFilter(event.target.value)}
-                        className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-700 dark:text-slate-200"
+                        className="rounded-[3px] border border-[color:var(--line-strong)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--bg)] px-3 py-2 text-xs text-[color:var(--ink-soft)] dark:text-[color:var(--ink)]"
                     />
                     <input
                         type="datetime-local"
                         value={toFilter}
                         onChange={(event) => setToFilter(event.target.value)}
-                        className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-700 dark:text-slate-200"
+                        className="rounded-[3px] border border-[color:var(--line-strong)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--bg)] px-3 py-2 text-xs text-[color:var(--ink-soft)] dark:text-[color:var(--ink)]"
                     />
                 </div>
 
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[760px] text-xs">
                         <thead>
-                            <tr className="text-left text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                            <tr className="text-left text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] border-b border-[color:var(--line)] dark:border-[color:var(--line)]">
                                 <th className="py-2 pr-3">Time</th>
                                 <th className="py-2 pr-3">Event Type</th>
                                 <th className="py-2 pr-3">Actor</th>
@@ -252,30 +252,30 @@ export default function EvidenceCompliancePanel() {
                         <tbody>
                             {auditLoading ? (
                                 <tr>
-                                    <td colSpan={5} className="py-3 text-slate-500 dark:text-slate-400">
+                                    <td colSpan={5} className="py-3 text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                                         Loading audit events...
                                     </td>
                                 </tr>
                             ) : auditEvents.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="py-3 text-slate-500 dark:text-slate-400">
+                                    <td colSpan={5} className="py-3 text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                                         No audit events match the current filters.
                                     </td>
                                 </tr>
                             ) : (
                                 auditEvents.map((event) => (
-                                    <tr key={event.id} className="border-b border-slate-100 dark:border-slate-800/80">
-                                        <td className="py-2 pr-3 text-slate-600 dark:text-slate-300">
+                                    <tr key={event.id} className="border-b border-[color:var(--line)] dark:border-[color:var(--line)]/80">
+                                        <td className="py-2 pr-3 text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
                                             {new Date(event.createdAt).toLocaleString()}
                                         </td>
-                                        <td className="py-2 pr-3 text-slate-700 dark:text-slate-200 font-medium">
+                                        <td className="py-2 pr-3 text-[color:var(--ink-soft)] dark:text-[color:var(--ink)] font-medium">
                                             {event.action}
                                         </td>
-                                        <td className="py-2 pr-3 text-slate-600 dark:text-slate-300">{event.actorEmail}</td>
-                                        <td className="py-2 pr-3 text-slate-600 dark:text-slate-300">
+                                        <td className="py-2 pr-3 text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">{event.actorEmail}</td>
+                                        <td className="py-2 pr-3 text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
                                             {event.targetType}:{event.targetId}
                                         </td>
-                                        <td className="py-2 pr-3 text-slate-600 dark:text-slate-300">{event.reason || "-"}</td>
+                                        <td className="py-2 pr-3 text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">{event.reason || "-"}</td>
                                     </tr>
                                 ))
                             )}

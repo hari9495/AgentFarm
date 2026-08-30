@@ -9,11 +9,11 @@ export const metadata: Metadata = {
 
 export default function GovernancePage() {
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen bg-[var(--bg-deep)]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
                 {/* Dark hero */}
-                <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-50 via-white to-white">
+                <section className="relative overflow-hidden rounded-[4px] border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
                     <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(99,102,241,0.18)_0%,transparent_60%)]" />
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(139,92,246,0.12)_0%,transparent_60%)]" />
@@ -21,17 +21,17 @@ export default function GovernancePage() {
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center gap-2 rounded-xl bg-blue-50 border border-blue-200 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-700">
+                            <div className="flex items-center gap-2 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
                                 <ShieldCheck className="w-3.5 h-3.5" />
                                 Governance
                             </div>
-                            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-                            <span className="text-xs text-slate-500">Compliance</span>
+                            <ChevronRight className="w-3.5 h-3.5 text-[color:var(--ink-soft)]" />
+                            <span className="text-xs text-[color:var(--ink-muted)]">Compliance</span>
                         </div>
                         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
                             <div>
-                                <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">Governance & Compliance</h1>
-                                <p className="mt-2 text-slate-600 text-base max-w-lg">
+                                <h1 className="text-3xl sm:text-4xl font-extrabold text-[color:var(--ink)] tracking-tight leading-tight">Governance & Compliance</h1>
+                                <p className="mt-2 text-[color:var(--ink-soft)] text-base max-w-lg">
                                     Configure multi-step approval workflows, track SLA health, and control
                                     which compliance plugins govern your AI agents.
                                 </p>
@@ -39,16 +39,16 @@ export default function GovernancePage() {
                         </div>
 
                         {/* Tab bar sits at the bottom of the hero */}
-                        <div className="mt-8 -mb-px flex gap-0 border-b border-slate-800">
+                        <div className="mt-8 -mb-px flex gap-0 border-b border-[color:var(--line)]">
                             {[
                                 { id: "kpis",      label: "KPIs",      sub: "Is governance working?" },
                                 { id: "workflows", label: "Workflows",  sub: "Multi-step approval flows" },
                                 { id: "plugins",   label: "Plugins",    sub: "Compliance extensions" },
                             ].map(({ id, label, sub }) => (
                                 <div key={id} id={`tab-hint-${id}`}
-                                    className="px-5 py-3 text-xs text-slate-500 border-b-2 border-transparent">
-                                    <span className="font-bold text-slate-300 text-sm">{label}</span>
-                                    <span className="hidden sm:inline text-slate-600 ml-2">— {sub}</span>
+                                    className="px-5 py-3 text-xs text-[color:var(--ink-muted)] border-b-2 border-transparent">
+                                    <span className="font-bold text-[color:var(--ink-muted)] text-sm">{label}</span>
+                                    <span className="hidden sm:inline text-[color:var(--ink-soft)] ml-2">— {sub}</span>
                                 </div>
                             ))}
                         </div>

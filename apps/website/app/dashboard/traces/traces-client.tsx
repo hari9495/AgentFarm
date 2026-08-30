@@ -84,14 +84,14 @@ export default function TracesClient() {
 
     return (
         <div className="grid gap-4" style={{ gridTemplateColumns: detail || detailLoading ? '1fr 1fr' : '1fr' }}>
-            <div className="rounded-lg border p-4 overflow-x-auto">
+            <div className="rounded-[3px] border p-4 overflow-x-auto">
                 <div className="flex items-center justify-between mb-2">
                     <strong>Recent tasks</strong>
                     <button type="button" className="text-sm underline" onClick={() => void loadList()} disabled={loading}>
                         {loading ? 'Loading…' : 'Refresh'}
                     </button>
                 </div>
-                {error && <p className="text-sm text-red-600">{error}</p>}
+                {error && <p className="text-sm text-[color:var(--danger)]">{error}</p>}
                 {!loading && !error && traces.length === 0 && (
                     <p className="text-sm text-muted-foreground">No tasks have run yet.</p>
                 )}
@@ -123,7 +123,7 @@ export default function TracesClient() {
             </div>
 
             {(detail || detailLoading) && (
-                <div className="rounded-lg border p-4 overflow-x-auto">
+                <div className="rounded-[3px] border p-4 overflow-x-auto">
                     <div className="flex items-center justify-between mb-2">
                         <strong className="font-mono text-sm">{selected}</strong>
                         <button type="button" className="text-sm underline" onClick={() => { setSelected(null); setDetail(null); }}>
@@ -137,7 +137,7 @@ export default function TracesClient() {
                                 <p className="text-sm text-muted-foreground">No model calls recorded for this task.</p>
                             )}
                             {(detail.observations ?? []).map((o) => (
-                                <div key={o.id} className="rounded-md border p-3 text-sm">
+                                <div key={o.id} className="rounded-[2px] border p-3 text-sm">
                                     <div className="flex flex-wrap gap-x-4 gap-y-1">
                                         <span>model: <code>{o.model ?? '—'}</code></span>
                                         <span>provider: {String(o.metadata?.['provider'] ?? '—')}</span>

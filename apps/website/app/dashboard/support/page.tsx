@@ -44,18 +44,18 @@ const STATUS_LABEL: Record<IssueStatus, string> = {
 };
 
 const STATUS_BADGE: Record<IssueStatus, string> = {
-    open: "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400",
-    diagnosing: "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400",
-    fixing: "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400",
-    escalated: "bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400",
-    resolved: "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400",
+    open: "bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/30 text-[color:var(--warn)] dark:text-[color:var(--warn)]",
+    diagnosing: "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/30 text-[color:var(--accent)] dark:text-[color:var(--accent)]",
+    fixing: "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/30 text-[color:var(--accent)] dark:text-[color:var(--accent)]",
+    escalated: "bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 text-[color:var(--danger)] dark:text-[color:var(--danger)]",
+    resolved: "bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]",
 };
 
 const SEVERITY_DOT: Record<IssueSeverity, string> = {
-    critical: "bg-rose-500",
-    high: "bg-amber-500",
-    medium: "bg-amber-400",
-    low: "bg-emerald-500",
+    critical: "bg-[var(--danger)]",
+    high: "bg-[var(--warn)]",
+    medium: "bg-[var(--warn)]",
+    low: "bg-[var(--ok)]",
 };
 
 const SEVERITIES: IssueSeverity[] = ["low", "medium", "high", "critical"];
@@ -68,7 +68,7 @@ function formatDate(iso: string | null): string {
 }
 
 const inputClass =
-    "w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400/40";
+    "w-full rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-3 py-2 text-sm text-[color:var(--ink)] dark:text-[color:var(--ink)] placeholder:text-[color:var(--ink-muted)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/40";
 
 export default function SupportPage() {
     const [issues, setIssues] = useState<Issue[]>([]);
@@ -151,29 +151,29 @@ export default function SupportPage() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="min-h-screen bg-[var(--bg-deep)] dark:bg-[var(--bg)]">
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
-                <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-50 via-white to-white">
+                <section className="relative overflow-hidden rounded-[4px] border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
                     <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(56,189,248,0.16)_0%,transparent_60%)]" />
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.07)_0%,transparent_60%)]" />
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
                         <div>
-                            <div className="flex items-center gap-2 rounded-xl bg-blue-50 border border-blue-200 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-300 w-fit mb-4">
-                                <PremiumIcon icon={LifeBuoy} tone="sky" containerClassName="w-4 h-4 rounded bg-blue-400/20 text-blue-300" iconClassName="w-2.5 h-2.5" />
+                            <div className="flex items-center gap-2 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)] w-fit mb-4">
+                                <PremiumIcon icon={LifeBuoy} tone="sky" containerClassName="w-4 h-4 rounded bg-[var(--accent)]/20 text-[color:var(--accent)]" iconClassName="w-2.5 h-2.5" />
                                 Support
                             </div>
-                            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">Support &amp; issues</h1>
-                            <p className="mt-2 text-slate-600 text-base max-w-lg">
+                            <h1 className="text-3xl sm:text-4xl font-extrabold text-[color:var(--ink)] tracking-tight leading-tight">Support &amp; issues</h1>
+                            <p className="mt-2 text-[color:var(--ink-soft)] text-base max-w-lg">
                                 File an issue and our support agent will diagnose it, attempt a fix, and keep you posted here — escalating to a human when needed.
                             </p>
                         </div>
                         <button
                             type="button"
                             onClick={() => setShowForm((v) => !v)}
-                            className="inline-flex items-center gap-2 rounded-xl bg-white text-slate-900 text-sm font-bold px-4 py-2.5 hover:bg-slate-100 transition-colors shrink-0"
+                            className="inline-flex items-center gap-2 rounded-[3px] bg-[var(--card)] text-[color:var(--ink)] text-sm font-bold px-4 py-2.5 hover:bg-[var(--bg-deep)] transition-colors shrink-0"
                         >
                             <Plus className="w-4 h-4" />
                             New issue
@@ -182,19 +182,19 @@ export default function SupportPage() {
                 </section>
 
                 {showForm && (
-                    <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-4">
-                        <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Describe what's going wrong</h2>
+                    <form onSubmit={handleSubmit} className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5 space-y-4">
+                        <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Describe what's going wrong</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="sm:col-span-2">
-                                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Title (optional)</label>
+                                <label className="block text-xs font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mb-1.5">Title (optional)</label>
                                 <input className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Outreach emails aren't sending" />
                             </div>
                             <div className="sm:col-span-2">
-                                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">What's happening? *</label>
+                                <label className="block text-xs font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mb-1.5">What's happening? *</label>
                                 <textarea className={`${inputClass} min-h-[110px]`} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Include what you expected, what happened instead, and any error messages." required />
                             </div>
                             <div>
-                                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Severity</label>
+                                <label className="block text-xs font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mb-1.5">Severity</label>
                                 <select className={inputClass} value={severity} onChange={(e) => setSeverity(e.target.value as IssueSeverity)}>
                                     {SEVERITIES.map((s) => (
                                         <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
@@ -203,44 +203,44 @@ export default function SupportPage() {
                             </div>
                         </div>
                         {submitError && (
-                            <p className="text-xs text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
+                            <p className="text-xs text-[color:var(--danger)] dark:text-[color:var(--danger)] flex items-center gap-1.5">
                                 <AlertTriangle className="w-3.5 h-3.5" /> {submitError}
                             </p>
                         )}
                         <div className="flex items-center gap-3">
-                            <button type="submit" disabled={submitting} className="rounded-lg bg-blue-600 dark:bg-white text-white dark:text-slate-900 text-sm font-bold px-4 py-2 disabled:opacity-60">
+                            <button type="submit" disabled={submitting} className="rounded-[3px] bg-[var(--accent)] dark:bg-[var(--card)] text-white dark:text-[color:var(--ink)] text-sm font-bold px-4 py-2 disabled:opacity-60">
                                 {submitting ? "Filing…" : "File issue"}
                             </button>
-                            <button type="button" onClick={() => setShowForm(false)} className="text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+                            <button type="button" onClick={() => setShowForm(false)} className="text-sm font-medium text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] dark:hover:text-[color:var(--ink)]">
                                 Cancel
                             </button>
                         </div>
                     </form>
                 )}
 
-                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-                    <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Your issues</h2>
-                        <button type="button" onClick={() => void load()} className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+                <div className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden">
+                    <div className="px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)] flex items-center justify-between">
+                        <h2 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Your issues</h2>
+                        <button type="button" onClick={() => void load()} className="inline-flex items-center gap-1.5 text-xs font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] dark:hover:text-[color:var(--ink)]">
                             <RefreshCw className="w-3.5 h-3.5" /> Refresh
                         </button>
                     </div>
 
                     {loadState === "loading" && (
-                        <div className="px-5 py-10 text-center text-sm text-slate-400 dark:text-slate-500">Loading your issues…</div>
+                        <div className="px-5 py-10 text-center text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">Loading your issues…</div>
                     )}
                     {loadState === "error" && (
-                        <div className="px-5 py-10 text-center text-sm text-rose-600 dark:text-rose-400">
+                        <div className="px-5 py-10 text-center text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)]">
                             We couldn't load your support issues right now. Try refreshing, or use "New issue" to reach us directly.
                         </div>
                     )}
                     {loadState === "ready" && issues.length === 0 && (
-                        <div className="px-5 py-10 text-center text-sm text-slate-400 dark:text-slate-500">
+                        <div className="px-5 py-10 text-center text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                             No support issues on file. If something's not working, click "New issue" and we'll take a look.
                         </div>
                     )}
                     {loadState === "ready" && issues.length > 0 && (
-                        <ul className="divide-y divide-slate-100 dark:divide-slate-800/70">
+                        <ul className="divide-y divide-[color:var(--line)] dark:divide-[color:var(--line)]/70">
                             {issues.map((issue) => {
                                 const detail = detailCache[issue.id];
                                 const isOpen = expanded === issue.id;
@@ -249,51 +249,51 @@ export default function SupportPage() {
                                         <button
                                             type="button"
                                             onClick={() => void toggleExpand(issue)}
-                                            className="w-full text-left px-5 py-4 flex items-start gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                                            className="w-full text-left px-5 py-4 flex items-start gap-3 hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]/40 transition-colors"
                                         >
                                             <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${SEVERITY_DOT[issue.severity]}`} title={`${issue.severity} severity`} />
                                             <div className="min-w-0 flex-1">
                                                 <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{issue.title || "Untitled issue"}</span>
+                                                    <span className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] truncate">{issue.title || "Untitled issue"}</span>
                                                     <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${STATUS_BADGE[issue.status]}`}>{STATUS_LABEL[issue.status]}</span>
                                                     {issue.prUrl && (
-                                                        <a href={issue.prUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                                                        <a href={issue.prUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-xs font-semibold text-[color:var(--accent)] dark:text-[color:var(--accent)] hover:underline">
                                                             View fix PR →
                                                         </a>
                                                     )}
                                                 </div>
-                                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 truncate">{issue.description}</p>
-                                                <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">Filed {formatDate(issue.createdAt)}{issue.resolvedAt ? ` · resolved ${formatDate(issue.resolvedAt)}` : ""}</p>
+                                                <p className="mt-1 text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] truncate">{issue.description}</p>
+                                                <p className="mt-1 text-[11px] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">Filed {formatDate(issue.createdAt)}{issue.resolvedAt ? ` · resolved ${formatDate(issue.resolvedAt)}` : ""}</p>
                                             </div>
-                                            {isOpen ? <ChevronUp className="w-4 h-4 text-slate-400 mt-1 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 mt-1 shrink-0" />}
+                                            {isOpen ? <ChevronUp className="w-4 h-4 text-[color:var(--ink-muted)] mt-1 shrink-0" /> : <ChevronDown className="w-4 h-4 text-[color:var(--ink-muted)] mt-1 shrink-0" />}
                                         </button>
                                         {isOpen && (
                                             <div className="px-5 pb-5 pl-[2.1rem] space-y-3">
                                                 {detailLoading === issue.id && !detail && (
-                                                    <p className="text-xs text-slate-400 dark:text-slate-500">Loading details…</p>
+                                                    <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">Loading details…</p>
                                                 )}
                                                 {detail?.diagnosisReport && (
-                                                    <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2.5">
-                                                        <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Diagnosis</p>
-                                                        <p className="text-xs text-slate-500 dark:text-slate-400 whitespace-pre-wrap">{detail.diagnosisReport}</p>
+                                                    <div className="rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)]/50 px-3 py-2.5">
+                                                        <p className="text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] mb-1">Diagnosis</p>
+                                                        <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] whitespace-pre-wrap">{detail.diagnosisReport}</p>
                                                     </div>
                                                 )}
                                                 {detail?.resolutionNotes && (
-                                                    <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/20 px-3 py-2.5">
-                                                        <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">Resolution notes</p>
-                                                        <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80 whitespace-pre-wrap">{detail.resolutionNotes}</p>
+                                                    <div className="rounded-[3px] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/20 px-3 py-2.5">
+                                                        <p className="text-xs font-semibold text-[color:var(--ok)] dark:text-[color:var(--ok)] mb-1">Resolution notes</p>
+                                                        <p className="text-xs text-[color:var(--ok)]/80 dark:text-[color:var(--ok)]/80 whitespace-pre-wrap">{detail.resolutionNotes}</p>
                                                     </div>
                                                 )}
                                                 {detail?.escalatedTo && (
-                                                    <p className="text-xs text-rose-600 dark:text-rose-400">Escalated to {detail.escalatedTo}</p>
+                                                    <p className="text-xs text-[color:var(--danger)] dark:text-[color:var(--danger)]">Escalated to {detail.escalatedTo}</p>
                                                 )}
                                                 {detail?.steps && detail.steps.length > 0 && (
                                                     <div>
-                                                        <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Progress</p>
+                                                        <p className="text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] mb-1.5">Progress</p>
                                                         <ul className="space-y-1">
                                                             {detail.steps.map((step, idx) => (
-                                                                <li key={step.id ?? idx} className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                                                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0" />
+                                                                <li key={step.id ?? idx} className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] flex items-center gap-2">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--bg-deep)] dark:bg-[var(--bg-deep)] shrink-0" />
                                                                     {step.label ?? "Step"}{step.status ? ` — ${step.status}` : ""}
                                                                 </li>
                                                             ))}
@@ -302,11 +302,11 @@ export default function SupportPage() {
                                                 )}
                                                 {detail?.messages && detail.messages.length > 0 && (
                                                     <div>
-                                                        <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Conversation</p>
+                                                        <p className="text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] mb-1.5">Conversation</p>
                                                         <ul className="space-y-1.5">
                                                             {detail.messages.map((msg, idx) => (
-                                                                <li key={msg.id ?? idx} className="text-xs text-slate-500 dark:text-slate-400">
-                                                                    <span className="font-semibold text-slate-600 dark:text-slate-300">{msg.role}: </span>
+                                                                <li key={msg.id ?? idx} className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
+                                                                    <span className="font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">{msg.role}: </span>
                                                                     {msg.content}
                                                                 </li>
                                                             ))}
@@ -314,7 +314,7 @@ export default function SupportPage() {
                                                     </div>
                                                 )}
                                                 {detail && !detail.diagnosisReport && !detail.resolutionNotes && (!detail.steps || detail.steps.length === 0) && (!detail.messages || detail.messages.length === 0) && (
-                                                    <p className="text-xs text-slate-400 dark:text-slate-500">No further activity yet — we'll update this issue as our support agent investigates.</p>
+                                                    <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">No further activity yet — we'll update this issue as our support agent investigates.</p>
                                                 )}
                                             </div>
                                         )}

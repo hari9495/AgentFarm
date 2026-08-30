@@ -79,11 +79,11 @@ export default function BillingOrdersPanel({ canProvision }: { canProvision: boo
     }, []);
 
     return (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Invoice History</h2>
+        <div className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden">
+            <div className="px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)] flex items-center justify-between">
+                <h2 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Invoice History</h2>
                 {loadState === "ready" && (
-                    <span className="text-xs text-slate-400 dark:text-slate-500">
+                    <span className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                         {orders.length} {orders.length === 1 ? "order" : "orders"}
                     </span>
                 )}
@@ -92,17 +92,17 @@ export default function BillingOrdersPanel({ canProvision }: { canProvision: boo
                 {loadState === "loading" ? (
                     <div className="px-5 py-6 animate-pulse space-y-3">
                         {[0, 1, 2].map((i) => (
-                            <div key={i} className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-full" />
+                            <div key={i} className="h-4 bg-[var(--line)] dark:bg-[var(--card)] rounded w-full" />
                         ))}
                     </div>
                 ) : loadState === "error" ? (
-                    <p className="px-5 py-6 text-sm text-slate-400 dark:text-slate-500">
+                    <p className="px-5 py-6 text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                         We couldn&apos;t load your invoice history right now. Try refreshing, or contact support if this persists.
                     </p>
                 ) : orders.length > 0 ? (
                     <table className="w-full min-w-[520px] text-sm">
                         <thead>
-                            <tr className="bg-slate-50 dark:bg-slate-800/50 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            <tr className="bg-[var(--bg-deep)] dark:bg-[var(--card)]/50 text-xs font-semibold uppercase tracking-wide text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                                 <th className="text-left px-5 py-3">Order ID</th>
                                 <th className="text-left px-4 py-3">Date</th>
                                 <th className="text-left px-4 py-3">Amount</th>
@@ -111,19 +111,19 @@ export default function BillingOrdersPanel({ canProvision }: { canProvision: boo
                                 {canProvision && <th className="text-left px-4 py-3">Provision</th>}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
+                        <tbody className="divide-y divide-[color:var(--line)] dark:divide-[color:var(--line)]/70">
                             {orders.map((order) => (
-                                <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                                    <td className="px-5 py-3.5 font-semibold text-slate-900 dark:text-slate-100 font-mono text-xs">
+                                <tr key={order.id} className="hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]/40 transition-colors">
+                                    <td className="px-5 py-3.5 font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] font-mono text-xs">
                                         {order.invoice?.number ?? order.id.slice(0, 12)}
                                     </td>
-                                    <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300">{formatOrderDate(order.createdAt)}</td>
-                                    <td className="px-4 py-3.5 font-bold text-slate-900 dark:text-slate-100">
+                                    <td className="px-4 py-3.5 text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">{formatOrderDate(order.createdAt)}</td>
+                                    <td className="px-4 py-3.5 font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">
                                         {formatOrderAmount(order.amountCents, order.currency)}
                                     </td>
                                     <td className="px-4 py-3.5">
-                                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 rounded-full px-2.5 py-1">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                        <span className="inline-flex items-center gap-1 text-xs font-bold text-[color:var(--ok)] dark:text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 rounded-full px-2.5 py-1">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--ok)]" />
                                             {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                                         </span>
                                     </td>
@@ -133,39 +133,39 @@ export default function BillingOrdersPanel({ canProvision }: { canProvision: boo
                                                 href={order.invoice.pdfUrl}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 transition-colors"
+                                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[color:var(--accent)] dark:text-[color:var(--accent)] hover:text-[color:var(--accent)] dark:hover:text-[color:var(--accent)] transition-colors"
                                             >
-                                                <PremiumIcon icon={Download} tone="sky" containerClassName="w-5 h-5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" iconClassName="w-3 h-3" />
+                                                <PremiumIcon icon={Download} tone="sky" containerClassName="w-5 h-5 rounded-[2px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-3 h-3" />
                                                 Download
                                             </a>
                                         ) : (
-                                            <span className="text-xs text-slate-400 dark:text-slate-500">Pending</span>
+                                            <span className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">Pending</span>
                                         )}
                                     </td>
                                     {canProvision && (
                                         <td className="px-4 py-3.5">
                                             {order.status === "paid" ? (
                                                 provisionStates[order.id] === "done" ? (
-                                                    <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 rounded-full px-2.5 py-1">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                    <span className="inline-flex items-center gap-1 text-xs font-bold text-[color:var(--ok)] dark:text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 rounded-full px-2.5 py-1">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--ok)]" />
                                                         Started
                                                     </span>
                                                 ) : provisionStates[order.id] === "error" ? (
-                                                    <span title={provisionErrors[order.id]} className="inline-flex items-center gap-1 text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/40 rounded-full px-2.5 py-1 cursor-help">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                                    <span title={provisionErrors[order.id]} className="inline-flex items-center gap-1 text-xs font-bold text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 rounded-full px-2.5 py-1 cursor-help">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--danger)]" />
                                                         Error
                                                     </span>
                                                 ) : (
                                                     <button
                                                         disabled={provisionStates[order.id] === "loading"}
                                                         onClick={() => provisionOrder(order)}
-                                                        className="text-xs font-bold rounded-lg border border-emerald-400 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 px-3 py-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        className="text-xs font-bold rounded-[3px] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] text-[color:var(--ok)] dark:text-[color:var(--ok)] hover:bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/30 px-3 py-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                     >
                                                         {provisionStates[order.id] === "loading" ? "Starting…" : "Provision"}
                                                     </button>
                                                 )
                                             ) : (
-                                                <span className="text-xs text-slate-400 dark:text-slate-500">—</span>
+                                                <span className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">—</span>
                                             )}
                                         </td>
                                     )}
@@ -174,7 +174,7 @@ export default function BillingOrdersPanel({ canProvision }: { canProvision: boo
                         </tbody>
                     </table>
                 ) : (
-                    <p className="px-5 py-6 text-sm text-slate-400 dark:text-slate-500">
+                    <p className="px-5 py-6 text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                         No invoices yet. Orders and receipts will appear here once your first payment is processed.
                     </p>
                 )}

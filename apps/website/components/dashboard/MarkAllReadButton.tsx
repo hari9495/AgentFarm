@@ -26,7 +26,7 @@ export default function MarkAllReadButton({ disabled }: { disabled?: boolean }) 
             type="button"
             onClick={onClick}
             disabled={disabled || loading}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-blue-400 border border-blue-500/30 hover:border-blue-400/60 bg-blue-500/10 hover:bg-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg px-4 py-2 transition-colors shrink-0"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--accent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/30 hover:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/60 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-[3px] px-4 py-2 transition-colors shrink-0"
         >
             {loading && <LoaderCircle className="w-3.5 h-3.5 animate-spin" />}
             Mark all read

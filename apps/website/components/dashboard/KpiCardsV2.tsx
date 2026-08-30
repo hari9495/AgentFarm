@@ -70,20 +70,20 @@ function DailyBars({ values, barBg }: { values: number[]; barBg: string }) {
 
 function SkeletonCard() {
     return (
-        <div className="relative rounded-2xl border border-slate-200 bg-white p-5 flex flex-col gap-4 shadow-sm overflow-hidden animate-pulse">
+        <div className="relative rounded-[4px] border border-[color:var(--line)] bg-[var(--card)] p-5 flex flex-col gap-4 shadow-sm overflow-hidden animate-pulse">
             <div className="flex items-start justify-between gap-3">
-                <div className="w-10 h-10 rounded-xl bg-slate-200" />
-                <div className="h-6 w-16 rounded-full bg-slate-200" />
+                <div className="w-10 h-10 rounded-[3px] bg-[var(--line)]" />
+                <div className="h-6 w-16 rounded-full bg-[var(--line)]" />
             </div>
             <div className="space-y-2">
-                <div className="h-8 w-24 rounded bg-slate-200" />
-                <div className="h-4 w-32 rounded bg-slate-200" />
-                <div className="h-3 w-20 rounded bg-slate-200" />
+                <div className="h-8 w-24 rounded bg-[var(--line)]" />
+                <div className="h-4 w-32 rounded bg-[var(--line)]" />
+                <div className="h-3 w-20 rounded bg-[var(--line)]" />
             </div>
-            <div className="h-10 w-full rounded bg-slate-200" />
-            <div className="flex items-center justify-between pt-1 border-t border-slate-100">
-                <div className="h-5 w-28 rounded-full bg-slate-200" />
-                <div className="h-3 w-8 rounded bg-slate-200" />
+            <div className="h-10 w-full rounded bg-[var(--line)]" />
+            <div className="flex items-center justify-between pt-1 border-t border-[color:var(--line)]">
+                <div className="h-5 w-28 rounded-full bg-[var(--line)]" />
+                <div className="h-3 w-8 rounded bg-[var(--line)]" />
             </div>
         </div>
     );
@@ -92,10 +92,10 @@ function SkeletonCard() {
 // ── Card config ───────────────────────────────────────────────────────────────
 
 const CARDS = [
-    { key: "tasksCompleted"  as const, icon: CheckCircle2,  border: "border-blue-100",     bg: "bg-gradient-to-br from-blue-50 to-white",     iconBg: "bg-blue-100",     iconColor: "text-blue-600",     barBg: "bg-blue-400",     dPos: "text-emerald-700 bg-emerald-50 border border-emerald-100", dNeg: "text-rose-600 bg-rose-50 border border-rose-100", label: "Tasks Completed"   },
-    { key: "prsMerged"       as const, icon: GitPullRequest, border: "border-blue-100",  bg: "bg-gradient-to-br from-blue-50 to-white",  iconBg: "bg-blue-100",  iconColor: "text-blue-600",  barBg: "bg-blue-400",  dPos: "text-emerald-700 bg-emerald-50 border border-emerald-100", dNeg: "text-rose-600 bg-rose-50 border border-rose-100", label: "PRs Merged"        },
-    { key: "medianCycleTime" as const, icon: Timer,          border: "border-amber-100",   bg: "bg-gradient-to-br from-amber-50 to-white",   iconBg: "bg-amber-100",   iconColor: "text-amber-600",   barBg: "bg-amber-400",   dPos: "text-emerald-700 bg-emerald-50 border border-emerald-100", dNeg: "text-rose-600 bg-rose-50 border border-rose-100", label: "Median Cycle Time" },
-    { key: "estimatedSavings" as const, icon: TrendingUp,   border: "border-emerald-100", bg: "bg-gradient-to-br from-emerald-50 to-white", iconBg: "bg-emerald-100", iconColor: "text-emerald-600", barBg: "bg-emerald-400", dPos: "text-emerald-700 bg-emerald-50 border border-emerald-100", dNeg: "text-rose-600 bg-rose-50 border border-rose-100", label: "Estimated Savings" },
+    { key: "tasksCompleted"  as const, icon: CheckCircle2,  border: "border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]",     bg: "bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] to-[var(--card)]",     iconBg: "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]",     iconColor: "text-[color:var(--accent)]",     barBg: "bg-[var(--accent)]",     dPos: "text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]", dNeg: "text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]", label: "Tasks Completed"   },
+    { key: "prsMerged"       as const, icon: GitPullRequest, border: "border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]",  bg: "bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] to-[var(--card)]",  iconBg: "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]",  iconColor: "text-[color:var(--accent)]",  barBg: "bg-[var(--accent)]",  dPos: "text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]", dNeg: "text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]", label: "PRs Merged"        },
+    { key: "medianCycleTime" as const, icon: Timer,          border: "border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)]",   bg: "bg-gradient-to-br from-[color-mix(in_srgb,var(--warn)_8%,transparent)] to-[var(--card)]",   iconBg: "bg-[color-mix(in_srgb,var(--warn)_10%,transparent)]",   iconColor: "text-[color:var(--warn)]",   barBg: "bg-[var(--warn)]",   dPos: "text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]", dNeg: "text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]", label: "Median Cycle Time" },
+    { key: "estimatedSavings" as const, icon: TrendingUp,   border: "border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]", bg: "bg-gradient-to-br from-[color-mix(in_srgb,var(--ok)_8%,transparent)] to-[var(--card)]", iconBg: "bg-[color-mix(in_srgb,var(--ok)_10%,transparent)]", iconColor: "text-[color:var(--ok)]", barBg: "bg-[var(--ok)]", dPos: "text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]", dNeg: "text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]", label: "Estimated Savings" },
 ] as const;
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -116,7 +116,7 @@ export default function KpiCardsV2() {
     const [appliedFrom, setAppliedFrom] = useState(defaultFrom);
     const [appliedTo, setAppliedTo]     = useState(defaultTo);
 
-    const agent = agents.find(a => a.id === activeAgent) ?? agents[0] ?? { id: "", ini: "—", name: "All Agents", aBg: "bg-slate-400" };
+    const agent = agents.find(a => a.id === activeAgent) ?? agents[0] ?? { id: "", ini: "—", name: "All Agents", aBg: "bg-[var(--bg-deep)]" };
 
     function fetchStats(agentId: AgentId, from: string, to: string) {
         setLoading(true);
@@ -174,7 +174,7 @@ export default function KpiCardsV2() {
                     onChange={e => handleAgentChange(e.target.value)}
                     disabled={agentsLoading || agents.length === 0}
                     style={{ WebkitAppearance: "none", MozAppearance: "none", appearance: "none" }}
-                    className="pl-10 pr-8 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors disabled:opacity-60"
+                    className="pl-10 pr-8 py-2 text-sm font-semibold text-[color:var(--ink-soft)] bg-[var(--card)] border border-[color:var(--line)] rounded-[3px] shadow-sm hover:border-[color:var(--line-strong)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] cursor-pointer transition-colors disabled:opacity-60"
                 >
                     {agentsLoading
                         ? <option value="">Loading…</option>
@@ -186,31 +186,31 @@ export default function KpiCardsV2() {
                     }
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                    <ChevronDown className="w-3.5 h-3.5 text-[color:var(--ink-muted)]" />
                 </div>
             </div>
 
             {/* Divider */}
-            <div className="hidden sm:block w-px h-6 bg-slate-200" />
+            <div className="hidden sm:block w-px h-6 bg-[var(--line)]" />
 
             {/* Date range */}
             <div className="flex items-center gap-2">
-                <CalendarDays className="w-4 h-4 text-slate-400 shrink-0" />
+                <CalendarDays className="w-4 h-4 text-[color:var(--ink-muted)] shrink-0" />
                 <input
                     type="date"
                     value={fromDate}
                     max={toDate}
                     onChange={e => setFromDate(e.target.value)}
-                    className="text-sm text-slate-700 font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-slate-300 transition-colors cursor-pointer"
+                    className="text-sm text-[color:var(--ink-soft)] font-medium bg-[var(--card)] border border-[color:var(--line)] rounded-[3px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] hover:border-[color:var(--line-strong)] transition-colors cursor-pointer"
                 />
-                <span className="text-xs text-slate-400 font-medium">to</span>
+                <span className="text-xs text-[color:var(--ink-muted)] font-medium">to</span>
                 <input
                     type="date"
                     value={toDate}
                     min={fromDate}
                     max={toDateStr(new Date())}
                     onChange={e => setToDate(e.target.value)}
-                    className="text-sm text-slate-700 font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-slate-300 transition-colors cursor-pointer"
+                    className="text-sm text-[color:var(--ink-soft)] font-medium bg-[var(--card)] border border-[color:var(--line)] rounded-[3px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] hover:border-[color:var(--line-strong)] transition-colors cursor-pointer"
                 />
             </div>
 
@@ -218,7 +218,7 @@ export default function KpiCardsV2() {
             <button
                 onClick={handleApply}
                 disabled={!fromDate || !toDate || fromDate > toDate}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl shadow-sm transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-40 disabled:cursor-not-allowed rounded-[3px] shadow-sm transition-colors"
             >
                 Apply
             </button>
@@ -233,7 +233,7 @@ export default function KpiCardsV2() {
             {filterBar}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 {CARDS.map(c => (
-                    <div key={c.key} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-center text-xs text-slate-400">
+                    <div key={c.key} className="rounded-[4px] border border-[color:var(--line)] bg-[var(--card)] p-5 shadow-sm text-center text-xs text-[color:var(--ink-muted)]">
                         Stats unavailable
                     </div>
                 ))}
@@ -266,11 +266,11 @@ export default function KpiCardsV2() {
                         <div
                             key={cfg.key}
                             style={{ animationDelay: idx * 60 + "ms" }}
-                            className={"choreo-rise relative rounded-2xl border " + cfg.border + " " + cfg.bg + " p-5 flex flex-col gap-3 shadow-sm hover:shadow-md hover:-translate-y-0.5 [transition:transform_220ms_cubic-bezier(0.22,1,0.36,1),box-shadow_220ms_cubic-bezier(0.22,1,0.36,1)]"}
+                            className={"choreo-rise relative rounded-[4px] border " + cfg.border + " " + cfg.bg + " p-5 flex flex-col gap-3 shadow-sm hover:shadow-md hover:-translate-y-0.5 [transition:transform_220ms_cubic-bezier(0.22,1,0.36,1),box-shadow_220ms_cubic-bezier(0.22,1,0.36,1)]"}
                         >
                             {/* Top: icon + delta */}
                             <div className="flex items-start justify-between gap-3">
-                                <div className={"w-10 h-10 rounded-xl " + cfg.iconBg + " flex items-center justify-center shrink-0"}>
+                                <div className={"w-10 h-10 rounded-[3px] " + cfg.iconBg + " flex items-center justify-center shrink-0"}>
                                     <Icon className={"w-5 h-5 " + cfg.iconColor} />
                                 </div>
                                 {stat.delta !== null
@@ -278,31 +278,31 @@ export default function KpiCardsV2() {
                                         {isDown ? <ArrowDownRight className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
                                         {stat.delta}
                                       </span>
-                                    : <span className="inline-flex items-center text-xs font-semibold rounded-full px-2.5 py-1 text-slate-400 bg-slate-100">—</span>
+                                    : <span className="inline-flex items-center text-xs font-semibold rounded-full px-2.5 py-1 text-[color:var(--ink-muted)] bg-[var(--bg-deep)]">—</span>
                                 }
                             </div>
 
                             {/* Metric */}
                             <div>
-                                <p className="text-3xl font-extrabold text-slate-900 tabular-nums leading-none tracking-tight">{stat.label}</p>
-                                <p className="mt-1 text-sm font-semibold text-slate-600">{cfg.label}</p>
-                                <p className="text-xs text-slate-400 mt-0.5">{stat.sub}</p>
+                                <p className="text-3xl font-extrabold text-[color:var(--ink)] tabular-nums leading-none tracking-tight">{stat.label}</p>
+                                <p className="mt-1 text-sm font-semibold text-[color:var(--ink-soft)]">{cfg.label}</p>
+                                <p className="text-xs text-[color:var(--ink-muted)] mt-0.5">{stat.sub}</p>
                             </div>
 
                             {/* Daily bars */}
                             <DailyBars values={stat.trend} barBg={cfg.barBg} />
 
                             {/* Bottom: agent + live */}
-                            <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                            <div className="flex items-center justify-between pt-1 border-t border-[color:var(--line)]">
                                 <div className="flex items-center gap-1.5">
                                     <span className={"inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold text-white shrink-0 " + agent.aBg}>
                                         {agent.ini}
                                     </span>
-                                    <span className="text-[11px] text-slate-500 font-medium truncate">{agent.name}</span>
+                                    <span className="text-[11px] text-[color:var(--ink-muted)] font-medium truncate">{agent.name}</span>
                                 </div>
                                 <div className="flex items-center gap-1 shrink-0">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Live</span>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--ok)] animate-pulse" />
+                                    <span className="text-[9px] font-semibold text-[color:var(--ink-muted)] uppercase tracking-wider">Live</span>
                                 </div>
                             </div>
                         </div>

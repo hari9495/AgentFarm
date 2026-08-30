@@ -86,10 +86,10 @@ const CATEGORY_LABELS: Record<ConnectorCategory, string> = {
 const CATEGORY_ORDER: ConnectorCategory[] = ["task_tracker", "messaging", "code", "email", "monitoring", "crm", "ats", "cms", "cloud"];
 
 const STATUS_BADGE: Record<ConnectorStatus, string> = {
-    connected: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300",
-    pending_auth: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300",
-    error: "bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400",
-    disconnected: "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400",
+    connected: "bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]",
+    pending_auth: "bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40 text-[color:var(--warn)] dark:text-[color:var(--warn)]",
+    error: "bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 text-[color:var(--danger)] dark:text-[color:var(--danger)]",
+    disconnected: "bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]",
 };
 
 const STATUS_LABELS: Record<ConnectorStatus, string> = {
@@ -438,31 +438,31 @@ function AddConnectorModal({
 
     return (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-lg border border-slate-200 dark:border-slate-800">
-                <div className="flex items-center gap-3 p-5 border-b border-slate-200 dark:border-slate-800">
+            <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] shadow-xl w-full max-w-lg border border-[color:var(--line)] dark:border-[color:var(--line)]">
+                <div className="flex items-center gap-3 p-5 border-b border-[color:var(--line)] dark:border-[color:var(--line)]">
                     <ConnectorIcon tool={connector.tool} size={36} />
                     <div>
-                        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Connect {connector.displayName}</h2>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{connector.category.replace("_", " ")}</p>
+                        <h2 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Connect {connector.displayName}</h2>
+                        <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] capitalize">{connector.category.replace("_", " ")}</p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="ml-auto text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-xl font-bold"
+                        className="ml-auto text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] dark:hover:text-[color:var(--ink)] text-xl font-bold"
                         aria-label="Close"
                     >×</button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-5 space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Display Name</label>
+                        <label className="block text-sm font-medium text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] mb-1">Display Name</label>
                         <input
                             type="text"
                             value={displayName}
                             onChange={(e) => { setNameTouched(true); setDisplayName(e.target.value); }}
-                            className="w-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] rounded-[3px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]"
                             placeholder="e.g. Our Jira, Engineering Slack"
                         />
-                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                        <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1">
                             {isCustom
                                 ? "Auto-filled from the API URL below — edit if you'd like a different name."
                                 : "The name your team will see in the dashboard."}
@@ -470,15 +470,15 @@ function AddConnectorModal({
                     </div>
 
                     {connector.authMethod === "oauth2" && (
-                        <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
-                            <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-1">OAuth 2.0 Authentication</p>
-                            <p className="text-xs text-blue-600 dark:text-blue-400">
+                        <div className="rounded-[3px] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/20 p-4">
+                            <p className="text-sm font-semibold text-[color:var(--accent)] dark:text-[color:var(--accent)] mb-1">OAuth 2.0 Authentication</p>
+                            <p className="text-xs text-[color:var(--accent)] dark:text-[color:var(--accent)]">
                                 After clicking Add, you&apos;ll be redirected to {connector.displayName} to authorize access.
                             </p>
                             {connector.oauthScopes && (
                                 <ul className="mt-2 space-y-0.5">
                                     {connector.oauthScopes.map((s) => (
-                                        <li key={s} className="text-xs font-mono bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded px-1">• {s}</li>
+                                        <li key={s} className="text-xs font-mono bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)] rounded px-1">• {s}</li>
                                     ))}
                                 </ul>
                             )}
@@ -487,15 +487,15 @@ function AddConnectorModal({
 
                     {fields.map((field) => (
                         <div key={field.key}>
-                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                            <label className="block text-sm font-medium text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] mb-1">
                                 {field.label}
-                                {field.required && <span className="text-rose-500 ml-1">*</span>}
+                                {field.required && <span className="text-[color:var(--danger)] ml-1">*</span>}
                             </label>
                             {field.type === "select" ? (
                                 <select
                                     value={configValues[field.key] ?? ""}
                                     onChange={(e) => setConfigValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                                    className="w-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] rounded-[3px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]"
                                     required={field.required}
                                 >
                                     <option value="">Select...</option>
@@ -515,36 +515,36 @@ function AddConnectorModal({
                                             if (derived) setDisplayName(derived);
                                         }
                                     }}
-                                    className="w-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] rounded-[3px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]"
                                     placeholder={field.placeholder}
                                     required={field.required}
                                 />
                             )}
-                            {field.hint && <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{field.hint}</p>}
+                            {field.hint && <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1">{field.hint}</p>}
                         </div>
                     ))}
 
                     <div>
-                        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1">Your agent will be able to:</p>
+                        <p className="text-xs font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] uppercase tracking-wide mb-1">Your agent will be able to:</p>
                         <div className="flex flex-wrap gap-1">
                             {connector.supportedActions.map((a) => (
-                                <span key={a} className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full px-2 py-0.5 text-xs font-mono">{a}</span>
+                                <span key={a} className="bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] rounded-full px-2 py-0.5 text-xs font-mono">{a}</span>
                             ))}
                         </div>
                     </div>
 
-                    {error && <p className="text-sm text-rose-600 bg-rose-50 dark:bg-rose-900/20 rounded-lg px-3 py-2">{error}</p>}
+                    {error && <p className="text-sm text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 rounded-[3px] px-3 py-2">{error}</p>}
 
                     <div className="flex gap-3 pt-2">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                            className="flex-1 border border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] rounded-[3px] px-4 py-2 text-sm hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition"
                         >Cancel</button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="flex-1 bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition"
+                            className="flex-1 bg-[var(--accent)] text-white rounded-[3px] px-4 py-2 text-sm font-medium hover:bg-[var(--accent)] disabled:opacity-50 transition"
                         >
                             {loading ? "Connecting…" : connector.authMethod === "oauth2" ? "Continue to Auth" : "Add Connector"}
                         </button>
@@ -603,11 +603,11 @@ function ConnectorRow({
     }
 
     const badge = checking ? (
-        <span className="text-xs rounded-full px-2 py-0.5 font-medium bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500">
+        <span className="text-xs rounded-full px-2 py-0.5 font-medium bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
             ⬤ Checking…
         </span>
     ) : healthResult !== null ? (
-        <span className={`text-xs rounded-full px-2 py-0.5 font-medium ${healthResult.healthy ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300" : "bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400"}`}>
+        <span className={`text-xs rounded-full px-2 py-0.5 font-medium ${healthResult.healthy ? "bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" : "bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 text-[color:var(--danger)] dark:text-[color:var(--danger)]"}`}>
             {healthResult.healthy ? "⬤ Healthy" : "⬤ Degraded"}
         </span>
     ) : (
@@ -617,8 +617,8 @@ function ConnectorRow({
     );
 
     return (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 flex items-center gap-4">
-            <div className="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+        <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-4 flex items-center gap-4">
+            <div className="h-10 w-10 rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] flex items-center justify-center shrink-0">
                 <ConnectorIcon tool={connector.tool} size={36} />
             </div>
             <div className="flex-1 min-w-0">
@@ -633,49 +633,49 @@ function ConnectorRow({
                                 autoFocus
                                 maxLength={100}
                                 disabled={savingName}
-                                className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-md px-2 py-0.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                                className="border border-[color:var(--line-strong)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] rounded-[2px] px-2 py-0.5 text-sm focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] disabled:opacity-50"
                             />
-                            <button onClick={() => void saveName()} disabled={savingName} aria-label="Save name" className="text-emerald-600 hover:text-emerald-700 disabled:opacity-50"><Check className="w-4 h-4" /></button>
-                            <button onClick={() => { setEditing(false); setNameInput(connector.displayName); }} disabled={savingName} aria-label="Cancel rename" className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
+                            <button onClick={() => void saveName()} disabled={savingName} aria-label="Save name" className="text-[color:var(--ok)] hover:text-[color:var(--ok)] disabled:opacity-50"><Check className="w-4 h-4" /></button>
+                            <button onClick={() => { setEditing(false); setNameInput(connector.displayName); }} disabled={savingName} aria-label="Cancel rename" className="text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)]"><X className="w-4 h-4" /></button>
                         </span>
                     ) : (
                         <>
-                            <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate">{connector.displayName}</p>
-                            <button onClick={() => { setNameInput(connector.displayName); setEditing(true); }} aria-label="Rename connector" className="text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400"><Pencil className="w-3 h-3" /></button>
+                            <p className="font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] text-sm truncate">{connector.displayName}</p>
+                            <button onClick={() => { setNameInput(connector.displayName); setEditing(true); }} aria-label="Rename connector" className="text-[color:var(--ink-muted)] hover:text-[color:var(--ink-muted)] dark:text-[color:var(--ink-soft)] dark:hover:text-[color:var(--ink-muted)]"><Pencil className="w-3 h-3" /></button>
                         </>
                     )}
                     {badge}
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 capitalize">
+                <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5 capitalize">
                     {connector.category.replace("_", " ")} · {connector.authMethod.replace(/_/g, " ")}
                 </p>
                 {connector.lastHealthcheckAt && (
-                    <p className="text-xs text-slate-400 dark:text-slate-500">
+                    <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                         Last checked: {new Date(connector.lastHealthcheckAt).toLocaleString()}
                     </p>
                 )}
                 {connector.lastErrorClass && (
-                    <p className="text-xs text-rose-500">{connector.lastErrorClass.replace(/_/g, " ")}</p>
+                    <p className="text-xs text-[color:var(--danger)]">{connector.lastErrorClass.replace(/_/g, " ")}</p>
                 )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
                 {healthResult !== null && !healthResult.healthy && healthResult.nextStep?.oauthInitUrl && (
                     <button
                         onClick={() => { if (healthResult.nextStep?.oauthInitUrl) window.location.href = healthResult.nextStep.oauthInitUrl; }}
-                        className="text-xs border border-amber-300 dark:border-amber-700 text-amber-600 dark:text-amber-400 rounded-lg px-3 py-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition"
+                        className="text-xs border border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] text-[color:var(--warn)] dark:text-[color:var(--warn)] rounded-[3px] px-3 py-1.5 hover:bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/20 transition"
                     >Re-auth</button>
                 )}
                 <button
                     onClick={runHealthCheck}
                     disabled={checking}
-                    className="flex items-center gap-1 text-xs border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-lg px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 transition"
+                    className="flex items-center gap-1 text-xs border border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] rounded-[3px] px-3 py-1.5 hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] disabled:opacity-50 transition"
                 >
                     <RefreshCw className="w-3 h-3" />
                     {checking ? "Checking…" : "Test"}
                 </button>
                 <button
                     onClick={onRemove}
-                    className="flex items-center gap-1 text-xs border border-rose-200 dark:border-rose-900 text-rose-500 dark:text-rose-400 rounded-lg px-3 py-1.5 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition"
+                    className="flex items-center gap-1 text-xs border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] text-[color:var(--danger)] dark:text-[color:var(--danger)] rounded-[3px] px-3 py-1.5 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 transition"
                 >
                     <Trash2 className="w-3 h-3" />
                     Remove
@@ -696,28 +696,28 @@ function AvailableCard({
     onAdd: () => void;
 }) {
     return (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 flex items-center gap-3 hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
-            <div className="h-9 w-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+        <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-4 flex items-center gap-3 hover:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:hover:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] transition-colors">
+            <div className="h-9 w-9 rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] flex items-center justify-center shrink-0">
                 <ConnectorIcon tool={connector.tool} size={32} />
             </div>
             <div className="flex-1 min-w-0">
-                <p className="font-medium text-slate-900 dark:text-slate-100 text-sm truncate">{connector.displayName}</p>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                <p className="font-medium text-[color:var(--ink)] dark:text-[color:var(--ink)] text-sm truncate">{connector.displayName}</p>
+                <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">
                     {connector.supportedActions.length} {connector.supportedActions.length === 1 ? "action" : "actions"} · {connector.authMethod.replace(/_/g, " ")}
                 </p>
             </div>
             {connector.connected ? (
                 configuredStatus === "error" || configuredStatus === "pending_auth" ? (
-                    <button onClick={onAdd} className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-lg px-3 py-1.5 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition font-medium">
+                    <button onClick={onAdd} className="text-xs bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/30 text-[color:var(--warn)] dark:text-[color:var(--warn)] rounded-[3px] px-3 py-1.5 hover:bg-[color-mix(in_srgb,var(--warn)_16%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/50 transition font-medium">
                         Reconnect
                     </button>
                 ) : (
-                    <span className="text-xs bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded-full px-2 py-0.5 font-medium">
+                    <span className="text-xs bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)] rounded-full px-2 py-0.5 font-medium">
                         Connected
                     </span>
                 )
             ) : (
-                <button onClick={onAdd} className="flex items-center gap-1 text-xs bg-blue-600 text-white rounded-lg px-3 py-1.5 hover:bg-blue-700 transition font-medium">
+                <button onClick={onAdd} className="flex items-center gap-1 text-xs bg-[var(--accent)] text-white rounded-[3px] px-3 py-1.5 hover:bg-[var(--accent)] transition font-medium">
                     <Plus className="w-3 h-3" />
                     Add
                 </button>
@@ -851,10 +851,10 @@ export default function DashboardIntegrationsPage() {
     const selectedBot = context?.options.find((o) => o.workspaceId === selectedWorkspaceId && o.botId === selectedBotId) ?? context?.options[0] ?? null;
 
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen bg-[var(--bg-deep)]">
             {/* Toast */}
             {toast && (
-                <div className={`fixed top-4 right-4 z-50 rounded-xl px-4 py-3 text-sm font-medium shadow-lg ${toast.type === "success" ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"}`}>
+                <div className={`fixed top-4 right-4 z-50 rounded-[3px] px-4 py-3 text-sm font-medium shadow-lg ${toast.type === "success" ? "bg-[var(--ok)] text-white" : "bg-[var(--danger)] text-white"}`}>
                     {toast.message}
                 </div>
             )}
@@ -873,7 +873,7 @@ export default function DashboardIntegrationsPage() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
                 {/* Dark hero */}
-                <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-50 via-white to-white">
+                <section className="relative overflow-hidden rounded-[4px] border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
                     <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.07)_0%,transparent_60%)]" />
@@ -881,20 +881,20 @@ export default function DashboardIntegrationsPage() {
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center gap-2 rounded-xl bg-blue-50 border border-blue-200 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-700">
+                            <div className="flex items-center gap-2 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
                                 <Link2 className="w-3.5 h-3.5" />
                                 Integrations
                             </div>
-                            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-                            <span className="text-xs text-slate-500">Connectors</span>
+                            <ChevronRight className="w-3.5 h-3.5 text-[color:var(--ink-soft)]" />
+                            <span className="text-xs text-[color:var(--ink-muted)]">Connectors</span>
                         </div>
                         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
                             <div>
-                                <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">Integrations</h1>
-                                <p className="mt-2 text-slate-600 text-base max-w-lg">
+                                <h1 className="text-3xl sm:text-4xl font-extrabold text-[color:var(--ink)] tracking-tight leading-tight">Integrations</h1>
+                                <p className="mt-2 text-[color:var(--ink-soft)] text-base max-w-lg">
                                     Connect tools so your agent can work across your entire stack.
                                     {available.length > 0 && (
-                                        <span className="ml-2 inline-flex items-center rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-xs font-semibold text-blue-400">
+                                        <span className="ml-2 inline-flex items-center rounded-full bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-2.5 py-0.5 text-xs font-semibold text-[color:var(--accent)]">
                                             {available.length} connectors available
                                         </span>
                                     )}
@@ -906,18 +906,18 @@ export default function DashboardIntegrationsPage() {
 
                 {/* Connector showcase */}
                 {!loading && available.length > 0 && (
-                    <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+                    <section className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-6">
                         <div className="flex items-center justify-between mb-4">
                             <div>
-                                <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Supported tools</h2>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">All tools your agent can connect to. More added every sprint.</p>
+                                <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Supported tools</h2>
+                                <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">All tools your agent can connect to. More added every sprint.</p>
                             </div>
                         </div>
                         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
                             {available.slice(0, 16).map((c) => (
-                                <div key={c.tool} className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-default">
+                                <div key={c.tool} className="flex flex-col items-center gap-1.5 p-2 rounded-[3px] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition-colors cursor-default">
                                     <ConnectorIcon tool={c.tool} size={26} />
-                                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 text-center leading-none">{c.displayName}</span>
+                                    <span className="text-[10px] font-medium text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] text-center leading-none">{c.displayName}</span>
                                 </div>
                             ))}
                         </div>
@@ -926,19 +926,19 @@ export default function DashboardIntegrationsPage() {
 
                 {/* Bot scope selector */}
                 {context && context.options.length > 0 && (
-                    <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
+                    <section className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-4">
                         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                             <div className="flex items-center gap-2">
-                                <Settings2 className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
+                                <Settings2 className="w-4 h-4 text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] shrink-0" />
                                 <div>
-                                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Connector scope</p>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400">Connectors are scoped per workspace and filtered by bot role policy.</p>
+                                    <p className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Connector scope</p>
+                                    <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">Connectors are scoped per workspace and filtered by bot role policy.</p>
                                 </div>
                             </div>
                             <select
                                 value={`${context.selectedWorkspaceId}::${context.selectedBotId}`}
                                 onChange={(e) => handleScopeChange(e.target.value)}
-                                className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]"
                                 aria-label="Select workspace bot"
                             >
                                 {context.options.map((o) => (
@@ -949,11 +949,11 @@ export default function DashboardIntegrationsPage() {
                             </select>
                         </div>
                         {selectedBot && (
-                            <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-3">
-                                <span>Role: <strong className="text-slate-700 dark:text-slate-300">{context.selectedRoleKey}</strong></span>
-                                <span>Policy: <strong className="text-slate-700 dark:text-slate-300">{selectedBot.policyPackVersion}</strong></span>
+                            <div className="mt-3 flex flex-wrap gap-4 text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] border-t border-[color:var(--line)] dark:border-[color:var(--line)] pt-3">
+                                <span>Role: <strong className="text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">{context.selectedRoleKey}</strong></span>
+                                <span>Policy: <strong className="text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">{selectedBot.policyPackVersion}</strong></span>
                                 {context.disallowed_tools_hidden_count > 0 && (
-                                    <span className="text-amber-600 dark:text-amber-400">{context.disallowed_tools_hidden_count} tools hidden by policy</span>
+                                    <span className="text-[color:var(--warn)] dark:text-[color:var(--warn)]">{context.disallowed_tools_hidden_count} tools hidden by policy</span>
                                 )}
                             </div>
                         )}
@@ -963,8 +963,8 @@ export default function DashboardIntegrationsPage() {
                 {/* Connected tools */}
                 {configured.length > 0 && (
                     <section>
-                        <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wide mb-3">
-                            Connected Tools <span className="font-normal text-slate-400 dark:text-slate-500 normal-case">({configured.length})</span>
+                        <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide mb-3">
+                            Connected Tools <span className="font-normal text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] normal-case">({configured.length})</span>
                         </h2>
                         <div className="space-y-2">
                             {configured.map((c) => (
@@ -982,17 +982,17 @@ export default function DashboardIntegrationsPage() {
 
                 {/* Empty state */}
                 {!loading && configured.length === 0 && (
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-10 text-center">
+                    <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] border border-dashed border-[color:var(--line-strong)] dark:border-[color:var(--line)] p-10 text-center">
                         <div className="text-4xl mb-3">🔌</div>
-                        <p className="font-semibold text-slate-800 dark:text-slate-200">No tools connected yet</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Add an integration below to let your agent work across your stack.</p>
+                        <p className="font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">No tools connected yet</p>
+                        <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1">Add an integration below to let your agent work across your stack.</p>
                     </div>
                 )}
 
                 {/* Available integrations */}
                 <section>
                     <div className="flex items-center justify-between mb-3">
-                        <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wide">Available Integrations</h2>
+                        <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide">Available Integrations</h2>
                     </div>
 
                     {/* Category filter */}
@@ -1002,8 +1002,8 @@ export default function DashboardIntegrationsPage() {
                                 key={cat}
                                 onClick={() => setActiveCategory(cat)}
                                 className={`text-xs rounded-full px-3 py-1.5 border font-medium transition ${activeCategory === cat
-                                    ? "bg-blue-600 text-white border-blue-600"
-                                    : "bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500"
+                                    ? "bg-[var(--accent)] text-white border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]"
+                                    : "bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] border-[color:var(--line)] dark:border-[color:var(--line)] hover:border-[color:var(--line)] dark:hover:border-[color:var(--line)]"
                                     }`}
                             >
                                 {cat === "all" ? "All" : CATEGORY_LABELS[cat]}
@@ -1014,11 +1014,11 @@ export default function DashboardIntegrationsPage() {
                     {loading ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                             {Array.from({ length: 6 }).map((_, i) => (
-                                <div key={i} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 animate-pulse flex items-center gap-3">
-                                    <div className="h-9 w-9 rounded-xl bg-slate-200 dark:bg-slate-700 shrink-0" />
+                                <div key={i} className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-4 animate-pulse flex items-center gap-3">
+                                    <div className="h-9 w-9 rounded-[3px] bg-[var(--line)] dark:bg-[var(--card)] shrink-0" />
                                     <div className="flex-1 space-y-2">
-                                        <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-3/4" />
-                                        <div className="h-2.5 bg-slate-100 dark:bg-slate-800 rounded w-1/2" />
+                                        <div className="h-3 bg-[var(--line)] dark:bg-[var(--card)] rounded w-3/4" />
+                                        <div className="h-2.5 bg-[var(--bg-deep)] dark:bg-[var(--card)] rounded w-1/2" />
                                     </div>
                                 </div>
                             ))}
@@ -1030,7 +1030,7 @@ export default function DashboardIntegrationsPage() {
                                 if (!items || items.length === 0) return null;
                                 return (
                                     <div key={cat}>
-                                        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">{CATEGORY_LABELS[cat]}</p>
+                                        <p className="text-xs font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] uppercase tracking-wide mb-2">{CATEGORY_LABELS[cat]}</p>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                             {items.map((c) => (
                                                 <AvailableCard
@@ -1049,18 +1049,18 @@ export default function DashboardIntegrationsPage() {
                 </section>
 
                 {/* Custom API callout */}
-                <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+                <section className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-5">
                     <div className="flex items-start gap-4">
-                        <div className="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 text-2xl">🔌</div>
+                        <div className="h-10 w-10 rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] flex items-center justify-center shrink-0 text-2xl">🔌</div>
                         <div className="flex-1">
-                            <p className="font-bold text-slate-900 dark:text-slate-100">Using a custom or internal tool?</p>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                            <p className="font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Using a custom or internal tool?</p>
+                            <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1">
                                 Any tool with a REST API can be connected using category-specific Custom REST connectors for tasks, messaging, code, and email.
                             </p>
                         </div>
                         <button
                             onClick={() => { const g = getPreferredCustomConnector(); if (g) setAddingConnector(g); }}
-                            className="flex items-center gap-1.5 shrink-0 bg-blue-600 dark:bg-slate-100 text-white dark:text-slate-900 rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 transition"
+                            className="flex items-center gap-1.5 shrink-0 bg-[var(--accent)] dark:bg-[var(--bg-deep)] text-white dark:text-[color:var(--ink)] rounded-[3px] px-4 py-2 text-sm font-medium hover:opacity-90 transition"
                         >
                             <Zap className="w-3.5 h-3.5" />
                             Custom API

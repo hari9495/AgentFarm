@@ -21,8 +21,8 @@ type PingState = { loading: boolean; ok?: boolean; latencyMs?: number };
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
-const inp = "w-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400 dark:placeholder:text-slate-500";
-const lbl = "block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5";
+const inp = "w-full border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] rounded-[3px] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] placeholder:text-[color:var(--ink-muted)] dark:placeholder:text-[color:var(--ink-muted)]";
+const lbl = "block text-xs font-bold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] uppercase tracking-wider mb-1.5";
 
 // ── What MCP does — use-case cards ────────────────────────────────────────────
 
@@ -99,11 +99,11 @@ export default function CustomerMcpPage() {
     const activeCount = servers.filter(s => s.isActive).length;
 
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen bg-[var(--bg-deep)]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
                 {/* Dark hero */}
-                <section className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-50 via-white to-white">
+                <section className="relative overflow-hidden rounded-[4px] border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
                     <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.07)_0%,transparent_60%)]" />
@@ -111,25 +111,25 @@ export default function CustomerMcpPage() {
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center gap-2 rounded-xl bg-blue-50 border border-blue-200 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-700">
+                            <div className="flex items-center gap-2 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
                                 <Cpu className="w-3.5 h-3.5" />
                                 MCP Servers
                             </div>
-                            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-                            <span className="text-xs text-slate-500">Model Context Protocol</span>
+                            <ChevronRight className="w-3.5 h-3.5 text-[color:var(--ink-soft)]" />
+                            <span className="text-xs text-[color:var(--ink-muted)]">Model Context Protocol</span>
                         </div>
                         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
                             <div>
-                                <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">MCP Servers</h1>
-                                <p className="mt-2 text-slate-600 text-base max-w-lg">Register Model Context Protocol servers to give agents access to your internal tools.</p>
+                                <h1 className="text-3xl sm:text-4xl font-extrabold text-[color:var(--ink)] tracking-tight leading-tight">MCP Servers</h1>
+                                <p className="mt-2 text-[color:var(--ink-soft)] text-base max-w-lg">Register Model Context Protocol servers to give agents access to your internal tools.</p>
                             </div>
                             <div className="flex items-center gap-3 shrink-0">
-                                <Link href="/dashboard/integrations" className="text-xs text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1">
+                                <Link href="/dashboard/integrations" className="text-xs text-[color:var(--ink-muted)] hover:text-[color:var(--ink)] transition-colors flex items-center gap-1">
                                     <ExternalLink className="w-3 h-3" /> Standard connectors
                                 </Link>
                                 <button
                                     onClick={() => setShowForm(v => !v)}
-                                    className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
+                                    className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[var(--accent)] hover:bg-[var(--accent)] text-white text-sm font-bold transition-colors"
                                 >
                                     <Plus className="w-3.5 h-3.5" />
                                     {showForm ? "Cancel" : "+ Add MCP Server"}
@@ -146,14 +146,14 @@ export default function CustomerMcpPage() {
 
                 {/* ── What is MCP — shown only when no servers yet ── */}
                 {!loading && servers.length === 0 && !showForm && (
-                    <div className="rounded-2xl border border-blue-200 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/10 p-6">
+                    <div className="rounded-[4px] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/40 bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]/50 dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/10 p-6">
                         <div className="flex items-start gap-3 mb-5">
-                            <Cpu className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                            <Cpu className="w-5 h-5 text-[color:var(--accent)] dark:text-[color:var(--accent)] shrink-0 mt-0.5" />
                             <div>
-                                <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1">
+                                <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-1">
                                     What is an MCP server?
                                 </p>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                                <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] leading-relaxed">
                                     MCP (Model Context Protocol) is a standard way to connect AI agents to your internal tools.
                                     You run a small MCP server that wraps your internal API, database, or tool — then register it here.
                                     Your agents automatically discover it and gain access to all the actions it exposes.
@@ -162,33 +162,33 @@ export default function CustomerMcpPage() {
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                             {USE_CASES.map(({ icon, title, desc }) => (
-                                <div key={title} className="rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4">
+                                <div key={title} className="rounded-[3px] bg-[var(--card)] dark:bg-[var(--card)] border border-[color:var(--line)] dark:border-[color:var(--line)] p-4">
                                     <div className="text-2xl mb-2">{icon}</div>
-                                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1">{title}</p>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{desc}</p>
+                                    <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-1">{title}</p>
+                                    <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] leading-relaxed">{desc}</p>
                                 </div>
                             ))}
                         </div>
-                        <div className="mt-5 p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">How to connect your tool in 3 steps</p>
-                            <ol className="space-y-1.5 text-sm text-slate-600 dark:text-slate-300">
+                        <div className="mt-5 p-4 rounded-[3px] bg-[var(--card)] dark:bg-[var(--card)] border border-[color:var(--line)] dark:border-[color:var(--line)]">
+                            <p className="text-xs font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] uppercase tracking-wider mb-2">How to connect your tool in 3 steps</p>
+                            <ol className="space-y-1.5 text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
                                 <li className="flex items-start gap-2">
-                                    <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
+                                    <span className="w-5 h-5 rounded-full bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">1</span>
                                     Build a small MCP server that wraps your internal tool (Anthropic provides SDKs for Python, TypeScript, and Go — takes ~30 min)
                                 </li>
                                 <li className="flex items-start gap-2">
-                                    <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
+                                    <span className="w-5 h-5 rounded-full bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
                                     Deploy it inside your infrastructure so it has a reachable URL
                                 </li>
                                 <li className="flex items-start gap-2">
-                                    <span className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
+                                    <span className="w-5 h-5 rounded-full bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)] text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
                                     Register the URL here → click <strong>Ping</strong> to verify → agents start using it on their next task
                                 </li>
                             </ol>
                         </div>
                         <button
                             onClick={() => setShowForm(true)}
-                            className="mt-5 flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
+                            className="mt-5 flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-[var(--accent)] hover:bg-[var(--accent)] text-white text-sm font-bold transition-colors"
                         >
                             <Plus className="w-3.5 h-3.5" /> Register your first MCP server
                         </button>
@@ -197,10 +197,10 @@ export default function CustomerMcpPage() {
 
                 {/* ── Add form ────────────────────────────────────────── */}
                 {showForm && (
-                    <div className="rounded-2xl border-2 border-blue-200 dark:border-blue-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
-                        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-blue-50/40 dark:bg-blue-950/10">
-                            <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-0.5">Register MCP Server</p>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <div className="rounded-[4px] border-2 border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden shadow-sm">
+                        <div className="px-6 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]/40 dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/10">
+                            <p className="text-xs font-bold text-[color:var(--accent)] dark:text-[color:var(--accent)] uppercase tracking-widest mb-0.5">Register MCP Server</p>
+                            <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                                 Point to your MCP endpoint. Agents will discover it automatically on their next task.
                             </p>
                         </div>
@@ -208,45 +208,45 @@ export default function CustomerMcpPage() {
                         <form onSubmit={addServer} className="p-6 space-y-4">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label className={lbl}>Server Name <span className="text-rose-500">*</span></label>
+                                    <label className={lbl}>Server Name <span className="text-[color:var(--danger)]">*</span></label>
                                     <input value={addName} onChange={e => setAddName(e.target.value)} className={inp} placeholder="e.g. Inventory API Server" required />
-                                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">A friendly name your team will recognise</p>
+                                    <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1">A friendly name your team will recognise</p>
                                 </div>
                                 <div>
-                                    <label className={lbl}>Server URL <span className="text-rose-500">*</span></label>
+                                    <label className={lbl}>Server URL <span className="text-[color:var(--danger)]">*</span></label>
                                     <input value={addUrl} onChange={e => setAddUrl(e.target.value)} type="url" className={inp} placeholder="https://mcp.yourcompany.com" required />
-                                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">The MCP endpoint your agents connect to</p>
+                                    <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1">The MCP endpoint your agents connect to</p>
                                 </div>
                             </div>
 
                             <div>
-                                <label className={lbl}>Workspace scope <span className="font-normal text-slate-400 normal-case">(optional)</span></label>
+                                <label className={lbl}>Workspace scope <span className="font-normal text-[color:var(--ink-muted)] normal-case">(optional)</span></label>
                                 <input value={addWs} onChange={e => setAddWs(e.target.value)} className={`${inp} max-w-xs`} placeholder="Leave blank — available to all agents" />
-                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                                <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1">
                                     Blank = all agents in your account can use this server.
                                     Fill in a workspace ID to restrict to one team.
                                 </p>
                             </div>
 
                             {/* Security note */}
-                            <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 px-4 py-3">
-                                <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+                            <div className="rounded-[3px] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/20 border border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)]/40 px-4 py-3">
+                                <p className="text-xs text-[color:var(--warn)] dark:text-[color:var(--warn)] leading-relaxed">
                                     <strong>Security note:</strong> Your MCP server should only be reachable from AgentFarm's agent runtime IPs.
                                     Do not expose it publicly. Use your firewall or a private network to restrict access.
                                 </p>
                             </div>
 
                             {addError && (
-                                <div className="flex items-center gap-2 text-sm text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 rounded-xl px-4 py-2.5">
+                                <div className="flex items-center gap-2 text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40 rounded-[3px] px-4 py-2.5">
                                     <AlertCircle className="w-4 h-4 shrink-0" /> {addError}
                                 </div>
                             )}
 
                             <div className="flex gap-3 pt-1">
-                                <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2.5 rounded-full border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2.5 rounded-full border border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] text-sm font-semibold hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition-colors">
                                     Cancel
                                 </button>
-                                <button type="submit" disabled={adding} className="px-6 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-bold transition-colors">
+                                <button type="submit" disabled={adding} className="px-6 py-2.5 rounded-full bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-50 text-white text-sm font-bold transition-colors">
                                     {adding ? "Registering…" : "Register Server"}
                                 </button>
                             </div>
@@ -256,7 +256,7 @@ export default function CustomerMcpPage() {
 
                 {/* ── Error ───────────────────────────────────────────── */}
                 {error && (
-                    <div className="flex items-center gap-2 text-sm text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 rounded-xl px-4 py-3">
+                    <div className="flex items-center gap-2 text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40 rounded-[3px] px-4 py-3">
                         <AlertCircle className="w-4 h-4 shrink-0" /> {error}
                     </div>
                 )}
@@ -265,7 +265,7 @@ export default function CustomerMcpPage() {
                 {loading && (
                     <div className="space-y-3">
                         {[1, 2].map(i => (
-                            <div key={i} className="h-24 rounded-2xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
+                            <div key={i} className="h-24 rounded-[4px] bg-[var(--line)] dark:bg-[var(--card)] animate-pulse" />
                         ))}
                     </div>
                 )}
@@ -274,11 +274,11 @@ export default function CustomerMcpPage() {
                 {!loading && servers.length > 0 && (
                     <div>
                         <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wide">
+                            <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide">
                                 Your MCP Servers
-                                <span className="font-normal text-slate-400 normal-case ml-1">({servers.length})</span>
+                                <span className="font-normal text-[color:var(--ink-muted)] normal-case ml-1">({servers.length})</span>
                             </h2>
-                            <button onClick={load} className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+                            <button onClick={load} className="flex items-center gap-1.5 text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] dark:hover:text-[color:var(--ink-muted)] transition-colors">
                                 <RefreshCw className="w-3 h-3" /> Refresh
                             </button>
                         </div>
@@ -287,26 +287,26 @@ export default function CustomerMcpPage() {
                             {servers.map(server => {
                                 const ps = pingStates[server.id];
                                 return (
-                                    <div key={server.id} className={`rounded-2xl border bg-white dark:bg-slate-900 overflow-hidden shadow-sm transition-colors ${server.isActive ? "border-emerald-200 dark:border-emerald-900/50" : "border-slate-200 dark:border-slate-800"}`}>
+                                    <div key={server.id} className={`rounded-[4px] border bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden shadow-sm transition-colors ${server.isActive ? "border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/50" : "border-[color:var(--line)] dark:border-[color:var(--line)]"}`}>
                                         <div className="p-5 flex items-start gap-3">
                                             {/* Status dot */}
-                                            <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${server.isActive ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"}`} />
+                                            <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${server.isActive ? "bg-[var(--ok)]" : "bg-[var(--bg-deep)] dark:bg-[var(--bg-deep)]"}`} />
 
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                                    <p className="font-bold text-slate-900 dark:text-slate-100">{server.name}</p>
-                                                    <span className={`text-[11px] font-semibold rounded-full px-2 py-0.5 ${server.isActive ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300" : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"}`}>
+                                                    <p className="font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{server.name}</p>
+                                                    <span className={`text-[11px] font-semibold rounded-full px-2 py-0.5 ${server.isActive ? "bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" : "bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]"}`}>
                                                         {server.isActive ? "Active" : "Inactive"}
                                                     </span>
                                                 </div>
-                                                <p className="text-xs font-mono text-blue-600 dark:text-blue-400">{server.url}</p>
-                                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                                                <p className="text-xs font-mono text-[color:var(--accent)] dark:text-[color:var(--accent)]">{server.url}</p>
+                                                <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1">
                                                     {server.workspaceId ? `Workspace: ${server.workspaceId}` : "Available to all agents in your account"}
                                                 </p>
 
                                                 {/* Ping result */}
                                                 {ps && !ps.loading && (
-                                                    <div className={`mt-2 flex items-center gap-1.5 text-xs font-semibold ${ps.ok ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                                                    <div className={`mt-2 flex items-center gap-1.5 text-xs font-semibold ${ps.ok ? "text-[color:var(--ok)] dark:text-[color:var(--ok)]" : "text-[color:var(--danger)] dark:text-[color:var(--danger)]"}`}>
                                                         {ps.ok ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
                                                         {ps.ok
                                                             ? `✓ Reachable — ${ps.latencyMs ?? 0}ms response time`
@@ -315,7 +315,7 @@ export default function CustomerMcpPage() {
                                                     </div>
                                                 )}
                                                 {ps?.loading && (
-                                                    <p className="mt-2 text-xs text-slate-400 dark:text-slate-500 animate-pulse">Pinging server…</p>
+                                                    <p className="mt-2 text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] animate-pulse">Pinging server…</p>
                                                 )}
                                             </div>
 
@@ -324,14 +324,14 @@ export default function CustomerMcpPage() {
                                                 <button
                                                     onClick={() => void ping(server)}
                                                     disabled={ps?.loading}
-                                                    className="flex items-center gap-1.5 text-xs font-semibold border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-lg px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors"
+                                                    className="flex items-center gap-1.5 text-xs font-semibold border border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] rounded-[3px] px-3 py-1.5 hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] disabled:opacity-50 transition-colors"
                                                 >
                                                     <Radio className="w-3 h-3" />
                                                     {ps?.loading ? "Pinging…" : "Ping"}
                                                 </button>
                                                 <button
                                                     onClick={() => void remove(server)}
-                                                    className="flex items-center gap-1.5 text-xs font-semibold border border-rose-200 dark:border-rose-900 text-rose-500 dark:text-rose-400 rounded-lg px-3 py-1.5 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
+                                                    className="flex items-center gap-1.5 text-xs font-semibold border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] text-[color:var(--danger)] dark:text-[color:var(--danger)] rounded-[3px] px-3 py-1.5 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 transition-colors"
                                                 >
                                                     <Trash2 className="w-3 h-3" /> Remove
                                                 </button>
@@ -422,38 +422,38 @@ function ConnectToolCatalog({ onActivated }: { onActivated: () => void | Promise
     if (catalog.length === 0) return null;
 
     return (
-        <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800">
-                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-0.5">Connect a tool</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+        <section className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden shadow-sm">
+            <div className="px-6 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)]">
+                <p className="text-xs font-bold text-[color:var(--ok)] dark:text-[color:var(--ok)] uppercase tracking-widest mb-0.5">Connect a tool</p>
+                <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                     Pick a tool your team already uses and activate it with an access token — no setup required. Your agents gain its tools on their next task.
                 </p>
             </div>
 
             {activated && (
-                <div className="mx-6 mt-4 flex items-center gap-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 px-4 py-2.5 text-sm text-emerald-700 dark:text-emerald-300">
+                <div className="mx-6 mt-4 flex items-center gap-2 rounded-[3px] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/20 border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] px-4 py-2.5 text-sm text-[color:var(--ok)] dark:text-[color:var(--ok)]">
                     <CheckCircle2 className="w-4 h-4" /> <strong>{activated}</strong> connected — your agents can use it now.
                 </div>
             )}
 
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {catalog.map((c) => (
-                    <div key={c.id} className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 flex flex-col">
+                    <div key={c.id} className="rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-4 flex flex-col">
                         <div className="flex items-start justify-between mb-2">
                             <div>
-                                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{c.displayName}</p>
-                                <p className="text-xs text-slate-400 uppercase tracking-wider">{c.category}</p>
+                                <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{c.displayName}</p>
+                                <p className="text-xs text-[color:var(--ink-muted)] uppercase tracking-wider">{c.category}</p>
                             </div>
                             {!c.live && (
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-full px-2 py-0.5">Coming soon</span>
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--warn)] dark:text-[color:var(--warn)] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] rounded-full px-2 py-0.5">Coming soon</span>
                             )}
                         </div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed flex-1">{c.description}</p>
-                        <p className="text-[11px] text-slate-400 mt-2">{c.tools.length} tools</p>
+                        <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] leading-relaxed flex-1">{c.description}</p>
+                        <p className="text-[11px] text-[color:var(--ink-muted)] mt-2">{c.tools.length} tools</p>
                         <button
                             onClick={() => openConfigure(c)}
                             disabled={!c.live}
-                            className={`mt-3 flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-colors ${c.live ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"}`}
+                            className={`mt-3 flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-colors ${c.live ? "bg-[var(--ok)] hover:bg-[var(--ok)] text-white" : "bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-muted)] cursor-not-allowed"}`}
                         >
                             <Plus className="w-3.5 h-3.5" /> {c.live ? "Connect" : "Coming soon"}
                         </button>
@@ -463,17 +463,17 @@ function ConnectToolCatalog({ onActivated }: { onActivated: () => void | Promise
 
             {configuring && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setConfiguring(null)}>
-                    <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
-                        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800">
-                            <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Connect {configuring.displayName}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">Enter your {configuring.displayName} credentials. Stored encrypted — never shown again.</p>
+                    <div className="w-full max-w-md rounded-[4px] bg-[var(--card)] dark:bg-[var(--card)] border border-[color:var(--line)] dark:border-[color:var(--line)] shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="px-6 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)]">
+                            <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Connect {configuring.displayName}</p>
+                            <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">Enter your {configuring.displayName} credentials. Stored encrypted — never shown again.</p>
                         </div>
                         <form onSubmit={activate} className="p-6 space-y-4">
                             {[...configuring.requiredFields, ...(configuring.optionalFields ?? [])].map((f) => {
                                 const required = configuring.requiredFields.some(rf => rf.name === f.name);
                                 return (
                                     <div key={f.name}>
-                                        <label className={lbl}>{f.label}{required && <span className="text-rose-500"> *</span>}</label>
+                                        <label className={lbl}>{f.label}{required && <span className="text-[color:var(--danger)]"> *</span>}</label>
                                         <input
                                             type={f.type === "secret" ? "password" : "text"}
                                             value={values[f.name] ?? ""}
@@ -481,16 +481,16 @@ function ConnectToolCatalog({ onActivated }: { onActivated: () => void | Promise
                                             className={inp}
                                             placeholder={f.placeholder}
                                         />
-                                        {f.helpText && <p className="text-[11px] text-slate-400 mt-1">{f.helpText}</p>}
+                                        {f.helpText && <p className="text-[11px] text-[color:var(--ink-muted)] mt-1">{f.helpText}</p>}
                                     </div>
                                 );
                             })}
                             {formError && (
-                                <div className="flex items-center gap-2 text-sm text-rose-600"><AlertCircle className="w-4 h-4" /> {formError}</div>
+                                <div className="flex items-center gap-2 text-sm text-[color:var(--danger)]"><AlertCircle className="w-4 h-4" /> {formError}</div>
                             )}
                             <div className="flex gap-2 pt-1">
-                                <button type="button" onClick={() => setConfiguring(null)} className="px-4 py-2.5 rounded-full border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-600 dark:text-slate-300">Cancel</button>
-                                <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-bold">
+                                <button type="button" onClick={() => setConfiguring(null)} className="px-4 py-2.5 rounded-full border border-[color:var(--line)] dark:border-[color:var(--line)] text-sm font-bold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">Cancel</button>
+                                <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-full bg-[var(--ok)] hover:bg-[var(--ok)] disabled:opacity-60 text-white text-sm font-bold">
                                     {saving ? "Connecting…" : `Connect ${configuring.displayName}`}
                                 </button>
                             </div>
