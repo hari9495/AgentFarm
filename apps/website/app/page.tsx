@@ -3,7 +3,7 @@ import dynamic from "next/dynamic";
 import Hero from "@/components/home/HeroSwitch";
 import Problem from "@/components/home/Problem";
 import Solution from "@/components/home/Solution";
-import Features from "@/components/home/Features";
+import Features from "@/components/home/FeaturesBento";
 import { siteMarketingMetadata } from "@/lib/marketing-content";
 import { homeFAQSchema, homeSpeakableSchema, aggregateRatingSchema } from "@/lib/seo-schemas";
 

@@ -1,9 +1,10 @@
 'use client';
 
 /**
- * PREVIEW — adaptation of 21st.dev `tommyjepsen/feature-section-with-bento-grid`
- * to the Operations Console palette + AgentFarm's 6 features. Light, editorial,
- * uniform cards. The Approval-gates cell spans two columns for emphasis.
+ * Home features — clean bento grid. Adapted from 21st.dev
+ * `tommyjepsen/feature-section-with-bento-grid`: light editorial cards, the
+ * Approval-gates and Azure-isolation cells span two columns for emphasis.
+ * Retinted to the Operations Console palette; content is AgentFarm's 6 pillars.
  */
 
 import * as React from 'react';
@@ -18,7 +19,7 @@ const FEATURES = [
   { icon: Server, title: 'Azure isolation', desc: 'A dedicated, isolated VM per tenant — your data never mingles with anyone else’s.', wide: true },
 ];
 
-export function FeaturesCleanBento() {
+export default function FeaturesBento() {
   return (
     <section className="w-full px-6 py-20 sm:py-28" style={{ background: 'var(--op-paper)', color: 'var(--op-ink)' }}>
       <div className="mx-auto max-w-6xl">
@@ -53,5 +54,3 @@ export function FeaturesCleanBento() {
     </section>
   );
 }
-
-export default FeaturesCleanBento;
