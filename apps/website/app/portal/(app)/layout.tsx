@@ -107,7 +107,7 @@ export default async function PortalAppLayout({
     `;
 
     return (
-        <div className="min-h-screen bg-[var(--bg-deep)] dark:bg-[var(--bg)] flex flex-col">
+        <div className="editorial-app min-h-screen bg-[var(--bg-deep)] dark:bg-[var(--bg)] flex flex-col">
             {/* Inject brand CSS */}
             <style dangerouslySetInnerHTML={{ __html: brandCss }} />
 
