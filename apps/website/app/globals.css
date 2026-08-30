@@ -737,3 +737,42 @@ dialog[open]::backdrop {
     backdrop-filter: blur(0px);
   }
 }
+
+/* ===================================================================== */
+/* Editorial (Ink & Petrol) scope — customer dashboard + portal only.    */
+/* Matches the internal operator dashboard. Scoped to .editorial-app so  */
+/* the marketing site's Operations Console palette is untouched.         */
+/* ===================================================================== */
+.editorial-app {
+  --bg: #F3F5F4;
+  --bg-deep: #E7EAE9;
+  --card: #ffffff;
+  --ink: #12181A;
+  --ink-soft: #3A4448;
+  --ink-muted: #5E6B70;
+  --line: #D2D8D6;
+  --line-strong: #AEB6B4;
+  --accent: #1C6E6E;
+  --ok: #3E7D4F;
+  --warn: #A9791E;
+  --danger: #B4483C;
+  --danger-border: rgba(180, 72, 60, 0.22);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-inter), -apple-system, sans-serif;
+}
+.dark .editorial-app {
+  --bg: #0E1214;
+  --bg-deep: #0A0D0F;
+  --card: #151A1D;
+  --ink: #E6EAEC;
+  --ink-soft: #A9B4B8;
+  --ink-muted: #849096;
+  --line: rgba(255, 255, 255, 0.10);
+  --line-strong: rgba(255, 255, 255, 0.20);
+  --accent: #37A0A0;
+  --ok: #6FA06B;
+  --warn: #D2A24E;
+  --danger: #D06A5E;
+  --danger-border: rgba(208, 106, 94, 0.30);
+}

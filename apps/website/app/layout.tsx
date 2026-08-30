@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
+import { Inter, Bricolage_Grotesque, JetBrains_Mono, Fraunces, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import ToastProvider from "@/components/shared/ToastProvider";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
@@ -31,6 +31,21 @@ const bricolage = Bricolage_Grotesque({
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-jetbrains",
+  display: "swap",
+  weight: ["400", "500", "600"],
+});
+
+// Editorial system (customer dashboard/portal) — Fraunces display serif + IBM Plex Mono figures.
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  variable: "--font-plex-mono",
   display: "swap",
   weight: ["400", "500", "600"],
 });
@@ -151,7 +166,7 @@ export default function RootLayout({
   return (
     <html
       lang="en-IN"
-      className={`${inter.variable} ${bricolage.variable} ${jetbrainsMono.variable}`}
+      className={`${inter.variable} ${bricolage.variable} ${jetbrainsMono.variable} ${fraunces.variable} ${plexMono.variable}`}
       suppressHydrationWarning
     >
       <head>

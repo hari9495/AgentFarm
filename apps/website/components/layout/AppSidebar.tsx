@@ -134,25 +134,25 @@ function NavLink({
             href={item.href}
             onClick={onClick}
             className={`
-                group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm
+                group relative flex items-center gap-3 rounded-[3px] px-3 py-2.5 text-sm
                 font-medium transition-all duration-150 select-none
                 ${active
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    ? "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[var(--accent)]"
+                    : "text-[var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[var(--ink)]"
                 }
             `}
         >
             {/* Left accent bar */}
             {active && (
-                <span className="absolute left-0 inset-y-[6px] w-[3px] rounded-r-full bg-blue-600" />
+                <span className="absolute left-0 inset-y-[6px] w-[3px] rounded-r-full bg-[var(--accent)]" />
             )}
 
             {/* Icon container */}
             <span className={`
-                flex items-center justify-center w-8 h-8 rounded-lg shrink-0 transition-all duration-150
+                flex items-center justify-center w-8 h-8 rounded-[3px] shrink-0 transition-all duration-150
                 ${active
-                    ? "bg-blue-100 text-blue-600"
-                    : "text-slate-400 group-hover:text-slate-600 group-hover:bg-slate-200/70"
+                    ? "bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-[var(--accent)]"
+                    : "text-[var(--ink-muted)] group-hover:text-[var(--ink-soft)] group-hover:bg-[var(--line)]/70"
                 }
             `}>
                 <Icon className="w-[17px] h-[17px]" />
@@ -161,13 +161,13 @@ function NavLink({
             <span className="flex-1 truncate tracking-[-0.01em]">{item.label}</span>
 
             {count > 0 && (
-                <span className="inline-flex items-center justify-center min-w-[20px] h-5 rounded-full bg-rose-500 text-white text-[10px] font-bold px-1.5 shrink-0 shadow-sm shadow-rose-500/30">
+                <span className="inline-flex items-center justify-center min-w-[20px] h-5 rounded-full bg-[var(--danger)] text-white text-[10px] font-bold px-1.5 shrink-0 shadow-sm ">
                     {count > 99 ? "99+" : count}
                 </span>
             )}
 
             {!active && !count && (
-                <ChevronRight className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                <ChevronRight className="w-3 h-3 text-[var(--ink-muted)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
             )}
         </Link>
     );
@@ -218,29 +218,29 @@ function SidebarContent({
     };
 
     return (
-        <aside style={{ width: 260 }} className="flex flex-col h-full bg-white border-r border-slate-200 shrink-0">
+        <aside style={{ width: 260 }} className="flex flex-col h-full bg-white border-r border-[var(--line)] shrink-0">
 
             {/* CommandPalette listener — renders nothing visible */}
             <CommandPalette />
 
             {/* ── Logo row ─────────────────────────────────────────────── */}
-            <div className="flex items-center gap-3 px-4 py-5 border-b border-slate-200 shrink-0">
+            <div className="flex items-center gap-3 px-4 py-5 border-b border-[var(--line)] shrink-0">
                 <Link
                     href="/"
                     onClick={onClose}
                     className="flex items-center gap-3 group flex-1 min-w-0"
                 >
-                    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 shadow-md shadow-blue-600/20">
+                    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[3px] bg-[var(--accent)] shadow-md shadow-blue-600/20">
                         <svg width="16" height="16" viewBox="0 0 12 12" fill="none" aria-hidden>
                             <circle cx="6" cy="6" r="5" stroke="white" strokeWidth="1.5" />
                             <path d="M4 6h4M6 4v4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
                         </svg>
                     </span>
                     <div className="min-w-0">
-                        <span className="block text-[15px] font-bold text-slate-900 tracking-tight group-hover:text-blue-600 transition-colors truncate leading-tight">
+                        <span className="block text-[15px] font-bold text-[var(--ink)] tracking-tight group-hover:text-[var(--accent)] transition-colors truncate leading-tight">
                             AgentFarms
                         </span>
-                        <span className="block text-[10px] text-slate-400 uppercase tracking-widest font-semibold leading-tight mt-0.5">
+                        <span className="block text-[10px] text-[var(--ink-muted)] uppercase tracking-widest font-semibold leading-tight mt-0.5">
                             Dashboard
                         </span>
                     </div>
@@ -248,7 +248,7 @@ function SidebarContent({
                 {onClose && (
                     <button
                         onClick={onClose}
-                        className="shrink-0 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors md:hidden"
+                        className="shrink-0 p-1.5 rounded-[3px] text-[var(--ink-muted)] hover:text-[var(--ink-soft)] hover:bg-[var(--bg-deep)] transition-colors md:hidden"
                     >
                         <X className="w-4 h-4" />
                     </button>
@@ -259,11 +259,11 @@ function SidebarContent({
             <div className="px-3 pt-4 pb-2">
                 <button
                     onClick={openSearch}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-[13px] text-slate-400 hover:bg-slate-100 hover:text-slate-600 hover:border-slate-300 transition-all group"
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-[3px] bg-[var(--bg-deep)] border border-[var(--line)] text-[13px] text-[var(--ink-muted)] hover:bg-[var(--bg-deep)] hover:text-[var(--ink-soft)] hover:border-[var(--line-strong)] transition-all group"
                 >
-                    <Search className="w-4 h-4 shrink-0 group-hover:text-slate-600 transition-colors" />
+                    <Search className="w-4 h-4 shrink-0 group-hover:text-[var(--ink-soft)] transition-colors" />
                     <span className="flex-1 text-left">Search…</span>
-                    <kbd className="text-[10px] font-mono bg-white text-slate-400 px-1.5 py-0.5 rounded-md border border-slate-200">⌘K</kbd>
+                    <kbd className="text-[10px] font-mono bg-white text-[var(--ink-muted)] px-1.5 py-0.5 rounded-[3px] border border-[var(--line)]">⌘K</kbd>
                 </button>
             </div>
 
@@ -273,10 +273,10 @@ function SidebarContent({
                     <div key={group.label}>
                         {/* Section header */}
                         <div className="flex items-center gap-2 px-3 mb-2">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--ink-muted)]">
                                 {group.label}
                             </p>
-                            <div className="flex-1 h-px bg-slate-200" />
+                            <div className="flex-1 h-px bg-[var(--line)]" />
                         </div>
                         <div className="space-y-0.5">
                             {group.items.map((item) => (
@@ -297,10 +297,10 @@ function SidebarContent({
                 {(userRole === "superadmin" || showCompanyPortal) && (
                     <div>
                         <div className="flex items-center gap-2 px-3 mb-2">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--ink-muted)]">
                                 Internal
                             </p>
-                            <div className="flex-1 h-px bg-slate-200" />
+                            <div className="flex-1 h-px bg-[var(--line)]" />
                         </div>
                         <div className="space-y-0.5">
                             {userRole === "superadmin" && (
@@ -308,24 +308,24 @@ function SidebarContent({
                                     <Link
                                         href="/admin"
                                         onClick={onClose}
-                                        className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all"
+                                        className="group flex items-center gap-3 rounded-[3px] px-3 py-2.5 text-sm font-medium text-[var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[var(--ink)] transition-all"
                                     >
-                                        <span className="flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 group-hover:text-slate-600 group-hover:bg-slate-200/70 transition-all">
+                                        <span className="flex items-center justify-center w-8 h-8 rounded-[3px] text-[var(--ink-muted)] group-hover:text-[var(--ink-soft)] group-hover:bg-[var(--line)]/70 transition-all">
                                             <Shield className="w-[17px] h-[17px]" />
                                         </span>
                                         <span className="flex-1 truncate tracking-[-0.01em]">Admin Console</span>
-                                        <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                        <ArrowUpRight className="w-3.5 h-3.5 text-[var(--ink-muted)] shrink-0" />
                                     </Link>
                                     <Link
                                         href="/admin/bots"
                                         onClick={onClose}
-                                        className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all"
+                                        className="group flex items-center gap-3 rounded-[3px] px-3 py-2.5 text-sm font-medium text-[var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[var(--ink)] transition-all"
                                     >
-                                        <span className="flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 group-hover:text-slate-600 group-hover:bg-slate-200/70 transition-all">
+                                        <span className="flex items-center justify-center w-8 h-8 rounded-[3px] text-[var(--ink-muted)] group-hover:text-[var(--ink-soft)] group-hover:bg-[var(--line)]/70 transition-all">
                                             <Bot className="w-[17px] h-[17px]" />
                                         </span>
                                         <span className="flex-1 truncate tracking-[-0.01em]">Manage Bots</span>
-                                        <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                        <ArrowUpRight className="w-3.5 h-3.5 text-[var(--ink-muted)] shrink-0" />
                                     </Link>
                                 </>
                             )}
@@ -333,9 +333,9 @@ function SidebarContent({
                                 <Link
                                     href="/company"
                                     onClick={onClose}
-                                    className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 hover:text-blue-700 transition-all"
+                                    className="group flex items-center gap-3 rounded-[3px] px-3 py-2.5 text-sm font-medium text-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] hover:text-[var(--accent)] transition-all"
                                 >
-                                    <span className="flex items-center justify-center w-8 h-8 rounded-lg text-blue-500 group-hover:bg-blue-100 transition-all">
+                                    <span className="flex items-center justify-center w-8 h-8 rounded-[3px] text-[var(--accent)] group-hover:bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] transition-all">
                                         <ShieldCheck className="w-[17px] h-[17px]" />
                                     </span>
                                     <span className="flex-1 truncate tracking-[-0.01em]">Company Portal</span>
@@ -348,18 +348,18 @@ function SidebarContent({
             </nav>
 
             {/* ── Footer ───────────────────────────────────────────────── */}
-            <div className="border-t border-slate-200 p-3 space-y-1 shrink-0">
+            <div className="border-t border-[var(--line)] p-3 space-y-1 shrink-0">
 
                 {/* User identity row */}
-                <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-slate-50 transition-colors cursor-default">
-                    <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-[12px] font-bold text-white shrink-0 shadow-sm shadow-blue-600/20 ring-2 ring-slate-200">
+                <div className="flex items-center gap-3 px-2 py-2 rounded-[3px] hover:bg-[var(--bg-deep)] transition-colors cursor-default">
+                    <div className="h-8 w-8 rounded-full bg-[var(--accent)] flex items-center justify-center text-[12px] font-bold text-white shrink-0 shadow-sm shadow-blue-600/20 ring-2 ring-[var(--line)]">
                         {initials}
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-slate-800 truncate leading-snug">
+                        <p className="text-[13px] font-semibold text-[var(--ink)] truncate leading-snug">
                             {userName}
                         </p>
-                        <p className="text-[11px] text-slate-400 truncate leading-snug">
+                        <p className="text-[11px] text-[var(--ink-muted)] truncate leading-snug">
                             {tenantId ? tenantId : roleLabel}
                         </p>
                     </div>
@@ -368,7 +368,7 @@ function SidebarContent({
                         onClick={toggle}
                         aria-label="Toggle theme"
                         title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                        className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                        className="shrink-0 w-8 h-8 rounded-[3px] flex items-center justify-center text-[var(--ink-muted)] hover:text-[var(--ink-soft)] hover:bg-[var(--bg-deep)] transition-colors"
                     >
                         {theme === "dark"
                             ? <Sun className="w-[15px] h-[15px]" />
@@ -379,9 +379,9 @@ function SidebarContent({
                 {/* Sign out */}
                 <button
                     onClick={() => void handleLogout()}
-                    className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-all group"
+                    className="w-full flex items-center gap-3 rounded-[3px] px-3 py-2 text-[13px] font-medium text-[var(--ink-muted)] hover:bg-rose-50 hover:text-rose-600 transition-all group"
                 >
-                    <span className="flex items-center justify-center w-8 h-8 rounded-lg group-hover:bg-rose-100 transition-all">
+                    <span className="flex items-center justify-center w-8 h-8 rounded-[3px] group-hover:bg-rose-100 transition-all">
                         <LogOut className="w-[15px] h-[15px]" />
                     </span>
                     <span className="tracking-[-0.01em]">Sign out</span>
@@ -413,10 +413,10 @@ export default function AppSidebar({
             {/* Mobile toggle button */}
             <button
                 onClick={() => setOpen(true)}
-                className="md:hidden fixed top-3.5 left-3.5 z-40 p-2 bg-white border border-slate-200 rounded-lg shadow-sm"
+                className="md:hidden fixed top-3.5 left-3.5 z-40 p-2 bg-white border border-[var(--line)] rounded-[3px] shadow-sm"
                 aria-label="Open navigation"
             >
-                <Menu className="w-4 h-4 text-slate-500" />
+                <Menu className="w-4 h-4 text-[var(--ink-muted)]" />
             </button>
 
             {/* Mobile backdrop */}
