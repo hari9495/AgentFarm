@@ -520,6 +520,13 @@ body {
     .sidebar-resize-handle { display: none; }
 }
 
+/* Collapsed icon rail: hide the nav scrollbar so it reserves no space —
+   otherwise the reserved gutter shifts the centered icons ~5px left, out of
+   line with the logo/toggle above them. Content still scrolls via wheel.
+   Uses nav.rail-scroll to outrank the later `.sidebar-scroll` rule. */
+nav.rail-scroll { scrollbar-width: none; }
+nav.rail-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
 .dashboard-sidebar>* {
     position: relative;
     z-index: 1;

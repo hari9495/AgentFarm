@@ -242,7 +242,7 @@ export function InternalSidebar({
             </div>
 
             {/* Nav */}
-            <nav className={`flex-1 overflow-y-auto py-4 space-y-5 sidebar-scroll ${collapsed ? 'px-2' : 'px-3'}`}>
+            <nav className={`flex-1 overflow-y-auto py-4 space-y-5 sidebar-scroll ${collapsed ? 'px-2 rail-scroll' : 'px-3'}`}>
 
                 {/* ⌘K Search */}
                 <button
