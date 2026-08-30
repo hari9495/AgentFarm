@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
     Activity,
     ArrowUpRight,
@@ -36,8 +36,50 @@ import {
     UsersRound,
     X,
     ChevronRight,
+    PanelLeftClose,
+    PanelLeftOpen,
     type LucideIcon,
 } from "lucide-react";
+
+// ── Collapse + resize state (persisted) ────────────────────────────────────────
+const SIDEBAR_MIN = 208;
+const SIDEBAR_MAX = 420;
+const SIDEBAR_DEFAULT = 260;
+const RAIL_WIDTH = 68;
+const LS_COLLAPSED = "af_sidebar_collapsed";
+const LS_WIDTH = "af_sidebar_width";
+
+function useSidebarState() {
+    const [collapsed, setCollapsed] = useState(false);
+    const [width, setWidth] = useState(SIDEBAR_DEFAULT);
+    const [ready, setReady] = useState(false);
+
+    useEffect(() => {
+        try {
+            const c = localStorage.getItem(LS_COLLAPSED);
+            const w = Number(localStorage.getItem(LS_WIDTH));
+            if (c === "1") setCollapsed(true);
+            if (w >= SIDEBAR_MIN && w <= SIDEBAR_MAX) setWidth(w);
+        } catch { /* private mode / SSR */ }
+        setReady(true);
+    }, []);
+
+    const toggle = useCallback(() => {
+        setCollapsed((prev) => {
+            const next = !prev;
+            try { localStorage.setItem(LS_COLLAPSED, next ? "1" : "0"); } catch { /* noop */ }
+            return next;
+        });
+    }, []);
+
+    const persistWidth = useCallback((w: number) => {
+        const clamped = Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, w));
+        setWidth(clamped);
+        try { localStorage.setItem(LS_WIDTH, String(clamped)); } catch { /* noop */ }
+    }, []);
+
+    return { collapsed, width, ready, toggle, setWidth, persistWidth };
+}
 import { useTheme } from "@/components/shared/ThemeProvider";
 import CommandPalette from "@/components/shared/CommandPalette";
 
@@ -116,10 +158,12 @@ function NavLink({
     item,
     badges,
     onClick,
+    collapsed,
 }: {
     item: NavItem;
     badges: BadgeCounts;
     onClick?: () => void;
+    collapsed?: boolean;
 }) {
     const pathname = usePathname();
     const active = item.exact
@@ -133,9 +177,11 @@ function NavLink({
         <Link
             href={item.href}
             onClick={onClick}
+            title={collapsed ? item.label : undefined}
             className={`
-                group relative flex items-center gap-3 rounded-[3px] px-3 py-2.5 text-sm
+                group relative flex items-center gap-3 rounded-[3px] py-2.5 text-sm
                 font-medium transition-all duration-150 select-none
+                ${collapsed ? "justify-center px-0" : "px-3"}
                 ${active
                     ? "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[color:var(--accent)]"
                     : "text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink)]"
@@ -149,24 +195,30 @@ function NavLink({
 
             {/* Icon container */}
             <span className={`
-                flex items-center justify-center w-8 h-8 rounded-[3px] shrink-0 transition-all duration-150
+                relative flex items-center justify-center w-8 h-8 rounded-[3px] shrink-0 transition-all duration-150
                 ${active
                     ? "bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-[color:var(--accent)]"
                     : "text-[color:var(--ink-muted)] group-hover:text-[color:var(--ink-soft)] group-hover:bg-[var(--line)]/70"
                 }
             `}>
                 <Icon className="w-[17px] h-[17px]" />
+                {/* Collapsed: badge as a dot on the icon */}
+                {collapsed && count > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[var(--danger)] ring-2 ring-white" />
+                )}
             </span>
 
-            <span className="flex-1 truncate tracking-[-0.01em]">{item.label}</span>
+            {!collapsed && (
+                <span className="flex-1 truncate tracking-[-0.01em]">{item.label}</span>
+            )}
 
-            {count > 0 && (
+            {!collapsed && count > 0 && (
                 <span className="inline-flex items-center justify-center min-w-[20px] h-5 rounded-full bg-[var(--danger)] text-white text-[10px] font-bold px-1.5 shrink-0 shadow-sm ">
                     {count > 99 ? "99+" : count}
                 </span>
             )}
 
-            {!active && !count && (
+            {!collapsed && !active && !count && (
                 <ChevronRight className="w-3 h-3 text-[color:var(--ink-muted)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
             )}
         </Link>
@@ -182,6 +234,9 @@ function SidebarContent({
     showCompanyPortal,
     badges,
     onClose,
+    collapsed = false,
+    width = SIDEBAR_DEFAULT,
+    onToggleCollapse,
 }: {
     userName: string;
     userRole: SidebarUserRole;
@@ -189,6 +244,9 @@ function SidebarContent({
     showCompanyPortal?: boolean;
     badges: BadgeCounts;
     onClose?: () => void;
+    collapsed?: boolean;
+    width?: number;
+    onToggleCollapse?: () => void;
 }) {
     const router = useRouter();
     const { theme, toggle } = useTheme();
@@ -218,17 +276,18 @@ function SidebarContent({
     };
 
     return (
-        <aside style={{ width: 260 }} className="flex flex-col h-full bg-white border-r border-[color:var(--line)] shrink-0">
+        <aside style={{ width: collapsed ? RAIL_WIDTH : width }} className="flex flex-col h-full bg-white border-r border-[color:var(--line)] shrink-0 transition-[width] duration-150 ease-out">
 
             {/* CommandPalette listener — renders nothing visible */}
             <CommandPalette />
 
             {/* ── Logo row ─────────────────────────────────────────────── */}
-            <div className="flex items-center gap-3 px-4 py-5 border-b border-[color:var(--line)] shrink-0">
+            <div className={`flex items-center gap-2 py-5 border-b border-[color:var(--line)] shrink-0 ${collapsed ? "flex-col px-2" : "px-4"}`}>
                 <Link
                     href="/"
                     onClick={onClose}
-                    className="flex items-center gap-3 group flex-1 min-w-0"
+                    title={collapsed ? "AgentFarms" : undefined}
+                    className={`flex items-center gap-3 group min-w-0 ${collapsed ? "" : "flex-1"}`}
                 >
                     <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[3px] bg-[var(--accent)] shadow-md shadow-blue-600/20">
                         <svg width="16" height="16" viewBox="0 0 12 12" fill="none" aria-hidden>
@@ -236,15 +295,28 @@ function SidebarContent({
                             <path d="M4 6h4M6 4v4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
                         </svg>
                     </span>
-                    <div className="min-w-0">
-                        <span className="block text-[15px] font-bold text-[color:var(--ink)] tracking-tight group-hover:text-[color:var(--accent)] transition-colors truncate leading-tight">
-                            AgentFarms
-                        </span>
-                        <span className="block text-[10px] text-[color:var(--ink-muted)] uppercase tracking-widest font-semibold leading-tight mt-0.5">
-                            Dashboard
-                        </span>
-                    </div>
+                    {!collapsed && (
+                        <div className="min-w-0">
+                            <span className="block text-[15px] font-bold text-[color:var(--ink)] tracking-tight group-hover:text-[color:var(--accent)] transition-colors truncate leading-tight">
+                                AgentFarms
+                            </span>
+                            <span className="block text-[10px] text-[color:var(--ink-muted)] uppercase tracking-widest font-semibold leading-tight mt-0.5">
+                                Dashboard
+                            </span>
+                        </div>
+                    )}
                 </Link>
+                {/* Desktop collapse/expand toggle */}
+                {onToggleCollapse && (
+                    <button
+                        onClick={onToggleCollapse}
+                        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                        className="hidden md:inline-flex shrink-0 p-1.5 rounded-[3px] text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] transition-colors"
+                    >
+                        {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+                    </button>
+                )}
                 {onClose && (
                     <button
                         onClick={onClose}
@@ -256,28 +328,33 @@ function SidebarContent({
             </div>
 
             {/* ── Search bar ───────────────────────────────────────────── */}
-            <div className="px-3 pt-4 pb-2">
+            <div className={collapsed ? "px-2 pt-4 pb-2" : "px-3 pt-4 pb-2"}>
                 <button
                     onClick={openSearch}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-[3px] bg-[var(--bg-deep)] border border-[color:var(--line)] text-[13px] text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink-soft)] hover:border-[color:var(--line-strong)] transition-all group"
+                    title={collapsed ? "Search (⌘K)" : undefined}
+                    className={`w-full flex items-center rounded-[3px] bg-[var(--bg-deep)] border border-[color:var(--line)] text-[13px] text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink-soft)] hover:border-[color:var(--line-strong)] transition-all group ${collapsed ? "justify-center py-2.5" : "gap-2.5 px-3 py-2.5"}`}
                 >
                     <Search className="w-4 h-4 shrink-0 group-hover:text-[color:var(--ink-soft)] transition-colors" />
-                    <span className="flex-1 text-left">Search…</span>
-                    <kbd className="text-[10px] font-mono bg-white text-[color:var(--ink-muted)] px-1.5 py-0.5 rounded-[3px] border border-[color:var(--line)]">⌘K</kbd>
+                    {!collapsed && <span className="flex-1 text-left">Search…</span>}
+                    {!collapsed && <kbd className="text-[10px] font-mono bg-white text-[color:var(--ink-muted)] px-1.5 py-0.5 rounded-[3px] border border-[color:var(--line)]">⌘K</kbd>}
                 </button>
             </div>
 
             {/* ── Nav groups ───────────────────────────────────────────── */}
-            <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-5 scrollbar-none">
+            <nav className={`flex-1 overflow-y-auto py-2 space-y-5 scrollbar-none ${collapsed ? "px-2" : "px-3"}`}>
                 {dashboardGroups.map((group) => (
                     <div key={group.label}>
                         {/* Section header */}
-                        <div className="flex items-center gap-2 px-3 mb-2">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[color:var(--ink-muted)]">
-                                {group.label}
-                            </p>
-                            <div className="flex-1 h-px bg-[var(--line)]" />
-                        </div>
+                        {collapsed ? (
+                            <div className="h-px bg-[var(--line)] mx-2 mb-2" />
+                        ) : (
+                            <div className="flex items-center gap-2 px-3 mb-2">
+                                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[color:var(--ink-muted)]">
+                                    {group.label}
+                                </p>
+                                <div className="flex-1 h-px bg-[var(--line)]" />
+                            </div>
+                        )}
                         <div className="space-y-0.5">
                             {group.items.map((item) => (
                                 <NavLink
@@ -285,6 +362,7 @@ function SidebarContent({
                                     item={item}
                                     badges={badges}
                                     onClick={onClose}
+                                    collapsed={collapsed}
                                 />
                             ))}
                         </div>
@@ -296,36 +374,42 @@ function SidebarContent({
                     group; the Admin Console is platform-staff tooling. */}
                 {(userRole === "superadmin" || showCompanyPortal) && (
                     <div>
-                        <div className="flex items-center gap-2 px-3 mb-2">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[color:var(--ink-muted)]">
-                                Internal
-                            </p>
-                            <div className="flex-1 h-px bg-[var(--line)]" />
-                        </div>
+                        {collapsed ? (
+                            <div className="h-px bg-[var(--line)] mx-2 mb-2" />
+                        ) : (
+                            <div className="flex items-center gap-2 px-3 mb-2">
+                                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[color:var(--ink-muted)]">
+                                    Internal
+                                </p>
+                                <div className="flex-1 h-px bg-[var(--line)]" />
+                            </div>
+                        )}
                         <div className="space-y-0.5">
                             {userRole === "superadmin" && (
                                 <>
                                     <Link
                                         href="/admin"
                                         onClick={onClose}
-                                        className="group flex items-center gap-3 rounded-[3px] px-3 py-2.5 text-sm font-medium text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink)] transition-all"
+                                        title={collapsed ? "Admin Console" : undefined}
+                                        className={`group flex items-center gap-3 rounded-[3px] py-2.5 text-sm font-medium text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink)] transition-all ${collapsed ? "justify-center px-0" : "px-3"}`}
                                     >
                                         <span className="flex items-center justify-center w-8 h-8 rounded-[3px] text-[color:var(--ink-muted)] group-hover:text-[color:var(--ink-soft)] group-hover:bg-[var(--line)]/70 transition-all">
                                             <Shield className="w-[17px] h-[17px]" />
                                         </span>
-                                        <span className="flex-1 truncate tracking-[-0.01em]">Admin Console</span>
-                                        <ArrowUpRight className="w-3.5 h-3.5 text-[color:var(--ink-muted)] shrink-0" />
+                                        {!collapsed && <span className="flex-1 truncate tracking-[-0.01em]">Admin Console</span>}
+                                        {!collapsed && <ArrowUpRight className="w-3.5 h-3.5 text-[color:var(--ink-muted)] shrink-0" />}
                                     </Link>
                                     <Link
                                         href="/admin/bots"
                                         onClick={onClose}
-                                        className="group flex items-center gap-3 rounded-[3px] px-3 py-2.5 text-sm font-medium text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink)] transition-all"
+                                        title={collapsed ? "Manage Bots" : undefined}
+                                        className={`group flex items-center gap-3 rounded-[3px] py-2.5 text-sm font-medium text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink)] transition-all ${collapsed ? "justify-center px-0" : "px-3"}`}
                                     >
                                         <span className="flex items-center justify-center w-8 h-8 rounded-[3px] text-[color:var(--ink-muted)] group-hover:text-[color:var(--ink-soft)] group-hover:bg-[var(--line)]/70 transition-all">
                                             <Bot className="w-[17px] h-[17px]" />
                                         </span>
-                                        <span className="flex-1 truncate tracking-[-0.01em]">Manage Bots</span>
-                                        <ArrowUpRight className="w-3.5 h-3.5 text-[color:var(--ink-muted)] shrink-0" />
+                                        {!collapsed && <span className="flex-1 truncate tracking-[-0.01em]">Manage Bots</span>}
+                                        {!collapsed && <ArrowUpRight className="w-3.5 h-3.5 text-[color:var(--ink-muted)] shrink-0" />}
                                     </Link>
                                 </>
                             )}
@@ -333,13 +417,14 @@ function SidebarContent({
                                 <Link
                                     href="/company"
                                     onClick={onClose}
-                                    className="group flex items-center gap-3 rounded-[3px] px-3 py-2.5 text-sm font-medium text-[color:var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] hover:text-[color:var(--accent)] transition-all"
+                                    title={collapsed ? "Company Portal" : undefined}
+                                    className={`group flex items-center gap-3 rounded-[3px] py-2.5 text-sm font-medium text-[color:var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] hover:text-[color:var(--accent)] transition-all ${collapsed ? "justify-center px-0" : "px-3"}`}
                                 >
                                     <span className="flex items-center justify-center w-8 h-8 rounded-[3px] text-[color:var(--accent)] group-hover:bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] transition-all">
                                         <ShieldCheck className="w-[17px] h-[17px]" />
                                     </span>
-                                    <span className="flex-1 truncate tracking-[-0.01em]">Company Portal</span>
-                                    <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
+                                    {!collapsed && <span className="flex-1 truncate tracking-[-0.01em]">Company Portal</span>}
+                                    {!collapsed && <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />}
                                 </Link>
                             )}
                         </div>
@@ -348,43 +433,60 @@ function SidebarContent({
             </nav>
 
             {/* ── Footer ───────────────────────────────────────────────── */}
-            <div className="border-t border-[color:var(--line)] p-3 space-y-1 shrink-0">
+            <div className={`border-t border-[color:var(--line)] space-y-1 shrink-0 ${collapsed ? "p-2 flex flex-col items-center" : "p-3"}`}>
 
                 {/* User identity row */}
-                <div className="flex items-center gap-3 px-2 py-2 rounded-[3px] hover:bg-[var(--bg-deep)] transition-colors cursor-default">
+                <div className={`flex items-center rounded-[3px] hover:bg-[var(--bg-deep)] transition-colors cursor-default ${collapsed ? "justify-center p-1.5" : "gap-3 px-2 py-2 w-full"}`} title={collapsed ? `${userName} · ${tenantId ? tenantId : roleLabel}` : undefined}>
                     <div className="h-8 w-8 rounded-full bg-[var(--accent)] flex items-center justify-center text-[12px] font-bold text-white shrink-0 shadow-sm shadow-blue-600/20 ring-2 ring-[color:var(--line)]">
                         {initials}
                     </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-[color:var(--ink)] truncate leading-snug">
-                            {userName}
-                        </p>
-                        <p className="text-[11px] text-[color:var(--ink-muted)] truncate leading-snug">
-                            {tenantId ? tenantId : roleLabel}
-                        </p>
-                    </div>
+                    {!collapsed && (
+                        <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-semibold text-[color:var(--ink)] truncate leading-snug">
+                                {userName}
+                            </p>
+                            <p className="text-[11px] text-[color:var(--ink-muted)] truncate leading-snug">
+                                {tenantId ? tenantId : roleLabel}
+                            </p>
+                        </div>
+                    )}
                     {/* Theme toggle */}
+                    {!collapsed && (
+                        <button
+                            onClick={toggle}
+                            aria-label="Toggle theme"
+                            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                            className="shrink-0 w-8 h-8 rounded-[3px] flex items-center justify-center text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] transition-colors"
+                        >
+                            {theme === "dark"
+                                ? <Sun className="w-[15px] h-[15px]" />
+                                : <Moon className="w-[15px] h-[15px]" />}
+                        </button>
+                    )}
+                </div>
+
+                {/* Theme toggle (collapsed — own row) */}
+                {collapsed && (
                     <button
                         onClick={toggle}
                         aria-label="Toggle theme"
                         title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                        className="shrink-0 w-8 h-8 rounded-[3px] flex items-center justify-center text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] transition-colors"
+                        className="w-8 h-8 rounded-[3px] flex items-center justify-center text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] transition-colors"
                     >
-                        {theme === "dark"
-                            ? <Sun className="w-[15px] h-[15px]" />
-                            : <Moon className="w-[15px] h-[15px]" />}
+                        {theme === "dark" ? <Sun className="w-[15px] h-[15px]" /> : <Moon className="w-[15px] h-[15px]" />}
                     </button>
-                </div>
+                )}
 
                 {/* Sign out */}
                 <button
                     onClick={() => void handleLogout()}
-                    className="w-full flex items-center gap-3 rounded-[3px] px-3 py-2 text-[13px] font-medium text-[color:var(--ink-muted)] hover:bg-rose-50 hover:text-rose-600 transition-all group"
+                    title={collapsed ? "Sign out" : undefined}
+                    className={`flex items-center rounded-[3px] text-[13px] font-medium text-[color:var(--ink-muted)] hover:bg-rose-50 hover:text-rose-600 transition-all group ${collapsed ? "justify-center w-8 h-8" : "w-full gap-3 px-3 py-2"}`}
                 >
-                    <span className="flex items-center justify-center w-8 h-8 rounded-[3px] group-hover:bg-rose-100 transition-all">
+                    <span className={`flex items-center justify-center rounded-[3px] group-hover:bg-rose-100 transition-all ${collapsed ? "w-8 h-8" : "w-8 h-8"}`}>
                         <LogOut className="w-[15px] h-[15px]" />
                     </span>
-                    <span className="tracking-[-0.01em]">Sign out</span>
+                    {!collapsed && <span className="tracking-[-0.01em]">Sign out</span>}
                 </button>
             </div>
         </aside>
@@ -407,6 +509,29 @@ export default function AppSidebar({
     badges: BadgeCounts;
 }) {
     const [open, setOpen] = useState(false);
+    const { collapsed, width, toggle, setWidth, persistWidth } = useSidebarState();
+    const [dragging, setDragging] = useState(false);
+    const asideRef = useRef<HTMLDivElement>(null);
+
+    // Drag-to-resize the desktop sidebar (expanded only).
+    const startResize = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        const left = asideRef.current?.getBoundingClientRect().left ?? 0;
+        setDragging(true);
+        const onMove = (ev: MouseEvent) => setWidth(Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, ev.clientX - left)));
+        const onUp = (ev: MouseEvent) => {
+            document.removeEventListener("mousemove", onMove);
+            document.removeEventListener("mouseup", onUp);
+            document.body.style.userSelect = "";
+            document.body.style.cursor = "";
+            setDragging(false);
+            persistWidth(ev.clientX - left);
+        };
+        document.body.style.userSelect = "none";
+        document.body.style.cursor = "col-resize";
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+    }, [setWidth, persistWidth]);
 
     return (
         <>
@@ -443,15 +568,30 @@ export default function AppSidebar({
                 />
             </div>
 
-            {/* Desktop — always visible */}
-            <div className="hidden md:flex flex-col min-h-screen shrink-0">
+            {/* Desktop — always visible; collapsible + resizable */}
+            <div ref={asideRef} className="hidden md:flex flex-col min-h-screen shrink-0 relative">
                 <SidebarContent
                     userName={userName}
                     userRole={userRole}
                     tenantId={tenantId}
                     showCompanyPortal={showCompanyPortal}
                     badges={badges}
+                    collapsed={collapsed}
+                    width={width}
+                    onToggleCollapse={toggle}
                 />
+                {/* Resize handle (expanded only) */}
+                {!collapsed && (
+                    <div
+                        onMouseDown={startResize}
+                        onDoubleClick={() => persistWidth(SIDEBAR_DEFAULT)}
+                        title="Drag to resize · double-click to reset"
+                        className={`absolute top-0 right-0 h-full w-1.5 cursor-col-resize z-10 group ${dragging ? "" : ""}`}
+                        style={{ transform: "translateX(50%)" }}
+                    >
+                        <div className={`mx-auto h-full w-px transition-colors ${dragging ? "bg-[var(--accent)]" : "bg-transparent group-hover:bg-[var(--accent)]"}`} />
+                    </div>
+                )}
             </div>
         </>
     );
