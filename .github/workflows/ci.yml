@@ -33,31 +33,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.12.0
-
-      - name: Restore pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.local/share/pnpm/store
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-store-${{ runner.os }}-
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Audit dependencies (fail on critical or high)
-        run: pnpm audit --audit-level=high
-        # To temporarily suppress a known unfixable CVE, add it to .npmrc:
-        # audit-ignore=<CVE-ID>
+      # OSV-Scanner reads pnpm-lock.yaml directly against the OSV database.
+      # Replaces `pnpm audit`, whose npm bulk-audit endpoint returns HTTP 400
+      # ("Invalid package tree") on a workspace tree this large.
+      # Remediation is pinned in root package.json pnpm.overrides; unavoidable
+      # transitive advisories are documented in osv-scanner.toml. Any new,
+      # un-ignored advisory fails this job.
+      - name: OSV vulnerability scan
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/src" \
+            ghcr.io/google/osv-scanner:v2.5.1 \
+            scan source --lockfile=/src/pnpm-lock.yaml --config=/src/osv-scanner.toml
 
   sast:
     name: Static analysis (Semgrep)

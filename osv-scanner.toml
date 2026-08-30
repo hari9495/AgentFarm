@@ -1,0 +1,26 @@
+# OSV-Scanner configuration — SCA gate for the monorepo.
+#
+# Vulnerabilities are remediated by pinning fixed versions in the root
+# package.json `pnpm.overrides`. The entries below are the exceptions: their
+# only fix is a MAJOR bump of a package pinned by a vendor library, where
+# forcing the major would risk breaking that vendor's tooling/runtime. They
+# are transitive (not imported by our code) and low real-world exposure.
+# Each carries a review date (`ignoreUntil`) so the deferral is revisited.
+
+[[IgnoredVulns]]
+id = "GHSA-ggr8-5vv4-36mx"
+ignoreUntil = 2026-11-30
+# deepmerge-ts 7.1.5 (prototype pollution). Pulled in ONLY by @prisma/config,
+# which pins deepmerge-ts@7. Fix requires deepmerge-ts@8 (major); forcing it
+# risks breaking the Prisma CLI/codegen. Build/CLI-time only, not app runtime.
+# Revisit when Prisma bumps @prisma/config to a deepmerge-ts@8 line.
+reason = "transitive via @prisma/config (CLI tooling); fix is a major bump of a Prisma-pinned dep. Revisit 2026-11-30."
+
+[[IgnoredVulns]]
+id = "GHSA-w5hq-g745-h8pq"
+ignoreUntil = 2026-11-30
+# uuid 8.3.2. Pulled in ONLY by @azure/msal-node. Fix requires uuid@11
+# (ESM-only major); forcing it across msal-node risks breaking Azure auth at
+# runtime. Not imported directly by our code.
+# Revisit when @azure/msal-node ships a uuid@11-compatible release.
+reason = "transitive via @azure/msal-node (auth lib); fix is an ESM-only major bump that risks breaking Azure auth. Revisit 2026-11-30."
