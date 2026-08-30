@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { UiKit, Masthead, Badge, Button, Stat, Eyebrow } from '../components/ui-kit';
+import { WfThemeToggle } from '../components/editorial';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -34,13 +36,8 @@ interface LeadsResponse {
 
 const STATUS_OPTIONS: LeadStatus[] = ['NEW', 'NURTURE', 'QUALIFIED', 'DISQUALIFIED', 'CONVERTED'];
 
-const STATUS_BADGE: Record<LeadStatus, string> = {
-    NEW: 'bg-red-500/20 text-red-300 border border-red-500/30',
-    NURTURE: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
-    QUALIFIED: 'bg-green-500/20 text-green-300 border border-green-500/30',
-    DISQUALIFIED: 'bg-red-500/20 text-red-300 border border-red-500/30',
-    CONVERTED: 'bg-red-500/20 text-red-300 border border-red-500/30',
-};
+const statusTone = (s: LeadStatus): 'ok' | 'warn' | 'err' | 'accent' | 'neutral' =>
+    ({ NEW: 'accent', NURTURE: 'warn', QUALIFIED: 'ok', DISQUALIFIED: 'err', CONVERTED: 'ok' } as const)[s] ?? 'neutral';
 
 // ---------------------------------------------------------------------------
 // Page
@@ -114,40 +111,38 @@ export default function LeadsPage() {
     const totalPages = Math.ceil(total / LIMIT);
 
     return (
-        <div className="min-h-screen bg-[#0a0a0f] text-white">
-            <div className="max-w-7xl mx-auto px-6 py-10">
-                {/* Header */}
-                <div className="mb-8 flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-white">Lead Queue</h1>
-                        <p className="text-sm text-white/50 mt-1">
-                            Manage inbound leads and nurture sequences
-                        </p>
-                    </div>
-                    <span className="text-sm text-white/30">{total} total</span>
-                </div>
+        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+            <Masthead
+                eyebrow="Sales — Pipeline"
+                title="Lead Queue"
+                actions={<WfThemeToggle />}
+                stats={<Stat n={total.toLocaleString()} k="Total leads" tone="accent" />}
+            />
 
+            <div style={{ padding: 28, maxWidth: 1200, margin: '0 auto', width: '100%', display: 'grid', gap: 18 }}>
                 {/* Tabs */}
-                <div className="flex gap-1 mb-6 bg-white/5 rounded-lg p-1 w-fit">
+                <div style={{ display: 'flex', gap: 6 }}>
                     {(['all', 'nurture'] as const).map((t) => (
                         <button
                             key={t}
                             onClick={() => setTab(t)}
-                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === t
-                                    ? 'bg-white/10 text-white'
-                                    : 'text-white/40 hover:text-white/70'
-                                }`}
+                            className="uk-eyebrow"
+                            style={{
+                                padding: '7px 14px',
+                                border: `1px solid ${tab === t ? 'var(--accent)' : 'var(--line)'}`,
+                                borderRadius: 3,
+                                cursor: 'pointer',
+                                background: tab === t ? 'color-mix(in srgb, var(--accent) 12%, transparent)' : 'transparent',
+                                color: tab === t ? 'var(--accent)' : 'var(--ink-muted)',
+                            }}
                         >
                             {t === 'all' ? 'All Leads' : 'Nurture Queue'}
                         </button>
                     ))}
-                </div>
-
-                {/* Filters (All tab only) */}
-                {tab === 'all' && (
-                    <div className="flex gap-3 mb-5 flex-wrap">
+                    {tab === 'all' && (
                         <select
-                            className="bg-white/5 border border-white/10 rounded-md px-3 py-1.5 text-sm text-white/70 focus:outline-none focus:border-white/30"
+                            className="uk-input"
+                            style={{ marginLeft: 'auto', width: 180 }}
                             value={statusFilter}
                             onChange={(e) => {
                                 const val = e.target.value as LeadStatus | '';
@@ -160,109 +155,69 @@ export default function LeadsPage() {
                                 <option key={s} value={s}>{s}</option>
                             ))}
                         </select>
-                    </div>
-                )}
+                    )}
+                </div>
 
                 {/* Content */}
                 {loading ? (
-                    <div className="text-white/40 text-sm py-12 text-center">Loading…</div>
+                    <div className="uk-panel" style={{ padding: 40, textAlign: 'center', color: 'var(--ink-muted)', fontSize: 13 }}>Loading…</div>
                 ) : error ? (
-                    <div className="text-red-400 text-sm py-12 text-center">{error}</div>
+                    <div className="uk-panel" style={{ padding: 40, textAlign: 'center', color: 'var(--danger)', fontSize: 13, borderLeft: '2px solid var(--danger)' }}>{error}</div>
                 ) : leads.length === 0 ? (
-                    <div className="text-white/30 text-sm py-12 text-center">No leads found.</div>
+                    <div className="uk-panel" style={{ padding: 40, textAlign: 'center', color: 'var(--ink-muted)', fontSize: 13 }}>No leads found.</div>
                 ) : (
-                    <div className="rounded-xl border border-white/8 overflow-hidden">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b border-white/8 bg-white/3">
-                                    <th className="text-left px-4 py-3 text-white/50 font-medium">Name</th>
-                                    <th className="text-left px-4 py-3 text-white/50 font-medium">Company</th>
-                                    <th className="text-left px-4 py-3 text-white/50 font-medium">Status</th>
+                    <table className="uk-ledger">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Company</th>
+                                <th>Status</th>
+                                {tab === 'nurture' && <th>Step</th>}
+                                {tab === 'nurture' && <th>Next Contact</th>}
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {leads.map((lead) => (
+                                <tr key={lead.id} style={{ cursor: 'pointer' }} onClick={() => setSelectedLead(lead)}>
+                                    <td>
+                                        <div style={{ color: 'var(--ink)', fontWeight: 500 }}>{lead.firstName} {lead.lastName}</div>
+                                        <div className="uk-mono" style={{ fontSize: 11, color: 'var(--ink-muted)', marginTop: 2 }}>{lead.email}</div>
+                                    </td>
+                                    <td>{lead.company}</td>
+                                    <td><Badge tone={statusTone(lead.status)}>{lead.status}</Badge></td>
+                                    {tab === 'nurture' && <td className="uk-num">{lead.nurtureStep} / 3</td>}
                                     {tab === 'nurture' && (
-                                        <th className="text-left px-4 py-3 text-white/50 font-medium">Step</th>
+                                        <td className="uk-num">{lead.nextContactAt ? new Date(lead.nextContactAt).toLocaleDateString() : '—'}</td>
                                     )}
-                                    {tab === 'nurture' && (
-                                        <th className="text-left px-4 py-3 text-white/50 font-medium">Next Contact</th>
-                                    )}
-                                    <th className="text-left px-4 py-3 text-white/50 font-medium">Created</th>
-                                    <th className="text-left px-4 py-3 text-white/50 font-medium">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {leads.map((lead) => (
-                                    <tr
-                                        key={lead.id}
-                                        className="border-b border-white/5 hover:bg-white/3 cursor-pointer transition-colors"
-                                        onClick={() => setSelectedLead(lead)}
-                                    >
-                                        <td className="px-4 py-3 text-white">
-                                            {lead.firstName} {lead.lastName}
-                                            <div className="text-xs text-white/40 mt-0.5">{lead.email}</div>
-                                        </td>
-                                        <td className="px-4 py-3 text-white/70">{lead.company}</td>
-                                        <td className="px-4 py-3">
-                                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE[lead.status] ?? ''}`}>
-                                                {lead.status}
-                                            </span>
-                                        </td>
-                                        {tab === 'nurture' && (
-                                            <td className="px-4 py-3 text-white/60">
-                                                {lead.nurtureStep} / 3
-                                            </td>
-                                        )}
-                                        {tab === 'nurture' && (
-                                            <td className="px-4 py-3 text-white/60 text-xs">
-                                                {lead.nextContactAt
-                                                    ? new Date(lead.nextContactAt).toLocaleDateString()
-                                                    : '—'}
-                                            </td>
-                                        )}
-                                        <td className="px-4 py-3 text-white/40 text-xs">
-                                            {new Date(lead.createdAt).toLocaleDateString()}
-                                        </td>
-                                        <td
-                                            className="px-4 py-3"
-                                            onClick={(e) => e.stopPropagation()}
+                                    <td className="uk-num">{new Date(lead.createdAt).toLocaleDateString()}</td>
+                                    <td onClick={(e) => e.stopPropagation()}>
+                                        <select
+                                            className="uk-input"
+                                            style={{ padding: '4px 8px', fontSize: 12 }}
+                                            value={lead.status}
+                                            disabled={updatingId === lead.id}
+                                            onChange={(e) => void updateStatus(lead.id, e.target.value as LeadStatus)}
                                         >
-                                            <select
-                                                className="bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white/60 focus:outline-none disabled:opacity-40"
-                                                value={lead.status}
-                                                disabled={updatingId === lead.id}
-                                                onChange={(e) =>
-                                                    void updateStatus(lead.id, e.target.value as LeadStatus)
-                                                }
-                                            >
-                                                {STATUS_OPTIONS.map((s) => (
-                                                    <option key={s} value={s}>{s}</option>
-                                                ))}
-                                            </select>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                            {STATUS_OPTIONS.map((s) => (
+                                                <option key={s} value={s}>{s}</option>
+                                            ))}
+                                        </select>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 )}
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                    <div className="flex items-center justify-between mt-5 text-sm text-white/40">
-                        <span>Page {page} of {totalPages}</span>
-                        <div className="flex gap-2">
-                            <button
-                                disabled={page <= 1}
-                                onClick={() => void loadLeads(page - 1)}
-                                className="px-3 py-1 rounded border border-white/10 hover:border-white/30 disabled:opacity-30 transition-colors"
-                            >
-                                Prev
-                            </button>
-                            <button
-                                disabled={page >= totalPages}
-                                onClick={() => void loadLeads(page + 1)}
-                                className="px-3 py-1 rounded border border-white/10 hover:border-white/30 disabled:opacity-30 transition-colors"
-                            >
-                                Next
-                            </button>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, color: 'var(--ink-muted)' }}>
+                        <span className="uk-mono">Page {page} of {totalPages}</span>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <Button variant="ghost" size="sm" disabled={page <= 1} onClick={() => void loadLeads(page - 1)}>Prev</Button>
+                            <Button variant="ghost" size="sm" disabled={page >= totalPages} onClick={() => void loadLeads(page + 1)}>Next</Button>
                         </div>
                     </div>
                 )}
@@ -270,100 +225,41 @@ export default function LeadsPage() {
 
             {/* Detail drawer */}
             {selectedLead && (
-                <div
-                    className="fixed inset-0 z-50 flex items-end justify-end"
-                    onClick={() => setSelectedLead(null)}
-                >
+                <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', justifyContent: 'flex-end', background: 'rgba(0,0,0,0.35)' }} onClick={() => setSelectedLead(null)}>
                     <div
-                        className="bg-[#111118] border-l border-white/10 h-full w-full max-w-sm overflow-y-auto p-6 shadow-2xl"
+                        className="uk"
+                        style={{ background: 'var(--card)', borderLeft: '1px solid var(--line)', height: '100%', width: '100%', maxWidth: 400, overflowY: 'auto', padding: 24 }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-base font-semibold">Lead Detail</h2>
-                            <button
-                                onClick={() => setSelectedLead(null)}
-                                className="text-white/40 hover:text-white/80 text-xl leading-none"
-                            >
-                                ×
-                            </button>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+                            <Eyebrow>Lead Detail</Eyebrow>
+                            <button onClick={() => setSelectedLead(null)} style={{ background: 'none', border: 'none', color: 'var(--ink-muted)', fontSize: 22, lineHeight: 1, cursor: 'pointer' }}>×</button>
                         </div>
 
-                        <div className="space-y-4 text-sm">
-                            <div>
-                                <div className="text-white/40 text-xs mb-1">Name</div>
-                                <div className="text-white">{selectedLead.firstName} {selectedLead.lastName}</div>
-                            </div>
-                            <div>
-                                <div className="text-white/40 text-xs mb-1">Email</div>
-                                <div className="text-white/80">{selectedLead.email}</div>
-                            </div>
-                            <div>
-                                <div className="text-white/40 text-xs mb-1">Company</div>
-                                <div className="text-white/80">{selectedLead.company}</div>
-                            </div>
-                            <div>
-                                <div className="text-white/40 text-xs mb-1">Status</div>
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE[selectedLead.status] ?? ''}`}>
-                                    {selectedLead.status}
-                                </span>
-                            </div>
+                        <div style={{ display: 'grid', gap: 16, fontSize: 13 }}>
+                            <Field label="Name"><span style={{ color: 'var(--ink)' }}>{selectedLead.firstName} {selectedLead.lastName}</span></Field>
+                            <Field label="Email">{selectedLead.email}</Field>
+                            <Field label="Company">{selectedLead.company}</Field>
+                            <Field label="Status"><Badge tone={statusTone(selectedLead.status)}>{selectedLead.status}</Badge></Field>
                             {selectedLead.message && (
-                                <div>
-                                    <div className="text-white/40 text-xs mb-1">Message</div>
-                                    <div className="text-white/70 bg-white/5 rounded p-3 text-xs leading-relaxed">
-                                        {selectedLead.message}
-                                    </div>
-                                </div>
+                                <Field label="Message">
+                                    <div className="uk-panel" style={{ padding: 12, fontSize: 12, lineHeight: 1.5, color: 'var(--ink-soft)' }}>{selectedLead.message}</div>
+                                </Field>
                             )}
-                            <div>
-                                <div className="text-white/40 text-xs mb-1">Lead Source</div>
-                                <div className="text-white/60">{selectedLead.leadSource}</div>
-                            </div>
-                            {selectedLead.sfLeadId && (
-                                <div>
-                                    <div className="text-white/40 text-xs mb-1">Salesforce ID</div>
-                                    <div className="font-mono text-white/60 text-xs">{selectedLead.sfLeadId}</div>
-                                </div>
-                            )}
-                            <div>
-                                <div className="text-white/40 text-xs mb-1">Nurture Step</div>
-                                <div className="text-white/60">{selectedLead.nurtureStep} / 3</div>
-                            </div>
-                            {selectedLead.nextContactAt && (
-                                <div>
-                                    <div className="text-white/40 text-xs mb-1">Next Contact</div>
-                                    <div className="text-white/60">
-                                        {new Date(selectedLead.nextContactAt).toLocaleString()}
-                                    </div>
-                                </div>
-                            )}
-                            {selectedLead.lastContactAt && (
-                                <div>
-                                    <div className="text-white/40 text-xs mb-1">Last Contact</div>
-                                    <div className="text-white/60">
-                                        {new Date(selectedLead.lastContactAt).toLocaleString()}
-                                    </div>
-                                </div>
-                            )}
-                            <div>
-                                <div className="text-white/40 text-xs mb-1">Created</div>
-                                <div className="text-white/60">
-                                    {new Date(selectedLead.createdAt).toLocaleString()}
-                                </div>
-                            </div>
+                            <Field label="Lead Source">{selectedLead.leadSource}</Field>
+                            {selectedLead.sfLeadId && <Field label="Salesforce ID"><span className="uk-mono" style={{ fontSize: 12 }}>{selectedLead.sfLeadId}</span></Field>}
+                            <Field label="Nurture Step">{selectedLead.nurtureStep} / 3</Field>
+                            {selectedLead.nextContactAt && <Field label="Next Contact">{new Date(selectedLead.nextContactAt).toLocaleString()}</Field>}
+                            {selectedLead.lastContactAt && <Field label="Last Contact">{new Date(selectedLead.lastContactAt).toLocaleString()}</Field>}
+                            <Field label="Created">{new Date(selectedLead.createdAt).toLocaleString()}</Field>
 
-                            <div className="pt-4 border-t border-white/8">
-                                <div className="text-white/40 text-xs mb-2">Change Status</div>
-                                <div className="flex flex-wrap gap-2">
+                            <div style={{ paddingTop: 16, borderTop: '1px solid var(--line)' }}>
+                                <Eyebrow style={{ marginBottom: 10 }}>Change Status</Eyebrow>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                                     {STATUS_OPTIONS.filter((s) => s !== selectedLead.status).map((s) => (
-                                        <button
-                                            key={s}
-                                            disabled={updatingId === selectedLead.id}
-                                            onClick={() => void updateStatus(selectedLead.id, s)}
-                                            className="px-3 py-1 rounded border border-white/15 text-xs text-white/60 hover:text-white hover:border-white/30 disabled:opacity-40 transition-colors"
-                                        >
+                                        <Button key={s} variant="ghost" size="sm" disabled={updatingId === selectedLead.id} onClick={() => void updateStatus(selectedLead.id, s)}>
                                             → {s}
-                                        </button>
+                                        </Button>
                                     ))}
                                 </div>
                             </div>
@@ -371,6 +267,15 @@ export default function LeadsPage() {
                     </div>
                 </div>
             )}
+        </UiKit>
+    );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+        <div>
+            <div className="uk-eyebrow" style={{ marginBottom: 4 }}>{label}</div>
+            <div style={{ color: 'var(--ink-soft)' }}>{children}</div>
         </div>
     );
 }
