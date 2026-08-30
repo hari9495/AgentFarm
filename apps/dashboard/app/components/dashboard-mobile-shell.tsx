@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, useRef, useCallback, type ReactNode, type CSSProperties } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { SidebarCollapseContext } from './sidebar-collapse-context';
 
 type DashboardMobileShellProps = {
     sidebar: ReactNode;
@@ -9,10 +10,58 @@ type DashboardMobileShellProps = {
     children: ReactNode;
 };
 
+const SB_MIN = 200;
+const SB_MAX = 400;
+const SB_DEFAULT = 256;
+const SB_RAIL = 68;
+const LS_COLLAPSED = 'af_ops_sidebar_collapsed';
+const LS_WIDTH = 'af_ops_sidebar_width';
+
 export function DashboardMobileShell({ sidebar, workspaceName, children }: DashboardMobileShellProps) {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [collapsed, setCollapsed] = useState(false);
+    const [width, setWidth] = useState(SB_DEFAULT);
+    const [dragging, setDragging] = useState(false);
+    const asideRef = useRef<HTMLElement>(null);
     const pathname = usePathname();
     const searchParams = useSearchParams();
+
+    // Restore persisted collapse/width.
+    useEffect(() => {
+        try {
+            if (localStorage.getItem(LS_COLLAPSED) === '1') setCollapsed(true);
+            const w = Number(localStorage.getItem(LS_WIDTH));
+            if (w >= SB_MIN && w <= SB_MAX) setWidth(w);
+        } catch { /* private mode */ }
+    }, []);
+
+    const toggleCollapse = useCallback(() => {
+        setCollapsed((prev) => {
+            const next = !prev;
+            try { localStorage.setItem(LS_COLLAPSED, next ? '1' : '0'); } catch { /* noop */ }
+            return next;
+        });
+    }, []);
+
+    const startResize = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        const left = asideRef.current?.getBoundingClientRect().left ?? 0;
+        setDragging(true);
+        const onMove = (ev: MouseEvent) => setWidth(Math.max(SB_MIN, Math.min(SB_MAX, ev.clientX - left)));
+        const onUp = (ev: MouseEvent) => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            document.body.style.userSelect = '';
+            document.body.style.cursor = '';
+            setDragging(false);
+            const w = Math.max(SB_MIN, Math.min(SB_MAX, ev.clientX - left));
+            try { localStorage.setItem(LS_WIDTH, String(w)); } catch { /* noop */ }
+        };
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'col-resize';
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    }, []);
 
     useEffect(() => {
         setIsDrawerOpen(false);
@@ -57,7 +106,11 @@ export function DashboardMobileShell({ sidebar, workspaceName, children }: Dashb
     }, []);
 
     return (
-        <main className={`dashboard-layout ${isDrawerOpen ? 'drawer-open' : ''}`}>
+        <SidebarCollapseContext.Provider value={{ collapsed, toggle: toggleCollapse }}>
+        <main
+            className={`dashboard-layout ${isDrawerOpen ? 'drawer-open' : ''}`}
+            style={{ ['--dash-sidebar-w' as keyof CSSProperties]: collapsed ? `${SB_RAIL}px` : `${width}px` } as CSSProperties}
+        >
             <button
                 type="button"
                 className={`dashboard-drawer-scrim ${isDrawerOpen ? 'visible' : ''}`}
@@ -68,8 +121,18 @@ export function DashboardMobileShell({ sidebar, workspaceName, children }: Dashb
                 onClick={() => setIsDrawerOpen(false)}
             />
 
-            <aside className="dashboard-sidebar" id="dashboard-navigation-drawer" data-testid="dashboard-sidebar-drawer">
+            <aside ref={asideRef} className="dashboard-sidebar" id="dashboard-navigation-drawer" data-testid="dashboard-sidebar-drawer">
                 {sidebar}
+                {/* Desktop resize handle (expanded only) */}
+                {!collapsed && (
+                    <div
+                        onMouseDown={startResize}
+                        onDoubleClick={() => { setWidth(SB_DEFAULT); try { localStorage.setItem(LS_WIDTH, String(SB_DEFAULT)); } catch { /* noop */ } }}
+                        title="Drag to resize · double-click to reset"
+                        className="sidebar-resize-handle"
+                        style={{ background: dragging ? 'var(--accent)' : undefined }}
+                    />
+                )}
             </aside>
 
             <section className="dashboard-main">
@@ -96,5 +159,6 @@ export function DashboardMobileShell({ sidebar, workspaceName, children }: Dashb
                 {children}
             </section>
         </main>
+        </SidebarCollapseContext.Provider>
     );
 }

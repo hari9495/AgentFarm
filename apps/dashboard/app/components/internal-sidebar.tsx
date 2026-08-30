@@ -14,11 +14,13 @@ import {
     Zap, Star, Plug, Layers, BookOpen, LifeBuoy, User, Users, Key,
     type LucideIcon,
 } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import type { DashboardTab } from './dashboard-navigation';
 import { getDashboardTabStorageKey } from './dashboard-tab-storage';
 import { NotificationBell } from './notification-bell';
 import { ThemeToggle } from './theme-toggle';
 import { LocaleSwitcher } from './locale-switcher';
+import { useSidebarCollapse } from './sidebar-collapse-context';
 
 // ─── Color system ────────────────────────────────────────────────────────────
 
@@ -86,13 +88,17 @@ function NavItem({
 }) {
     const Icon = def.icon;
     const c = COLOR_MAP[def.color];
+    const { collapsed } = useSidebarCollapse();
+    const hasBadge = def.key === 'approvals' && pendingCount != null && pendingCount > 0;
     return (
         <button
             type="button"
             onClick={onClick}
             aria-current={active ? 'page' : undefined}
+            title={collapsed ? def.label : undefined}
             className={[
-                'w-full flex items-center gap-3 px-3 py-2 rounded-sm text-sm font-medium transition-colors text-left',
+                'w-full flex items-center gap-3 py-2 rounded-sm text-sm font-medium transition-colors text-left',
+                collapsed ? 'justify-center px-0' : 'px-3',
                 active
                     ? 'font-semibold'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
@@ -100,7 +106,7 @@ function NavItem({
             style={active ? { background: 'color-mix(in srgb, var(--accent) 7%, transparent)', color: 'var(--accent)' } : {}}
         >
             <span
-                className="inline-flex h-7 w-7 items-center justify-center rounded-sm shrink-0"
+                className="relative inline-flex h-7 w-7 items-center justify-center rounded-sm shrink-0"
                 style={active
                     ? { background: 'rgba(45, 138, 138,0.12)' }
                     : { background: c.bg }}
@@ -110,9 +116,12 @@ function NavItem({
                     style={{ color: active ? 'var(--accent)' : c.text }}
                     aria-hidden="true"
                 />
+                {collapsed && hasBadge && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white" aria-label={`${pendingCount} pending`} />
+                )}
             </span>
-            <span className="flex-1">{def.label}</span>
-            {def.key === 'approvals' && pendingCount != null && pendingCount > 0 && (
+            {!collapsed && <span className="flex-1">{def.label}</span>}
+            {!collapsed && hasBadge && (
                 <span
                     aria-label={`${pendingCount} pending`}
                     className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-rose-500 text-white text-[9px] font-bold shrink-0"
@@ -140,10 +149,12 @@ function SidebarLink({
     badge?: string;
 }) {
     const c = COLOR_MAP[color];
+    const { collapsed } = useSidebarCollapse();
     return (
         <Link
             href={href}
-            className="flex items-center gap-3 px-3 py-2 rounded-sm text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+            title={collapsed ? label : undefined}
+            className={`flex items-center gap-3 py-2 rounded-sm text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors ${collapsed ? 'justify-center px-0' : 'px-3'}`}
         >
             <span
                 className="inline-flex h-7 w-7 items-center justify-center rounded-sm shrink-0"
@@ -151,8 +162,8 @@ function SidebarLink({
             >
                 <Icon className="w-3.5 h-3.5" style={{ color: c.text }} aria-hidden="true" />
             </span>
-            <span className="flex-1">{label}</span>
-            {badge && (
+            {!collapsed && <span className="flex-1">{label}</span>}
+            {!collapsed && badge && (
                 <span style={{
                     fontSize: '0.6rem', fontWeight: 700, padding: '1px 5px', borderRadius: 4,
                     background: 'color-mix(in srgb, var(--accent) 8%, transparent)', color: 'var(--accent)',
@@ -166,6 +177,10 @@ function SidebarLink({
 // ─── Section header ───────────────────────────────────────────────────────────
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
+    const { collapsed } = useSidebarCollapse();
+    if (collapsed) {
+        return <div className="mx-2 mb-1.5 h-px bg-slate-200" aria-hidden="true" />;
+    }
     return (
         <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
             {children}
@@ -186,6 +201,7 @@ export function InternalSidebar({
 }: InternalSidebarProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { collapsed, toggle } = useSidebarCollapse();
 
     const handleTabSelect = (tab: DashboardTab) => {
         window.localStorage.setItem(getDashboardTabStorageKey(workspaceId), tab);
@@ -208,30 +224,40 @@ export function InternalSidebar({
     return (
         <div className="flex flex-col h-screen sticky top-0 bg-white border-r border-slate-200 overflow-hidden">
             {/* Logo */}
-            <div className="flex items-center gap-2.5 px-4 h-14 border-b border-slate-200 shrink-0">
+            <div className={`flex items-center h-14 border-b border-slate-200 shrink-0 ${collapsed ? 'flex-col justify-center gap-1 px-2' : 'gap-2.5 px-4'}`}>
                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-sm shadow-sm shrink-0" style={{ background: 'var(--accent)' }}>
                     <Cpu className="w-3.5 h-3.5 text-white" aria-hidden="true" />
                 </span>
-                <span className="text-sm font-bold tracking-tight text-slate-900 flex-1">AgentFarms Ops</span>
-                <NotificationBell workspaceId={workspaceId} />
+                {!collapsed && <span className="text-sm font-bold tracking-tight text-slate-900 flex-1">AgentFarms Ops</span>}
+                {!collapsed && <NotificationBell workspaceId={workspaceId} />}
+                <button
+                    type="button"
+                    onClick={toggle}
+                    title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                    aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                    className="shrink-0 inline-flex items-center justify-center p-1 rounded-sm text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                >
+                    {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+                </button>
             </div>
 
             {/* Nav */}
-            <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5 sidebar-scroll">
+            <nav className={`flex-1 overflow-y-auto py-4 space-y-5 sidebar-scroll ${collapsed ? 'px-2' : 'px-3'}`}>
 
                 {/* ⌘K Search */}
                 <button
                     type="button"
                     onClick={handleSearchKey}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-sm border border-slate-200 bg-slate-50 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                    title={collapsed ? 'Search (⌘K)' : undefined}
+                    className={`w-full flex items-center rounded-sm border border-slate-200 bg-slate-50 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors ${collapsed ? 'justify-center py-2' : 'gap-2 px-3 py-2'}`}
                 >
                     <Search className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-                    <span className="flex-1 text-left">Search pages…</span>
-                    <kbd className="inline-flex items-center text-[9px] font-mono text-slate-400">⌘K</kbd>
+                    {!collapsed && <span className="flex-1 text-left">Search pages…</span>}
+                    {!collapsed && <kbd className="inline-flex items-center text-[9px] font-mono text-slate-400">⌘K</kbd>}
                 </button>
 
-                {/* Workspace switcher */}
-                {workspaces.length > 1 && (
+                {/* Workspace switcher (hidden in the collapsed rail) */}
+                {!collapsed && workspaces.length > 1 && (
                     <div>
                         <SectionLabel>Workspace</SectionLabel>
                         <div className="relative">
@@ -396,20 +422,22 @@ export function InternalSidebar({
             </nav>
 
             {/* Footer */}
-            <div className="border-t border-slate-200 px-3 py-3 space-y-0.5 shrink-0">
+            <div className={`border-t border-slate-200 py-3 space-y-0.5 shrink-0 ${collapsed ? 'px-2 flex flex-col items-center' : 'px-3'}`}>
                 {workspaces.length <= 1 && (
-                    <div className="flex items-center gap-3 px-3 py-2 rounded-sm">
+                    <div className={`flex items-center rounded-sm ${collapsed ? 'justify-center py-2' : 'gap-3 px-3 py-2'}`} title={collapsed ? workspaceName : undefined}>
                         <div className="h-7 w-7 rounded-full bg-red-100 flex items-center justify-center text-[10px] font-bold text-red-600 shrink-0">
                             {workspaceName.slice(0, 2).toUpperCase()}
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-slate-800 font-medium truncate text-xs">{workspaceName}</p>
-                            <p className="text-slate-400 truncate text-[10px]">Active workspace</p>
-                        </div>
+                        {!collapsed && (
+                            <div className="flex-1 min-w-0">
+                                <p className="text-slate-800 font-medium truncate text-xs">{workspaceName}</p>
+                                <p className="text-slate-400 truncate text-[10px]">Active workspace</p>
+                            </div>
+                        )}
                     </div>
                 )}
-                <ThemeToggle />
-                <LocaleSwitcher />
+                {!collapsed && <ThemeToggle />}
+                {!collapsed && <LocaleSwitcher />}
                 <button
                     type="button"
                     onClick={async () => {
@@ -417,10 +445,11 @@ export function InternalSidebar({
                         document.cookie = 'agentfarm_internal_session=; path=/; max-age=0; samesite=strict';
                         window.location.href = '/login';
                     }}
-                    className="flex items-center gap-3 px-3 py-2 rounded-sm text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors w-full text-left"
+                    title={collapsed ? 'Sign out' : undefined}
+                    className={`flex items-center rounded-sm text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors text-left ${collapsed ? 'justify-center w-9 h-9' : 'gap-3 px-3 py-2 w-full'}`}
                 >
                     <LogOut className="w-4 h-4 shrink-0" aria-hidden="true" />
-                    <span>Sign out</span>
+                    {!collapsed && <span>Sign out</span>}
                 </button>
             </div>
         </div>
