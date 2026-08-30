@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { UiKit, Masthead, Panel, Badge, Button, Stat } from './ui-kit';
+import { WfThemeToggle } from './editorial';
 
 // ─── Types (mirror of API response) ────────────────────────────────────────
 
@@ -32,16 +34,6 @@ type CapabilitiesResponse = {
     totalAvailable: number;
 };
 
-// ─── Auth badge colours by method ──────────────────────────────────────────
-
-const AUTH_BADGE: Record<string, string> = {
-    oauth2: 'bg-red-900/60 text-red-300',
-    api_key: 'bg-red-900/60 text-red-300',
-    bearer_token: 'bg-red-900/60 text-red-300',
-    basic: 'bg-zinc-700 text-zinc-300',
-    generic_rest: 'bg-red-900/60 text-red-300',
-};
-
 const AUTH_LABEL: Record<string, string> = {
     oauth2: 'OAuth 2.0',
     api_key: 'API Key',
@@ -49,8 +41,6 @@ const AUTH_LABEL: Record<string, string> = {
     basic: 'Basic Auth',
     generic_rest: 'Custom',
 };
-
-// ─── Group icon ─────────────────────────────────────────────────────────────
 
 const GROUP_ICON: Record<string, string> = {
     engineering: '⚙️',
@@ -61,35 +51,41 @@ const GROUP_ICON: Record<string, string> = {
     support: '🎧',
 };
 
+// Editorial pill for category / group filters.
+function FilterPill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+    return (
+        <button
+            onClick={onClick}
+            className="uk-eyebrow"
+            style={{
+                padding: '5px 11px', borderRadius: 3, cursor: 'pointer', textTransform: 'none', letterSpacing: '0.02em',
+                border: `1px solid ${active ? 'var(--accent)' : 'var(--line)'}`,
+                background: active ? 'color-mix(in srgb, var(--accent) 12%, transparent)' : 'transparent',
+                color: active ? 'var(--accent)' : 'var(--ink-muted)',
+            }}
+        >
+            {children}
+        </button>
+    );
+}
+
 // ─── Connector card ─────────────────────────────────────────────────────────
 
 function ConnectorCard({ connector, onConfigure }: { connector: ConnectorEntry; onConfigure: () => void }) {
     return (
-        <div className="flex flex-col gap-2 rounded-xl border border-zinc-700 bg-zinc-800 p-4 hover:border-zinc-500 transition-colors">
-            <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold">{connector.displayName}</span>
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${AUTH_BADGE[connector.authMethod] ?? 'bg-zinc-700 text-zinc-300'}`}>
-                    {AUTH_LABEL[connector.authMethod] ?? connector.authMethod}
-                </span>
+        <div className="uk-panel" style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{connector.displayName}</span>
+                <Badge tone="neutral">{AUTH_LABEL[connector.authMethod] ?? connector.authMethod}</Badge>
             </div>
-            <span className="text-xs text-zinc-500 capitalize">{connector.category.replace(/_/g, ' ')}</span>
-            <div className="flex gap-2 mt-auto pt-1">
+            <span style={{ fontSize: 11, color: 'var(--ink-muted)', textTransform: 'capitalize' }}>{connector.category.replace(/_/g, ' ')}</span>
+            <div style={{ display: 'flex', gap: 8, marginTop: 'auto', paddingTop: 4 }}>
                 {connector.configSchema && connector.configSchema.length > 0 && (
-                    <button
-                        onClick={onConfigure}
-                        className="flex-1 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium hover:bg-red-500 transition-colors"
-                    >
-                        Configure
-                    </button>
+                    <Button variant="primary" size="sm" onClick={onConfigure} style={{ flex: 1 }}>Configure</Button>
                 )}
                 {connector.docsUrl && (
-                    <a
-                        href={connector.docsUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="rounded-lg bg-zinc-700 px-3 py-1.5 text-xs font-medium hover:bg-zinc-600 transition-colors"
-                    >
-                        Docs ↗
+                    <a href={connector.docsUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                        <Button variant="ghost" size="sm">Docs ↗</Button>
                     </a>
                 )}
             </div>
@@ -114,26 +110,22 @@ function ConfigureDrawer({ connector, onClose }: { connector: ConnectorEntry; on
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative bg-zinc-900 border border-zinc-700 rounded-2xl p-6 w-full max-w-lg mx-4 flex flex-col gap-5 max-h-[80vh] overflow-y-auto">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-bold">Configure {connector.displayName}</h2>
-                    <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 text-xl leading-none">×</button>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} onClick={onClose} />
+            <div className="uk" style={{ position: 'relative', background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 3, padding: 24, width: '100%', maxWidth: 512, margin: '0 16px', display: 'flex', flexDirection: 'column', gap: 18, maxHeight: '80vh', overflowY: 'auto' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <h2 style={{ margin: 0, fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: 18, fontWeight: 600, color: 'var(--ink)' }}>Configure {connector.displayName}</h2>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--ink-muted)', fontSize: 22, lineHeight: 1, cursor: 'pointer' }}>×</button>
                 </div>
 
                 {connector.configSchema?.map((field) => (
-                    <div key={field.key} className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-zinc-400 flex items-center gap-1">
+                    <div key={field.key} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label className="uk-eyebrow" style={{ display: 'flex', alignItems: 'center', gap: 4, textTransform: 'none', letterSpacing: '0.02em', fontSize: 11 }}>
                             {field.label}
-                            {field.required && <span className="text-red-400">*</span>}
+                            {field.required && <span style={{ color: 'var(--danger)' }}>*</span>}
                         </label>
                         {field.type === 'select' ? (
-                            <select
-                                className="rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-red-500"
-                                value={values[field.key] ?? ''}
-                                onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                            >
+                            <select className="uk-input" value={values[field.key] ?? ''} onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}>
                                 <option value="">Select…</option>
                                 {(field as { options?: { value: string; label: string }[] }).options?.map((o) => (
                                     <option key={o.value} value={o.value}>{o.label}</option>
@@ -142,27 +134,21 @@ function ConfigureDrawer({ connector, onClose }: { connector: ConnectorEntry; on
                         ) : (
                             <input
                                 type={field.type === 'password' ? 'password' : field.type === 'url' ? 'url' : 'text'}
+                                className="uk-input"
                                 placeholder={field.placeholder}
-                                className="rounded-lg bg-zinc-800 border border-zinc-700 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-red-500"
                                 value={values[field.key] ?? ''}
                                 onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
                             />
                         )}
-                        {field.hint && <p className="text-xs text-zinc-500">{field.hint}</p>}
+                        {field.hint && <p style={{ margin: 0, fontSize: 11, color: 'var(--ink-muted)' }}>{field.hint}</p>}
                     </div>
                 ))}
 
-                <div className="flex gap-3 pt-1">
-                    <button
-                        onClick={handleSave}
-                        disabled={saving || saved}
-                        className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium hover:bg-red-500 disabled:opacity-60 transition-colors"
-                    >
+                <div style={{ display: 'flex', gap: 10, paddingTop: 2 }}>
+                    <Button variant="primary" size="sm" disabled={saving || saved} onClick={handleSave} style={{ flex: 1 }}>
                         {saved ? 'Saved ✓' : saving ? 'Saving…' : 'Save Configuration'}
-                    </button>
-                    <button onClick={onClose} className="rounded-lg bg-zinc-700 px-4 py-2 text-sm font-medium hover:bg-zinc-600 transition-colors">
-                        Cancel
-                    </button>
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
                 </div>
             </div>
         </div>
@@ -182,34 +168,32 @@ function PurchasedSection({ section }: { section: AgentCapabilitySection }) {
         : section.connectors.filter((c) => c.category === connectorFilter);
 
     return (
-        <div className="rounded-2xl border border-zinc-700 bg-zinc-800/40 overflow-hidden">
+        <div className="uk-panel" style={{ overflow: 'hidden', padding: 0 }}>
             {/* Header */}
             <button
                 onClick={() => setOpen((o) => !o)}
-                className="w-full flex items-center justify-between gap-4 px-5 py-4 hover:bg-zinc-800/60 transition-colors text-left"
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '16px 20px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}
             >
-                <div className="flex items-center gap-3">
-                    <span className="text-xl">{GROUP_ICON[section.group] ?? '🤖'}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontSize: 20 }}>{GROUP_ICON[section.group] ?? '🤖'}</span>
                     <div>
-                        <div className="flex items-center gap-2">
-                            <h3 className="font-semibold">{section.displayName}</h3>
-                            <span className="rounded-full bg-green-900/60 px-2 py-0.5 text-xs font-medium text-green-400">
-                                Active · {section.botCount} {section.botCount === 1 ? 'agent' : 'agents'}
-                            </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>{section.displayName}</h3>
+                            <Badge tone="ok">Active · {section.botCount} {section.botCount === 1 ? 'agent' : 'agents'}</Badge>
                         </div>
-                        <p className="text-xs text-zinc-400 mt-0.5">{section.tagline}</p>
+                        <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--ink-muted)' }}>{section.tagline}</p>
                     </div>
                 </div>
-                <span className="text-zinc-500 text-sm">{open ? '▲' : '▼'}</span>
+                <span style={{ color: 'var(--ink-muted)', fontSize: 12 }}>{open ? '▲' : '▼'}</span>
             </button>
 
             {open && (
-                <div className="px-5 pb-5 flex flex-col gap-5 border-t border-zinc-700">
+                <div style={{ padding: '0 20px 20px', display: 'flex', flexDirection: 'column', gap: 18, borderTop: '1px solid var(--line)' }}>
                     {/* Feature highlights */}
-                    <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
+                    <div style={{ paddingTop: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', columnGap: 24, rowGap: 6 }}>
                         {section.featureHighlights.map((f) => (
-                            <div key={f} className="flex items-start gap-2 text-xs text-zinc-300">
-                                <span className="mt-0.5 text-green-400 shrink-0">✓</span>
+                            <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12, color: 'var(--ink-soft)' }}>
+                                <span style={{ marginTop: 1, color: 'var(--ok)', flexShrink: 0 }}>✓</span>
                                 <span>{f}</span>
                             </div>
                         ))}
@@ -217,38 +201,23 @@ function PurchasedSection({ section }: { section: AgentCapabilitySection }) {
 
                     {/* Connectors */}
                     {section.connectors.length > 0 && (
-                        <div className="flex flex-col gap-3">
-                            <div className="flex items-center justify-between">
-                                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                                    Available Integrations ({section.connectors.length})
-                                </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                                <span className="uk-eyebrow">Available Integrations ({section.connectors.length})</span>
                                 {categories.length > 1 && (
-                                    <div className="flex gap-1.5 flex-wrap justify-end">
-                                        <button
-                                            onClick={() => setConnectorFilter('all')}
-                                            className={`px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors ${connectorFilter === 'all' ? 'bg-red-600 text-white' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'}`}
-                                        >
-                                            All
-                                        </button>
+                                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                        <FilterPill active={connectorFilter === 'all'} onClick={() => setConnectorFilter('all')}>All</FilterPill>
                                         {categories.map((cat) => (
-                                            <button
-                                                key={cat}
-                                                onClick={() => setConnectorFilter(cat)}
-                                                className={`px-2.5 py-0.5 rounded-full text-xs font-medium capitalize transition-colors ${connectorFilter === cat ? 'bg-red-600 text-white' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'}`}
-                                            >
+                                            <FilterPill key={cat} active={connectorFilter === cat} onClick={() => setConnectorFilter(cat)}>
                                                 {cat.replace(/_/g, ' ')}
-                                            </button>
+                                            </FilterPill>
                                         ))}
                                     </div>
                                 )}
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
                                 {visibleConnectors.map((c) => (
-                                    <ConnectorCard
-                                        key={c.tool}
-                                        connector={c}
-                                        onConfigure={() => setConfiguring(c)}
-                                    />
+                                    <ConnectorCard key={c.tool} connector={c} onConfigure={() => setConfiguring(c)} />
                                 ))}
                             </div>
                         </div>
@@ -256,9 +225,7 @@ function PurchasedSection({ section }: { section: AgentCapabilitySection }) {
                 </div>
             )}
 
-            {configuring && (
-                <ConfigureDrawer connector={configuring} onClose={() => setConfiguring(null)} />
-            )}
+            {configuring && <ConfigureDrawer connector={configuring} onClose={() => setConfiguring(null)} />}
         </div>
     );
 }
@@ -267,31 +234,26 @@ function PurchasedSection({ section }: { section: AgentCapabilitySection }) {
 
 function LockedSection({ section }: { section: AgentCapabilitySection }) {
     return (
-        <div className="rounded-2xl border border-zinc-700/50 bg-zinc-900/50 overflow-hidden opacity-80">
-            <div className="flex items-center justify-between gap-4 px-5 py-4">
-                <div className="flex items-center gap-3">
-                    <span className="text-xl opacity-50">{GROUP_ICON[section.group] ?? '🤖'}</span>
+        <div className="uk-panel" style={{ overflow: 'hidden', padding: 0, opacity: 0.75 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '16px 20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontSize: 20, opacity: 0.5 }}>{GROUP_ICON[section.group] ?? '🤖'}</span>
                     <div>
-                        <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-zinc-400">{section.displayName}</h3>
-                            <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-xs font-medium text-zinc-500 flex items-center gap-1">
-                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clipRule="evenodd" />
-                                </svg>
-                                Not hired
-                            </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--ink-muted)' }}>{section.displayName}</h3>
+                            <Badge tone="neutral">🔒 Not hired</Badge>
                         </div>
-                        <p className="text-xs text-zinc-500 mt-0.5">{section.tagline}</p>
+                        <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--ink-muted)' }}>{section.tagline}</p>
                     </div>
                 </div>
             </div>
 
             {/* Blurred feature preview */}
-            <div className="px-5 pb-4 border-t border-zinc-700/40">
-                <div className="pt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 select-none pointer-events-none blur-[2px]">
+            <div style={{ padding: '0 20px 16px', borderTop: '1px solid var(--line)' }}>
+                <div style={{ paddingTop: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', columnGap: 24, rowGap: 6, userSelect: 'none', pointerEvents: 'none', filter: 'blur(2px)' }}>
                     {section.featureHighlights.map((f) => (
-                        <div key={f} className="flex items-start gap-2 text-xs text-zinc-500">
-                            <span className="mt-0.5 shrink-0">○</span>
+                        <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12, color: 'var(--ink-muted)' }}>
+                            <span style={{ marginTop: 1, flexShrink: 0 }}>○</span>
                             <span>{f}</span>
                         </div>
                     ))}
@@ -313,19 +275,17 @@ export function AgentCapabilitiesPanel({ capabilities, error }: Props) {
 
     if (error) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-zinc-900 text-zinc-100">
-                <div className="p-6 rounded-xl bg-red-900/30 border border-red-700 text-red-300 text-sm max-w-md text-center">
-                    {error}
-                </div>
-            </div>
+            <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="uk-panel" style={{ padding: 24, borderLeft: '2px solid var(--danger)', color: 'var(--danger)', fontSize: 13, maxWidth: 420, textAlign: 'center' }}>{error}</div>
+            </UiKit>
         );
     }
 
     if (!capabilities) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-zinc-900 text-zinc-400 text-sm">
-                Loading capabilities…
-            </div>
+            <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ color: 'var(--ink-muted)', fontSize: 13 }}>Loading capabilities…</span>
+            </UiKit>
         );
     }
 
@@ -346,87 +306,73 @@ export function AgentCapabilitiesPanel({ capabilities, error }: Props) {
         : lockedSections.filter((s) => s.group === groupFilter);
 
     return (
-        <div className="flex flex-col gap-6 p-6 bg-zinc-900 min-h-screen text-zinc-100">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Agent Capabilities</h1>
-                    <p className="text-zinc-400 text-sm mt-1">
-                        View and configure the integrations available to each agent you have hired.
-                    </p>
-                </div>
-                <div className="shrink-0 rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-center">
-                    <div className="text-2xl font-bold text-red-400">{totalPurchased}</div>
-                    <div className="text-xs text-zinc-500 mt-0.5">of {totalAvailable} agents hired</div>
-                </div>
-            </div>
+        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+            <Masthead
+                eyebrow="Workforce — Capabilities"
+                title="Agent Capabilities"
+                actions={<WfThemeToggle />}
+                stats={<Stat n={`${totalPurchased}`} k={`of ${totalAvailable} agents hired`} tone="accent" />}
+            />
 
-            {/* Group filter */}
-            {allGroups.length > 1 && (
-                <div className="flex gap-2 flex-wrap">
-                    <button
-                        onClick={() => setGroupFilter('all')}
-                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${groupFilter === 'all' ? 'bg-red-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
-                    >
-                        All groups
-                    </button>
-                    {allGroups.map((group) => {
-                        const label = sections.find((s) => s.group === group)?.groupLabel ?? group;
-                        return (
-                            <button
-                                key={group}
-                                onClick={() => setGroupFilter(group)}
-                                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${groupFilter === group ? 'bg-red-600 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
-                            >
-                                {GROUP_ICON[group]} {label}
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
+            <div style={{ padding: 28, maxWidth: 1200, margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-muted)' }}>
+                    View and configure the integrations available to each agent you have hired.
+                </p>
 
-            {/* Purchased sections */}
-            {filteredPurchased.length > 0 ? (
-                <div className="flex flex-col gap-4">
-                    {purchasedGroups
-                        .filter((g) => groupFilter === 'all' || g === groupFilter)
-                        .map((group) => {
-                            const groupSections = filteredPurchased.filter((s) => s.group === group);
-                            if (groupSections.length === 0) return null;
-                            const groupLabel = groupSections[0]?.groupLabel ?? group;
+                {/* Group filter */}
+                {allGroups.length > 1 && (
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <FilterPill active={groupFilter === 'all'} onClick={() => setGroupFilter('all')}>All groups</FilterPill>
+                        {allGroups.map((group) => {
+                            const label = sections.find((s) => s.group === group)?.groupLabel ?? group;
                             return (
-                                <div key={group} className="flex flex-col gap-3">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-semibold text-zinc-300">
-                                            {GROUP_ICON[group]} {groupLabel}
-                                        </span>
-                                        <div className="flex-1 h-px bg-zinc-700" />
-                                    </div>
-                                    {groupSections.map((s) => <PurchasedSection key={s.roleKey} section={s} />)}
-                                </div>
+                                <FilterPill key={group} active={groupFilter === group} onClick={() => setGroupFilter(group)}>
+                                    {GROUP_ICON[group]} {label}
+                                </FilterPill>
                             );
                         })}
-                </div>
-            ) : (
-                <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 p-6 text-center">
-                    <p className="text-zinc-400 text-sm">No agents hired yet.</p>
-                </div>
-            )}
+                    </div>
+                )}
 
-            {/* Locked sections */}
-            {filteredLocked.length > 0 && (
-                <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-zinc-500">
-                            🔒 Available to Hire ({filteredLocked.length})
-                        </span>
-                        <div className="flex-1 h-px bg-zinc-800" />
+                {/* Purchased sections */}
+                {filteredPurchased.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        {purchasedGroups
+                            .filter((g) => groupFilter === 'all' || g === groupFilter)
+                            .map((group) => {
+                                const groupSections = filteredPurchased.filter((s) => s.group === group);
+                                if (groupSections.length === 0) return null;
+                                const groupLabel = groupSections[0]?.groupLabel ?? group;
+                                return (
+                                    <div key={group} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                            <span className="uk-eyebrow">{GROUP_ICON[group]} {groupLabel}</span>
+                                            <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+                                        </div>
+                                        {groupSections.map((s) => <PurchasedSection key={s.roleKey} section={s} />)}
+                                    </div>
+                                );
+                            })}
                     </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                        {filteredLocked.map((s) => <LockedSection key={s.roleKey} section={s} />)}
+                ) : (
+                    <div className="uk-panel" style={{ padding: 24, textAlign: 'center' }}>
+                        <p style={{ margin: 0, color: 'var(--ink-muted)', fontSize: 13 }}>No agents hired yet.</p>
                     </div>
-                </div>
-            )}
-        </div>
+                )}
+
+                {/* Locked sections */}
+                {filteredLocked.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span className="uk-eyebrow">🔒 Available to Hire ({filteredLocked.length})</span>
+                            <div style={{ flex: 1, height: 1, background: 'var(--line)' }} />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
+                            {filteredLocked.map((s) => <LockedSection key={s.roleKey} section={s} />)}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </UiKit>
     );
 }
