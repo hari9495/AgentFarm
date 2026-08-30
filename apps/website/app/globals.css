@@ -7,6 +7,30 @@
   --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
   --font-display: var(--font-bricolage), var(--font-inter), system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* shadcn / 21st.dev token bridge → Operations Console palette (light-first
+     marketing surface). Lets pasted 21st.dev components render with bg-background,
+     text-muted-foreground, bg-primary, border-border, ring-ring, etc. with no
+     class rewrites. Additive — nothing on the site uses these utilities yet. */
+  --color-background: var(--op-paper);
+  --color-foreground: var(--op-ink);
+  --color-card: var(--op-paper);
+  --color-card-foreground: var(--op-ink);
+  --color-popover: var(--op-paper);
+  --color-popover-foreground: var(--op-ink);
+  --color-muted: var(--op-paper-3);
+  --color-muted-foreground: var(--op-muted);
+  --color-primary: var(--op-indigo);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: var(--op-paper-2);
+  --color-secondary-foreground: var(--op-ink);
+  --color-accent: var(--op-paper-3);
+  --color-accent-foreground: var(--op-ink);
+  --color-destructive: var(--op-blocked);
+  --color-destructive-foreground: #ffffff;
+  --color-border: var(--op-line);
+  --color-input: var(--op-line);
+  --color-ring: var(--op-indigo);
 }
 
 /* ═══════════════════════════════════════════════════════
