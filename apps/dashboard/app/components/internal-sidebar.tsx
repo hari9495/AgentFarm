@@ -29,10 +29,25 @@ type NavColor =
     | 'pink' | 'orange' | 'teal' | 'cyan' | 'indigo' | 'sky'
     | 'violet' | 'gold' | 'emerald' | 'slate';
 
-// Monochrome nav icons — a muted glyph, no colored square. Only the active item
-// gets the accent (handled in NavItem). Reads as premium ops software, not a
-// rainbow of AI-toy chips.
-const MONO_ICON = { bg: 'transparent', text: 'var(--sidebar-muted)' } as const;
+// Section-accent nav icons — a glyph tinted by its SECTION (not per-item), via
+// an inherited --nav-tint CSS var set on each section wrapper. Falls back to
+// muted when no section tint is in scope. Active item still overrides to accent.
+// Colour encodes area, not decoration — one cool hue per group, no rainbow.
+const MONO_ICON = { bg: 'transparent', text: 'var(--nav-tint, var(--sidebar-muted))' } as const;
+
+// One calm, cool-family hue per section. Distinct from the status palette
+// (green/amber/red stay reserved for signals) so area-coding never reads as state.
+const tint = (hex: string) => ({ ['--nav-tint']: hex } as React.CSSProperties);
+const SECTION_TINT = {
+    operations: '#3B82F6', // blue
+    workforce:  '#6366F1', // indigo
+    devtools:   '#8B5CF6', // violet
+    analytics:  '#0EA5E9', // sky
+    audit:      '#64748B', // slate
+    platform:   '#06B6D4', // cyan
+    business:   '#14B8A6', // teal
+    settings:   '#7C83A3', // muted slate-violet
+} as const;
 const COLOR_MAP: Record<NavColor, { bg: string; text: string }> = {
     blue: MONO_ICON, purple: MONO_ICON, green: MONO_ICON, amber: MONO_ICON,
     red: MONO_ICON, rose: MONO_ICON, pink: MONO_ICON, orange: MONO_ICON,
@@ -281,7 +296,7 @@ export function InternalSidebar({
                 )}
 
                 {/* ── Operations ────────────────────────────────────── */}
-                <div>
+                <div style={tint(SECTION_TINT.operations)}>
                     <SectionLabel>Operations</SectionLabel>
                     <div className="space-y-0.5">
                         {navItems.map((item) => (
@@ -299,7 +314,7 @@ export function InternalSidebar({
                 </div>
 
                 {/* ── Workforce ─────────────────────────────────────── */}
-                <div>
+                <div style={tint(SECTION_TINT.workforce)}>
                     <SectionLabel>Workforce</SectionLabel>
                     <div className="space-y-0.5">
                         <SidebarLink href="/agents"          label="Team"             Icon={Users}       color="slate"  />
@@ -314,7 +329,7 @@ export function InternalSidebar({
                 </div>
 
                 {/* ── Developer Tools ───────────────────────────────── */}
-                <div>
+                <div style={tint(SECTION_TINT.devtools)}>
                     <SectionLabel>Developer Tools</SectionLabel>
                     <div className="space-y-0.5">
                         <SidebarLink href="/playground"      label="API Playground"     Icon={Zap}              color="gold"   />
@@ -333,7 +348,7 @@ export function InternalSidebar({
                 </div>
 
                 {/* ── Analytics ─────────────────────────────────────── */}
-                <div>
+                <div style={tint(SECTION_TINT.analytics)}>
                     <SectionLabel>Analytics</SectionLabel>
                     <div className="space-y-0.5">
                         <SidebarLink href="/analytics"           label="Overview"           Icon={BarChart2}   color="blue"   />
@@ -349,7 +364,7 @@ export function InternalSidebar({
                 </div>
 
                 {/* ── Audit & Compliance ────────────────────────────── */}
-                <div>
+                <div style={tint(SECTION_TINT.audit)}>
                     <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-[color:var(--ink-muted)] flex items-center gap-1.5">
                         Audit &amp; Compliance
                         {!auditUnlocked && <Lock className="w-2.5 h-2.5 text-[color:var(--ink-muted)]" />}
@@ -383,7 +398,7 @@ export function InternalSidebar({
                 </div>
 
                 {/* ── Platform ──────────────────────────────────────── */}
-                <div>
+                <div style={tint(SECTION_TINT.platform)}>
                     <SectionLabel>Platform</SectionLabel>
                     <div className="space-y-0.5">
                         <SidebarLink href="/connectors"    label="Connectors"    Icon={Link2}      color="blue"   />
@@ -398,7 +413,7 @@ export function InternalSidebar({
                 </div>
 
                 {/* ── Business ──────────────────────────────────────── */}
-                <div>
+                <div style={tint(SECTION_TINT.business)}>
                     <SectionLabel>Business</SectionLabel>
                     <div className="space-y-0.5">
                         <SidebarLink href="/billing" label="Billing" Icon={CreditCard} color="green"   />
@@ -407,7 +422,7 @@ export function InternalSidebar({
                 </div>
 
                 {/* ── Team & Settings ───────────────────────────────── */}
-                <div>
+                <div style={tint(SECTION_TINT.settings)}>
                     <SectionLabel>Team &amp; Settings</SectionLabel>
                     <div className="space-y-0.5">
                         <SidebarLink href="/account"            label="My Account"       Icon={User}         color="blue"   />

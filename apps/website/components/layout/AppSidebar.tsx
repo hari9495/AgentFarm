@@ -107,6 +107,19 @@ type NavGroup = {
     items: NavItem[];
 };
 
+// Section-accent: one calm cool-family hue per nav group, applied to icons via an
+// inherited --nav-tint CSS var. Colour encodes area, not decoration; the status
+// palette (green/amber/red) stays reserved for signals. Active item → accent.
+const NAV_TINT: Record<string, string> = {
+    Main:       "#3B82F6", // blue
+    Operations: "#0EA5E9", // sky
+    Configure:  "#8B5CF6", // violet
+    Account:    "#64748B", // slate
+    Internal:   "#14B8A6", // teal
+};
+const tintStyle = (label: string): React.CSSProperties =>
+    ({ ["--nav-tint"]: NAV_TINT[label] ?? "var(--ink-muted)" } as React.CSSProperties);
+
 const dashboardGroups: NavGroup[] = [
     {
         label: "Main",
@@ -210,7 +223,7 @@ function NavLink({
                     : "text-[color:var(--ink-muted)] group-hover:text-[color:var(--ink-soft)] group-hover:bg-[var(--line)]/70"
                 }
             `}>
-                <Icon className="w-[17px] h-[17px]" />
+                <Icon className="w-[17px] h-[17px]" style={!active ? { color: "var(--nav-tint, var(--ink-muted))" } : undefined} />
                 {/* Collapsed: badge as a dot on the icon */}
                 {collapsed && count > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[var(--danger)] ring-2 ring-[color:var(--card)]" />
@@ -352,7 +365,7 @@ function SidebarContent({
             {/* ── Nav groups ───────────────────────────────────────────── */}
             <nav className={`flex-1 overflow-y-auto py-2 space-y-5 scrollbar-none ${collapsed ? "px-2" : "px-3"}`}>
                 {dashboardGroups.map((group) => (
-                    <div key={group.label}>
+                    <div key={group.label} style={tintStyle(group.label)}>
                         {/* Section header */}
                         {collapsed ? (
                             <div className="h-px bg-[var(--line)] mx-2 mb-2" />
@@ -382,7 +395,7 @@ function SidebarContent({
                     Customer owners/admins manage their org from the ACCOUNT
                     group; the Admin Console is platform-staff tooling. */}
                 {(userRole === "superadmin" || showCompanyPortal) && (
-                    <div>
+                    <div style={tintStyle("Internal")}>
                         {collapsed ? (
                             <div className="h-px bg-[var(--line)] mx-2 mb-2" />
                         ) : (
@@ -403,7 +416,7 @@ function SidebarContent({
                                         className={`group flex items-center gap-3 rounded-[3px] py-2.5 text-sm font-medium text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink)] transition-all ${collapsed ? "justify-center px-0" : "px-3"}`}
                                     >
                                         <span className="flex items-center justify-center w-8 h-8 rounded-[3px] text-[color:var(--ink-muted)] group-hover:text-[color:var(--ink-soft)] group-hover:bg-[var(--line)]/70 transition-all">
-                                            <Shield className="w-[17px] h-[17px]" />
+                                            <Shield className="w-[17px] h-[17px]" style={{ color: "var(--nav-tint, var(--ink-muted))" }} />
                                         </span>
                                         {!collapsed && <span className="flex-1 truncate tracking-[-0.01em]">Admin Console</span>}
                                         {!collapsed && <ArrowUpRight className="w-3.5 h-3.5 text-[color:var(--ink-muted)] shrink-0" />}
@@ -415,7 +428,7 @@ function SidebarContent({
                                         className={`group flex items-center gap-3 rounded-[3px] py-2.5 text-sm font-medium text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink)] transition-all ${collapsed ? "justify-center px-0" : "px-3"}`}
                                     >
                                         <span className="flex items-center justify-center w-8 h-8 rounded-[3px] text-[color:var(--ink-muted)] group-hover:text-[color:var(--ink-soft)] group-hover:bg-[var(--line)]/70 transition-all">
-                                            <Bot className="w-[17px] h-[17px]" />
+                                            <Bot className="w-[17px] h-[17px]" style={{ color: "var(--nav-tint, var(--ink-muted))" }} />
                                         </span>
                                         {!collapsed && <span className="flex-1 truncate tracking-[-0.01em]">Manage Bots</span>}
                                         {!collapsed && <ArrowUpRight className="w-3.5 h-3.5 text-[color:var(--ink-muted)] shrink-0" />}
