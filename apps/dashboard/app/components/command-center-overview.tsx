@@ -108,7 +108,7 @@ export default function CommandCenterOverview(p: Props) {
                                     <Clock size={15} color="var(--warn)" style={{ flexShrink: 0 }} />
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{ fontSize: 13, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.action_summary}</div>
-                                        <div className="uk-mono" style={{ fontSize: 10.5, color: 'var(--ink-muted)', marginTop: 2 }}>{a.bot_id.slice(-8)} · {ago(a.requested_at)} ago</div>
+                                        <div className="uk-mono" suppressHydrationWarning style={{ fontSize: 10.5, color: 'var(--ink-muted)', marginTop: 2 }}>{a.bot_id.slice(-8)} · {ago(a.requested_at)} ago</div>
                                     </div>
                                     <Badge tone={riskTone(a.risk_level)}>{a.risk_level}</Badge>
                                 </div>

@@ -118,7 +118,7 @@ export default function ApprovalsWorkspace({ initial, workspaceId }: { initial: 
                                             {d && <Badge tone={d === 'approve' ? 'ok' : 'err'}>{d}d</Badge>}
                                         </span>
                                     </div>
-                                    <div className="uk-mono" style={{ fontSize: 10.5, color: 'var(--ink-muted)' }}>{i.approval_id.slice(-8)} · {i.bot_id.slice(-8)} · {ago(i.requested_at)} ago</div>
+                                    <div className="uk-mono" suppressHydrationWarning style={{ fontSize: 10.5, color: 'var(--ink-muted)' }}>{i.approval_id.slice(-8)} · {i.bot_id.slice(-8)} · {ago(i.requested_at)} ago</div>
                                 </div>
                             </button>
                         );
