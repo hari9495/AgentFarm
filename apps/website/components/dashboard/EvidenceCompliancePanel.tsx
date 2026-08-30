@@ -145,7 +145,7 @@ export default function EvidenceCompliancePanel() {
                         </a>
                         <a
                             href="/api/evidence/export?format=csv"
-                            className="inline-flex items-center gap-1.5 rounded-[3px] bg-[var(--accent)] dark:bg-[var(--bg-deep)] px-3 py-1.5 text-xs font-semibold text-white dark:text-[color:var(--ink)]"
+                            className="inline-flex items-center gap-1.5 rounded-[3px] bg-[var(--accent)] dark:bg-[var(--bg-deep)] px-3 py-1.5 text-xs font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]"
                         >
                             <PremiumIcon icon={Download} tone="slate" containerClassName="w-6 h-6 rounded-[3px] bg-[var(--card)] text-white border-[color:var(--line)] dark:bg-[var(--card)]/10 dark:text-[color:var(--ink)] dark:border-[color:var(--line)]/20" iconClassName="h-3.5 w-3.5" /> Export CSV
                         </a>

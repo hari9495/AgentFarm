@@ -237,7 +237,7 @@ export default function ApiKeysPage() {
                             </p>
                         )}
                         <div className="flex items-center gap-3">
-                            <button type="submit" disabled={creating} className="rounded-[3px] bg-[var(--accent)] dark:bg-[var(--card)] text-white dark:text-[color:var(--ink)] text-sm font-bold px-4 py-2 disabled:opacity-60">
+                            <button type="submit" disabled={creating} className="rounded-[3px] bg-[var(--accent)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] text-sm font-bold px-4 py-2 disabled:opacity-60">
                                 {creating ? "Creating…" : "Create key"}
                             </button>
                             <button type="button" onClick={() => setShowForm(false)} className="text-sm font-medium text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] dark:hover:text-[color:var(--ink)]">

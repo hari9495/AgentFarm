@@ -122,7 +122,7 @@ export default function TaskSourcesPage() {
         <div className="max-w-4xl mx-auto p-6">
             <div className="flex items-start justify-between mb-2">
                 <div>
-                    <h1 className="text-2xl font-bold text-[color:var(--ink)] dark:text-white">Task Sources</h1>
+                    <h1 className="text-2xl font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Task Sources</h1>
                     <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1 max-w-2xl">
                         Have an agent pull tickets assigned to it. Use Jira, Linear, or GitHub out of the box, or any
                         other tracker via a custom REST mapping. Tickets that arrive outside the agent&apos;s shift are

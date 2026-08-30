@@ -120,7 +120,7 @@ function RegisterForm({ onSave, onCancel }: { onSave: (data: unknown) => Promise
                     <div key={n} className="flex items-center gap-2">
                         {i > 0 && <div className="w-8 h-px bg-[var(--line)] dark:bg-[var(--card)]" />}
                         <div className="flex items-center gap-2">
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${step === n ? "bg-[var(--accent)] text-white" : step > n ? "bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" : "bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-muted)]"}`}>
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${step === n ? "bg-[var(--accent)] text-[color:var(--ink)]" : step > n ? "bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" : "bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-muted)]"}`}>
                                 {step > n ? "✓" : n}
                             </div>
                             <span className={`text-xs font-semibold ${step === n ? "text-[color:var(--accent)] dark:text-[color:var(--accent)]" : step > n ? "text-[color:var(--ok)] dark:text-[color:var(--ok)]" : "text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]"}`}>{l}</span>

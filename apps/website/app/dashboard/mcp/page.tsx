@@ -453,7 +453,7 @@ function ConnectToolCatalog({ onActivated }: { onActivated: () => void | Promise
                         <button
                             onClick={() => openConfigure(c)}
                             disabled={!c.live}
-                            className={`mt-3 flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-colors ${c.live ? "bg-[var(--ok)] hover:bg-[var(--ok)] text-white" : "bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-muted)] cursor-not-allowed"}`}
+                            className={`mt-3 flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-colors ${c.live ? "bg-[var(--ok)] hover:bg-[var(--ok)] text-[color:var(--ink)]" : "bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-muted)] cursor-not-allowed"}`}
                         >
                             <Plus className="w-3.5 h-3.5" /> {c.live ? "Connect" : "Coming soon"}
                         </button>

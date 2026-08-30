@@ -77,11 +77,11 @@ export default async function SecurityPage() {
 
                         <div className="mt-5 flex flex-wrap items-center gap-6 border-t border-[color:var(--line)] pt-4">
                             <div className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
-                                <span className="text-white font-bold">{sessions.length}</span>
+                                <span className="text-[color:var(--ink)] font-bold">{sessions.length}</span>
                                 {sessions.length === 1 ? "active session" : "active sessions"}
                             </div>
                             <div className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
-                                <span className="text-white font-bold">{roleDisplayName(user?.role)}</span>
+                                <span className="text-[color:var(--ink)] font-bold">{roleDisplayName(user?.role)}</span>
                                 role
                             </div>
                         </div>

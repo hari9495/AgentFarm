@@ -70,7 +70,7 @@ export default async function DeploymentsPage() {
                         <div className="mt-5 flex flex-wrap items-center gap-6 border-t border-[color:var(--line)] pt-4">
                             {deploymentStats.map(({ label, value }) => (
                                 <div key={label} className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
-                                    <span className="text-white font-bold">{value}</span>
+                                    <span className="text-[color:var(--ink)] font-bold">{value}</span>
                                     {label}
                                 </div>
                             ))}

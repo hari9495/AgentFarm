@@ -137,7 +137,7 @@ function CsatForm() {
                 <button
                     type="submit"
                     disabled={submitting || rating === 0}
-                    className="w-full py-2.5 px-4 rounded-[3px] bg-[var(--accent)] hover:bg-[var(--accent)] disabled:bg-[var(--line)] disabled:text-[color:var(--ink-muted)] dark:disabled:bg-[var(--card)] text-white text-sm font-semibold shadow-sm transition-colors"
+                    className="w-full py-2.5 px-4 rounded-[3px] bg-[var(--accent)] hover:bg-[var(--accent)] disabled:bg-[var(--line)] disabled:text-[color:var(--ink-muted)] dark:disabled:bg-[var(--card)] text-[color:var(--ink)] text-sm font-semibold shadow-sm transition-colors"
                 >
                     {submitting ? "Submitting…" : "Submit feedback"}
                 </button>

@@ -130,15 +130,15 @@ export default async function RolesPermissionsPage() {
 
                         <div className="mt-5 flex flex-wrap items-center gap-6 border-t border-[color:var(--line)] pt-4">
                             <div className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
-                                <span className="text-white font-bold">{roleLabel(displayRole)}</span>
+                                <span className="text-[color:var(--ink)] font-bold">{roleLabel(displayRole)}</span>
                                 your current role
                             </div>
                             <div className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
-                                <span className="text-white font-bold">{roleRows.length}</span>
+                                <span className="text-[color:var(--ink)] font-bold">{roleRows.length}</span>
                                 roles defined
                             </div>
                             <div className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
-                                <span className="text-white font-bold">{modules.length}</span>
+                                <span className="text-[color:var(--ink)] font-bold">{modules.length}</span>
                                 permission areas
                             </div>
                         </div>

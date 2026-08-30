@@ -160,7 +160,7 @@ export default function HeatmapDatePicker({ fromValue, toValue, minDate, maxDate
                         <button onClick={handleCancel} className="flex-1 rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] py-2 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition-colors">
                             Cancel
                         </button>
-                        <button onClick={handleApply} disabled={!canApply} className="flex-1 rounded-[3px] bg-[var(--accent)] dark:bg-[var(--bg-deep)] py-2 text-xs font-semibold text-white dark:text-[color:var(--ink)] hover:bg-[var(--accent)] dark:hover:bg-[var(--card)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                        <button onClick={handleApply} disabled={!canApply} className="flex-1 rounded-[3px] bg-[var(--accent)] dark:bg-[var(--bg-deep)] py-2 text-xs font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] hover:bg-[var(--accent)] dark:hover:bg-[var(--card)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                             Apply
                         </button>
                     </div>

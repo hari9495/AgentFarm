@@ -93,7 +93,7 @@ function EditRow({ agent, onCancel, onSaved }: { agent: ShiftScheduleAgent; onCa
                                 type="button"
                                 onClick={() => toggleDay(d)}
                                 className={`inline-flex items-center justify-center h-6 w-7 rounded text-[9px] font-semibold transition-colors ${days.includes(d)
-                                    ? "bg-[var(--accent)] text-white"
+                                    ? "bg-[var(--accent)] text-[color:var(--ink)]"
                                     : "bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--line)] dark:hover:bg-[var(--card)]"
                                     }`}
                             >

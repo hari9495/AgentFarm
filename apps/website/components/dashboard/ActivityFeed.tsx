@@ -120,7 +120,7 @@ export default function ActivityFeed() {
                             key={f.key}
                             onClick={() => setActiveFilter(f.key)}
                             className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${activeFilter === f.key
-                                    ? "bg-[var(--accent)] text-white"
+                                    ? "bg-[var(--accent)] text-[color:var(--ink)]"
                                     : "bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--line)] dark:hover:bg-[var(--card)]"
                                 }`}
                         >

@@ -151,14 +151,14 @@ export default function CustomerAuditPage() {
                                 <button
                                     onClick={() => void loadEvents()}
                                     disabled={loading}
-                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[3px] bg-[var(--card)] border border-[color:var(--line)] text-xs font-semibold text-white hover:bg-[var(--card)] hover:border-[color:var(--line)] transition-colors disabled:opacity-50"
+                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[3px] bg-[var(--card)] border border-[color:var(--line)] text-xs font-semibold text-[color:var(--ink)] hover:bg-[var(--card)] hover:border-[color:var(--line)] transition-colors disabled:opacity-50"
                                 >
                                     <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
                                 </button>
                                 <button
                                     onClick={() => clientDownloadCsv(filtered)}
                                     disabled={loading || filtered.length === 0}
-                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[3px] bg-[var(--card)] border border-[color:var(--line)] text-xs font-semibold text-white hover:bg-[var(--card)] hover:border-[color:var(--line)] transition-colors disabled:opacity-50"
+                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[3px] bg-[var(--card)] border border-[color:var(--line)] text-xs font-semibold text-[color:var(--ink)] hover:bg-[var(--card)] hover:border-[color:var(--line)] transition-colors disabled:opacity-50"
                                 >
                                     <Download className="w-3.5 h-3.5" /> Export CSV
                                 </button>
@@ -167,7 +167,7 @@ export default function CustomerAuditPage() {
 
                         <div className="mt-5 flex flex-wrap items-center gap-6 border-t border-[color:var(--line)] pt-4">
                             <div className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
-                                <span className="text-white font-bold">{filtered.length}</span>
+                                <span className="text-[color:var(--ink)] font-bold">{filtered.length}</span>
                                 {filtered.length === 1 ? "event" : "events"}
                             </div>
                         </div>
@@ -189,7 +189,7 @@ export default function CustomerAuditPage() {
                                 key={cat}
                                 onClick={() => setCategory(cat)}
                                 className={`px-3 py-1.5 rounded-[3px] text-xs font-medium transition-colors ${category === cat
-                                        ? "bg-[var(--accent)] dark:bg-[var(--bg-deep)] text-white dark:text-[color:var(--ink)]"
+                                        ? "bg-[var(--accent)] dark:bg-[var(--bg-deep)] text-[color:var(--ink)] dark:text-[color:var(--ink)]"
                                         : "text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"
                                     }`}
                             >

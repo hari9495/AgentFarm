@@ -224,7 +224,7 @@ export default function KpiCards() {
                         {/* Bottom row — top contributor + live dot */}
                         <div className="flex items-center justify-between pt-1 border-t border-[color:var(--line)]">
                             <div className="flex items-center gap-1.5">
-                                <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold text-white shrink-0 ${cfg.contributor.avatarBg}`}>
+                                <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold text-[color:var(--ink)] shrink-0 ${cfg.contributor.avatarBg}`}>
                                     {cfg.contributor.initials}
                                 </span>
                                 <span className="text-[11px] text-[color:var(--ink-muted)] font-medium truncate">{cfg.contributor.name}</span>

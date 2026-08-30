@@ -121,15 +121,15 @@ export default function TeamRosterClient({
             <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-[color:var(--line)] pt-4">
                 <div className="flex flex-wrap items-center gap-6">
                     <div className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
-                        <span className="text-white font-bold">{members.length}</span>
+                        <span className="text-[color:var(--ink)] font-bold">{members.length}</span>
                         {members.length === 1 ? "teammate" : "teammates"}
                     </div>
                     <div className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
-                        <span className="text-white font-bold">{adminCount}</span>
+                        <span className="text-[color:var(--ink)] font-bold">{adminCount}</span>
                         {adminCount === 1 ? "admin" : "admins"}
                     </div>
                     <div className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
-                        <span className="text-white font-bold">{memberCount}</span>
+                        <span className="text-[color:var(--ink)] font-bold">{memberCount}</span>
                         {memberCount === 1 ? "member" : "members"}
                     </div>
                 </div>
