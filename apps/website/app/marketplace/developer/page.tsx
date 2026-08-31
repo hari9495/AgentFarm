@@ -5,6 +5,7 @@ import {
     ArrowLeft, Star, Users, BarChart3,
 } from "lucide-react";
 import HireAgentButton from "@/components/marketplace/HireAgentButton";
+import StackPill from "@/components/marketplace/StackPill";
 
 export const metadata: Metadata = {
     title: "AI Developer Agent — Hire a Governed Worker | AgentFarms",
@@ -206,12 +207,7 @@ export default function DeveloperMarketplacePage() {
                 </h2>
                 <div className="flex flex-wrap gap-2">
                     {CONNECTORS.map((c) => (
-                        <span
-                            key={c.name}
-                            className={`inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-semibold ${c.color}`}
-                        >
-                            {c.name}
-                        </span>
+                        <StackPill key={c.name} name={c.name} />
                     ))}
                 </div>
             </section>

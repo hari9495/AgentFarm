@@ -6,6 +6,7 @@ import {
     ArrowLeft, Star, Users, Bug, MonitorPlay, Shield, Globe, BookOpen, Lock,
 } from "lucide-react";
 import HireAgentButton from "@/components/marketplace/HireAgentButton";
+import StackPill from "@/components/marketplace/StackPill";
 import { getSessionUser, listWorkspaceBotsForUser } from "@/lib/auth-store";
 
 export const metadata: Metadata = {
@@ -263,12 +264,7 @@ export default async function TesterMarketplacePage() {
                 {hasTesterAgent ? (
                     <div className="flex flex-wrap gap-2">
                         {CONNECTORS.map((c) => (
-                            <span
-                                key={c.name}
-                                className={`inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-semibold ${c.color}`}
-                            >
-                                {c.name}
-                            </span>
+                            <StackPill key={c.name} name={c.name} />
                         ))}
                     </div>
                 ) : (
@@ -276,12 +272,7 @@ export default async function TesterMarketplacePage() {
                         {/* Blurred preview */}
                         <div className="flex flex-wrap gap-2 select-none" aria-hidden="true" style={{ filter: "blur(4px)", pointerEvents: "none" }}>
                             {CONNECTORS.map((c) => (
-                                <span
-                                    key={c.name}
-                                    className={`inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-semibold ${c.color}`}
-                                >
-                                    {c.name}
-                                </span>
+                                <StackPill key={c.name} name={c.name} />
                             ))}
                         </div>
                         {/* Lock overlay */}

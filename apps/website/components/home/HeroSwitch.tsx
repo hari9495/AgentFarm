@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { ArrowUpRight, Star, Check, Clock } from 'lucide-react';
 import { useMotionValueEvent, useReducedMotion, useScroll } from 'motion/react';
 import { cn } from '@/lib/cn';
+import { ConnectorLogo } from '@/components/integrations/IntegrationsCardGrid';
 
 interface PreviewTab { id: string; label: string; media: React.ReactNode }
 interface HeroRating { source: string; score: string; icon?: React.ReactNode }
@@ -222,7 +223,7 @@ function AgentPanel({ agent, action, tone }: { agent: string; action: string; to
   );
 }
 
-const CONNECTORS = ['Jira', 'Slack', 'GitHub', 'Salesforce', 'Linear', 'HubSpot'].map((name) => ({ name }));
+const CONNECTORS = ['Jira', 'Slack', 'GitHub', 'Salesforce', 'Linear', 'HubSpot'].map((name) => ({ name, logo: <ConnectorLogo name={name} size={44} /> }));
 
 const TABS: PreviewTab[] = [
   { id: 'recruiter', label: 'Recruiter', media: <AgentPanel agent="Recruiter" action="Send outreach to 12 shortlisted candidates for the Senior Backend role." tone="pending" /> },

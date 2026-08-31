@@ -35,6 +35,13 @@ export const CONNECTOR_LOGOS: Record<string, string> = {
   HubSpot: '/connector-logos/hubspot.svg',
   Zendesk: '/connector-logos/zendesk.svg',
   Intercom: '/connector-logos/intercom.svg',
+  PostgreSQL: '/connector-logos/postgresql.svg',
+  MySQL: '/connector-logos/mysql.svg',
+  Jenkins: '/connector-logos/jenkins.svg',
+  CircleCI: '/connector-logos/circleci.svg',
+  Playwright: '/connector-logos/playwright.svg',
+  Cypress: '/connector-logos/cypress.svg',
+  Postman: '/connector-logos/postman.svg',
 };
 
 export function ConnectorLogo({ name, size = 40 }: { name: string; size?: number }) {
