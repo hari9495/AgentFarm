@@ -6,6 +6,7 @@ import { howItWorksHowToSchema, breadcrumbSchema } from '@/lib/seo-schemas';
 import FeatureStepsShowcase from '@/components/how-it-works/FeatureStepsShowcase';
 import StepMock from '@/components/how-it-works/StepMock';
 import SharedCTA from '@/components/shared/SharedCTA';
+import SubPageHero from '@/components/shared/SubPageHero';
 
 export const metadata: Metadata = {
   ...C.metadata,
@@ -30,26 +31,16 @@ export default function HowItWorksPage() {
     <div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(pageSchemas) }} />
 
-      {/* Hero — standard sub-page split */}
-      <section className="op-light relative overflow-hidden">
-        <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(60% 45% at 15% 0%, var(--op-indigo-soft), transparent 60%)' }} />
-        <div className="op-wrap relative grid items-center gap-12 md:grid-cols-2" style={{ paddingTop: 80, paddingBottom: 72 }}>
-          <div>
-            <p className="op-eyebrow">{C.hero.eyebrow}</p>
-            <h1 className="mt-4 font-[family-name:var(--font-display)] font-extrabold" style={{ fontSize: 'clamp(2.4rem, 4.6vw, 3.6rem)', letterSpacing: '-0.03em', lineHeight: 1.04, color: 'var(--op-ink)' }}>
-              {C.hero.titleLead} <span style={{ color: 'var(--op-indigo)' }}>{C.hero.titleAccent}</span>
-            </h1>
-            <p className="mt-5 max-w-lg text-[1.075rem] leading-relaxed" style={{ color: 'var(--op-muted)' }}>{C.hero.description}</p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/#waitlist" className="inline-flex h-11 items-center gap-2 rounded-xl px-5 text-sm font-semibold text-white" style={{ background: 'var(--op-indigo)' }}>Start free trial <ArrowRight className="h-4 w-4" /></Link>
-              <Link href="/pricing" className="inline-flex h-11 items-center rounded-xl px-5 text-sm font-semibold" style={{ border: '1px solid var(--op-line)', color: 'var(--op-ink)' }}>See pricing</Link>
-            </div>
-          </div>
-          <div className="flex items-center justify-center rounded-2xl p-8" style={{ background: 'linear-gradient(160deg, var(--op-indigo-soft), var(--op-paper-2) 65%)', outline: '1px solid rgba(16,24,40,0.06)' }}>
-            <StepMock index={4} />
-          </div>
-        </div>
-      </section>
+      {/* Hero — shared SubPageHero (21st.dev: felipemenezes098/hero-02) */}
+      <SubPageHero
+        eyebrow={C.hero.eyebrow}
+        titleLead={C.hero.titleLead}
+        titleAccent={C.hero.titleAccent}
+        description={C.hero.description}
+        primary={{ label: 'Start free trial', href: '/#waitlist' }}
+        secondary={{ label: 'See pricing', href: '/pricing' }}
+        visual={<StepMock index={4} />}
+      />
 
       {/* Quick timeline band */}
       <section className="op-soft" style={{ paddingTop: 28, paddingBottom: 28 }}>

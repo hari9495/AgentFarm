@@ -4,6 +4,7 @@ import Link from 'next/link';
 import CompareSwitcher from '@/components/compare/CompareSwitcher';
 import CompareMatrix from '@/components/compare/CompareMatrix';
 import SharedCTA from '@/components/shared/SharedCTA';
+import SubPageHero from '@/components/shared/SubPageHero';
 
 export const metadata: Metadata = {
   title: 'AgentFarms vs Alternatives — AI Workers vs Copilot',
@@ -15,39 +16,29 @@ const heroPoints = ['Executes tasks autonomously', 'Risk-classified approval gat
 export default function ComparePage() {
   return (
     <div>
-      {/* Hero — standard sub-page split */}
-      <section className="op-light relative overflow-hidden">
-        <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(60% 45% at 15% 0%, var(--op-indigo-soft), transparent 60%)' }} />
-        <div className="op-wrap relative grid items-center gap-12 md:grid-cols-2" style={{ paddingTop: 80, paddingBottom: 72 }}>
-          <div>
-            <p className="op-eyebrow">Compare</p>
-            <h1 className="mt-4 font-[family-name:var(--font-display)] font-extrabold" style={{ fontSize: 'clamp(2.4rem, 4.6vw, 3.6rem)', letterSpacing: '-0.03em', lineHeight: 1.04, color: 'var(--op-ink)' }}>
-              AgentFarms vs <span style={{ color: 'var(--op-indigo)' }}>the alternatives</span>
-            </h1>
-            <p className="mt-5 max-w-lg text-[1.075rem] leading-relaxed" style={{ color: 'var(--op-muted)' }}>
-              Copilots suggest. Contractors bill by the hour. Full-time hires take months to onboard. AgentFarms workers execute with accountability from day one.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/get-started" className="inline-flex h-11 items-center gap-2 rounded-xl px-5 text-sm font-semibold text-white" style={{ background: 'var(--op-indigo)' }}>Start free trial <ArrowRight className="h-4 w-4" /></Link>
-              <Link href="/pricing" className="inline-flex h-11 items-center rounded-xl px-5 text-sm font-semibold" style={{ border: '1px solid var(--op-line)', color: 'var(--op-ink)' }}>View pricing</Link>
+      {/* Hero — shared SubPageHero (21st.dev: felipemenezes098/hero-02) */}
+      <SubPageHero
+        eyebrow="Compare"
+        titleLead="AgentFarms vs"
+        titleAccent="the alternatives"
+        description="Copilots suggest. Contractors bill by the hour. Full-time hires take months to onboard. AgentFarms workers execute with accountability from day one."
+        primary={{ label: 'Start free trial', href: '/get-started' }}
+        secondary={{ label: 'View pricing', href: '/pricing' }}
+        visual={
+          <div className="mx-auto w-full max-w-sm rounded-2xl p-6" style={{ background: 'var(--op-paper)', border: '1px solid var(--op-line)', boxShadow: '0 24px 50px -28px rgba(16,24,40,0.22)' }}>
+            <p className="text-[13px] font-semibold" style={{ color: 'var(--op-ink)' }}>Why teams switch to AgentFarms</p>
+            <p className="mb-4 font-[family-name:var(--font-mono)] text-[11px]" style={{ color: 'var(--op-muted)' }}>vs copilots, contractors, and hires</p>
+            <div className="space-y-2.5">
+              {heroPoints.map((p) => (
+                <div key={p} className="flex items-start gap-2.5 rounded-lg px-3 py-2" style={{ background: 'var(--op-paper-2)', border: '1px solid var(--op-line)' }}>
+                  <Check className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.6} style={{ color: 'var(--op-approved)' }} />
+                  <span className="text-[13px]" style={{ color: 'var(--op-ink-soft)' }}>{p}</span>
+                </div>
+              ))}
             </div>
           </div>
-          <div className="flex items-center justify-center rounded-2xl p-8" style={{ background: 'linear-gradient(160deg, var(--op-indigo-soft), var(--op-paper-2) 65%)', outline: '1px solid rgba(16,24,40,0.06)' }}>
-            <div className="mx-auto w-full max-w-sm rounded-2xl p-6" style={{ background: 'var(--op-paper)', border: '1px solid var(--op-line)', boxShadow: '0 24px 50px -28px rgba(16,24,40,0.22)' }}>
-              <p className="text-[13px] font-semibold" style={{ color: 'var(--op-ink)' }}>Why teams switch to AgentFarms</p>
-              <p className="mb-4 font-[family-name:var(--font-mono)] text-[11px]" style={{ color: 'var(--op-muted)' }}>vs copilots, contractors, and hires</p>
-              <div className="space-y-2.5">
-                {heroPoints.map((p) => (
-                  <div key={p} className="flex items-start gap-2.5 rounded-lg px-3 py-2" style={{ background: 'var(--op-paper-2)', border: '1px solid var(--op-line)' }}>
-                    <Check className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.6} style={{ color: 'var(--op-approved)' }} />
-                    <span className="text-[13px]" style={{ color: 'var(--op-ink-soft)' }}>{p}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+        }
+      />
 
       {/* Head-to-head switcher (B) */}
       <section className="op-soft" style={{ paddingTop: 72, paddingBottom: 72 }}>
