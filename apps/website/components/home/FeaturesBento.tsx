@@ -9,6 +9,7 @@
 
 import * as React from 'react';
 import { Rocket, Users, ShieldCheck, Plug, FileClock, Server } from 'lucide-react';
+import { featureTint } from '@/components/shared/feature-icon-palette';
 
 const FEATURES = [
   { icon: ShieldCheck, title: 'Approval gates', desc: 'Nothing risky ships without a human. One tap to approve or reject — every action logged.', wide: true },
@@ -34,13 +35,15 @@ export default function FeaturesBento() {
         </div>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map(({ icon: Icon, title, desc, wide }) => (
+          {FEATURES.map(({ icon: Icon, title, desc, wide }, i) => {
+            const t = featureTint(i);
+            return (
             <div
               key={title}
               className={`op-lift flex flex-col justify-between rounded-2xl p-6 ${wide ? 'lg:col-span-2' : ''}`}
               style={{ background: 'var(--op-paper-2)', border: '1px solid var(--op-line)', minHeight: 200 }}
             >
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl" style={{ background: 'var(--op-paper)', border: '1px solid var(--op-line)', color: 'var(--op-indigo)' }}>
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl" style={{ background: t.bg, color: t.color }}>
                 <Icon className="h-5 w-5" strokeWidth={1.6} />
               </span>
               <div className="mt-8 flex flex-col">
@@ -48,7 +51,8 @@ export default function FeaturesBento() {
                 <p className="mt-1 max-w-sm text-base" style={{ color: 'var(--op-muted)' }}>{desc}</p>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

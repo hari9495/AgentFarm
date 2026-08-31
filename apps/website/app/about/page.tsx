@@ -6,6 +6,7 @@ import { organizationSchema, breadcrumbSchema } from '@/lib/seo-schemas';
 import SubPageHero from '@/components/shared/SubPageHero';
 import SharedCTA from '@/components/shared/SharedCTA';
 import TeamCards from '@/components/about/TeamCards';
+import { featureTint } from '@/components/shared/feature-icon-palette';
 
 export const metadata: Metadata = {
   ...aboutPageContent.metadata,
@@ -96,12 +97,13 @@ export default function AboutPage() {
           <h2 className="font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight sm:text-4xl" style={{ letterSpacing: '-0.025em', color: 'var(--op-ink)' }}>What we believe</h2>
           <p className="mt-3 max-w-2xl text-[17px]" style={{ lineHeight: 1.5, color: 'var(--op-muted)' }}>{teamIntro}</p>
           <div className="mt-10 grid gap-4 sm:grid-cols-3">
-            {values.map((v) => {
+            {values.map((v, i) => {
               const Icon = valueIcons[v.icon];
+              const t = featureTint(i);
               return (
                 <div key={v.title} className="op-lift rounded-2xl p-6" style={{ background: 'var(--op-paper)', border: '1px solid var(--op-line)' }}>
-                  <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px]" style={{ background: 'var(--op-indigo-soft)' }}>
-                    <Icon className="h-5 w-5" style={{ color: 'var(--op-indigo)' }} />
+                  <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px]" style={{ background: t.bg }}>
+                    <Icon className="h-5 w-5" style={{ color: t.color }} />
                   </div>
                   <h3 className="mb-2 text-[17px] font-semibold" style={{ letterSpacing: '-0.018em', color: 'var(--op-ink)' }}>{v.title}</h3>
                   <p className="text-[15px]" style={{ lineHeight: 1.5, color: 'var(--op-muted)' }}>{v.description}</p>

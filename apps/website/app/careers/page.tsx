@@ -3,6 +3,7 @@ import { openRoles, values, perks } from '@/components/careers/careers-data';
 import CareersCards from '@/components/careers/CareersCards';
 import SubPageHero from '@/components/shared/SubPageHero';
 import SharedCTA from '@/components/shared/SharedCTA';
+import { featureTint } from '@/components/shared/feature-icon-palette';
 
 export const metadata: Metadata = {
   title: 'Join AgentFarms — Careers at the Governed AI Platform',
@@ -49,12 +50,13 @@ export default function CareersPage() {
         <div className="op-wrap">
           <h2 className="mb-12 text-center font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight sm:text-4xl" style={{ letterSpacing: '-0.025em', color: 'var(--op-ink)' }}>How we work</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {values.map((v) => {
+            {values.map((v, i) => {
               const Icon = v.icon;
+              const t = featureTint(i);
               return (
                 <div key={v.title} className="op-lift rounded-2xl p-6" style={{ background: 'var(--op-paper)', border: '1px solid var(--op-line)' }}>
-                  <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-[8px]" style={{ background: 'var(--op-indigo-soft)' }}>
-                    <Icon className="h-5 w-5" style={{ color: 'var(--op-indigo)' }} />
+                  <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-[8px]" style={{ background: t.bg }}>
+                    <Icon className="h-5 w-5" style={{ color: t.color }} />
                   </div>
                   <h3 className="mb-2 text-[15px] font-semibold" style={{ letterSpacing: '-0.015em', color: 'var(--op-ink)' }}>{v.title}</h3>
                   <p className="text-[14px]" style={{ lineHeight: 1.5, color: 'var(--op-muted)' }}>{v.body}</p>

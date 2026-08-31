@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import HireAgentButton from "@/components/marketplace/HireAgentButton";
 import StackPill from "@/components/marketplace/StackPill";
+import { featureTint } from "@/components/shared/feature-icon-palette";
 import { getSessionUser, listWorkspaceBotsForUser } from "@/lib/auth-store";
 
 export const metadata: Metadata = {
@@ -298,22 +299,23 @@ export default async function TesterMarketplacePage() {
             <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <h2 className="text-xl font-semibold text-[var(--op-ink)] mb-6">Testing disciplines</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {TESTING_CATEGORIES.map((cat) => {
+                    {TESTING_CATEGORIES.map((cat, idx) => {
                         const Icon = cat.icon;
+                        const tint = featureTint(idx);
                         return (
                             <div
                                 key={cat.title}
-                                className="rounded-xl border border-[var(--op-line)] bg-[var(--op-paper-2)] p-5 hover:border-emerald-500/30 hover:-translate-y-0.5 transition-all duration-200"
+                                className="rounded-xl border border-[var(--op-line)] bg-[var(--op-paper-2)] p-5 hover:-translate-y-0.5 transition-all duration-200"
                             >
                                 <div className="flex items-center gap-2.5 mb-2">
-                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10">
-                                        <Icon className="h-3.5 w-3.5 text-[var(--op-approved)]" aria-hidden="true" />
+                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ background: tint.bg }}>
+                                        <Icon className="h-3.5 w-3.5" style={{ color: tint.color }} aria-hidden="true" />
                                     </div>
                                     <h3 className="text-sm font-semibold text-[var(--op-ink)]">{cat.title}</h3>
                                 </div>
                                 <div className="flex flex-wrap gap-1 mb-2.5">
                                     {cat.tools.map((t) => (
-                                        <span key={t} className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-emerald-500/10 text-[var(--op-approved)] border border-emerald-500/20">{t}</span>
+                                        <span key={t} className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium" style={{ background: tint.bg, color: tint.color }}>{t}</span>
                                     ))}
                                 </div>
                                 <p className="text-sm text-[var(--op-muted)] leading-relaxed">{cat.detail}</p>

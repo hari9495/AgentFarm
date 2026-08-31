@@ -6,6 +6,7 @@
 
 import { Shield, type LucideIcon } from 'lucide-react';
 import { securityIconMap, type SecurityFeature } from './security-icons';
+import { featureTint } from '@/components/shared/feature-icon-palette';
 
 export default function SecurityFeaturesCards({ title, subtitle, features }: { title: string; subtitle: string; features: readonly SecurityFeature[] }) {
   return (
@@ -15,12 +16,13 @@ export default function SecurityFeaturesCards({ title, subtitle, features }: { t
         <p className="mt-4" style={{ color: 'var(--op-muted)' }}>{subtitle}</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {features.map((f) => {
+        {features.map((f, i) => {
           const Icon: LucideIcon = securityIconMap[f.icon] ?? Shield;
+          const t = featureTint(i);
           return (
             <div key={f.title} className="op-lift rounded-2xl p-6" style={{ background: 'var(--op-paper)', border: '1px solid var(--op-line)' }}>
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px]" style={{ background: 'var(--op-indigo-soft)' }}>
-                <Icon className="h-5 w-5" style={{ color: 'var(--op-indigo)' }} />
+              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px]" style={{ background: t.bg }}>
+                <Icon className="h-5 w-5" style={{ color: t.color }} />
               </div>
               <h3 className="mb-3 text-[15px] font-semibold" style={{ letterSpacing: '-0.015em', color: 'var(--op-ink)' }}>{f.title}</h3>
               <ul className="space-y-1.5">

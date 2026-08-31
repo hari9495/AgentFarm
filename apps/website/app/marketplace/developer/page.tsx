@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import HireAgentButton from "@/components/marketplace/HireAgentButton";
 import StackPill from "@/components/marketplace/StackPill";
+import { featureTint } from "@/components/shared/feature-icon-palette";
 
 export const metadata: Metadata = {
     title: "AI Developer Agent — Hire a Governed Worker | AgentFarms",
@@ -221,16 +222,17 @@ export default function DeveloperMarketplacePage() {
             <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <h2 className="text-xl font-semibold text-[var(--op-ink)] mb-6">What it can do</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {CAPABILITIES.map((cap) => {
+                    {CAPABILITIES.map((cap, idx) => {
                         const Icon = cap.icon;
+                        const t = featureTint(idx);
                         return (
                             <div
                                 key={cap.title}
                                 className="rounded-xl border border-[var(--op-line)] bg-[var(--op-paper-2)] p-5 hover:border-[var(--op-indigo)]/30 hover:-translate-y-0.5 transition-all duration-200"
                             >
                                 <div className="flex items-center gap-2.5 mb-2.5">
-                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/10">
-                                        <Icon className="h-3.5 w-3.5 text-[var(--op-indigo)]" aria-hidden="true" />
+                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ background: t.bg }}>
+                                        <Icon className="h-3.5 w-3.5" style={{ color: t.color }} aria-hidden="true" />
                                     </div>
                                     <h3 className="text-sm font-semibold text-[var(--op-ink)]">{cap.title}</h3>
                                 </div>
