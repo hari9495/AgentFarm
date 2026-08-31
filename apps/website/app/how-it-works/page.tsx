@@ -5,6 +5,7 @@ import { howItWorksPageContent as C } from '@/lib/marketing-content';
 import { howItWorksHowToSchema, breadcrumbSchema } from '@/lib/seo-schemas';
 import FeatureStepsShowcase from '@/components/how-it-works/FeatureStepsShowcase';
 import StepMock from '@/components/how-it-works/StepMock';
+import SharedCTA from '@/components/shared/SharedCTA';
 
 export const metadata: Metadata = {
   ...C.metadata,
@@ -71,24 +72,16 @@ export default function HowItWorksPage() {
         <FeatureStepsShowcase />
       </section>
 
-      {/* CTA */}
-      <section className="op-soft text-center" style={{ paddingTop: 88, paddingBottom: 88 }}>
-        <div className="op-wrap-narrow">
-          <span className="inline-flex items-center rounded-full px-3 py-1 text-[12px] font-semibold" style={{ background: 'var(--op-indigo-soft)', color: 'var(--op-indigo)' }}>14-day free trial · no card required</span>
-          <h2 className="mx-auto mt-5 font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight sm:text-5xl" style={{ lineHeight: 1.04, color: 'var(--op-ink)' }}>{C.cta.title}</h2>
-          <p className="mt-4 mx-auto max-w-xl text-[1.075rem]" style={{ color: 'var(--op-muted)' }}>{C.cta.description}</p>
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link href={C.cta.primary.href} className="inline-flex h-11 items-center gap-2 rounded-xl px-6 text-[15px] font-semibold text-white" style={{ background: 'var(--op-indigo)' }}>{C.cta.primary.label} <ArrowRight className="h-4 w-4" /></Link>
-            <Link href="/book-demo" className="inline-flex h-11 items-center rounded-xl px-6 text-[15px] font-semibold" style={{ border: '1px solid var(--op-line)', color: 'var(--op-ink)' }}>Book a demo</Link>
-          </div>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-            {['Policy-aware approvals', 'Tenant-isolated runtime', 'Full evidence trail'].map((t) => (
-              <span key={t} className="inline-flex items-center gap-1.5 text-[13px]" style={{ color: 'var(--op-ink-soft)' }}>
-                <Check className="h-3.5 w-3.5" strokeWidth={2.6} style={{ color: 'var(--op-indigo)' }} /> {t}
-              </span>
-            ))}
-          </div>
-        </div>
+      {/* CTA (21st.dev: shadcnblocks/cta11) */}
+      <section className="op-soft" style={{ paddingTop: 88, paddingBottom: 88 }}>
+        <SharedCTA
+          badge="14-day free trial · no card required"
+          heading={C.cta.title}
+          description={C.cta.description}
+          primary={{ label: C.cta.primary.label, href: C.cta.primary.href }}
+          secondary={{ label: 'Book a demo', href: '/book-demo' }}
+          trustItems={['Policy-aware approvals', 'Tenant-isolated runtime', 'Full evidence trail']}
+        />
       </section>
     </div>
   );

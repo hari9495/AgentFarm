@@ -9,8 +9,8 @@ import { homeFAQSchema, homeSpeakableSchema, aggregateRatingSchema } from "@/lib
 
 const Testimonials = dynamic(() => import("@/components/home/TestimonialsStaggered"));
 const PricingSection = dynamic(() => import("@/components/home/PricingGrowth"));
-const FAQ = dynamic(() => import("@/components/home/FAQSplit"));
-const CallToAction = dynamic(() => import("@/components/home/CTAClean"));
+const FAQ = dynamic(() => import("@/components/home/HomeFAQ"));
+const CallToAction = dynamic(() => import("@/components/home/HomeCTA"));
 
 export const metadata: Metadata = {
   title: siteMarketingMetadata.homeTitle,

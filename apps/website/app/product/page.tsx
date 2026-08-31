@@ -4,7 +4,7 @@ import ProductHeroSplit from '@/components/product/ProductHeroSplit';
 import HowItWorksSteps from '@/components/product/HowItWorksSteps';
 import ProductFeaturesGrid from '@/components/product/ProductFeaturesGrid';
 import ProductDemoFramed from '@/components/product/ProductDemoFramed';
-import ProductCTAClean from '@/components/product/ProductCTAClean';
+import SharedCTA from '@/components/shared/SharedCTA';
 
 export const metadata: Metadata = {
   title: productPageContent.metadata.title,
@@ -35,7 +35,13 @@ export default function ProductPage() {
       </section>
 
       <section className="op-light" style={{ paddingTop: 88, paddingBottom: 88 }}>
-        <ProductCTAClean />
+        <SharedCTA
+          badge="14-day free trial · no card required"
+          heading={productPageContent.cta.title}
+          description={productPageContent.cta.description}
+          primary={{ label: productPageContent.cta.button.label, href: productPageContent.cta.button.href }}
+          secondary={{ label: 'How it works', href: '/how-it-works' }}
+        />
       </section>
     </div>
   );
