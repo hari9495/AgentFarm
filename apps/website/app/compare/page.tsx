@@ -1,151 +1,83 @@
-import type { Metadata } from "next";
-import { CheckCircle, XCircle, MinusCircle, ArrowRight } from "lucide-react";
-import Link from "next/link";
+import type { Metadata } from 'next';
+import { ArrowRight, Check } from 'lucide-react';
+import Link from 'next/link';
+import CompareSwitcher from '@/components/compare/CompareSwitcher';
+import CompareMatrix from '@/components/compare/CompareMatrix';
 
 export const metadata: Metadata = {
-    title: "AgentFarms vs Alternatives — AI Workers vs Copilot",
-    description: "Compare AgentFarms against GitHub Copilot, contractors, and full-time hires. Governed AI workers execute tasks end-to-end — see the key differences.",
+  title: 'AgentFarms vs Alternatives — AI Workers vs Copilot',
+  description: 'Compare AgentFarms against GitHub Copilot, contractors, and full-time hires. Governed AI workers execute tasks end-to-end — see the key differences.',
 };
 
-type Value = "yes" | "no" | "partial";
-
-const rows: { feature: string; AgentFarms: Value; copilot: Value; contractor: Value; hiring: Value }[] = [
-    { feature: "Executes tasks autonomously", AgentFarms: "yes", copilot: "no", contractor: "yes", hiring: "yes" },
-    { feature: "Opens GitHub PRs automatically", AgentFarms: "yes", copilot: "no", contractor: "yes", hiring: "yes" },
-    { feature: "Works 24/7 without breaks", AgentFarms: "yes", copilot: "partial", contractor: "no", hiring: "no" },
-    { feature: "Risk-classified approval gates", AgentFarms: "yes", copilot: "no", contractor: "no", hiring: "partial" },
-    { feature: "Jira & Linear integration", AgentFarms: "yes", copilot: "no", contractor: "partial", hiring: "yes" },
-    { feature: "Day-one productivity", AgentFarms: "yes", copilot: "yes", contractor: "partial", hiring: "no" },
-    { feature: "Runs CI checks & fixes failures", AgentFarms: "yes", copilot: "partial", contractor: "partial", hiring: "yes" },
-    { feature: "Full audit trail", AgentFarms: "yes", copilot: "no", contractor: "no", hiring: "partial" },
-    { feature: "Cost under $500/mo per worker", AgentFarms: "yes", copilot: "yes", contractor: "no", hiring: "no" },
-    { feature: "No hiring / onboarding time", AgentFarms: "yes", copilot: "yes", contractor: "partial", hiring: "no" },
-    { feature: "Scales instantly", AgentFarms: "yes", copilot: "yes", contractor: "no", hiring: "no" },
-    { feature: "Understands full codebase context", AgentFarms: "yes", copilot: "partial", contractor: "partial", hiring: "yes" },
-    { feature: "13 AI worker roles available", AgentFarms: "yes", copilot: "no", contractor: "partial", hiring: "partial" },
-    { feature: "OWASP / security scanning per PR", AgentFarms: "yes", copilot: "no", contractor: "no", hiring: "partial" },
-    { feature: "Test coverage delta tracked per PR", AgentFarms: "yes", copilot: "no", contractor: "no", hiring: "partial" },
-    { feature: "Per-skill analytics dashboard", AgentFarms: "yes", copilot: "no", contractor: "no", hiring: "no" },
-    { feature: "Iterate on PR review comments", AgentFarms: "yes", copilot: "partial", contractor: "yes", hiring: "yes" },
-    { feature: "Cancel & reassign tasks instantly", AgentFarms: "yes", copilot: "yes", contractor: "no", hiring: "no" },
-    { feature: "Tenant-isolated Azure runtime", AgentFarms: "yes", copilot: "no", contractor: "no", hiring: "no" },
-    { feature: "Microsoft Teams task assignment", AgentFarms: "yes", copilot: "no", contractor: "no", hiring: "yes" },
-];
-
-function Cell({ v }: { v: Value }) {
-    if (v === "yes") return <CheckCircle className="w-5 h-5 text-[var(--op-indigo)] mx-auto" />;
-    if (v === "no") return <XCircle className="w-5 h-5 text-[var(--op-line)] mx-auto" />;
-    return <MinusCircle className="w-5 h-5 text-[#ff9f0a] mx-auto" />;
-}
-
-const cols = [
-    { key: "AgentFarms", label: "AgentFarms", highlight: true },
-    { key: "copilot", label: "Copilot / Cursor", highlight: false },
-    { key: "contractor", label: "Contractor", highlight: false },
-    { key: "hiring", label: "Full-time hire", highlight: false },
-];
+const heroPoints = ['Executes tasks autonomously', 'Risk-classified approval gates', 'Full audit trail', 'Live in minutes, not months'];
 
 export default function ComparePage() {
-    return (
-        <div style={{ background: "#ffffff" }}>
-
-            {/* Hero */}
-            <section className="af-tile af-tile-white text-center" style={{ paddingTop: 80, paddingBottom: 64 }}>
-                <div className="af-container-narrow">
-                    <p className="af-eyebrow mb-4">Compare</p>
-                    <h1 className="font-semibold text-[var(--op-ink)]" style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}>
-                        AgentFarms vs the alternatives
-                    </h1>
-                    <p className="mt-5 text-[17px] text-[var(--op-ink-soft)] max-w-lg mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
-                        Copilots suggest. Contractors bill by the hour. Full-time hires take months to onboard. AgentFarms workers execute with accountability from day one.
-                    </p>
-                </div>
-            </section>
-
-            {/* Comparison table — parchment */}
-            <section className="af-tile af-tile-parchment" style={{ paddingTop: 0, paddingBottom: 64 }}>
-                <div className="af-container-wide">
-                    <div className="rounded-[18px] overflow-hidden" style={{ border: "1px solid var(--op-line)" }}>
-                        {/* Header */}
-                        <div className="grid grid-cols-5 bg-[#ffffff]" style={{ borderBottom: "1px solid var(--op-line)" }}>
-                            <div className="px-5 py-4">
-                                <span className="text-[13px] font-semibold text-[var(--op-muted)]">Feature</span>
-                            </div>
-                            {cols.map((col) => (
-                                <div
-                                    key={col.key}
-                                    className="px-4 py-4 text-center"
-                                    style={{ background: col.highlight ? "rgba(37,99,235,0.04)" : undefined }}
-                                >
-                                    <span
-                                        className="text-[13px] font-semibold"
-                                        style={{ color: col.highlight ? "var(--op-indigo)" : "var(--op-muted)" }}
-                                    >
-                                        {col.label}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                        {/* Rows */}
-                        {rows.map((row, i) => (
-                            <div
-                                key={row.feature}
-                                className="grid grid-cols-5"
-                                style={{
-                                    borderBottom: i < rows.length - 1 ? "1px solid var(--op-line)" : "none",
-                                    background: i % 2 === 0 ? "#ffffff" : "var(--op-paper-2)",
-                                }}
-                            >
-                                <div className="px-5 py-3 flex items-center">
-                                    <span className="text-[14px] text-[var(--op-ink)]">{row.feature}</span>
-                                </div>
-                                {cols.map((col) => (
-                                    <div
-                                        key={col.key}
-                                        className="py-3 flex items-center justify-center"
-                                        style={{ background: col.highlight ? "rgba(37,99,235,0.02)" : undefined }}
-                                    >
-                                        <Cell v={row[col.key as keyof typeof row] as Value} />
-                                    </div>
-                                ))}
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Legend */}
-                    <div className="mt-4 flex flex-wrap items-center gap-5 justify-center">
-                        <span className="flex items-center gap-1.5 text-[13px] text-[var(--op-muted)]">
-                            <CheckCircle className="w-4 h-4 text-[var(--op-indigo)]" /> Yes / Supported
-                        </span>
-                        <span className="flex items-center gap-1.5 text-[13px] text-[var(--op-muted)]">
-                            <MinusCircle className="w-4 h-4 text-[#ff9f0a]" /> Partial / Limited
-                        </span>
-                        <span className="flex items-center gap-1.5 text-[13px] text-[var(--op-muted)]">
-                            <XCircle className="w-4 h-4 text-[var(--op-line)]" /> Not supported
-                        </span>
-                    </div>
-                </div>
-            </section>
-
-            {/* CTA — dark */}
-            <section className="af-tile af-tile-dark text-center">
-                <div className="af-container-narrow">
-                    <h2 className="font-semibold text-[color:var(--op-ink)]" style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.025em", lineHeight: 1.1 }}>
-                        Ready to see the difference?
-                    </h2>
-                    <p className="mt-4 text-[17px] text-[var(--op-muted)]" style={{ lineHeight: 1.47 }}>
-                        Start with one workflow, see real output within hours.
-                    </p>
-                    <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-                        <Link href="/get-started" className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors" style={{ background: "var(--op-indigo)" }}>
-                            Start free trial <ArrowRight className="inline w-4 h-4 ml-1" />
-                        </Link>
-                        <Link href="/pricing" className="px-6 py-3 rounded-full text-[17px] font-medium text-[color:var(--op-ink)] transition-colors" style={{ border: "1px solid var(--op-line)" }}>
-                            View pricing
-                        </Link>
-                    </div>
-                </div>
-            </section>
+  return (
+    <div>
+      {/* Hero — standard sub-page split */}
+      <section className="op-light relative overflow-hidden">
+        <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(60% 45% at 15% 0%, var(--op-indigo-soft), transparent 60%)' }} />
+        <div className="op-wrap relative grid items-center gap-12 md:grid-cols-2" style={{ paddingTop: 80, paddingBottom: 72 }}>
+          <div>
+            <p className="op-eyebrow">Compare</p>
+            <h1 className="mt-4 font-[family-name:var(--font-display)] font-extrabold" style={{ fontSize: 'clamp(2.4rem, 4.6vw, 3.6rem)', letterSpacing: '-0.03em', lineHeight: 1.04, color: 'var(--op-ink)' }}>
+              AgentFarms vs <span style={{ color: 'var(--op-indigo)' }}>the alternatives</span>
+            </h1>
+            <p className="mt-5 max-w-lg text-[1.075rem] leading-relaxed" style={{ color: 'var(--op-muted)' }}>
+              Copilots suggest. Contractors bill by the hour. Full-time hires take months to onboard. AgentFarms workers execute with accountability from day one.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href="/get-started" className="inline-flex h-11 items-center gap-2 rounded-xl px-5 text-sm font-semibold text-white" style={{ background: 'var(--op-indigo)' }}>Start free trial <ArrowRight className="h-4 w-4" /></Link>
+              <Link href="/pricing" className="inline-flex h-11 items-center rounded-xl px-5 text-sm font-semibold" style={{ border: '1px solid var(--op-line)', color: 'var(--op-ink)' }}>View pricing</Link>
+            </div>
+          </div>
+          <div className="flex items-center justify-center rounded-2xl p-8" style={{ background: 'linear-gradient(160deg, var(--op-indigo-soft), var(--op-paper-2) 65%)', outline: '1px solid rgba(16,24,40,0.06)' }}>
+            <div className="mx-auto w-full max-w-sm rounded-2xl p-6" style={{ background: 'var(--op-paper)', border: '1px solid var(--op-line)', boxShadow: '0 24px 50px -28px rgba(16,24,40,0.22)' }}>
+              <p className="text-[13px] font-semibold" style={{ color: 'var(--op-ink)' }}>Why teams switch to AgentFarms</p>
+              <p className="mb-4 font-[family-name:var(--font-mono)] text-[11px]" style={{ color: 'var(--op-muted)' }}>vs copilots, contractors, and hires</p>
+              <div className="space-y-2.5">
+                {heroPoints.map((p) => (
+                  <div key={p} className="flex items-start gap-2.5 rounded-lg px-3 py-2" style={{ background: 'var(--op-paper-2)', border: '1px solid var(--op-line)' }}>
+                    <Check className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.6} style={{ color: 'var(--op-approved)' }} />
+                    <span className="text-[13px]" style={{ color: 'var(--op-ink-soft)' }}>{p}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
-    );
+      </section>
+
+      {/* Head-to-head switcher (B) */}
+      <section className="op-soft" style={{ paddingTop: 72, paddingBottom: 72 }}>
+        <div className="op-wrap-narrow mb-10 text-center">
+          <h2 className="font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight sm:text-4xl" style={{ lineHeight: 1.05, color: 'var(--op-ink)' }}>See the head-to-head</h2>
+          <p className="mt-3" style={{ color: 'var(--op-muted)' }}>Pick an alternative to compare AgentFarms against, capability by capability.</p>
+        </div>
+        <CompareSwitcher />
+      </section>
+
+      {/* Full matrix (A) */}
+      <section className="op-light" style={{ paddingTop: 72, paddingBottom: 72 }}>
+        <div className="op-wrap mb-10 text-center">
+          <h2 className="font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight sm:text-4xl" style={{ lineHeight: 1.05, color: 'var(--op-ink)' }}>The full comparison</h2>
+          <p className="mt-3" style={{ color: 'var(--op-muted)' }}>Every capability across all four approaches, side by side.</p>
+        </div>
+        <CompareMatrix />
+      </section>
+
+      {/* CTA */}
+      <section className="op-soft text-center" style={{ paddingTop: 88, paddingBottom: 88 }}>
+        <div className="op-wrap-narrow">
+          <span className="inline-flex items-center rounded-full px-3 py-1 text-[12px] font-semibold" style={{ background: 'var(--op-indigo-soft)', color: 'var(--op-indigo)' }}>14-day free trial · no card required</span>
+          <h2 className="mx-auto mt-5 font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight sm:text-5xl" style={{ lineHeight: 1.04, color: 'var(--op-ink)' }}>Ready to see the difference?</h2>
+          <p className="mt-4 mx-auto max-w-xl text-[1.075rem]" style={{ color: 'var(--op-muted)' }}>Start with one workflow, see real output within hours.</p>
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link href="/get-started" className="inline-flex h-11 items-center gap-2 rounded-xl px-6 text-[15px] font-semibold text-white" style={{ background: 'var(--op-indigo)' }}>Start free trial <ArrowRight className="h-4 w-4" /></Link>
+            <Link href="/pricing" className="inline-flex h-11 items-center rounded-xl px-6 text-[15px] font-semibold" style={{ border: '1px solid var(--op-line)', color: 'var(--op-ink)' }}>View pricing</Link>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
 }
