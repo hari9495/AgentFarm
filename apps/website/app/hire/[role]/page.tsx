@@ -185,21 +185,21 @@ function StepBar({ current }: { current: WizardStep }) {
                     <li key={step} className="flex-1 flex flex-col items-center gap-1">
                         <div className="flex items-center w-full">
                             {i > 0 && (
-                                <div className={`flex-1 h-0.5 ${done || active ? "bg-[var(--ink)]" : "bg-[var(--ink-faint,#e2e8f0)]"}`} />
+                                <div className={`flex-1 h-0.5 ${done || active ? "bg-[var(--op-indigo)]" : "bg-[var(--op-line)]"}`} />
                             )}
                             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2 transition-all ${done
-                                    ? "bg-[var(--ink)] border-[var(--ink)] text-[var(--canvas)]"
+                                    ? "bg-[var(--op-indigo)] border-[var(--op-indigo)] text-white"
                                     : active
-                                        ? "bg-[var(--canvas)] border-[var(--ink)] text-[var(--ink)]"
-                                        : "bg-transparent border-[var(--ink-faint,#e2e8f0)] text-[var(--ink-muted,#94a3b8)]"
+                                        ? "bg-[var(--op-paper)] border-[var(--op-indigo)] text-[var(--op-ink)]"
+                                        : "bg-transparent border-[var(--op-line)] text-[var(--ink-muted,#94a3b8)]"
                                 }`}>
                                 {done ? <Check className="w-3.5 h-3.5" /> : i + 1}
                             </div>
                             {i < STEPS.length - 1 && (
-                                <div className={`flex-1 h-0.5 ${done ? "bg-[var(--ink)]" : "bg-[var(--ink-faint,#e2e8f0)]"}`} />
+                                <div className={`flex-1 h-0.5 ${done ? "bg-[var(--op-indigo)]" : "bg-[var(--op-line)]"}`} />
                             )}
                         </div>
-                        <span className={`text-[0.65rem] font-semibold uppercase tracking-wider ${active ? "text-[var(--ink)]" : "text-[var(--ink-muted,#94a3b8)]"}`}>
+                        <span className={`text-[0.65rem] font-semibold uppercase tracking-wider ${active ? "text-[var(--op-ink)]" : "text-[var(--ink-muted,#94a3b8)]"}`}>
                             {STEP_LABELS[step]}
                         </span>
                     </li>
@@ -230,16 +230,16 @@ function SelectRoleStep({ roleKey, onNext }: { roleKey: string; onNext: (payload
 
     return (
         <div className="flex flex-col gap-5">
-            <div className="rounded-2xl border border-[var(--ink-faint,#e2e8f0)] p-5 bg-[var(--canvas-subtle,#f8fafc)]">
+            <div className="rounded-2xl border border-[var(--op-line)] p-5 bg-[var(--canvas-subtle,#f8fafc)]">
                 <p className="text-[0.6rem] font-bold uppercase tracking-widest text-[var(--ink-muted,#94a3b8)] mb-1">Selected Role</p>
-                <h2 className="text-2xl font-black text-[var(--ink)] tracking-tight">{meta?.displayName ?? roleKey}</h2>
+                <h2 className="text-2xl font-black text-[var(--op-ink)] tracking-tight">{meta?.displayName ?? roleKey}</h2>
                 <p className="mt-2 text-sm text-[var(--ink-muted,#64748b)]">{meta?.description ?? ""}</p>
             </div>
             {error && <p className="text-sm text-red-500">{error}</p>}
             <button
                 onClick={confirm}
                 disabled={loading}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--ink)] px-5 py-3 text-sm font-semibold text-[var(--canvas)] hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--op-indigo)] px-5 py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-50"
             >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
                 Confirm role &amp; continue
@@ -298,16 +298,16 @@ function ConnectToolsStep({ roleKey, onNext }: { roleKey: string; onNext: (paylo
                             key={c.name}
                             onClick={() => toggle(c.name)}
                             className={`flex items-center gap-3 rounded-xl border-2 p-3 text-left transition-all ${on
-                                    ? "border-[var(--ink)] bg-[var(--canvas-subtle,#f8fafc)]"
-                                    : "border-[var(--ink-faint,#e2e8f0)] bg-transparent hover:border-[var(--ink-muted,#94a3b8)]"
+                                    ? "border-[var(--op-indigo)] bg-[var(--canvas-subtle,#f8fafc)]"
+                                    : "border-[var(--op-line)] bg-transparent hover:border-[var(--ink-muted,#94a3b8)]"
                                 }`}
                         >
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${on ? "border-[var(--ink)] bg-[var(--ink)]" : "border-[var(--ink-faint,#e2e8f0)]"
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${on ? "border-[var(--op-indigo)] bg-[var(--op-indigo)]" : "border-[var(--op-line)]"
                                 }`}>
-                                {on && <Check className="w-3 h-3 text-[var(--canvas)]" />}
+                                {on && <Check className="w-3 h-3 text-white" />}
                             </div>
                             <div>
-                                <p className="text-xs font-semibold text-[var(--ink)]">{c.displayName}</p>
+                                <p className="text-xs font-semibold text-[var(--op-ink)]">{c.displayName}</p>
                                 <p className="text-[0.6rem] text-[var(--ink-muted,#94a3b8)] capitalize">{c.authType.replace("_", " ")}</p>
                             </div>
                         </button>
@@ -318,7 +318,7 @@ function ConnectToolsStep({ roleKey, onNext }: { roleKey: string; onNext: (paylo
             <button
                 onClick={proceed}
                 disabled={loading}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--ink)] px-5 py-3 text-sm font-semibold text-[var(--canvas)] hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--op-indigo)] px-5 py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-50"
             >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
                 Continue
@@ -359,30 +359,30 @@ function ConfigurePersonaStep({ roleKey, onNext }: { roleKey: string; onNext: (p
                 Give your agent an identity. External people will interact with it by this name and email.
             </p>
             <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-[var(--ink)]">Agent name</label>
+                <label className="text-xs font-semibold text-[var(--op-ink)]">Agent name</label>
                 <input
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     placeholder="e.g. Dev Bot"
-                    className="rounded-lg border border-[var(--ink-faint,#e2e8f0)] px-3 py-2 text-sm text-[var(--ink)] bg-transparent focus:outline-none focus:border-[var(--ink)]"
+                    className="rounded-lg border border-[var(--op-line)] px-3 py-2 text-sm text-[var(--op-ink)] bg-transparent focus:outline-none focus:border-[var(--op-indigo)]"
                 />
             </div>
             <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-[var(--ink)]">Agent email address</label>
+                <label className="text-xs font-semibold text-[var(--op-ink)]">Agent email address</label>
                 <input
                     type="email"
                     value={emailAddress}
                     onChange={(e) => setEmailAddress(e.target.value)}
                     placeholder="e.g. devbot@yourcompany.com"
-                    className="rounded-lg border border-[var(--ink-faint,#e2e8f0)] px-3 py-2 text-sm text-[var(--ink)] bg-transparent focus:outline-none focus:border-[var(--ink)]"
+                    className="rounded-lg border border-[var(--op-line)] px-3 py-2 text-sm text-[var(--op-ink)] bg-transparent focus:outline-none focus:border-[var(--op-indigo)]"
                 />
             </div>
             <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-[var(--ink)]">Communication style</label>
+                <label className="text-xs font-semibold text-[var(--op-ink)]">Communication style</label>
                 <select
                     value={communicationStyle}
                     onChange={(e) => setCommunicationStyle(e.target.value)}
-                    className="rounded-lg border border-[var(--ink-faint,#e2e8f0)] px-3 py-2 text-sm text-[var(--ink)] bg-transparent focus:outline-none focus:border-[var(--ink)]"
+                    className="rounded-lg border border-[var(--op-line)] px-3 py-2 text-sm text-[var(--op-ink)] bg-transparent focus:outline-none focus:border-[var(--op-indigo)]"
                 >
                     <option value="professional">Professional</option>
                     <option value="friendly">Friendly</option>
@@ -391,11 +391,11 @@ function ConfigurePersonaStep({ roleKey, onNext }: { roleKey: string; onNext: (p
                 </select>
             </div>
             <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-[var(--ink)]">Disclosure footer</label>
+                <label className="text-xs font-semibold text-[var(--op-ink)]">Disclosure footer</label>
                 <input
                     value={disclosureStatement}
                     onChange={(e) => setDisclosureStatement(e.target.value)}
-                    className="rounded-lg border border-[var(--ink-faint,#e2e8f0)] px-3 py-2 text-sm text-[var(--ink)] bg-transparent focus:outline-none focus:border-[var(--ink)]"
+                    className="rounded-lg border border-[var(--op-line)] px-3 py-2 text-sm text-[var(--op-ink)] bg-transparent focus:outline-none focus:border-[var(--op-indigo)]"
                 />
                 <p className="text-[0.6rem] text-[var(--ink-muted,#94a3b8)]">Appended to all outbound messages. Required for AI disclosure compliance.</p>
             </div>
@@ -403,7 +403,7 @@ function ConfigurePersonaStep({ roleKey, onNext }: { roleKey: string; onNext: (p
             <button
                 onClick={proceed}
                 disabled={loading}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--ink)] px-5 py-3 text-sm font-semibold text-[var(--canvas)] hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--op-indigo)] px-5 py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-50"
             >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
                 Continue
@@ -452,26 +452,26 @@ function SetApprovalRulesStep({ onNext }: { onNext: (payload: unknown) => Promis
                     <button
                         key={label}
                         onClick={() => set(!value)}
-                        className={`flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all ${value ? "border-[var(--ink)]" : "border-[var(--ink-faint,#e2e8f0)]"
+                        className={`flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all ${value ? "border-[var(--op-indigo)]" : "border-[var(--op-line)]"
                             }`}
                     >
-                        <div className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center shrink-0 border-2 transition-all ${value ? "bg-[var(--ink)] border-[var(--ink)]" : "border-[var(--ink-faint,#e2e8f0)]"
+                        <div className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center shrink-0 border-2 transition-all ${value ? "bg-[var(--op-indigo)] border-[var(--op-indigo)]" : "border-[var(--op-line)]"
                             }`}>
-                            {value && <Check className="w-3 h-3 text-[var(--canvas)]" />}
+                            {value && <Check className="w-3 h-3 text-white" />}
                         </div>
                         <div>
-                            <p className="text-sm font-semibold text-[var(--ink)]">{label}</p>
+                            <p className="text-sm font-semibold text-[var(--op-ink)]">{label}</p>
                             <p className="text-xs text-[var(--ink-muted,#94a3b8)]">{sublabel}</p>
                         </div>
                     </button>
                 ))}
             </div>
             <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-[var(--ink)]">Approval timeout</label>
+                <label className="text-xs font-semibold text-[var(--op-ink)]">Approval timeout</label>
                 <select
                     value={timeout}
                     onChange={(e) => setTimeout_(Number(e.target.value))}
-                    className="rounded-lg border border-[var(--ink-faint,#e2e8f0)] px-3 py-2 text-sm text-[var(--ink)] bg-transparent focus:outline-none focus:border-[var(--ink)]"
+                    className="rounded-lg border border-[var(--op-line)] px-3 py-2 text-sm text-[var(--op-ink)] bg-transparent focus:outline-none focus:border-[var(--op-indigo)]"
                 >
                     <option value={1800}>30 minutes</option>
                     <option value={3600}>1 hour</option>
@@ -485,7 +485,7 @@ function SetApprovalRulesStep({ onNext }: { onNext: (payload: unknown) => Promis
             <button
                 onClick={proceed}
                 disabled={loading}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--ink)] px-5 py-3 text-sm font-semibold text-[var(--canvas)] hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--op-indigo)] px-5 py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-50"
             >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
                 Continue
@@ -528,12 +528,12 @@ function DeployStep({
                     <CheckCircle2 className="w-7 h-7 text-emerald-600" />
                 </div>
                 <div>
-                    <h3 className="text-lg font-black text-[var(--ink)]">Your agent is being deployed!</h3>
+                    <h3 className="text-lg font-black text-[var(--op-ink)]">Your agent is being deployed!</h3>
                     <p className="text-sm text-[var(--ink-muted,#64748b)] mt-1">It will be active within a few minutes. Check the dashboard for status.</p>
                 </div>
                 <Link
                     href="/dashboard"
-                    className="inline-flex items-center gap-2 rounded-xl bg-[var(--ink)] px-5 py-3 text-sm font-semibold text-[var(--canvas)] hover:opacity-90 transition-opacity"
+                    className="inline-flex items-center gap-2 rounded-xl bg-[var(--op-indigo)] px-5 py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
                 >
                     <Rocket className="w-4 h-4" /> Go to dashboard
                 </Link>
@@ -544,7 +544,7 @@ function DeployStep({
     return (
         <div className="flex flex-col gap-5">
             <p className="text-sm text-[var(--ink-muted,#64748b)]">Review your configuration, then deploy.</p>
-            <div className="rounded-xl border border-[var(--ink-faint,#e2e8f0)] divide-y divide-[var(--ink-faint,#e2e8f0)]">
+            <div className="rounded-xl border border-[var(--op-line)] divide-y divide-[var(--op-line)]">
                 <Row icon={<User className="w-4 h-4" />} label="Role" value={meta?.displayName ?? session.selectedRole ?? "—"} />
                 <Row
                     icon={<Wrench className="w-4 h-4" />}
@@ -570,7 +570,7 @@ function DeployStep({
             <button
                 onClick={deploy}
                 disabled={loading}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--ink)] px-5 py-3 text-sm font-semibold text-[var(--canvas)] hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--op-indigo)] px-5 py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-50"
             >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
                 Deploy agent
@@ -584,7 +584,7 @@ function Row({ icon, label, value }: { icon: React.ReactNode; label: string; val
         <div className="flex items-center gap-3 px-4 py-3">
             <span className="text-[var(--ink-muted,#94a3b8)]">{icon}</span>
             <span className="text-xs font-semibold text-[var(--ink-muted,#64748b)] w-28 shrink-0">{label}</span>
-            <span className="text-sm text-[var(--ink)] truncate">{value}</span>
+            <span className="text-sm text-[var(--op-ink)] truncate">{value}</span>
         </div>
     );
 }
@@ -680,14 +680,14 @@ export default function HireWizardPage({ params }: Props) {
     const meta = ROLE_META[roleKey];
 
     return (
-        <div className="min-h-screen bg-[var(--canvas)] flex flex-col">
+        <div className="min-h-screen bg-[var(--op-paper)] flex flex-col">
             {/* Header */}
-            <header className="border-b border-[var(--ink-faint,#e2e8f0)] px-4 py-3">
+            <header className="border-b border-[var(--op-line)] px-4 py-3">
                 <div className="max-w-lg mx-auto flex items-center gap-3">
-                    <Link href={`/marketplace/${roleKey}`} className="text-[var(--ink-muted,#94a3b8)] hover:text-[var(--ink)] transition-colors">
+                    <Link href={`/marketplace/${roleKey}`} className="text-[var(--ink-muted,#94a3b8)] hover:text-[var(--op-ink)] transition-colors">
                         <ArrowLeft className="w-5 h-5" />
                     </Link>
-                    <span className="text-sm font-semibold text-[var(--ink)]">
+                    <span className="text-sm font-semibold text-[var(--op-ink)]">
                         Hire {meta?.displayName ?? roleKey} Agent
                     </span>
                 </div>
@@ -706,7 +706,7 @@ export default function HireWizardPage({ params }: Props) {
                     {!initialising && initError && (
                         <div className="flex flex-col items-center gap-4 py-12 text-center">
                             <AlertTriangle className="w-10 h-10 text-red-400" />
-                            <p className="text-sm text-[var(--ink)]">{initError}</p>
+                            <p className="text-sm text-[var(--op-ink)]">{initError}</p>
                             <Link href="/login" className="text-sm underline text-[var(--ink-muted,#64748b)]">
                                 Sign in to continue
                             </Link>
