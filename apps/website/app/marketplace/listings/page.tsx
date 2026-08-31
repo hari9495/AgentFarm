@@ -16,8 +16,8 @@ type Listing = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-    active: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
-    deprecated: 'bg-slate-500/20 text-slate-400 border border-slate-600/30',
+    active: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+    deprecated: 'bg-[color:var(--op-paper-3)] text-[color:var(--op-muted)] border border-[color:var(--op-line)]',
 };
 
 export default function MarketplaceListingsPage() {
@@ -77,19 +77,20 @@ export default function MarketplaceListingsPage() {
     });
 
     return (
-        <div className="min-h-screen bg-gray-950 text-slate-100">
+        <div className="min-h-screen bg-[var(--op-paper)] text-[color:var(--op-ink)]">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="mb-8">
                     <Link
                         href="/marketplace"
-                        className="text-sm text-slate-400 hover:text-slate-200 transition-colors"
+                        className="text-sm text-[color:var(--op-muted)] hover:text-[color:var(--op-ink)] transition-colors"
                     >
                         ← Back to Marketplace
                     </Link>
-                    <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-100">
+                    <p className="op-eyebrow mt-4 mb-2">Marketplace</p>
+                    <h1 className="font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight text-[color:var(--op-ink)]">
                         Live Skill Registry
                     </h1>
-                    <p className="mt-2 text-slate-400 text-base">
+                    <p className="mt-2 text-[color:var(--op-muted)] text-base">
                         All published skills available for installation on your agents.
                     </p>
                 </div>
@@ -100,12 +101,12 @@ export default function MarketplaceListingsPage() {
                         placeholder="Search skills..."
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        className="flex-1 rounded-xl bg-slate-800/80 border border-slate-700 px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500"
+                        className="flex-1 rounded-xl bg-[var(--op-paper-2)] border border-[color:var(--op-line)] px-4 py-2.5 text-sm text-[color:var(--op-ink)] placeholder-[color:var(--op-muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--op-indigo)]"
                     />
                     <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="rounded-xl bg-slate-800/80 border border-slate-700 px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-500"
+                        className="rounded-xl bg-[var(--op-paper-2)] border border-[color:var(--op-line)] px-4 py-2.5 text-sm text-[color:var(--op-ink)] focus:outline-none focus:ring-2 focus:ring-[color:var(--op-indigo)]"
                     >
                         <option value="">All statuses</option>
                         <option value="active">Active</option>
@@ -114,37 +115,37 @@ export default function MarketplaceListingsPage() {
                     <button
                         type="button"
                         onClick={() => void fetchListings()}
-                        className="rounded-xl bg-slate-800 border border-slate-700 px-4 py-2.5 text-sm font-medium text-slate-200 hover:bg-slate-700 transition-colors"
+                        className="rounded-xl bg-[var(--op-paper-2)] border border-[color:var(--op-line)] px-4 py-2.5 text-sm font-medium text-[color:var(--op-ink)] hover:bg-[color:var(--op-paper-3)] transition-colors"
                     >
                         Refresh
                     </button>
                 </div>
 
                 {!needsAuth && error && (
-                    <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-300">
+                    <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
                         {error}
                     </div>
                 )}
 
                 {loading ? (
-                    <div className="text-slate-400 text-sm py-8 text-center">Loading listings...</div>
+                    <div className="text-[color:var(--op-muted)] text-sm py-8 text-center">Loading listings...</div>
                 ) : needsAuth ? (
-                    <div className="rounded-2xl bg-slate-900/80 border border-slate-700/60 px-6 py-12 text-center">
-                        <h2 className="text-lg font-semibold text-slate-100">
+                    <div className="rounded-2xl bg-[var(--op-paper)] border border-[color:var(--op-line)] px-6 py-12 text-center">
+                        <h2 className="text-lg font-semibold text-[color:var(--op-ink)]">
                             Sign in to browse the skill registry
                         </h2>
-                        <p className="mt-1.5 text-sm text-slate-400">
+                        <p className="mt-1.5 text-sm text-[color:var(--op-muted)]">
                             Published skills are available to logged-in accounts.
                         </p>
                         <Link
                             href="/portal/login"
-                            className="mt-5 inline-flex items-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+                            className="mt-5 inline-flex items-center rounded-xl bg-[color:var(--op-indigo)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[color:var(--op-indigo-ink)] transition-colors"
                         >
                             Sign in
                         </Link>
                     </div>
                 ) : filtered.length === 0 ? (
-                    <div className="text-slate-500 text-sm py-8 text-center">
+                    <div className="text-[color:var(--op-muted)] text-sm py-8 text-center">
                         No listings match your filters.
                     </div>
                 ) : (
@@ -152,25 +153,25 @@ export default function MarketplaceListingsPage() {
                         {filtered.map((listing) => (
                             <article
                                 key={listing.id}
-                                className="rounded-2xl bg-slate-900/80 border border-slate-700/60 p-5 flex flex-col gap-3 hover:border-slate-500/60 transition-colors"
+                                className="rounded-2xl bg-[var(--op-paper)] border border-[color:var(--op-line)] p-5 flex flex-col gap-3 hover:border-[color:var(--op-indigo)] transition-colors"
                             >
                                 <div className="flex items-start justify-between gap-2">
                                     <div>
-                                        <h2 className="text-base font-semibold text-slate-100">{listing.name}</h2>
-                                        <p className="text-xs text-slate-500 mt-0.5">{listing.skillId} · v{listing.version}</p>
+                                        <h2 className="text-base font-semibold text-[color:var(--op-ink)]">{listing.name}</h2>
+                                        <p className="text-xs text-[color:var(--op-muted)] mt-0.5">{listing.skillId} · v{listing.version}</p>
                                     </div>
                                     <span
-                                        className={`text-xs font-bold px-2 py-0.5 rounded ${STATUS_COLORS[listing.status] ?? 'bg-slate-700 text-slate-400'}`}
+                                        className={`text-xs font-bold px-2 py-0.5 rounded ${STATUS_COLORS[listing.status] ?? 'bg-[var(--op-paper-2)] text-[color:var(--op-muted)]'}`}
                                     >
                                         {listing.status}
                                     </span>
                                 </div>
 
                                 {listing.description && (
-                                    <p className="text-sm text-slate-400 line-clamp-2">{listing.description}</p>
+                                    <p className="text-sm text-[color:var(--op-muted)] line-clamp-2">{listing.description}</p>
                                 )}
 
-                                <div className="flex flex-wrap gap-1.5 text-xs text-slate-500">
+                                <div className="flex flex-wrap gap-1.5 text-xs text-[color:var(--op-muted)]">
                                     {listing.author && <span>by {listing.author}</span>}
                                     {listing.source && (
                                         <span className="truncate max-w-[180px]" title={listing.source}>
@@ -184,7 +185,7 @@ export default function MarketplaceListingsPage() {
                 )}
 
                 {!needsAuth && (
-                    <p className="mt-6 text-xs text-slate-600">
+                    <p className="mt-6 text-xs text-[color:var(--op-muted)]">
                         Showing {filtered.length} of {listings.length} listings
                     </p>
                 )}
