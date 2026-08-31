@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { CheckCircle2 } from 'lucide-react';
 import SubPageHero from '@/components/shared/SubPageHero';
 import SharedCTA from '@/components/shared/SharedCTA';
-import IntegrationsCardGrid from '@/components/integrations/IntegrationsCardGrid';
+import IntegrationsCardGrid, { ConnectorLogo, CONNECTOR_LOGOS } from '@/components/integrations/IntegrationsCardGrid';
 
 export const metadata: Metadata = {
   title: 'Integrations — 18 AgentFarms Connectors and Workflows',
@@ -90,9 +90,9 @@ export default function IntegrationsPage() {
           <div className="mx-auto w-full max-w-sm rounded-2xl p-6" style={{ background: 'var(--op-paper)', border: '1px solid var(--op-line)', boxShadow: '0 24px 50px -28px rgba(16,24,40,0.22)' }}>
             <p className="mb-4 font-[family-name:var(--font-mono)] text-[11px] uppercase tracking-[0.14em]" style={{ color: 'var(--op-muted)' }}>{totalConnectors} connectors live</p>
             <div className="grid grid-cols-4 gap-2.5">
-              {categories.flatMap((c) => c.connectors).slice(0, 12).map((c) => (
-                <div key={c.name} className="flex aspect-square items-center justify-center rounded-xl text-[12px] font-bold" style={{ background: 'var(--op-paper-2)', border: '1px solid var(--op-line)', color: 'var(--op-indigo)' }} title={c.name}>
-                  {c.name.slice(0, 2).toUpperCase()}
+              {[...new Set(categories.flatMap((c) => c.connectors).map((c) => c.name).filter((n) => CONNECTOR_LOGOS[n]))].slice(0, 12).map((name) => (
+                <div key={name} className="flex aspect-square items-center justify-center" title={name}>
+                  <ConnectorLogo name={name} size={52} />
                 </div>
               ))}
             </div>

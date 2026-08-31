@@ -16,14 +16,44 @@ export interface ConnectorCategory {
   connectors: Connector[];
 }
 
+/** Real brand SVGs (svgl.app, served locally). Missing brands fall back to a monogram. */
+export const CONNECTOR_LOGOS: Record<string, string> = {
+  GitHub: '/connector-logos/github.svg',
+  'GitHub Actions': '/connector-logos/github.svg',
+  GitLab: '/connector-logos/gitlab.svg',
+  Linear: '/connector-logos/linear.svg',
+  Asana: '/connector-logos/asana.svg',
+  Notion: '/connector-logos/notion.svg',
+  Slack: '/connector-logos/slack.svg',
+  'Microsoft Teams': '/connector-logos/teams.svg',
+  Gmail: '/connector-logos/gmail.svg',
+  Outlook: '/connector-logos/outlook.svg',
+  Salesforce: '/connector-logos/salesforce.svg',
+  Azure: '/connector-logos/azure.svg',
+};
+
+export function ConnectorLogo({ name, size = 40 }: { name: string; size?: number }) {
+  const src = CONNECTOR_LOGOS[name];
+  if (src) {
+    return (
+      <div className="flex items-center justify-center rounded-[10px]" style={{ width: size, height: size, background: 'var(--op-paper-2)', border: '1px solid var(--op-line)' }}>
+        <img src={src} alt={name} style={{ width: size * 0.6, height: size * 0.6, objectFit: 'contain' }} loading="lazy" />
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center justify-center rounded-[10px] text-[13px] font-bold" style={{ width: size, height: size, background: 'var(--op-indigo-soft)', color: 'var(--op-indigo)' }}>
+      {name.slice(0, 2).toUpperCase()}
+    </div>
+  );
+}
+
 function IntegrationCard({ c }: { c: Connector }) {
   const ga = c.status === 'GA';
   return (
     <div className="op-lift rounded-2xl p-6" style={{ background: 'var(--op-paper)', border: '1px solid var(--op-line)' }}>
       <div className="flex items-start justify-between gap-2">
-        <div className="flex h-10 w-10 items-center justify-center rounded-[10px] text-[13px] font-bold" style={{ background: 'var(--op-indigo-soft)', color: 'var(--op-indigo)' }}>
-          {c.name.slice(0, 2).toUpperCase()}
-        </div>
+        <ConnectorLogo name={c.name} size={40} />
         <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.05em]" style={{ background: ga ? 'var(--op-indigo-soft)' : 'var(--op-pending-soft, #fdeecd)', color: ga ? 'var(--op-indigo)' : 'var(--op-pending)' }}>
           {c.status}
         </span>
