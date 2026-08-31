@@ -160,13 +160,13 @@ export default async function TesterMarketplacePage() {
     }
 
     return (
-        <div className="min-h-screen bg-[var(--canvas)] text-[var(--body-color)]">
+        <div className="min-h-screen bg-[var(--op-paper)] text-[var(--op-ink-soft)]">
 
             {/* Breadcrumb */}
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
                 <Link
                     href="/marketplace"
-                    className="inline-flex items-center gap-1.5 text-sm text-[var(--mute)] hover:text-[var(--ink)] transition-colors"
+                    className="inline-flex items-center gap-1.5 text-sm text-[var(--op-muted)] hover:text-[var(--op-ink)] transition-colors"
                 >
                     <ArrowLeft className="h-3.5 w-3.5" />
                     Marketplace
@@ -179,15 +179,15 @@ export default async function TesterMarketplacePage() {
 
                     {/* Left: identity + social proof */}
                     <div className="flex-1 min-w-0">
-                        <span className="inline-flex items-center rounded-full bg-emerald-500/10 text-[var(--accent-green)] border border-emerald-500/20 px-3 py-1 text-xs font-semibold mb-4">
+                        <span className="inline-flex items-center rounded-full bg-emerald-500/10 text-[var(--op-approved)] border border-emerald-500/20 px-3 py-1 text-xs font-semibold mb-4">
                             Quality Assurance
                         </span>
-                        <h1 className="text-3xl sm:text-4xl font-semibold text-[var(--ink)] tracking-tight leading-tight">
+                        <h1 className="font-[family-name:var(--font-display)] text-3xl sm:text-4xl font-extrabold text-[var(--op-ink)] tracking-tight leading-tight">
                             AI Tester Agent
                         </h1>
-                        <p className="mt-3 text-[var(--mute)] text-base sm:text-lg max-w-xl leading-relaxed">
+                        <p className="mt-3 text-[var(--op-muted)] text-base sm:text-lg max-w-xl leading-relaxed">
                             A complete QA platform in one AI agent — works with{" "}
-                            <strong className="text-[var(--ink)]">any programming language and any framework</strong>.
+                            <strong className="text-[var(--op-ink)]">any programming language and any framework</strong>.
                             Manual desktop testing, Selenium/Playwright/Cypress/Appium automation, k6 &amp; JMeter
                             load testing, Postman API testing, OWASP ZAP security scans, and
                             TestRail/Zephyr test management.
@@ -195,54 +195,54 @@ export default async function TesterMarketplacePage() {
 
                         {/* Social proof row */}
                         <div className="mt-6 flex flex-wrap items-center gap-4">
-                            <div className="flex items-center gap-1.5 rounded-lg bg-[var(--surface-el)] border border-[var(--hairline)] px-3 py-1.5 text-sm">
+                            <div className="flex items-center gap-1.5 rounded-lg bg-[var(--op-paper-2)] border border-[var(--op-line)] px-3 py-1.5 text-sm">
                                 <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400 shrink-0" aria-hidden="true" />
-                                <strong className="text-[var(--ink)]">{SOCIAL_PROOF.rating}</strong>
-                                <span className="text-[var(--mute)]">rating</span>
+                                <strong className="text-[var(--op-ink)]">{SOCIAL_PROOF.rating}</strong>
+                                <span className="text-[var(--op-muted)]">rating</span>
                             </div>
-                            <div className="flex items-center gap-1.5 rounded-lg bg-[var(--surface-el)] border border-[var(--hairline)] px-3 py-1.5 text-sm">
-                                <Users className="h-3.5 w-3.5 text-[var(--mute)] shrink-0" aria-hidden="true" />
-                                <strong className="text-[var(--ink)]">{SOCIAL_PROOF.teams}</strong>
-                                <span className="text-[var(--mute)]">teams</span>
+                            <div className="flex items-center gap-1.5 rounded-lg bg-[var(--op-paper-2)] border border-[var(--op-line)] px-3 py-1.5 text-sm">
+                                <Users className="h-3.5 w-3.5 text-[var(--op-muted)] shrink-0" aria-hidden="true" />
+                                <strong className="text-[var(--op-ink)]">{SOCIAL_PROOF.teams}</strong>
+                                <span className="text-[var(--op-muted)]">teams</span>
                             </div>
-                            <div className="flex items-center gap-1.5 rounded-lg bg-[var(--surface-el)] border border-[var(--hairline)] px-3 py-1.5 text-sm">
-                                <Clock className="h-3.5 w-3.5 text-[var(--mute)] shrink-0" aria-hidden="true" />
-                                <span className="text-[var(--mute)]">~</span>
-                                <strong className="text-[var(--ink)]">{SOCIAL_PROOF.hoursPerMonth}h</strong>
-                                <span className="text-[var(--mute)]">saved/mo</span>
+                            <div className="flex items-center gap-1.5 rounded-lg bg-[var(--op-paper-2)] border border-[var(--op-line)] px-3 py-1.5 text-sm">
+                                <Clock className="h-3.5 w-3.5 text-[var(--op-muted)] shrink-0" aria-hidden="true" />
+                                <span className="text-[var(--op-muted)]">~</span>
+                                <strong className="text-[var(--op-ink)]">{SOCIAL_PROOF.hoursPerMonth}h</strong>
+                                <span className="text-[var(--op-muted)]">saved/mo</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Right: pricing card */}
-                    <div className="shrink-0 w-full sm:w-64 rounded-2xl border border-[var(--hairline)] bg-[var(--surface-el)] p-5 flex flex-col gap-4 self-start">
+                    <div className="shrink-0 w-full sm:w-64 rounded-2xl border border-[var(--op-line)] bg-[var(--op-paper-2)] p-5 flex flex-col gap-4 self-start">
                         <div>
-                            <p className="text-2xl font-bold text-[var(--ink)]">
+                            <p className="text-2xl font-bold text-[var(--op-ink)]">
                                 {PRICING.seat.amount}
-                                <span className="text-sm font-normal text-[var(--mute)]">{PRICING.seat.period}</span>
+                                <span className="text-sm font-normal text-[var(--op-muted)]">{PRICING.seat.period}</span>
                             </p>
-                            <p className="text-xs text-[var(--mute)] mt-0.5">per agent seat</p>
+                            <p className="text-xs text-[var(--op-muted)] mt-0.5">per agent seat</p>
                         </div>
-                        <ul className="space-y-2.5 text-sm border-t border-[var(--hairline)] pt-4">
+                        <ul className="space-y-2.5 text-sm border-t border-[var(--op-line)] pt-4">
                             <li className="flex items-center justify-between gap-2">
-                                <span className="text-[var(--mute)]">{PRICING.perTask.label}</span>
-                                <strong className="text-[var(--ink)] shrink-0">{PRICING.perTask.amount}</strong>
+                                <span className="text-[var(--op-muted)]">{PRICING.perTask.label}</span>
+                                <strong className="text-[var(--op-ink)] shrink-0">{PRICING.perTask.amount}</strong>
                             </li>
                             <li className="flex items-center justify-between gap-2">
-                                <span className="text-[var(--mute)]">{PRICING.approvals.label}</span>
-                                <strong className="text-[var(--accent-green)] shrink-0">{PRICING.approvals.amount}</strong>
+                                <span className="text-[var(--op-muted)]">{PRICING.approvals.label}</span>
+                                <strong className="text-[var(--op-approved)] shrink-0">{PRICING.approvals.amount}</strong>
                             </li>
                             <li className="flex items-center justify-between gap-2">
-                                <span className="text-[var(--mute)]">{PRICING.support.label}</span>
-                                <strong className="text-[var(--accent-green)] shrink-0">{PRICING.support.amount}</strong>
+                                <span className="text-[var(--op-muted)]">{PRICING.support.label}</span>
+                                <strong className="text-[var(--op-approved)] shrink-0">{PRICING.support.amount}</strong>
                             </li>
                         </ul>
                         <HireAgentButton
                             roleKey="tester"
                             source="marketplace-tester"
-                            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--ink)] px-4 py-3 text-sm font-semibold text-[var(--canvas)] hover:opacity-90 active:scale-[0.98] transition-all"
+                            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--op-indigo)] px-4 py-3 text-sm font-semibold text-white hover:opacity-90 active:scale-[0.98] transition-all"
                         />
-                        <p className="text-[11px] text-[var(--mute)] text-center leading-relaxed">
+                        <p className="text-[11px] text-[var(--op-muted)] text-center leading-relaxed">
                             Setup wizard takes &lt; 5 minutes.
                             <br />Cancel any time.
                         </p>
@@ -252,12 +252,12 @@ export default async function TesterMarketplacePage() {
 
             {/* Divider */}
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                <hr className="border-t border-[var(--hairline)]" />
+                <hr className="border-t border-[var(--op-line)]" />
             </div>
 
             {/* Connectors — visible only after purchase */}
             <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-                <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[var(--mute)] mb-4">
+                <h2 className="text-[11px] font-semibold uppercase tracking-widest text-[var(--op-muted)] mb-4">
                     Works with your stack
                 </h2>
                 {hasTesterAgent ? (
@@ -285,12 +285,12 @@ export default async function TesterMarketplacePage() {
                             ))}
                         </div>
                         {/* Lock overlay */}
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-xl bg-[var(--canvas)]/80 backdrop-blur-sm">
-                            <Lock className="h-5 w-5 text-[var(--mute)]" aria-hidden="true" />
-                            <p className="text-sm font-medium text-[var(--ink)]">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-xl bg-[var(--op-paper)]/80 backdrop-blur-sm">
+                            <Lock className="h-5 w-5 text-[var(--op-muted)]" aria-hidden="true" />
+                            <p className="text-sm font-medium text-[var(--op-ink)]">
                                 Available after hiring the Tester agent
                             </p>
-                            <p className="text-xs text-[var(--mute)] text-center max-w-xs">
+                            <p className="text-xs text-[var(--op-muted)] text-center max-w-xs">
                                 18 integrations across automation, performance, API, security, and test management tools — unlocked when you set up your agent.
                             </p>
                         </div>
@@ -300,32 +300,32 @@ export default async function TesterMarketplacePage() {
 
             {/* Divider */}
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                <hr className="border-t border-[var(--hairline)]" />
+                <hr className="border-t border-[var(--op-line)]" />
             </div>
 
             {/* Capabilities */}
             <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <h2 className="text-xl font-semibold text-[var(--ink)] mb-6">Testing disciplines</h2>
+                <h2 className="text-xl font-semibold text-[var(--op-ink)] mb-6">Testing disciplines</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {TESTING_CATEGORIES.map((cat) => {
                         const Icon = cat.icon;
                         return (
                             <div
                                 key={cat.title}
-                                className="rounded-xl border border-[var(--hairline)] bg-[var(--surface-el)] p-5 hover:border-emerald-500/30 hover:-translate-y-0.5 transition-all duration-200"
+                                className="rounded-xl border border-[var(--op-line)] bg-[var(--op-paper-2)] p-5 hover:border-emerald-500/30 hover:-translate-y-0.5 transition-all duration-200"
                             >
                                 <div className="flex items-center gap-2.5 mb-2">
                                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10">
-                                        <Icon className="h-3.5 w-3.5 text-[var(--accent-green)]" aria-hidden="true" />
+                                        <Icon className="h-3.5 w-3.5 text-[var(--op-approved)]" aria-hidden="true" />
                                     </div>
-                                    <h3 className="text-sm font-semibold text-[var(--ink)]">{cat.title}</h3>
+                                    <h3 className="text-sm font-semibold text-[var(--op-ink)]">{cat.title}</h3>
                                 </div>
                                 <div className="flex flex-wrap gap-1 mb-2.5">
                                     {cat.tools.map((t) => (
-                                        <span key={t} className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-emerald-500/10 text-[var(--accent-green)] border border-emerald-500/20">{t}</span>
+                                        <span key={t} className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-emerald-500/10 text-[var(--op-approved)] border border-emerald-500/20">{t}</span>
                                     ))}
                                 </div>
-                                <p className="text-sm text-[var(--mute)] leading-relaxed">{cat.detail}</p>
+                                <p className="text-sm text-[var(--op-muted)] leading-relaxed">{cat.detail}</p>
                             </div>
                         );
                     })}
@@ -334,16 +334,16 @@ export default async function TesterMarketplacePage() {
 
             {/* Divider */}
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                <hr className="border-t border-[var(--hairline)]" />
+                <hr className="border-t border-[var(--op-line)]" />
             </div>
 
             {/* Sample tasks */}
             <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <h2 className="text-xl font-semibold text-[var(--ink)] mb-5">Sample tasks it handles</h2>
+                <h2 className="text-xl font-semibold text-[var(--op-ink)] mb-5">Sample tasks it handles</h2>
                 <ul className="space-y-3">
                     {SAMPLE_TASKS.map((task) => (
-                        <li key={task} className="flex items-start gap-3 rounded-lg border border-[var(--hairline)] bg-[var(--surface-el)] px-4 py-3 text-sm text-[var(--body-color)]">
-                            <CheckCircle2 className="h-4 w-4 text-[var(--accent-green)] shrink-0 mt-0.5" aria-hidden="true" />
+                        <li key={task} className="flex items-start gap-3 rounded-lg border border-[var(--op-line)] bg-[var(--op-paper-2)] px-4 py-3 text-sm text-[var(--op-ink-soft)]">
+                            <CheckCircle2 className="h-4 w-4 text-[var(--op-approved)] shrink-0 mt-0.5" aria-hidden="true" />
                             {task}
                         </li>
                     ))}
@@ -352,18 +352,18 @@ export default async function TesterMarketplacePage() {
 
             {/* Divider */}
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                <hr className="border-t border-[var(--hairline)]" />
+                <hr className="border-t border-[var(--op-line)]" />
             </div>
 
             {/* Sample triage report */}
             <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <h2 className="text-xl font-semibold text-[var(--ink)] mb-5">Sample CI triage report</h2>
-                <div className="rounded-xl border border-[var(--hairline)] overflow-hidden">
-                    <div className="bg-[var(--surface-el)] border-b border-[var(--hairline)] px-5 py-3 flex items-center gap-2">
-                        <Bug className="h-4 w-4 text-[var(--accent-green)] shrink-0" aria-hidden="true" />
-                        <span className="text-sm font-semibold text-[var(--ink)] truncate">{SAMPLE_REPORT.title}</span>
+                <h2 className="text-xl font-semibold text-[var(--op-ink)] mb-5">Sample CI triage report</h2>
+                <div className="rounded-xl border border-[var(--op-line)] overflow-hidden">
+                    <div className="bg-[var(--op-paper-2)] border-b border-[var(--op-line)] px-5 py-3 flex items-center gap-2">
+                        <Bug className="h-4 w-4 text-[var(--op-approved)] shrink-0" aria-hidden="true" />
+                        <span className="text-sm font-semibold text-[var(--op-ink)] truncate">{SAMPLE_REPORT.title}</span>
                     </div>
-                    <pre className="bg-[var(--surface-card)] px-5 py-4 text-xs text-[var(--mute)] whitespace-pre-wrap font-mono leading-relaxed overflow-x-auto">
+                    <pre className="bg-[var(--op-paper)] px-5 py-4 text-xs text-[var(--op-muted)] whitespace-pre-wrap font-mono leading-relaxed overflow-x-auto">
                         {SAMPLE_REPORT.body}
                     </pre>
                 </div>
@@ -371,19 +371,19 @@ export default async function TesterMarketplacePage() {
 
             {/* Divider */}
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                <hr className="border-t border-[var(--hairline)]" />
+                <hr className="border-t border-[var(--op-line)]" />
             </div>
 
             {/* Bottom CTA */}
             <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 pb-20">
-                <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-[var(--surface-el)] p-10 text-center">
+                <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-[var(--op-paper-2)] p-10 text-center">
                     {/* Subtle green glow backdrop */}
                     <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/5 via-transparent to-emerald-500/5" aria-hidden="true" />
                     <div className="relative">
-                        <h2 className="text-2xl font-semibold text-[var(--ink)] mb-2">
+                        <h2 className="text-2xl font-semibold text-[var(--op-ink)] mb-2">
                             Ready to hire your AI tester?
                         </h2>
-                        <p className="text-sm text-[var(--mute)] mb-7 max-w-md mx-auto leading-relaxed">
+                        <p className="text-sm text-[var(--op-muted)] mb-7 max-w-md mx-auto leading-relaxed">
                             Connect your repos, CI pipeline, and test management tools, configure the agent
                             persona, and deploy your full-stack QA agent \u2014 in under 5 minutes.
                         </p>
