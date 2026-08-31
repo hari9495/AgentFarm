@@ -70,6 +70,7 @@
 .op-section { padding-top: 96px; padding-bottom: 96px; }
 .op-wrap { margin-inline: auto; max-width: 1200px; padding-inline: 24px; }
 .op-wrap-narrow { margin-inline: auto; max-width: 780px; padding-inline: 24px; }
+.op-wrap-wide { margin-inline: auto; max-width: 1320px; padding-inline: 24px; }
 .op-light { background: var(--op-paper); color: var(--op-ink); }
 .op-soft { background: var(--op-paper-2); color: var(--op-ink); }
 /* op-dark retired to a calm soft-brand wash instead of near-black */

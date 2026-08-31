@@ -95,7 +95,7 @@ function AgentFlipCard({ bot, index }: { bot: Bot; index: number }) {
             transition={{ duration: 0.28, delay: Math.min(index * 0.04, 0.5) }}
             className="relative rounded-[18px] overflow-hidden"
             style={{
-                border: inCart ? "2px solid #0066cc" : "1px solid #d2d2d7",
+                border: inCart ? "2px solid var(--op-indigo)" : "1px solid var(--op-line)",
                 background: "#ffffff",
                 boxShadow: hovered ? "0 8px 24px -10px rgba(0,0,0,0.15)" : "none",
                 transition: "box-shadow 200ms ease",
@@ -127,24 +127,24 @@ function AgentFlipCard({ bot, index }: { bot: Bot; index: number }) {
                                     />
                                 </div>
                             ) : (
-                                <div className="rounded-2xl flex items-center justify-center" style={{ width: 96, height: 96, background: "rgba(0,102,204,0.08)" }}>
-                                    <FallbackIcon className="w-10 h-10 text-[#0066cc]" />
+                                <div className="rounded-2xl flex items-center justify-center" style={{ width: 96, height: 96, background: "var(--op-indigo-soft)" }}>
+                                    <FallbackIcon className="w-10 h-10 text-[var(--op-indigo)]" />
                                 </div>
                             )}
                             {bot.available && (
-                                <span className="absolute rounded-full bg-[#34c759]" style={{ width: 13, height: 13, bottom: 0, right: 0, border: "2.5px solid white" }} />
+                                <span className="absolute rounded-full bg-[var(--op-approved)]" style={{ width: 13, height: 13, bottom: 0, right: 0, border: "2.5px solid white" }} />
                             )}
                         </div>
 
                         {/* Name */}
-                        <p className="font-semibold text-[#1d1d1f] text-center leading-snug" style={{ fontSize: "14px", letterSpacing: "-0.01em" }}>
+                        <p className="font-semibold text-[var(--op-ink)] text-center leading-snug" style={{ fontSize: "14px", letterSpacing: "-0.01em" }}>
                             {bot.name.replace("AI ", "")}
                         </p>
 
                         {/* Read More — always visible (not hover-only) */}
                         <button
                             onClick={() => { setShowBack(true); track({ type: "bot_peek_toggle", slug: bot.slug, name: bot.name, open: true }); }}
-                            className="flex items-center gap-1 text-[12px] font-semibold text-[#0066cc] hover:text-[#0071e3] transition-colors cursor-pointer"
+                            className="flex items-center gap-1 text-[12px] font-semibold text-[var(--op-indigo)] hover:text-[var(--op-indigo-ink)] transition-colors cursor-pointer"
                         >
                             Read More <ArrowRight className="w-3 h-3" />
                         </button>
@@ -159,21 +159,21 @@ function AgentFlipCard({ bot, index }: { bot: Bot; index: number }) {
                         transition={{ duration: 0.2 }}
                     >
                         {/* Header */}
-                        <div className="flex items-start justify-between px-4 pt-4 pb-3" style={{ borderBottom: "1px solid #f0f0f0" }}>
+                        <div className="flex items-start justify-between px-4 pt-4 pb-3" style={{ borderBottom: "1px solid var(--op-line)" }}>
                             <div className="flex-1 min-w-0 pr-2">
                                 <span
                                     className="inline-block text-[10px] font-semibold uppercase tracking-[0.05em] px-1.5 py-0.5 rounded"
-                                    style={{ background: "rgba(0,102,204,0.08)", color: "#0066cc", lineHeight: 1.5 }}
+                                    style={{ background: "var(--op-indigo-soft)", color: "var(--op-indigo)", lineHeight: 1.5 }}
                                 >
                                     {DEPT_SHORT[bot.department as BotDepartment] ?? bot.department}
                                 </span>
-                                <p className="font-semibold text-[#1d1d1f] text-[14px] mt-1.5 leading-snug" style={{ letterSpacing: "-0.015em" }}>
+                                <p className="font-semibold text-[var(--op-ink)] text-[14px] mt-1.5 leading-snug" style={{ letterSpacing: "-0.015em" }}>
                                     {bot.name.replace("AI ", "")}
                                 </p>
                             </div>
                             <button
                                 onClick={() => setShowBack(false)}
-                                className="shrink-0 mt-0.5 text-[#aeaeb2] hover:text-[#6e6e73] transition-colors cursor-pointer"
+                                className="shrink-0 mt-0.5 text-[var(--op-muted)] hover:text-[var(--op-muted)] transition-colors cursor-pointer"
                                 aria-label="Go back"
                             >
                                 <X className="w-4 h-4" />
@@ -183,19 +183,19 @@ function AgentFlipCard({ bot, index }: { bot: Bot; index: number }) {
                         {/* Body — no height limit, all content visible */}
                         <div className="px-4 py-3 space-y-3">
                             {/* Tagline */}
-                            <p className="text-[12px] font-semibold text-[#0066cc]" style={{ lineHeight: 1.5 }}>
+                            <p className="text-[12px] font-semibold text-[var(--op-indigo)]" style={{ lineHeight: 1.5 }}>
                                 {bot.tagline}
                             </p>
 
                             {/* Description */}
-                            <p className="text-[12px] text-[#6e6e73]" style={{ lineHeight: 1.6 }}>
+                            <p className="text-[12px] text-[var(--op-muted)]" style={{ lineHeight: 1.6 }}>
                                 {bot.description}
                             </p>
 
                             {/* Skills */}
                             <div className="flex flex-wrap gap-1.5">
                                 {bot.skills.slice(0, 4).map((s) => (
-                                    <span key={s} className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: "#f5f5f7", color: "#6e6e73" }}>
+                                    <span key={s} className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: "var(--op-paper-2)", color: "var(--op-muted)" }}>
                                         {s}
                                     </span>
                                 ))}
@@ -203,12 +203,12 @@ function AgentFlipCard({ bot, index }: { bot: Bot; index: number }) {
                         </div>
 
                         {/* Footer */}
-                        <div className="flex items-center justify-between px-4 py-3" style={{ borderTop: "1px solid #f0f0f0" }}>
+                        <div className="flex items-center justify-between px-4 py-3" style={{ borderTop: "1px solid var(--op-line)" }}>
                             <div>
-                                <p className="font-semibold text-[#1d1d1f] text-[15px]" style={{ letterSpacing: "-0.02em", lineHeight: 1 }}>
+                                <p className="font-semibold text-[var(--op-ink)] text-[15px]" style={{ letterSpacing: "-0.02em", lineHeight: 1 }}>
                                     {bot.price}
                                 </p>
-                                <p className="text-[10px] text-[#aeaeb2] mt-0.5">{bot.plan}</p>
+                                <p className="text-[10px] text-[var(--op-muted)] mt-0.5">{bot.plan}</p>
                             </div>
                             <AddToCartButton bot={bot} compact />
                         </div>
@@ -271,19 +271,19 @@ export default function MarketplaceGrid() {
             <div className="flex flex-wrap items-center gap-3 mb-6">
                 {/* Search */}
                 <div className="relative flex-1 min-w-[200px]">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#aeaeb2] pointer-events-none" />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--op-muted)] pointer-events-none" />
                     <input
                         type="search"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="Search by role, skill, or department..."
-                        className="w-full pl-10 pr-8 py-2.5 text-[14px] text-[#1d1d1f] placeholder:text-[#aeaeb2] outline-none"
-                        style={{ border: "1px solid #d2d2d7", borderRadius: 11, background: "#ffffff" }}
-                        onFocus={(e) => (e.currentTarget.style.borderColor = "#0066cc")}
-                        onBlur={(e) => (e.currentTarget.style.borderColor = "#d2d2d7")}
+                        className="w-full pl-10 pr-8 py-2.5 text-[14px] text-[var(--op-ink)] placeholder:text-[var(--op-muted)] outline-none"
+                        style={{ border: "1px solid var(--op-line)", borderRadius: 11, background: "#ffffff" }}
+                        onFocus={(e) => (e.currentTarget.style.borderColor = "var(--op-indigo)")}
+                        onBlur={(e) => (e.currentTarget.style.borderColor = "var(--op-line)")}
                     />
                     {search && (
-                        <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#aeaeb2] hover:text-[#6e6e73] cursor-pointer">
+                        <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--op-muted)] hover:text-[var(--op-muted)] cursor-pointer">
                             <X className="w-3.5 h-3.5" />
                         </button>
                     )}
@@ -294,11 +294,11 @@ export default function MarketplaceGrid() {
                     onClick={() => setOnlyAvailable(!onlyAvailable)}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-full text-[13px] font-medium transition-colors cursor-pointer shrink-0"
                     style={{
-                        background: onlyAvailable ? "#34c759" : "#f5f5f7",
-                        color: onlyAvailable ? "#ffffff" : "#6e6e73",
+                        background: onlyAvailable ? "var(--op-approved)" : "var(--op-paper-2)",
+                        color: onlyAvailable ? "#ffffff" : "var(--op-muted)",
                     }}
                 >
-                    <span className={`w-1.5 h-1.5 rounded-full ${onlyAvailable ? "bg-white" : "bg-[#34c759]"}`} />
+                    <span className={`w-1.5 h-1.5 rounded-full ${onlyAvailable ? "bg-white" : "bg-[var(--op-approved)]"}`} />
                     Live now
                 </button>
 
@@ -306,14 +306,14 @@ export default function MarketplaceGrid() {
                 <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as SortOption)}
-                    className="px-3 py-2 text-[13px] text-[#1d1d1f] rounded-[11px] outline-none cursor-pointer shrink-0"
-                    style={{ border: "1px solid #d2d2d7", background: "#ffffff" }}
+                    className="px-3 py-2 text-[13px] text-[var(--op-ink)] rounded-[11px] outline-none cursor-pointer shrink-0"
+                    style={{ border: "1px solid var(--op-line)", background: "#ffffff" }}
                 >
                     {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
 
                 {/* Count */}
-                <span className="text-[12px] text-[#aeaeb2] shrink-0">{filtered.length} / {marketplaceBots.length}</span>
+                <span className="text-[12px] text-[var(--op-muted)] shrink-0">{filtered.length} / {marketplaceBots.length}</span>
             </div>
 
             {/* ── Dept filter pills ── */}
@@ -321,7 +321,7 @@ export default function MarketplaceGrid() {
                 <button
                     onClick={() => setDept("all")}
                     className="px-3 py-1.5 rounded-full text-[12px] font-medium transition-colors cursor-pointer"
-                    style={{ background: dept === "all" ? "#1d1d1f" : "#f5f5f7", color: dept === "all" ? "#ffffff" : "#6e6e73" }}
+                    style={{ background: dept === "all" ? "var(--op-ink)" : "var(--op-paper-2)", color: dept === "all" ? "#ffffff" : "var(--op-muted)" }}
                 >
                     All ({marketplaceBots.length})
                 </button>
@@ -333,8 +333,8 @@ export default function MarketplaceGrid() {
                             onClick={() => setDept(d)}
                             className="px-3 py-1.5 rounded-full text-[12px] font-medium transition-colors cursor-pointer"
                             style={{
-                                background: dept === d ? "#0066cc" : "#f5f5f7",
-                                color: dept === d ? "#ffffff" : "#6e6e73",
+                                background: dept === d ? "var(--op-indigo)" : "var(--op-paper-2)",
+                                color: dept === d ? "#ffffff" : "var(--op-muted)",
                             }}
                         >
                             {d} ({cnt})
@@ -346,10 +346,10 @@ export default function MarketplaceGrid() {
             {/* ── Agent icon grid ── */}
             {filtered.length === 0 ? (
                 <div className="text-center py-16">
-                    <p className="text-[17px] font-semibold text-[#1d1d1f] mb-2">No workers match your filters</p>
+                    <p className="text-[17px] font-semibold text-[var(--op-ink)] mb-2">No workers match your filters</p>
                     <button
                         onClick={() => { setDept("all"); setSearch(""); setOnlyAvailable(false); }}
-                        className="text-[14px] text-[#0066cc] hover:text-[#0071e3] transition-colors cursor-pointer mt-3"
+                        className="text-[14px] text-[var(--op-indigo)] hover:text-[var(--op-indigo-ink)] transition-colors cursor-pointer mt-3"
                     >
                         Clear all filters
                     </button>
@@ -375,7 +375,7 @@ export default function MarketplaceGrid() {
                     >
                         <div
                             className="flex items-center gap-4 px-5 py-3.5 rounded-[18px]"
-                            style={{ background: "#1a1a1c", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 24px 56px -20px rgba(0,0,0,0.6)" }}
+                            style={{ background: "var(--op-ink)", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 24px 56px -20px rgba(0,0,0,0.6)" }}
                         >
                             {/* Avatars */}
                             <div className="flex -space-x-2 shrink-0">
@@ -383,9 +383,9 @@ export default function MarketplaceGrid() {
                                     const iconSrc = AGENT_ICONS[item.slug];
                                     return iconSrc ? (
                                         <img key={item.slug} src={iconSrc} alt={item.name}
-                                            className="w-8 h-8 rounded-full object-cover" style={{ border: "2px solid #1a1a1c" }} />
+                                            className="w-8 h-8 rounded-full object-cover" style={{ border: "2px solid var(--op-ink)" }} />
                                     ) : (
-                                        <div key={item.slug} className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white" style={{ background: "#0066cc", border: "2px solid #1a1a1c" }}>
+                                        <div key={item.slug} className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white" style={{ background: "var(--op-indigo)", border: "2px solid var(--op-ink)" }}>
                                             {item.name.slice(0, 2)}
                                         </div>
                                     );
@@ -393,15 +393,15 @@ export default function MarketplaceGrid() {
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-[13px] font-semibold text-white">{count} worker{count !== 1 ? "s" : ""} selected</p>
-                                <p className="text-[11px] text-[#98989d]">~${total.toLocaleString()}/mo</p>
+                                <p className="text-[11px] text-[var(--op-muted)]">~${total.toLocaleString()}/mo</p>
                             </div>
                             <Link
                                 href="/checkout"
                                 onClick={() => track({ type: "checkout_started", count, total })}
                                 className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-medium text-white transition-colors"
-                                style={{ background: "#0066cc" }}
-                                onMouseOver={(e) => (e.currentTarget.style.background = "#0071e3")}
-                                onMouseOut={(e) => (e.currentTarget.style.background = "#0066cc")}
+                                style={{ background: "var(--op-indigo)" }}
+                                onMouseOver={(e) => (e.currentTarget.style.background = "var(--op-indigo-ink)")}
+                                onMouseOut={(e) => (e.currentTarget.style.background = "var(--op-indigo)")}
                             >
                                 <ShoppingCart className="w-3.5 h-3.5" />
                                 Build my team
