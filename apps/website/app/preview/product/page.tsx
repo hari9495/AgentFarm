@@ -1,82 +1,49 @@
-import { ArrowRight, Check, Play, Code2, Zap, Shield, Server, TestTube2, Activity, GitBranch, Layout } from 'lucide-react';
+import { ArrowRight, Check, Play } from 'lucide-react';
 import Link from 'next/link';
 import { productPageContent as C } from '@/lib/marketing-content';
+import HowItWorksSteps from '@/components/product/HowItWorksSteps';
+import ProductFeaturesGrid from '@/components/product/ProductFeaturesGrid';
 
 export const metadata = { title: 'Product page preview' };
-
-const featureIcons = [Code2, Zap, Shield, Server, TestTube2, Activity, GitBranch, Layout];
 
 export default function Page() {
   return (
     <div>
-      {/* Hero — split: copy + execution-flow visual */}
+      {/* Hero — centered */}
       <section className="op-light relative overflow-hidden">
-        <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(60% 45% at 15% 0%, var(--op-indigo-soft), transparent 60%)' }} />
-        <div className="op-wrap relative grid items-center gap-12 md:grid-cols-2" style={{ paddingTop: 80, paddingBottom: 80 }}>
-          <div>
-            <p className="op-eyebrow">{C.hero.badge}</p>
-            <h1 className="mt-4 font-[family-name:var(--font-display)] font-extrabold" style={{ fontSize: 'clamp(2.4rem, 4.6vw, 3.6rem)', letterSpacing: '-0.03em', lineHeight: 1.04, color: 'var(--op-ink)' }}>
-              {C.hero.titleLead} <span style={{ color: 'var(--op-indigo)' }}>{C.hero.titleAccent}</span>
-            </h1>
-            <p className="mt-5 max-w-lg text-[1.075rem] leading-relaxed" style={{ color: 'var(--op-muted)' }}>{C.hero.description}</p>
-            <ul className="mt-6 flex flex-col gap-2.5">
-              {C.outcomes.map((o) => (
-                <li key={o} className="flex items-start gap-2.5 text-[14px]" style={{ color: 'var(--op-ink-soft)' }}>
-                  <Check className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.4} style={{ color: 'var(--op-approved)' }} /> <span>{o}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href={C.hero.primaryCta.href} className="inline-flex h-11 items-center gap-2 rounded-xl px-5 text-sm font-semibold text-white" style={{ background: 'var(--op-indigo)' }}>{C.hero.primaryCta.label} <ArrowRight className="h-4 w-4" /></Link>
-              <Link href={C.hero.secondaryCta.href} className="inline-flex h-11 items-center rounded-xl px-5 text-sm font-semibold" style={{ border: '1px solid var(--op-line)', color: 'var(--op-ink)' }}>{C.hero.secondaryCta.label}</Link>
-            </div>
+        <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(55% 45% at 50% 0%, var(--op-indigo-soft), transparent 65%)' }} />
+        <div className="op-wrap-narrow relative text-center" style={{ paddingTop: 88, paddingBottom: 64 }}>
+          <p className="op-eyebrow">{C.hero.badge}</p>
+          <h1 className="mt-4 mx-auto max-w-3xl font-[family-name:var(--font-display)] font-extrabold" style={{ fontSize: 'clamp(2.5rem, 5vw, 3.8rem)', letterSpacing: '-0.03em', lineHeight: 1.04, color: 'var(--op-ink)' }}>
+            {C.hero.titleLead} <span style={{ color: 'var(--op-indigo)' }}>{C.hero.titleAccent}</span>
+          </h1>
+          <p className="mt-5 mx-auto max-w-xl text-[1.075rem] leading-relaxed" style={{ color: 'var(--op-muted)' }}>{C.hero.description}</p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Link href={C.hero.primaryCta.href} className="inline-flex h-11 items-center gap-2 rounded-xl px-5 text-sm font-semibold text-white" style={{ background: 'var(--op-indigo)' }}>{C.hero.primaryCta.label} <ArrowRight className="h-4 w-4" /></Link>
+            <Link href={C.hero.secondaryCta.href} className="inline-flex h-11 items-center rounded-xl px-5 text-sm font-semibold" style={{ border: '1px solid var(--op-line)', color: 'var(--op-ink)' }}>{C.hero.secondaryCta.label}</Link>
           </div>
-
-          {/* Execution flow stepper */}
-          <div className="rounded-2xl p-6 sm:p-7" style={{ background: 'var(--op-paper)', border: '1px solid var(--op-line)', boxShadow: '0 24px 50px -28px rgba(16,24,40,0.22)' }}>
-            <p className="mb-5 font-[family-name:var(--font-mono)] text-[11px] uppercase tracking-[0.14em]" style={{ color: 'var(--op-indigo)' }}>How a worker runs</p>
-            <div className="flex flex-col">
-              {C.executionFlow.map((step, i) => (
-                <div key={step.step} className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-[family-name:var(--font-mono)] text-[13px] font-bold text-white" style={{ background: 'var(--op-indigo)' }}>{step.step}</span>
-                    {i < C.executionFlow.length - 1 && <span className="my-1 w-px flex-1" style={{ background: 'var(--op-line)' }} />}
-                  </div>
-                  <div className={i < C.executionFlow.length - 1 ? 'pb-6' : ''}>
-                    <h3 className="text-[15px] font-semibold" style={{ color: 'var(--op-ink)' }}>{step.title}</h3>
-                    <p className="mt-1 text-[13px] leading-relaxed" style={{ color: 'var(--op-muted)' }}>{step.detail}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="mt-9 grid gap-x-8 gap-y-2.5 text-left sm:grid-cols-2 max-w-2xl mx-auto">
+            {C.outcomes.map((o) => (
+              <div key={o} className="flex items-start gap-2.5 text-[14px]" style={{ color: 'var(--op-ink-soft)' }}>
+                <Check className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2.4} style={{ color: 'var(--op-approved)' }} /> <span>{o}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Features grid */}
+      {/* How it works — 21st.dev: 7ovr/how-it-works-1 */}
       <section className="op-soft" style={{ paddingTop: 80, paddingBottom: 80 }}>
-        <div className="op-wrap">
-          <div className="mb-10 max-w-2xl">
-            <h2 className="font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight sm:text-4xl" style={{ lineHeight: 1.05, color: 'var(--op-ink)' }}>{C.featuresHeader.title}</h2>
-            <p className="mt-4 text-[1.075rem]" style={{ color: 'var(--op-muted)' }}>{C.featuresHeader.description}</p>
-          </div>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {C.features.map((f, i) => {
-              const Icon = featureIcons[i] ?? Zap;
-              return (
-                <div key={f.title} className="op-lift rounded-2xl p-6" style={{ background: 'var(--op-paper)', border: '1px solid var(--op-line)' }}>
-                  <span className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'var(--op-indigo-soft)', color: 'var(--op-indigo)' }}><Icon className="h-5 w-5" /></span>
-                  <h3 className="text-[15px] font-semibold" style={{ letterSpacing: '-0.015em', color: 'var(--op-ink)' }}>{f.title}</h3>
-                  <p className="mt-1.5 text-[13.5px] leading-relaxed" style={{ color: 'var(--op-muted)' }}>{f.description}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <HowItWorksSteps />
+      </section>
+
+      {/* Features grid — 21st.dev: gooseui/features-grid */}
+      <section className="op-light" style={{ paddingTop: 80, paddingBottom: 80 }}>
+        <ProductFeaturesGrid />
       </section>
 
       {/* Demo — framed product film */}
-      <section className="op-light" style={{ paddingTop: 80, paddingBottom: 80 }}>
+      <section className="op-soft" style={{ paddingTop: 80, paddingBottom: 80 }}>
         <div className="op-wrap-narrow text-center">
           <p className="op-eyebrow">{C.demo.badge}</p>
           <h2 className="mt-4 font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight sm:text-4xl" style={{ lineHeight: 1.05, color: 'var(--op-ink)' }}>{C.demo.title}</h2>
@@ -108,7 +75,7 @@ export default function Page() {
       </section>
 
       {/* CTA */}
-      <section className="op-soft text-center" style={{ paddingTop: 88, paddingBottom: 88 }}>
+      <section className="op-light text-center" style={{ paddingTop: 88, paddingBottom: 88 }}>
         <div className="op-wrap-narrow">
           <span className="inline-flex items-center rounded-full px-3 py-1 text-[12px] font-semibold" style={{ background: 'var(--op-indigo-soft)', color: 'var(--op-indigo)' }}>14-day free trial · no card required</span>
           <h2 className="mx-auto mt-5 font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight sm:text-5xl" style={{ lineHeight: 1.04, color: 'var(--op-ink)' }}>{C.cta.title}</h2>
