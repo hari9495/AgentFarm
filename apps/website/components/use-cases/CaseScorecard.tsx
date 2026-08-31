@@ -3,13 +3,15 @@
 
 import { Check, ShieldCheck } from 'lucide-react';
 import type { UseCase } from './cases-data';
+import { featureTint } from '@/components/shared/feature-icon-palette';
 
-export default function CaseScorecard({ c }: { c: UseCase }) {
+export default function CaseScorecard({ c, index = 0 }: { c: UseCase; index?: number }) {
   const Icon = c.icon;
+  const tint = featureTint(index);
   return (
     <div className="mx-auto w-full max-w-md rounded-2xl p-6" style={{ background: 'var(--op-paper)', border: '1px solid var(--op-line)', boxShadow: '0 24px 50px -28px rgba(16,24,40,0.22)' }}>
       <div className="mb-4 flex items-center gap-3">
-        <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'var(--op-indigo-soft)', color: 'var(--op-indigo)' }}><Icon className="h-5 w-5" /></span>
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: tint.bg, color: tint.color }}><Icon className="h-5 w-5" /></span>
         <div>
           <p className="text-[13px] font-semibold" style={{ color: 'var(--op-ink)' }}>{c.audience}</p>
           <p className="font-[family-name:var(--font-mono)] text-[11px]" style={{ color: 'var(--op-muted)' }}>outcomes</p>

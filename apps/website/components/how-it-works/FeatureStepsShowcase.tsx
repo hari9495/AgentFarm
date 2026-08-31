@@ -10,6 +10,7 @@
 import * as React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { howItWorksPageContent as C } from '@/lib/marketing-content';
+import { featureTint } from '@/components/shared/feature-icon-palette';
 import StepMock from './StepMock';
 
 const AUTOPLAY = 3500;
@@ -47,7 +48,7 @@ export default function FeatureStepsShowcase() {
               <motion.button key={step.number} type="button" onClick={() => { setCurrent(i); setProgress(0); }}
                 className="flex w-full items-start gap-5 text-left" initial={{ opacity: 0.4 }} animate={{ opacity: active ? 1 : 0.4 }} transition={{ duration: 0.4 }}>
                 <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-bold transition-all"
-                  style={active ? { background: 'var(--op-indigo)', color: '#fff', transform: 'scale(1.08)' } : { background: 'var(--op-paper-2)', border: '1px solid var(--op-line)', color: 'var(--op-muted)' }}>
+                  style={active ? { background: featureTint(i).color, color: '#fff', transform: 'scale(1.08)' } : { background: 'var(--op-paper-2)', border: '1px solid var(--op-line)', color: 'var(--op-muted)' }}>
                   {i <= current ? '✓' : i + 1}
                 </span>
                 <div className="flex-1">

@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { cases } from './cases-data';
 import CaseScorecard from './CaseScorecard';
+import { featureTint } from '@/components/shared/feature-icon-palette';
 
 export default function UseCasesTabs() {
   const [active, setActive] = React.useState(0);
@@ -22,11 +23,12 @@ export default function UseCasesTabs() {
         {cases.map((t, i) => {
           const Icon = t.icon;
           const on = i === active;
+          const tint = featureTint(i);
           return (
             <button key={t.audience} type="button" onClick={() => setActive(i)}
               className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors"
-              style={on ? { background: 'var(--op-indigo-soft)', color: 'var(--op-indigo)', border: '1px solid var(--op-indigo)' } : { color: 'var(--op-muted)', border: '1px solid var(--op-line)', background: 'var(--op-paper)' }}>
-              <Icon className="h-4 w-4" /> {t.audience}
+              style={on ? { background: tint.bg, color: tint.color, border: `1px solid ${tint.color}` } : { color: 'var(--op-muted)', border: '1px solid var(--op-line)', background: 'var(--op-paper)' }}>
+              <Icon className="h-4 w-4" style={{ color: tint.color }} /> {t.audience}
             </button>
           );
         })}
@@ -40,7 +42,7 @@ export default function UseCasesTabs() {
             <p className="mt-4 text-[15px] leading-relaxed" style={{ color: 'var(--op-ink-soft)' }}>{c.story}</p>
             <Link href="/marketplace" className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: 'var(--op-indigo)' }}>Explore the roles <ArrowRight className="h-4 w-4" /></Link>
           </div>
-          <CaseScorecard c={c} />
+          <CaseScorecard c={c} index={active} />
         </div>
       </div>
     </div>

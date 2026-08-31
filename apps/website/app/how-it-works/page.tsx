@@ -7,6 +7,7 @@ import FeatureStepsShowcase from '@/components/how-it-works/FeatureStepsShowcase
 import StepMock from '@/components/how-it-works/StepMock';
 import SharedCTA from '@/components/shared/SharedCTA';
 import SubPageHero from '@/components/shared/SubPageHero';
+import { featureTint } from '@/components/shared/feature-icon-palette';
 
 export const metadata: Metadata = {
   ...C.metadata,
@@ -48,9 +49,9 @@ export default function HowItWorksPage() {
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-3">
             {C.timeline.map((item, i) => (
               <div key={item.label} className="flex items-center gap-3">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white" style={{ background: 'var(--op-indigo)' }}>{i + 1}</span>
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white" style={{ background: featureTint(i).color }}>{i + 1}</span>
                 <span className="text-[14px]" style={{ color: 'var(--op-muted)' }}>{item.label}</span>
-                <span className="text-[14px] font-semibold" style={{ color: 'var(--op-indigo)' }}>{item.time}</span>
+                <span className="text-[14px] font-semibold" style={{ color: featureTint(i).color }}>{item.time}</span>
                 {i < C.timeline.length - 1 && <ArrowRight className="hidden h-3.5 w-3.5 sm:block" style={{ color: 'var(--op-line-strong, #aeb6b4)' }} />}
               </div>
             ))}
