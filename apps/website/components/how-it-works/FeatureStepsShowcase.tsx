@@ -10,6 +10,7 @@
 import * as React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { howItWorksPageContent as C } from '@/lib/marketing-content';
+import StepMock from './StepMock';
 
 const AUTOPLAY = 3500;
 
@@ -58,15 +59,12 @@ export default function FeatureStepsShowcase() {
           })}
         </div>
 
-        <div className="relative order-1 h-[260px] overflow-hidden rounded-2xl md:order-2 md:h-[440px]" style={{ border: '1px solid var(--op-line)', boxShadow: '0 24px 50px -28px rgba(16,24,40,0.25)' }}>
+        <div className="relative order-1 flex h-[320px] items-center justify-center overflow-hidden rounded-2xl md:order-2 md:h-[460px]" style={{ border: '1px solid var(--op-line)', background: 'linear-gradient(160deg, var(--op-indigo-soft), var(--op-paper-2) 70%)' }}>
           <AnimatePresence mode="wait">
             {steps.map((step, i) => i === current && (
-              <motion.div key={step.number} className="absolute inset-0 overflow-hidden rounded-2xl"
-                initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -80, opacity: 0 }} transition={{ duration: 0.5, ease: 'easeInOut' }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={step.image} alt="" className="h-full w-full object-cover" />
-                <div className="absolute inset-x-0 bottom-0 h-2/3" style={{ background: 'linear-gradient(to top, var(--op-paper), transparent)' }} />
-                <div className="absolute bottom-4 left-4 rounded-full px-3 py-1 text-[12px] font-semibold" style={{ background: 'var(--op-paper)', border: '1px solid var(--op-line)', color: 'var(--op-indigo)' }}>{step.detail}</div>
+              <motion.div key={step.number} className="absolute inset-0 flex items-center justify-center p-6"
+                initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -40, opacity: 0 }} transition={{ duration: 0.45, ease: 'easeInOut' }}>
+                <StepMock index={i} />
               </motion.div>
             ))}
           </AnimatePresence>
