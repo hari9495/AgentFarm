@@ -1,12 +1,12 @@
-import CustomerCases from '@/components/customers/CustomerCases';
+import CustomerCasesBento from '@/components/customers/CustomerCasesBento';
 
-export const metadata = { title: 'Customers — Option A (cards grid)' };
+export const metadata = { title: 'Customers — Option A (casestudy-5 bento)' };
 
 export default function Page() {
   return (
     <main style={{ background: 'var(--op-paper)', minHeight: '100vh' }}>
       <section className="op-soft" style={{ paddingTop: 72, paddingBottom: 72 }}>
-        <CustomerCases />
+        <CustomerCasesBento />
       </section>
     </main>
   );
