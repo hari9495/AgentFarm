@@ -1,131 +1,108 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { ArrowLeft, Bot, Calendar, Clock, Tag } from "lucide-react";
-import { blogListingContent, blogPostsContent } from "@/lib/marketing-content";
-
-const categoryColors: Record<string, string> = {
-    Product: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
-    Engineering: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
-    Insights: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300",
-};
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { ArrowLeft, Calendar, Clock, Tag } from 'lucide-react';
+import { blogListingContent, blogPostsContent } from '@/lib/marketing-content';
+import SharedCTA from '@/components/shared/SharedCTA';
 
 export function generateStaticParams() {
-    return blogPostsContent.map((post) => ({ slug: post.slug }));
+  return blogPostsContent.map((post) => ({ slug: post.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-    const { slug } = await params;
-    const post = blogPostsContent.find((entry) => entry.slug === slug);
-
-    if (!post) {
-        return blogListingContent.metadata;
-    }
-
-    return {
-        title: `${post.title} - AgentFarms`,
-        description: post.excerpt,
-    };
+  const { slug } = await params;
+  const post = blogPostsContent.find((entry) => entry.slug === slug);
+  if (!post) return blogListingContent.metadata;
+  return {
+    title: `${post.title} — AgentFarms`,
+    description: post.excerpt,
+    openGraph: { title: post.title, description: post.excerpt, url: `https://agentfarms.in/blog/${post.slug}`, type: 'article', images: post.image ? [post.image] : undefined },
+  };
 }
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
-    const { slug } = await params;
-    const post = blogPostsContent.find((entry) => entry.slug === slug);
+  const { slug } = await params;
+  const post = blogPostsContent.find((entry) => entry.slug === slug);
+  if (!post) notFound();
 
-    if (!post) {
-        notFound();
-    }
+  const related = blogPostsContent.filter((entry) => entry.slug !== post.slug && entry.category === post.category).slice(0, 2);
 
-    const related = blogPostsContent.filter((entry) => entry.slug !== post.slug && entry.category === post.category).slice(0, 2);
+  return (
+    <article>
+      {/* Header */}
+      <section className="op-light" style={{ paddingTop: 56, paddingBottom: 40 }}>
+        <div className="op-wrap-narrow">
+          <Link href="/blog" className="mb-8 inline-flex items-center gap-1.5 text-sm transition-colors" style={{ color: 'var(--op-muted)' }}>
+            <ArrowLeft className="h-4 w-4" /> All posts
+          </Link>
 
-    return (
-        <article className="site-shell min-h-screen">
-            <div className="bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-slate-900 dark:to-blue-900/10 border-b border-slate-200 dark:border-slate-800">
-                <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-                    <Link
-                        href="/blog"
-                        className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 mb-8 transition-colors"
-                    >
-                        <ArrowLeft className="w-4 h-4" /> All posts
-                    </Link>
+          <div className="mb-5 flex flex-wrap items-center gap-3">
+            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-semibold" style={{ background: 'var(--op-indigo-soft)', color: 'var(--op-indigo)' }}>
+              <Tag className="h-3 w-3" /> {post.category}
+            </span>
+            <span className="flex items-center gap-1.5 text-[12px]" style={{ color: 'var(--op-muted)' }}><Calendar className="h-3.5 w-3.5" /> {post.date}</span>
+            <span className="flex items-center gap-1.5 text-[12px]" style={{ color: 'var(--op-muted)' }}><Clock className="h-3.5 w-3.5" /> {post.readTime}</span>
+          </div>
 
-                    <div className="flex flex-wrap items-center gap-3 mb-5">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${categoryColors[post.category]}`}>
-                            <Tag className="w-3 h-3" /> {post.category}
-                        </span>
-                        <span className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
-                            <Calendar className="w-3.5 h-3.5" /> {post.date}
-                        </span>
-                        <span className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
-                            <Clock className="w-3.5 h-3.5" /> {post.readTime}
-                        </span>
-                    </div>
+          <h1 className="mb-6 font-[family-name:var(--font-display)] text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl" style={{ letterSpacing: '-0.03em', color: 'var(--op-ink)' }}>{post.title}</h1>
+          <p className="mb-8 text-[18px]" style={{ lineHeight: 1.6, color: 'var(--op-ink-soft)' }}>{post.excerpt}</p>
 
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-slate-100 leading-tight mb-6">{post.title}</h1>
-                    <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed mb-8">{post.excerpt}</p>
-
-                    <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 via-blue-600 to-emerald-500 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                            {post.author.initials}
-                        </div>
-                        <div>
-                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{post.author.name}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">{post.author.role}</p>
-                        </div>
-                    </div>
-                </div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ background: 'var(--op-indigo)' }}>{post.author.initials}</div>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: 'var(--op-ink)' }}>{post.author.name}</p>
+              <p className="text-xs" style={{ color: 'var(--op-muted)' }}>{post.author.role}</p>
             </div>
+          </div>
+        </div>
+      </section>
 
-            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-                <div className="prose prose-slate dark:prose-invert max-w-none">
-                    {post.body.map((paragraph) => (
-                        <p key={paragraph} className="text-base text-slate-700 dark:text-slate-300 leading-relaxed mb-6 last:mb-0">
-                            {paragraph}
-                        </p>
-                    ))}
-                </div>
+      {/* Cover image */}
+      {post.image && (
+        <div className="op-wrap-narrow" style={{ marginBottom: 8 }}>
+          <div className="overflow-hidden rounded-2xl" style={{ border: '1px solid var(--op-line)', aspectRatio: '16 / 9' }}>
+            <img src={post.image} alt={post.title} className="h-full w-full object-cover" />
+          </div>
+        </div>
+      )}
 
-                <hr className="my-12 border-slate-200 dark:border-slate-800" />
+      {/* Body */}
+      <section className="op-light" style={{ paddingTop: 40, paddingBottom: 72 }}>
+        <div className="op-wrap-narrow">
+          <div className="max-w-none">
+            {post.body.map((paragraph) => (
+              <p key={paragraph} className="mb-6 text-[16px] last:mb-0" style={{ lineHeight: 1.75, color: 'var(--op-ink-soft)' }}>{paragraph}</p>
+            ))}
+          </div>
 
-                {related.length > 0 && (
-                    <div>
-                        <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-5">
-                            More in {post.category}
-                        </p>
-                        <div className="grid sm:grid-cols-2 gap-4">
-                            {related.map((entry) => (
-                                <Link
-                                    key={entry.slug}
-                                    href={`/blog/${entry.slug}`}
-                                    className="group block p-5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700 bg-slate-50 dark:bg-slate-900 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-all"
-                                >
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold mb-3 ${categoryColors[entry.category]}`}>
-                                        {entry.category}
-                                    </span>
-                                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors leading-snug mb-2">
-                                        {entry.title}
-                                    </p>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                                        {entry.readTime} | {entry.date}
-                                    </p>
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
-                )}
+          {related.length > 0 && (
+            <>
+              <hr className="my-12" style={{ border: 'none', borderTop: '1px solid var(--op-line)' }} />
+              <p className="mb-5 text-[12px] font-semibold uppercase tracking-[0.1em]" style={{ color: 'var(--op-muted)' }}>More in {post.category}</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {related.map((entry) => (
+                  <Link key={entry.slug} href={`/blog/${entry.slug}`} className="op-lift group block rounded-2xl p-5" style={{ background: 'var(--op-paper)', border: '1px solid var(--op-line)' }}>
+                    <span className="mb-3 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'var(--op-indigo-soft)', color: 'var(--op-indigo)' }}>{entry.category}</span>
+                    <p className="mb-2 text-sm font-bold leading-snug transition-colors group-hover:text-[color:var(--op-indigo)]" style={{ color: 'var(--op-ink)' }}>{entry.title}</p>
+                    <p className="text-xs" style={{ color: 'var(--op-muted)' }}>{entry.readTime} · {entry.date}</p>
+                  </Link>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </section>
 
-                <div className="mt-12 p-8 rounded-3xl bg-gradient-to-br from-blue-500 via-blue-600 to-emerald-500 text-center">
-                    <Bot className="w-8 h-8 text-[color:var(--op-muted)] mx-auto mb-3" />
-                    <h3 className="text-lg font-bold text-white mb-2">{blogListingContent.postCta.title}</h3>
-                    <p className="text-sm text-[color:var(--op-muted)] mb-5">{blogListingContent.postCta.description}</p>
-                    <Link
-                        href={blogListingContent.postCta.buttonHref}
-                        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-blue-700 font-semibold text-sm hover:bg-slate-50 transition-colors shadow-lg"
-                    >
-                        {blogListingContent.postCta.buttonLabel}
-                    </Link>
-                </div>
-            </div>
-        </article>
-    );
+      {/* CTA — shared SharedCTA (21st.dev: shadcnblocks/cta11) */}
+      <section className="op-soft" style={{ paddingTop: 80, paddingBottom: 80 }}>
+        <SharedCTA
+          badge="14-day free trial · no card required"
+          heading={blogListingContent.postCta.title}
+          description={blogListingContent.postCta.description}
+          primary={{ label: blogListingContent.postCta.buttonLabel, href: blogListingContent.postCta.buttonHref }}
+          secondary={{ label: 'Read more posts', href: '/blog' }}
+        />
+      </section>
+    </article>
+  );
 }
