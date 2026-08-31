@@ -84,17 +84,18 @@ export default async function StatusPage() {
     });
 
     return (
-        <main className="min-h-screen bg-[var(--canvas)] text-[var(--ink)]">
+        <main className="min-h-screen bg-[var(--op-paper)] text-[var(--op-ink)]">
             {/* Auto-refresh every 60s */}
             <StatusRefresher />
 
             {/* Header */}
             <section className="max-w-3xl mx-auto px-6 pt-20 pb-10">
-                <h1 className="font-display text-4xl font-bold tracking-[-0.03em] text-[var(--ink)] mb-2">
+                <p className="op-eyebrow mb-3">System status</p>
+                <h1 className="font-[family-name:var(--font-display)] text-4xl font-extrabold tracking-[-0.03em] text-[var(--op-ink)] mb-2">
                     System Status
                 </h1>
-                <p className="text-[var(--mute)] text-sm">
-                    Last updated: <span className="text-[var(--body-color)]">{lastUpdated}</span>
+                <p className="text-[var(--op-muted)] text-sm">
+                    Last updated: <span className="text-[var(--op-ink-soft)]">{lastUpdated}</span>
                 </p>
             </section>
 
@@ -114,16 +115,16 @@ export default async function StatusPage() {
 
             {/* Services table */}
             <section className="max-w-3xl mx-auto px-6 mb-12">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--ash)] mb-4">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--op-muted)] mb-4">
                     Services
                 </h2>
 
                 {data.services.length === 0 ? (
-                    <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] px-6 py-8 text-center text-[var(--mute)] text-sm">
+                    <div className="rounded-2xl border border-[var(--op-line)] bg-[var(--op-paper)] px-6 py-8 text-center text-[var(--op-muted)] text-sm">
                         Unable to retrieve service status.
                     </div>
                 ) : (
-                    <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] overflow-hidden divide-y divide-[var(--hairline)]">
+                    <div className="rounded-2xl border border-[var(--op-line)] bg-[var(--op-paper)] overflow-hidden divide-y divide-[var(--op-line)]">
                         {data.services.map((svc) => (
                             <div
                                 key={svc.name}
@@ -133,13 +134,13 @@ export default async function StatusPage() {
                                     <span
                                         className={`inline-block w-2.5 h-2.5 rounded-full flex-shrink-0 ${STATUS_COLORS[svc.status]}`}
                                     />
-                                    <span className="text-sm font-medium text-[var(--ink)]">
+                                    <span className="text-sm font-medium text-[var(--op-ink)]">
                                         {svc.name}
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-4 text-sm">
                                     {svc.latencyMs !== undefined && (
-                                        <span className="text-[var(--ash)] tabular-nums">
+                                        <span className="text-[var(--op-muted)] tabular-nums">
                                             {svc.latencyMs}ms
                                         </span>
                                     )}
@@ -157,27 +158,27 @@ export default async function StatusPage() {
 
             {/* Incidents section */}
             <section className="max-w-3xl mx-auto px-6 mb-20">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--ash)] mb-4">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--op-muted)] mb-4">
                     Active Incidents
                 </h2>
 
                 {data.incidents.length === 0 ? (
-                    <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] px-6 py-8 text-center text-[var(--mute)] text-sm">
+                    <div className="rounded-2xl border border-[var(--op-line)] bg-[var(--op-paper)] px-6 py-8 text-center text-[var(--op-muted)] text-sm">
                         No incidents reported.
                     </div>
                 ) : (
-                    <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] overflow-hidden divide-y divide-[var(--hairline)]">
+                    <div className="rounded-2xl border border-[var(--op-line)] bg-[var(--op-paper)] overflow-hidden divide-y divide-[var(--op-line)]">
                         {data.incidents.map((incident) => (
                             <div key={incident.id} className="px-6 py-4">
                                 <div className="flex items-center justify-between mb-1">
-                                    <span className="text-sm font-semibold text-[var(--ink)]">
+                                    <span className="text-sm font-semibold text-[var(--op-ink)]">
                                         {incident.title}
                                     </span>
-                                    <span className="text-xs uppercase tracking-wide font-bold text-amber-400 bg-amber-950/60 border border-amber-700 rounded px-2 py-0.5">
+                                    <span className="text-xs uppercase tracking-wide font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5">
                                         {incident.severity}
                                     </span>
                                 </div>
-                                <p className="text-xs text-[var(--ash)]">
+                                <p className="text-xs text-[var(--op-muted)]">
                                     Started{' '}
                                     {new Date(incident.startedAt).toLocaleString('en-US', {
                                         dateStyle: 'medium',
