@@ -1,197 +1,137 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowRight, CheckCircle2, Shield, ShieldCheck, Globe, FileLock2, Lock, Server, Eye, KeyRound, Zap, RefreshCw } from "lucide-react";
-import { securityPageContent } from "@/lib/marketing-content";
-import { breadcrumbSchema } from "@/lib/seo-schemas";
+import type { Metadata } from 'next';
+import { ArrowRight, CheckCircle2, Shield } from 'lucide-react';
+import { securityPageContent } from '@/lib/marketing-content';
+import { breadcrumbSchema } from '@/lib/seo-schemas';
+import { securityIconMap } from '@/components/security/security-icons';
+import SecurityFeaturesCards from '@/components/security/SecurityFeaturesCards';
+import SubPageHero from '@/components/shared/SubPageHero';
+import SharedFAQ from '@/components/shared/SharedFAQ';
+import SharedCTA from '@/components/shared/SharedCTA';
 
 export const metadata: Metadata = {
-    ...securityPageContent.metadata,
-    keywords: [
-        "AgentFarms security", "AI platform SOC 2", "governed AI GDPR",
-        "AI worker data isolation", "enterprise AI security India",
-        "AI platform compliance", "HIPAA ready AI platform", "AI audit trail",
-        "tenant isolated AI runtime", "secure AI workers",
-    ],
-    alternates: { canonical: "https://agentfarms.in/security" },
-    openGraph: {
-        title: securityPageContent.metadata.title,
-        description: securityPageContent.metadata.description,
-        url: "https://agentfarms.in/security",
-        type: "website",
-    },
+  ...securityPageContent.metadata,
+  keywords: [
+    'AgentFarms security', 'AI platform SOC 2', 'governed AI GDPR',
+    'AI worker data isolation', 'enterprise AI security India',
+    'AI platform compliance', 'HIPAA ready AI platform', 'AI audit trail',
+    'tenant isolated AI runtime', 'secure AI workers',
+  ],
+  alternates: { canonical: 'https://agentfarms.in/security' },
+  openGraph: {
+    title: securityPageContent.metadata.title,
+    description: securityPageContent.metadata.description,
+    url: 'https://agentfarms.in/security',
+    type: 'website',
+  },
 };
 
-const iconMap = {
-    shield: Shield,
-    "shield-check": ShieldCheck,
-    globe: Globe,
-    "file-lock-2": FileLock2,
-    lock: Lock,
-    server: Server,
-    eye: Eye,
-    "key-round": KeyRound,
-    zap: Zap,
-    "refresh-cw": RefreshCw,
-} as const;
-
 const pageSchemas = [
-    breadcrumbSchema([
-        { name: "Home", url: "https://agentfarms.in" },
-        { name: "Security", url: "https://agentfarms.in/security" },
-    ]),
+  breadcrumbSchema([
+    { name: 'Home', url: 'https://agentfarms.in' },
+    { name: 'Security', url: 'https://agentfarms.in/security' },
+  ]),
 ];
 
 export default function SecurityPage() {
-    const { hero, certifications, features, faqs, checklist, cta } = securityPageContent;
+  const { hero, certifications, certificationsTitle, architectureTitle, architectureSubtitle, features, checklist, faqs, cta } = securityPageContent;
 
-    return (
-        <div style={{ background: "#ffffff" }}>
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(pageSchemas) }} />
+  return (
+    <div>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(pageSchemas) }} />
 
-            {/* Hero */}
-            <section className="af-tile af-tile-white text-center" style={{ paddingTop: 80, paddingBottom: 64 }}>
-                <div className="af-container-narrow">
-                    <p className="af-eyebrow mb-4">{hero.eyebrow}</p>
-                    <h1 className="font-semibold text-[var(--op-ink)]" style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}>
-                        {hero.titleLead}{" "}
-                        <span className="text-[var(--op-indigo)]">{hero.titleAccent}</span>
-                    </h1>
-                    <p className="mt-5 text-[17px] text-[var(--op-ink-soft)] max-w-lg mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
-                        {hero.description}
-                    </p>
-                    <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-                        <Link href={hero.primary.href} className="btn-primary">
-                            {hero.primary.label} <ArrowRight className="w-4 h-4" />
-                        </Link>
-                        <a href={hero.secondary.href} className="btn-secondary">{hero.secondary.label}</a>
-                    </div>
+      {/* Hero — shared SubPageHero (21st.dev: felipemenezes098/hero-02) */}
+      <SubPageHero
+        eyebrow={hero.eyebrow}
+        titleLead={hero.titleLead}
+        titleAccent={hero.titleAccent}
+        description={hero.description}
+        primary={{ label: hero.primary.label, href: hero.primary.href }}
+        secondary={{ label: hero.secondary.label, href: hero.secondary.href }}
+        visual={
+          <div className="mx-auto w-full max-w-sm rounded-2xl p-6" style={{ background: 'var(--op-paper)', border: '1px solid var(--op-line)', boxShadow: '0 24px 50px -28px rgba(16,24,40,0.22)' }}>
+            <p className="mb-4 font-[family-name:var(--font-mono)] text-[11px] uppercase tracking-[0.14em]" style={{ color: 'var(--op-muted)' }}>Compliance posture</p>
+            <div className="space-y-2.5">
+              {certifications.map((cert) => {
+                const Icon = securityIconMap[cert.icon] ?? Shield;
+                return (
+                  <div key={cert.name} className="flex items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: 'var(--op-paper-2)', border: '1px solid var(--op-line)' }}>
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: 'var(--op-indigo-soft)' }}>
+                      <Icon className="h-4 w-4" style={{ color: 'var(--op-indigo)' }} />
+                    </span>
+                    <span className="text-[13px] font-semibold" style={{ color: 'var(--op-ink)' }}>{cert.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        }
+      />
+
+      {/* Certifications */}
+      <section className="op-soft" style={{ paddingTop: 64, paddingBottom: 64 }}>
+        <div className="op-wrap">
+          <p className="mb-10 text-center text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--op-muted)' }}>{certificationsTitle}</p>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {certifications.map((cert) => {
+              const Icon = securityIconMap[cert.icon] ?? Shield;
+              return (
+                <div key={cert.name} className="op-lift rounded-2xl p-6 text-center" style={{ background: 'var(--op-paper)', border: '1px solid var(--op-line)' }}>
+                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-[12px]" style={{ background: 'var(--op-indigo-soft)' }}>
+                    <Icon className="h-6 w-6" style={{ color: 'var(--op-indigo)' }} />
+                  </div>
+                  <p className="mb-2 text-[15px] font-semibold" style={{ color: 'var(--op-ink)' }}>{cert.name}</p>
+                  <p className="text-[13px]" style={{ lineHeight: 1.5, color: 'var(--op-muted)' }}>{cert.description}</p>
                 </div>
-            </section>
-
-            {/* Certifications */}
-            <section className="af-tile af-tile-parchment">
-                <div className="af-container">
-                    <p className="text-center text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--op-muted)] mb-10">
-                        {securityPageContent.certificationsTitle}
-                    </p>
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {certifications.map((cert) => {
-                            const Icon = iconMap[cert.icon as keyof typeof iconMap] ?? Shield;
-                            return (
-                                <div key={cert.name} className="rounded-[18px] p-6 text-center" style={{ background: "#ffffff", border: "1px solid var(--op-line)" }}>
-                                    <div className="w-12 h-12 rounded-[12px] flex items-center justify-center mx-auto mb-4" style={{ background: "rgba(37,99,235,0.08)" }}>
-                                        <Icon className="w-6 h-6 text-[var(--op-indigo)]" />
-                                    </div>
-                                    <p className="font-semibold text-[15px] text-[var(--op-ink)] mb-2">{cert.name}</p>
-                                    <p className="text-[13px] text-[var(--op-muted)]" style={{ lineHeight: 1.5 }}>{cert.description}</p>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            </section>
-
-            {/* Architecture features — dark */}
-            <section className="af-tile af-tile-dark">
-                <div className="af-container">
-                    <div className="text-center mb-12">
-                        <h2 className="font-semibold text-[color:var(--op-ink)]" style={{ fontSize: "clamp(1.9rem, 3.5vw, 2.8rem)", letterSpacing: "-0.028em", lineHeight: 1.07 }}>
-                            {securityPageContent.architectureTitle}
-                        </h2>
-                        <p className="mt-3 text-[17px] text-[var(--op-muted)] mx-auto max-w-lg" style={{ lineHeight: 1.47 }}>
-                            {securityPageContent.architectureSubtitle}
-                        </p>
-                    </div>
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {features.map((feature) => {
-                            const Icon = iconMap[feature.icon as keyof typeof iconMap] ?? Shield;
-                            return (
-                                <div key={feature.title} className="rounded-[18px] p-5" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid var(--op-line)" }}>
-                                    <div className="w-9 h-9 rounded-[8px] flex items-center justify-center mb-4" style={{ background: "rgba(37,99,235,0.15)" }}>
-                                        <Icon className="w-5 h-5 text-[var(--op-indigo)]" />
-                                    </div>
-                                    <h3 className="font-semibold text-[15px] text-white mb-3" style={{ letterSpacing: "-0.015em" }}>{feature.title}</h3>
-                                    <ul className="space-y-1.5">
-                                        {feature.items.map((item) => (
-                                            <li key={item} className="flex items-start gap-2">
-                                                <span className="w-1 h-1 rounded-full mt-2 shrink-0" style={{ background: "var(--op-indigo)" }} />
-                                                <span className="text-[13px] text-[var(--op-muted)]" style={{ lineHeight: 1.5 }}>{item}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            </section>
-
-            {/* Security checklist */}
-            <section className="af-tile af-tile-white">
-                <div className="af-container">
-                    <div className="text-center mb-10">
-                        <p className="af-eyebrow mb-3">{checklist.eyebrow}</p>
-                        <h2 className="font-semibold text-[var(--op-ink)]" style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.4rem)", letterSpacing: "-0.025em" }}>
-                            {checklist.title}
-                        </h2>
-                        <p className="mt-3 text-[17px] text-[var(--op-muted)] max-w-md mx-auto" style={{ lineHeight: 1.47 }}>
-                            {checklist.description}
-                        </p>
-                    </div>
-                    <div className="grid sm:grid-cols-2 gap-3 max-w-[800px] mx-auto mb-8">
-                        {checklist.items.map((item) => (
-                            <div key={item} className="flex items-start gap-2.5 rounded-[14px] px-5 py-4" style={{ border: "1px solid var(--op-line)" }}>
-                                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-[var(--op-indigo)]" />
-                                <span className="text-[14px] text-[var(--op-ink)]" style={{ lineHeight: 1.5 }}>{item}</span>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="text-center">
-                        <a
-                            href={checklist.buttonHref}
-                            className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-[15px] font-medium text-white"
-                            style={{ background: "var(--op-indigo)" }}
-                        >
-                            {checklist.buttonLabel} <ArrowRight className="w-4 h-4" />
-                        </a>
-                    </div>
-                </div>
-            </section>
-
-            {/* FAQ */}
-            <section className="af-tile af-tile-parchment">
-                <div className="af-container-narrow">
-                    <h2 className="font-semibold text-[var(--op-ink)] mb-10 text-center" style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.4rem)", letterSpacing: "-0.025em" }}>
-                        Security FAQ
-                    </h2>
-                    <div className="rounded-[18px] overflow-hidden" style={{ border: "1px solid var(--op-line)", background: "#ffffff" }}>
-                        {faqs.map(({ question, answer }, i) => (
-                            <div key={question} className="px-6 py-5" style={{ borderBottom: i < faqs.length - 1 ? "1px solid var(--op-line)" : "none" }}>
-                                <h3 className="font-semibold text-[var(--op-ink)] mb-2" style={{ fontSize: "15px", letterSpacing: "-0.015em" }}>{question}</h3>
-                                <p className="text-[14px] text-[var(--op-muted)]" style={{ lineHeight: 1.6 }}>{answer}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* CTA */}
-            <section className="af-tile af-tile-dark text-center">
-                <div className="af-container-narrow">
-                    <h2 className="font-semibold text-[color:var(--op-ink)]" style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.025em", lineHeight: 1.1 }}>
-                        {cta.title}
-                    </h2>
-                    <p className="mt-4 text-[17px] text-[var(--op-muted)]" style={{ lineHeight: 1.47 }}>{cta.description}</p>
-                    <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-                        <a href={cta.primary.href} className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors" style={{ background: "var(--op-indigo)" }}>
-                            {cta.primary.label}
-                        </a>
-                        <Link href={cta.secondary.href} className="px-6 py-3 rounded-full text-[17px] font-medium text-[color:var(--op-ink)] transition-colors" style={{ border: "1px solid var(--op-line)" }}>
-                            {cta.secondary.label}
-                        </Link>
-                    </div>
-                </div>
-            </section>
+              );
+            })}
+          </div>
         </div>
-    );
+      </section>
+
+      {/* Architecture features — pulled SecurityFeaturesCards (21st.dev: gooseui icon cards) */}
+      <section className="op-light" style={{ paddingTop: 80, paddingBottom: 80 }}>
+        <SecurityFeaturesCards title={architectureTitle} subtitle={architectureSubtitle} features={features} />
+      </section>
+
+      {/* Security checklist */}
+      <section className="op-soft" style={{ paddingTop: 80, paddingBottom: 80 }}>
+        <div className="op-wrap">
+          <div className="mb-10 text-center">
+            <p className="op-eyebrow">{checklist.eyebrow}</p>
+            <h2 className="mt-3 font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight sm:text-4xl" style={{ letterSpacing: '-0.025em', color: 'var(--op-ink)' }}>{checklist.title}</h2>
+            <p className="mx-auto mt-3 max-w-md text-[17px]" style={{ lineHeight: 1.47, color: 'var(--op-muted)' }}>{checklist.description}</p>
+          </div>
+          <div className="mx-auto mb-8 grid max-w-[800px] gap-3 sm:grid-cols-2">
+            {checklist.items.map((item) => (
+              <div key={item} className="flex items-start gap-2.5 rounded-2xl px-5 py-4" style={{ border: '1px solid var(--op-line)', background: 'var(--op-paper)' }}>
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--op-indigo)' }} />
+                <span className="text-[14px]" style={{ lineHeight: 1.5, color: 'var(--op-ink)' }}>{item}</span>
+              </div>
+            ))}
+          </div>
+          <div className="text-center">
+            <a href={checklist.buttonHref} className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-[15px] font-medium text-white" style={{ background: 'var(--op-indigo)' }}>
+              {checklist.buttonLabel} <ArrowRight className="h-4 w-4" />
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ — shared SharedFAQ (21st.dev: moumensoliman/faq-section) */}
+      <section className="op-light" style={{ paddingTop: 80, paddingBottom: 80 }}>
+        <SharedFAQ heading="Security FAQ" faqs={faqs.map((f) => ({ question: f.question, answer: f.answer }))} />
+      </section>
+
+      {/* CTA — shared SharedCTA (21st.dev: shadcnblocks/cta11) */}
+      <section className="op-soft" style={{ paddingTop: 88, paddingBottom: 88 }}>
+        <SharedCTA
+          badge="Enterprise-grade by default"
+          heading={cta.title}
+          description={cta.description}
+          primary={{ label: cta.primary.label, href: cta.primary.href }}
+          secondary={{ label: cta.secondary.label, href: cta.secondary.href }}
+        />
+      </section>
+    </div>
+  );
 }
