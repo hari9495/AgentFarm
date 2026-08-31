@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
-import { ArrowRight, Check } from 'lucide-react';
-import Link from 'next/link';
-import CompareSwitcher from '@/components/compare/CompareSwitcher';
-import CompareMatrix from '@/components/compare/CompareMatrix';
+import { Check } from 'lucide-react';
+import { rows as compareRows, cols as compareCols } from '@/components/compare/compare-data';
+import ComparisonTable from '@/components/shared/ComparisonTable';
 import SharedCTA from '@/components/shared/SharedCTA';
 import SubPageHero from '@/components/shared/SubPageHero';
 
@@ -40,22 +39,17 @@ export default function ComparePage() {
         }
       />
 
-      {/* Head-to-head switcher (B) */}
-      <section className="op-soft" style={{ paddingTop: 72, paddingBottom: 72 }}>
-        <div className="op-wrap-narrow mb-10 text-center">
-          <h2 className="font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight sm:text-4xl" style={{ lineHeight: 1.05, color: 'var(--op-ink)' }}>See the head-to-head</h2>
-          <p className="mt-3" style={{ color: 'var(--op-muted)' }}>Pick an alternative to compare AgentFarms against, capability by capability.</p>
-        </div>
-        <CompareSwitcher />
-      </section>
-
-      {/* Full matrix (A) */}
+      {/* Full comparison — shared ComparisonTable (21st.dev: kokonutd/pricing-table).
+          Click any column header to focus that alternative — matrix (A) + switcher (B) in one. */}
       <section className="op-light" style={{ paddingTop: 72, paddingBottom: 72 }}>
         <div className="op-wrap mb-10 text-center">
           <h2 className="font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight sm:text-4xl" style={{ lineHeight: 1.05, color: 'var(--op-ink)' }}>The full comparison</h2>
-          <p className="mt-3" style={{ color: 'var(--op-muted)' }}>Every capability across all four approaches, side by side.</p>
+          <p className="mt-3" style={{ color: 'var(--op-muted)' }}>Every capability across all four approaches. Tap a column to focus one alternative.</p>
         </div>
-        <CompareMatrix />
+        <ComparisonTable
+          columns={compareCols.map((c) => ({ key: c.key, label: c.label, highlight: c.highlight }))}
+          rows={compareRows.map((r) => ({ label: r.feature, cells: [r.AgentFarms, r.copilot, r.contractor, r.hiring] }))}
+        />
       </section>
 
       {/* CTA (21st.dev: shadcnblocks/cta11) */}
