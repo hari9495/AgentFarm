@@ -30,6 +30,11 @@ export const CONNECTOR_LOGOS: Record<string, string> = {
   Outlook: '/connector-logos/outlook.svg',
   Salesforce: '/connector-logos/salesforce.svg',
   Azure: '/connector-logos/azure.svg',
+  Jira: '/connector-logos/jira.svg',
+  Bitbucket: '/connector-logos/bitbucket.svg',
+  HubSpot: '/connector-logos/hubspot.svg',
+  Zendesk: '/connector-logos/zendesk.svg',
+  Intercom: '/connector-logos/intercom.svg',
 };
 
 export function ConnectorLogo({ name, size = 40 }: { name: string; size?: number }) {
