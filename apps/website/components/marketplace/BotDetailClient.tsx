@@ -133,7 +133,7 @@ export default function BotDetailClient({ bot }: { bot: Bot }) {
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
                 <Link
                     href="/marketplace"
-                    className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
+                    className="inline-flex items-center gap-1.5 text-sm text-[color:var(--op-muted)] hover:text-[color:var(--op-ink)] dark:hover:text-slate-200 transition-colors"
                 >
                     <ArrowLeft className="w-4 h-4" /> Back to marketplace
                 </Link>
@@ -146,7 +146,7 @@ export default function BotDetailClient({ bot }: { bot: Bot }) {
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.35 }}
-                        className="rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-700"
+                        className="rounded-3xl overflow-hidden border border-[color:var(--op-line)] dark:border-slate-700"
                     >
                         <div className="relative h-56">
                             <img src={heroImage} alt={`${bot.department} team context`} className="w-full h-full object-cover" loading="lazy" />
@@ -174,7 +174,7 @@ export default function BotDetailClient({ bot }: { bot: Bot }) {
                                 <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${c.badge}`}>
                                     {bot.department}
                                 </span>
-                                <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                                <span className="text-xs px-2.5 py-1 rounded-full bg-[color:var(--op-paper-2)] dark:bg-slate-800 text-[color:var(--op-muted)] dark:text-[color:var(--op-muted)]">
                                     {bot.plan}
                                 </span>
                                 {bot.available ? (
@@ -183,10 +183,10 @@ export default function BotDetailClient({ bot }: { bot: Bot }) {
                                         Live now
                                     </span>
                                 ) : (
-                                    <span className="text-xs text-slate-400">Coming soon</span>
+                                    <span className="text-xs text-[color:var(--op-muted)]">Coming soon</span>
                                 )}
                             </div>
-                            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100 leading-tight">
+                            <h1 className="text-2xl sm:text-3xl font-extrabold text-[color:var(--op-ink)] dark:text-slate-100 leading-tight">
                                 {bot.name}
                             </h1>
                             <p className={`mt-1 text-sm font-medium ${c.icon}`}>{bot.tagline}</p>
@@ -197,8 +197,8 @@ export default function BotDetailClient({ bot }: { bot: Bot }) {
                                     <Star className="w-4 h-4 fill-amber-400 stroke-amber-400" />
                                     {proof.rating.toFixed(1)}
                                 </span>
-                                <span className="text-xs text-slate-400">{proof.teams}+ teams using this agent</span>
-                                <span className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-medium">
+                                <span className="text-xs text-[color:var(--op-muted)]">{proof.teams}+ teams using this agent</span>
+                                <span className="flex items-center gap-1 text-xs text-[color:var(--op-indigo)] dark:text-[color:var(--op-indigo)] font-medium">
                                     <Zap className="w-3.5 h-3.5" /> Fast deploy
                                 </span>
                             </div>
@@ -211,8 +211,8 @@ export default function BotDetailClient({ bot }: { bot: Bot }) {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.4, delay: 0.1 }}
                     >
-                        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-3">About this agent</h2>
-                        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                        <h2 className="text-base font-bold text-[color:var(--op-ink)] dark:text-slate-100 mb-3">About this agent</h2>
+                        <p className="text-sm text-[color:var(--op-muted)] dark:text-slate-300 leading-relaxed">
                             {bot.longDescription || bot.description}
                         </p>
                     </motion.section>
@@ -223,15 +223,15 @@ export default function BotDetailClient({ bot }: { bot: Bot }) {
                         transition={{ duration: 0.4, delay: 0.11 }}
                         className="grid sm:grid-cols-2 gap-4"
                     >
-                        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900">
-                            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-2">Best for</h3>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                        <div className="rounded-2xl border border-[color:var(--op-line)] dark:border-slate-800 p-4 bg-white dark:bg-slate-900">
+                            <h3 className="text-sm font-bold text-[color:var(--op-ink)] dark:text-slate-100 mb-2">Best for</h3>
+                            <p className="text-xs text-[color:var(--op-muted)] dark:text-[color:var(--op-muted)] leading-relaxed">
                                 Teams that need consistent execution for {bot.useCases[0] ?? "recurring tasks"} without adding headcount.
                             </p>
                         </div>
-                        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900">
-                            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-2">What changes after rollout</h3>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                        <div className="rounded-2xl border border-[color:var(--op-line)] dark:border-slate-800 p-4 bg-white dark:bg-slate-900">
+                            <h3 className="text-sm font-bold text-[color:var(--op-ink)] dark:text-slate-100 mb-2">What changes after rollout</h3>
+                            <p className="text-xs text-[color:var(--op-muted)] dark:text-[color:var(--op-muted)] leading-relaxed">
                                 Repetitive work shifts to this role, while your core team focuses on high-value planning and decisions.
                             </p>
                         </div>
@@ -241,9 +241,9 @@ export default function BotDetailClient({ bot }: { bot: Bot }) {
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.4, delay: 0.12 }}
-                        className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/70 p-5"
+                        className="rounded-2xl border border-[color:var(--op-line)] dark:border-slate-800 bg-[color:var(--op-paper-2)] dark:bg-slate-900/70 p-5"
                     >
-                        <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-4">Typical first week with this agent</h2>
+                        <h2 className="text-base font-bold text-[color:var(--op-ink)] dark:text-slate-100 mb-4">Typical first week with this agent</h2>
                         <div className="space-y-3">
                             {firstWeekMilestones.map((m, idx) => {
                                 const MIcon = m.icon;
@@ -255,13 +255,13 @@ export default function BotDetailClient({ bot }: { bot: Bot }) {
                                         transition={{ duration: 0.3, delay: 0.14 + idx * 0.05 }}
                                         className="flex gap-3"
                                     >
-                                        <div className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0">
-                                            <MIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                        <div className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-[color:var(--op-line)] dark:border-slate-700 shrink-0">
+                                            <MIcon className="h-4 w-4 text-[color:var(--op-indigo)] dark:text-[color:var(--op-indigo)]" />
                                         </div>
                                         <div>
-                                            <p className="text-xs font-semibold text-blue-600 dark:text-blue-400">{m.day}</p>
-                                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{m.title}</p>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400">{m.detail}</p>
+                                            <p className="text-xs font-semibold text-[color:var(--op-indigo)] dark:text-[color:var(--op-indigo)]">{m.day}</p>
+                                            <p className="text-sm font-semibold text-[color:var(--op-ink)] dark:text-slate-100">{m.title}</p>
+                                            <p className="text-xs text-[color:var(--op-muted)] dark:text-[color:var(--op-muted)]">{m.detail}</p>
                                         </div>
                                     </motion.div>
                                 );
@@ -276,10 +276,10 @@ export default function BotDetailClient({ bot }: { bot: Bot }) {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.4, delay: 0.15 }}
                         >
-                            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-3">What it handles</h2>
+                            <h2 className="text-base font-bold text-[color:var(--op-ink)] dark:text-slate-100 mb-3">What it handles</h2>
                             <ul className="space-y-2">
                                 {bot.useCases.map((uc) => (
-                                    <li key={uc} className="flex items-start gap-2.5 text-sm text-slate-700 dark:text-slate-300">
+                                    <li key={uc} className="flex items-start gap-2.5 text-sm text-[color:var(--op-ink-soft)] dark:text-slate-300">
                                         <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
                                         {uc}
                                     </li>
@@ -295,12 +295,12 @@ export default function BotDetailClient({ bot }: { bot: Bot }) {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.4, delay: 0.2 }}
                         >
-                            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-3">Skills</h2>
+                            <h2 className="text-base font-bold text-[color:var(--op-ink)] dark:text-slate-100 mb-3">Skills</h2>
                             <div className="flex flex-wrap gap-2">
                                 {bot.skills.map((s) => (
                                     <span
                                         key={s}
-                                        className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg font-medium"
+                                        className="text-xs bg-[color:var(--op-paper-2)] dark:bg-slate-800 text-[color:var(--op-muted)] dark:text-slate-300 px-3 py-1.5 rounded-lg font-medium"
                                     >
                                         {s}
                                     </span>
@@ -316,12 +316,12 @@ export default function BotDetailClient({ bot }: { bot: Bot }) {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.4, delay: 0.25 }}
                         >
-                            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-3">Integrations</h2>
+                            <h2 className="text-base font-bold text-[color:var(--op-ink)] dark:text-slate-100 mb-3">Integrations</h2>
                             <div className="flex flex-wrap gap-2">
                                 {bot.integrations.map((intg) => (
                                     <span
                                         key={intg}
-                                        className="text-xs border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg"
+                                        className="text-xs border border-[color:var(--op-line)] dark:border-slate-700 text-[color:var(--op-muted)] dark:text-slate-300 px-3 py-1.5 rounded-lg"
                                     >
                                         {intg}
                                     </span>
@@ -337,12 +337,12 @@ export default function BotDetailClient({ bot }: { bot: Bot }) {
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.4, delay: 0.1 }}
-                        className="sticky top-24 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 space-y-5"
+                        className="sticky top-24 rounded-2xl border border-[color:var(--op-line)] dark:border-slate-800 bg-white dark:bg-slate-900 p-6 space-y-5"
                     >
                         {/* Price */}
                         <div>
-                            <p className="text-3xl font-extrabold text-slate-900 dark:text-slate-100">{bot.price}</p>
-                            <p className="text-xs text-slate-400 mt-0.5">per month · {bot.plan} plan</p>
+                            <p className="text-3xl font-extrabold text-[color:var(--op-ink)] dark:text-slate-100">{bot.price}</p>
+                            <p className="text-xs text-[color:var(--op-muted)] mt-0.5">per month · {bot.plan} plan</p>
                         </div>
 
                         {/* ROI snippet */}
@@ -362,7 +362,7 @@ export default function BotDetailClient({ bot }: { bot: Bot }) {
                             ) : (
                                 <Link
                                     href="/get-started"
-                                    className="flex w-full items-center justify-center rounded-xl bg-slate-900 dark:bg-slate-100 px-4 py-3 text-sm font-semibold text-white dark:text-slate-900 hover:opacity-90 transition-opacity"
+                                    className="flex w-full items-center justify-center rounded-xl bg-[color:var(--op-indigo)] px-4 py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
                                 >
                                     Join waitlist
                                 </Link>
@@ -370,7 +370,7 @@ export default function BotDetailClient({ bot }: { bot: Bot }) {
                             {inCart && (
                                 <Link
                                     href="/checkout"
-                                    className="flex w-full items-center justify-center rounded-xl border border-blue-500 text-blue-600 dark:text-blue-400 px-4 py-3 text-sm font-semibold hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
+                                    className="flex w-full items-center justify-center rounded-xl border border-blue-500 text-[color:var(--op-indigo)] dark:text-[color:var(--op-indigo)] px-4 py-3 text-sm font-semibold hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
                                 >
                                     Go to checkout
                                 </Link>
@@ -386,13 +386,13 @@ export default function BotDetailClient({ bot }: { bot: Bot }) {
                         </div>
 
                         {/* Trust signals */}
-                        <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <div className="space-y-2 pt-2 border-t border-[color:var(--op-line)] dark:border-slate-800">
                             {[
                                 "14-day free trial included",
                                 "Guided onboarding setup",
                                 "Cancel anytime, no lock-in",
                             ].map((line) => (
-                                <p key={line} className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                <p key={line} className="flex items-center gap-2 text-xs text-[color:var(--op-muted)] dark:text-[color:var(--op-muted)]">
                                     <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />
                                     {line}
                                 </p>
