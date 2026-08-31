@@ -18,16 +18,20 @@ export default function FeatureStepsShowcase() {
   const [current, setCurrent] = React.useState(0);
   const [progress, setProgress] = React.useState(0);
 
+  // Advance one step at a time. Depends on progress/current and re-arms a single
+  // timeout each tick — no nested state setters (which double-fire in Strict Mode
+  // and made it skip steps).
   React.useEffect(() => {
-    const t = setInterval(() => {
-      setProgress((p) => {
-        if (p < 100) return p + 100 / (AUTOPLAY / 100);
-        setCurrent((c) => (c + 1) % steps.length);
-        return 0;
-      });
+    const t = setTimeout(() => {
+      if (progress < 100) {
+        setProgress(progress + 100 / (AUTOPLAY / 100));
+      } else {
+        setCurrent((current + 1) % steps.length);
+        setProgress(0);
+      }
     }, 100);
-    return () => clearInterval(t);
-  }, [steps.length]);
+    return () => clearTimeout(t);
+  }, [progress, current, steps.length]);
 
   return (
     <div className="op-wrap">
