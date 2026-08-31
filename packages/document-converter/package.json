@@ -17,14 +17,14 @@
         "test": "tsx --test src/**/*.test.ts"
     },
     "dependencies": {
-        "mammoth": "^1.8.0",
+        "mammoth": "^1.12.1",
         "officeparser": "^7.5.1",
         "pdf-parse": "^1.1.1",
         "turndown": "^7.2.0",
         "exceljs": "^4.4.0"
     },
     "devDependencies": {
-        "@types/node": "^22.0.0",
+        "@types/node": "^20.19.43",
         "@types/pdf-parse": "^1.1.4",
         "@types/turndown": "^5.0.5",
         "tsx": "^4.21.0",
