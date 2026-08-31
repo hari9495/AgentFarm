@@ -1,181 +1,95 @@
-import type { Metadata } from "next";
-import { ArrowRight, CheckCircle2, ShoppingCart, Users, Link as LinkIcon, MessageSquare, CheckCircle, BarChart3 } from "lucide-react";
-import Link from "next/link";
-import { howItWorksPageContent } from "@/lib/marketing-content";
-import { howItWorksHowToSchema, breadcrumbSchema } from "@/lib/seo-schemas";
+import type { Metadata } from 'next';
+import { ArrowRight, Check } from 'lucide-react';
+import Link from 'next/link';
+import { howItWorksPageContent as C } from '@/lib/marketing-content';
+import { howItWorksHowToSchema, breadcrumbSchema } from '@/lib/seo-schemas';
+import FeatureStepsShowcase from '@/components/how-it-works/FeatureStepsShowcase';
+import StepMock from '@/components/how-it-works/StepMock';
 
 export const metadata: Metadata = {
-    ...howItWorksPageContent.metadata,
-    keywords: [
-        "how AgentFarms works", "deploy AI worker tutorial", "AI agent setup guide",
-        "governed AI deployment", "AI worker onboarding", "connect AI to GitHub Jira Slack",
-        "AI approval policy setup", "AI task execution guide",
-    ],
-    alternates: { canonical: "https://agentfarms.in/how-it-works" },
-    openGraph: {
-        title: howItWorksPageContent.metadata.title,
-        description: howItWorksPageContent.metadata.description,
-        url: "https://agentfarms.in/how-it-works",
-        type: "website",
-    },
+  ...C.metadata,
+  openGraph: {
+    title: C.metadata.title,
+    description: C.metadata.description,
+    url: 'https://agentfarms.in/how-it-works',
+    type: 'website',
+  },
 };
 
-const stepIcons = {
-    "shopping-cart": ShoppingCart,
-    users: Users,
-    link: LinkIcon,
-    "message-square": MessageSquare,
-    "check-circle-2": CheckCircle,
-    "bar-chart-3": BarChart3,
-} as const;
-
 const pageSchemas = [
-    howItWorksHowToSchema,
-    breadcrumbSchema([
-        { name: "Home", url: "https://agentfarms.in" },
-        { name: "How It Works", url: "https://agentfarms.in/how-it-works" },
-    ]),
+  howItWorksHowToSchema,
+  breadcrumbSchema([
+    { name: 'Home', url: 'https://agentfarms.in' },
+    { name: 'How it works', url: 'https://agentfarms.in/how-it-works' },
+  ]),
 ];
 
 export default function HowItWorksPage() {
-    const { hero, timeline, steps, cta } = howItWorksPageContent;
+  return (
+    <div>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(pageSchemas) }} />
 
-    return (
-        <div style={{ background: "#ffffff" }}>
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(pageSchemas) }} />
-
-            {/* Hero — white */}
-            <section className="af-tile af-tile-white text-center" style={{ paddingTop: 80, paddingBottom: 72 }}>
-                <div className="af-container-narrow">
-                    <p className="af-eyebrow mb-4">{hero.eyebrow}</p>
-                    <h1
-                        className="font-semibold text-[var(--op-ink)]"
-                        style={{ fontSize: "clamp(2.4rem, 5vw, 3.6rem)", letterSpacing: "-0.03em", lineHeight: 1.07 }}
-                    >
-                        {hero.titleLead}{" "}
-                        <span className="text-[var(--op-indigo)]">{hero.titleAccent}</span>
-                    </h1>
-                    <p className="mt-5 text-[17px] text-[var(--op-ink-soft)] max-w-lg mx-auto" style={{ lineHeight: 1.47, letterSpacing: "-0.022em" }}>
-                        {hero.description}
-                    </p>
-                </div>
-            </section>
-
-            {/* Timeline bar — parchment */}
-            <section className="af-tile af-tile-parchment" style={{ paddingTop: 32, paddingBottom: 32 }}>
-                <div className="af-container">
-                    <div className="flex flex-wrap justify-center gap-6">
-                        {timeline.map((item, i) => (
-                            <div key={item.label} className="flex items-center gap-3">
-                                <span
-                                    className="text-[12px] font-semibold text-[color:var(--op-ink)] rounded-full w-5 h-5 flex items-center justify-center shrink-0"
-                                    style={{ background: "var(--op-indigo)", fontSize: "11px" }}
-                                >
-                                    {i + 1}
-                                </span>
-                                <span className="text-[14px] text-[var(--op-muted)]">{item.label}</span>
-                                <span className="text-[14px] font-semibold text-[var(--op-indigo)]">{item.time}</span>
-                                {i < timeline.length - 1 && (
-                                    <ArrowRight className="w-3.5 h-3.5 text-[var(--op-line)] hidden sm:block" />
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* Steps — alternating tiles */}
-            {steps.map((step, index) => {
-                const StepIcon = stepIcons[step.icon as keyof typeof stepIcons] ?? CheckCircle;
-                const isDark = index % 2 === 1;
-                const isReversed = index % 2 === 1;
-
-                return (
-                    <section
-                        key={step.number}
-                        className={`af-tile ${isDark ? "af-tile-dark" : "af-tile-white"}`}
-                        style={{ paddingTop: 72, paddingBottom: 72 }}
-                    >
-                        <div className="af-container">
-                            <div className={`grid lg:grid-cols-2 gap-12 items-center ${isReversed ? "lg:[&>*:first-child]:order-2 lg:[&>*:last-child]:order-1" : ""}`}>
-                                <div>
-                                    <div className="flex items-center gap-3 mb-5">
-                                        <div
-                                            className="w-10 h-10 rounded-[10px] flex items-center justify-center"
-                                            style={{ background: isDark ? "rgba(37,99,235,0.15)" : "rgba(37,99,235,0.08)" }}
-                                        >
-                                            <StepIcon className="w-5 h-5" style={{ color: isDark ? "var(--op-indigo)" : "var(--op-indigo)" }} />
-                                        </div>
-                                        <span className="text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: isDark ? "var(--op-muted)" : "var(--op-muted)" }}>
-                                            Step {step.number}
-                                        </span>
-                                    </div>
-                                    <h2
-                                        className="font-semibold mb-4"
-                                        style={{
-                                            fontSize: "clamp(1.6rem, 3vw, 2.2rem)",
-                                            letterSpacing: "-0.025em",
-                                            lineHeight: 1.1,
-                                            color: isDark ? "var(--op-paper-2)" : "var(--op-ink)",
-                                        }}
-                                    >
-                                        {step.title}
-                                    </h2>
-                                    <p className="text-[17px] mb-5" style={{ lineHeight: 1.47, letterSpacing: "-0.022em", color: isDark ? "var(--op-muted)" : "var(--op-ink-soft)" }}>
-                                        {step.description}
-                                    </p>
-                                    <span
-                                        className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-full"
-                                        style={{
-                                            background: isDark ? "rgba(37,99,235,0.12)" : "rgba(37,99,235,0.08)",
-                                            color: isDark ? "var(--op-indigo)" : "var(--op-indigo)",
-                                        }}
-                                    >
-                                        {step.detail}
-                                    </span>
-                                </div>
-                                <div
-                                    className="rounded-[18px] overflow-hidden"
-                                    style={{
-                                        border: isDark ? "1px solid var(--op-line)" : "1px solid var(--op-line)",
-                                        boxShadow: "0 24px 56px -20px rgba(0,0,0,0.18)",
-                                    }}
-                                >
-                                    <img
-                                        src={step.image}
-                                        alt={step.title}
-                                        className="w-full h-64 sm:h-72 object-cover"
-                                        loading="lazy"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                );
-            })}
-
-            {/* CTA — dark */}
-            <section className="af-tile af-tile-dark text-center">
-                <div className="af-container-narrow">
-                    <h2
-                        className="font-semibold text-[color:var(--op-ink)]"
-                        style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "-0.025em", lineHeight: 1.1 }}
-                    >
-                        {cta.title}
-                    </h2>
-                    <p className="mt-4 text-[17px] text-[var(--op-muted)]" style={{ lineHeight: 1.47 }}>
-                        {cta.description}
-                    </p>
-                    <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-                        <Link href={cta.primary.href} className="px-6 py-3 rounded-full text-[17px] font-medium text-white transition-colors" style={{ background: "var(--op-indigo)" }}>
-                            {cta.primary.label}
-                        </Link>
-                        <Link href="/pricing" className="px-6 py-3 rounded-full text-[17px] font-medium text-[color:var(--op-ink)] transition-colors" style={{ border: "1px solid var(--op-line)" }}>
-                            See pricing
-                        </Link>
-                    </div>
-                </div>
-            </section>
+      {/* Hero — standard sub-page split */}
+      <section className="op-light relative overflow-hidden">
+        <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(60% 45% at 15% 0%, var(--op-indigo-soft), transparent 60%)' }} />
+        <div className="op-wrap relative grid items-center gap-12 md:grid-cols-2" style={{ paddingTop: 80, paddingBottom: 72 }}>
+          <div>
+            <p className="op-eyebrow">{C.hero.eyebrow}</p>
+            <h1 className="mt-4 font-[family-name:var(--font-display)] font-extrabold" style={{ fontSize: 'clamp(2.4rem, 4.6vw, 3.6rem)', letterSpacing: '-0.03em', lineHeight: 1.04, color: 'var(--op-ink)' }}>
+              {C.hero.titleLead} <span style={{ color: 'var(--op-indigo)' }}>{C.hero.titleAccent}</span>
+            </h1>
+            <p className="mt-5 max-w-lg text-[1.075rem] leading-relaxed" style={{ color: 'var(--op-muted)' }}>{C.hero.description}</p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href="/#waitlist" className="inline-flex h-11 items-center gap-2 rounded-xl px-5 text-sm font-semibold text-white" style={{ background: 'var(--op-indigo)' }}>Start free trial <ArrowRight className="h-4 w-4" /></Link>
+              <Link href="/pricing" className="inline-flex h-11 items-center rounded-xl px-5 text-sm font-semibold" style={{ border: '1px solid var(--op-line)', color: 'var(--op-ink)' }}>See pricing</Link>
+            </div>
+          </div>
+          <div className="flex items-center justify-center rounded-2xl p-8" style={{ background: 'linear-gradient(160deg, var(--op-indigo-soft), var(--op-paper-2) 65%)', outline: '1px solid rgba(16,24,40,0.06)' }}>
+            <StepMock index={4} />
+          </div>
         </div>
-    );
+      </section>
+
+      {/* Quick timeline band */}
+      <section className="op-soft" style={{ paddingTop: 28, paddingBottom: 28 }}>
+        <div className="op-wrap">
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-3">
+            {C.timeline.map((item, i) => (
+              <div key={item.label} className="flex items-center gap-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white" style={{ background: 'var(--op-indigo)' }}>{i + 1}</span>
+                <span className="text-[14px]" style={{ color: 'var(--op-muted)' }}>{item.label}</span>
+                <span className="text-[14px] font-semibold" style={{ color: 'var(--op-indigo)' }}>{item.time}</span>
+                {i < C.timeline.length - 1 && <ArrowRight className="hidden h-3.5 w-3.5 sm:block" style={{ color: 'var(--op-line-strong, #aeb6b4)' }} />}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Steps — interactive showcase (Option A) with relevant product mocks */}
+      <section className="op-light" style={{ paddingTop: 80, paddingBottom: 80 }}>
+        <FeatureStepsShowcase />
+      </section>
+
+      {/* CTA */}
+      <section className="op-soft text-center" style={{ paddingTop: 88, paddingBottom: 88 }}>
+        <div className="op-wrap-narrow">
+          <span className="inline-flex items-center rounded-full px-3 py-1 text-[12px] font-semibold" style={{ background: 'var(--op-indigo-soft)', color: 'var(--op-indigo)' }}>14-day free trial · no card required</span>
+          <h2 className="mx-auto mt-5 font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight sm:text-5xl" style={{ lineHeight: 1.04, color: 'var(--op-ink)' }}>{C.cta.title}</h2>
+          <p className="mt-4 mx-auto max-w-xl text-[1.075rem]" style={{ color: 'var(--op-muted)' }}>{C.cta.description}</p>
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link href={C.cta.primary.href} className="inline-flex h-11 items-center gap-2 rounded-xl px-6 text-[15px] font-semibold text-white" style={{ background: 'var(--op-indigo)' }}>{C.cta.primary.label} <ArrowRight className="h-4 w-4" /></Link>
+            <Link href="/book-demo" className="inline-flex h-11 items-center rounded-xl px-6 text-[15px] font-semibold" style={{ border: '1px solid var(--op-line)', color: 'var(--op-ink)' }}>Book a demo</Link>
+          </div>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+            {['Policy-aware approvals', 'Tenant-isolated runtime', 'Full evidence trail'].map((t) => (
+              <span key={t} className="inline-flex items-center gap-1.5 text-[13px]" style={{ color: 'var(--op-ink-soft)' }}>
+                <Check className="h-3.5 w-3.5" strokeWidth={2.6} style={{ color: 'var(--op-indigo)' }} /> {t}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
 }
