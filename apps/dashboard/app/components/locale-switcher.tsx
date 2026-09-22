@@ -15,7 +15,7 @@ const LOCALES: LocaleOption[] = [
     { code: 'pt', label: 'Português', flag: '🇧🇷' },
 ];
 
-export function LocaleSwitcher() {
+export function LocaleSwitcher({ openUp = true }: { openUp?: boolean }) {
     const [locale, setLocale] = useState('en');
     const [open, setOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
@@ -56,7 +56,7 @@ export function LocaleSwitcher() {
             {open && (
                 <div style={{
                     position: 'absolute',
-                    bottom: '110%',
+                    ...(openUp ? { bottom: '110%' } : { top: '110%' }),
                     left: 0,
                     right: 0,
                     background: 'var(--card)',
