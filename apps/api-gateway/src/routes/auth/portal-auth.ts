@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { hashPassword, verifyPassword } from '../../lib/password.js';
+import { hashPassword, verifyPassword, normalizeRole } from '../../lib/password.js';
 import { sendPasswordResetEmail, sendVerificationEmail } from '../../lib/portal-email.js';
 
 // ── In-memory rate limiter for forgot-password (3 req/hr per email) ──────────
@@ -312,7 +312,7 @@ export const registerPortalAuthRoutes = async (
             accountId: account.id,
             tenantId: account.tenantId,
             email: account.email,
-            role: account.role,
+            role: normalizeRole(account.role),
             emailVerified: false,
             ...extra,
         });
@@ -395,7 +395,7 @@ export const registerPortalAuthRoutes = async (
                 tenantId: account.tenantId,
                 email: account.email,
                 displayName: account.displayName,
-                role: account.role,
+                role: normalizeRole(account.role),
                 expiresAt: session.expiresAt.toISOString(),
             });
     });
@@ -444,7 +444,7 @@ export const registerPortalAuthRoutes = async (
             tenantId: session.tenantId,
             email: session.account.email,
             displayName: session.account.displayName,
-            role: session.account.role,
+            role: normalizeRole(session.account.role),
             workspaceIds: wsRows.map((w) => w.id),
         });
     });

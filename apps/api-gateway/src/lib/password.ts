@@ -1,1 +1,1 @@
-export { hashPassword, verifyPassword } from '@agentfarm/auth-utils';
+export { hashPassword, verifyPassword, normalizeRole } from '@agentfarm/auth-utils';

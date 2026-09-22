@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import type { FastifyRequest, FastifyReply } from 'fastify';
+import { normalizeRole } from '@agentfarm/auth-utils';
 
 export const PORTAL_SESSION_COOKIE = 'portal_session';
 
@@ -52,7 +53,7 @@ export const verifyPortalSession = async (
         accountId: record.account.id,
         tenantId: record.tenantId,
         email: record.account.email,
-        role: record.account.role as string,
+        role: normalizeRole(record.account.role as string),
         displayName: record.account.displayName,
     };
 };
