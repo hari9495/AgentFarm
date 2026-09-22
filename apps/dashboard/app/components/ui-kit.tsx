@@ -8,8 +8,8 @@
  * follow light/dark automatically. Styling lives in UK_CSS (scoped to `.uk`),
  * so a page opts in by wrapping its tree in <UiKit> once — no `.wf` needed.
  *
- * Aesthetic: flat, hairline, sharp (≤3px), Fraunces for display, IBM Plex Mono
- * for figures/labels, hard instant hover. Replaces the ad-hoc class primitives.
+ * Aesthetic: soft radii (8px), hairline borders with subtle elevation, Inter for
+ * display, IBM Plex Mono for figures/labels, gentle hover lift + press feedback.
  */
 
 import type { ReactNode, ButtonHTMLAttributes, InputHTMLAttributes, SelectHTMLAttributes } from 'react';
@@ -23,21 +23,23 @@ export const UK_CSS = `
 
 /* Button */
 .uk-btn { font-family: var(--font-inter), sans-serif; font-size: 12.5px; font-weight: 600; line-height: 1;
-  display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 3px; cursor: pointer;
-  border: 1px solid transparent; transition: background 90ms linear, color 90ms linear, border-color 90ms linear; white-space: nowrap; }
-.uk-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: var(--radius-lg, 8px); cursor: pointer;
+  border: 1px solid transparent; box-shadow: var(--shadow-sm);
+  transition: filter 140ms ease, background 140ms ease, color 140ms ease, border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease; white-space: nowrap; }
+.uk-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+.uk-btn:active:not(:disabled) { transform: translateY(0); box-shadow: var(--shadow-sm); }
 .uk-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .uk-btn--primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-.uk-btn--primary:hover:not(:disabled) { background: transparent; color: var(--accent); }
-.uk-btn--ghost { background: transparent; color: var(--ink-soft); border-color: var(--line); }
-.uk-btn--ghost:hover:not(:disabled) { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-.uk-btn--danger { background: transparent; color: var(--danger); border-color: var(--danger-border); }
-.uk-btn--danger:hover:not(:disabled) { background: var(--danger); color: #fff; border-color: var(--danger); }
+.uk-btn--primary:hover:not(:disabled) { filter: brightness(1.06); box-shadow: var(--shadow-brand); transform: translateY(-1px); }
+.uk-btn--ghost { background: var(--card); color: var(--ink-soft); border-color: var(--line); }
+.uk-btn--ghost:hover:not(:disabled) { background: var(--bg); color: var(--ink); border-color: var(--ink-muted); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.uk-btn--danger { background: var(--card); color: var(--danger); border-color: var(--danger-border); }
+.uk-btn--danger:hover:not(:disabled) { background: var(--danger); color: #fff; border-color: var(--danger); box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .uk-btn--sm { padding: 5px 10px; font-size: 11.5px; }
 
 /* Badge */
 .uk-badge { font-family: var(--font-plex-mono), monospace; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.06em;
-  padding: 2px 7px; border-radius: 2px; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  padding: 2px 7px; border-radius: 5px; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .uk-badge--ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 13%, transparent); border-color: color-mix(in srgb, var(--ok) 30%, transparent); }
 .uk-badge--warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 13%, transparent); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
 .uk-badge--err { color: var(--danger); background: color-mix(in srgb, var(--danger) 13%, transparent); border-color: color-mix(in srgb, var(--danger) 30%, transparent); }
@@ -46,13 +48,13 @@ export const UK_CSS = `
 
 /* Inputs */
 .uk-input, .uk-select { font-family: var(--font-inter), sans-serif; font-size: 13px; color: var(--ink); background: var(--card);
-  border: 1px solid var(--line); border-radius: 3px; padding: 8px 11px; outline: none; width: 100%; transition: border-color 90ms linear; }
+  border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 8px 11px; outline: none; width: 100%; transition: border-color 90ms linear; }
 .uk-input:focus, .uk-select:focus { border-color: var(--accent); }
 .uk-input::placeholder { color: var(--ink-muted); }
 .uk-select { appearance: none; cursor: pointer; padding-right: 28px; }
 
 /* Panel */
-.uk-panel { background: var(--card); border: 1px solid var(--line); border-radius: 3px; }
+.uk-panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg); }
 .uk-panel__head { padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .uk-panel__body { padding: 16px; }
 
