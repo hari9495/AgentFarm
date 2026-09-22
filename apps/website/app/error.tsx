@@ -16,7 +16,7 @@ export default function ErrorPage({
     reset: () => void;
 }) {
     return (
-        <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="min-h-svh flex items-center justify-center px-4">
             <div className="max-w-md w-full text-center">
                 <h1 className="text-2xl font-bold text-slate-900 mb-3">
                     Something went wrong

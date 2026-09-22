@@ -108,7 +108,7 @@ const SOCIAL_PROOF = { teams: 214, rating: 4.9, hoursPerMonth: 60 };
 
 export default function DeveloperMarketplacePage() {
     return (
-        <div className="min-h-screen bg-[var(--op-paper)] text-[var(--op-ink-soft)]">
+        <div className="min-h-svh bg-[var(--op-paper)] text-[var(--op-ink-soft)]">
 
             {/* Breadcrumb */}
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">

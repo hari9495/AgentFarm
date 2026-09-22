@@ -18,7 +18,7 @@ export default function Design21stPage() {
         <div
             className="d21"
             style={{
-                minHeight: '100vh',
+                minHeight: '100svh',
                 background: 'var(--background)',
                 color: 'var(--foreground)',
                 fontFamily: 'var(--font-inter), sans-serif',

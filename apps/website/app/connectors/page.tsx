@@ -563,7 +563,7 @@ export default function ConnectorsPage() {
     );
 
     return (
-        <div className="min-h-screen bg-[var(--canvas)] p-6">
+        <div className="min-h-svh bg-[var(--canvas)] p-6">
             {/* Toast */}
             {toast && (
                 <div className={`fixed top-4 right-4 z-50 rounded-xl px-4 py-3 text-sm font-medium shadow-lg ${toast.type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}>

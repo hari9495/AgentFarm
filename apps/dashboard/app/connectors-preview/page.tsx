@@ -25,7 +25,7 @@ export default function ConnectorsPreview() {
     const issues = CONNECTED.filter((c) => c.status !== 'ok').length;
 
     return (
-        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+        <UiKit style={{ minHeight: '100svh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
             <Masthead
                 eyebrow="Integrations — Connector Registry"
                 title="Connectors"

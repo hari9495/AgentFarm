@@ -153,7 +153,7 @@ export default function OnboardingPage() {
     }
 
     return (
-        <div className="relative min-h-screen flex flex-col overflow-hidden" style={{ background: "var(--op-paper-2)", color: "var(--op-ink)" }}>
+        <div className="relative min-h-svh flex flex-col overflow-hidden" style={{ background: "var(--op-paper-2)", color: "var(--op-ink)" }}>
             <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(45% 38% at 50% 0%, var(--op-indigo-soft), transparent 70%)" }} />
 
             <main className="relative flex-1 flex items-center justify-center px-4 py-12">

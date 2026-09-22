@@ -101,7 +101,7 @@ export default function SignupPage() {
     const labelCls = "block text-[13px] font-medium mb-1.5";
 
     return (
-        <div className="relative min-h-screen flex flex-col overflow-hidden" style={{ background: "var(--op-paper-2)", color: "var(--op-ink)" }}>
+        <div className="relative min-h-svh flex flex-col overflow-hidden" style={{ background: "var(--op-paper-2)", color: "var(--op-ink)" }}>
             {/* soft brand wash — calm, same family as home */}
             <div
                 aria-hidden

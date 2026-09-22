@@ -18,7 +18,7 @@ export default function GlobalError({
             <body style={{ margin: 0, fontFamily: "sans-serif", background: "#f8fafc" }}>
                 <div
                     style={{
-                        minHeight: "100vh",
+                        minHeight: "100svh",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",

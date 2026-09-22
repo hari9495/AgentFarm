@@ -84,7 +84,7 @@ export default function TasksPageClient({
 
     return (
         <div className="wf" style={{
-            minHeight: '100vh',
+            minHeight: '100svh',
             display: 'flex',
             flexDirection: 'column',
         }}>

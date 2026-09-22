@@ -10,7 +10,7 @@ import { WfThemeToggle } from '../components/editorial';
 export default function UiKitGallery() {
     const [tab, setTab] = useState<'live' | 'history' | 'queue'>('live');
     return (
-        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <UiKit style={{ minHeight: '100svh', background: 'var(--bg)' }}>
             <Masthead
                 eyebrow="Design System — Editorial Primitives"
                 title="UI Kit"

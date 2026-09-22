@@ -52,7 +52,7 @@ export default function SettingsPreview() {
     const [notif, setNotif] = useState({ approvals: true, budget: true, incidents: true, digest: false });
 
     return (
-        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+        <UiKit style={{ minHeight: '100svh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
             <Masthead
                 eyebrow="Workspace — Settings"
                 title="Settings"

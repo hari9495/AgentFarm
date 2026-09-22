@@ -160,7 +160,7 @@ export default function ApiKeysPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[var(--bg-deep)] dark:bg-[var(--bg)]">
+        <div className="min-h-svh bg-[var(--bg-deep)] dark:bg-[var(--bg)]">
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
                 <section className="relative overflow-hidden rounded-[4px] border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">

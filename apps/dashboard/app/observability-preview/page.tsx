@@ -35,7 +35,7 @@ export default function ObservabilityPreview() {
     let cursor = 0;
 
     return (
-        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+        <UiKit style={{ minHeight: '100svh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
             <Masthead
                 eyebrow="Observability — LLM Traces & Telemetry"
                 title="Observability"

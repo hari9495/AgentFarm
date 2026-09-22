@@ -30,7 +30,7 @@ function Panel({ i, children, style }: { i: number; children: React.ReactNode; s
 
 export default function DesignModernPage() {
     return (
-        <div style={{ minHeight: '100vh', background: '#080A0C', color: '#E8EDEC', fontFamily: 'var(--font-inter), sans-serif', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ minHeight: '100svh', background: '#080A0C', color: '#E8EDEC', fontFamily: 'var(--font-inter), sans-serif', position: 'relative', overflow: 'hidden' }}>
             {/* Animated aurora glow */}
             <style>{`
                 @keyframes drift1 { 0%,100%{ transform: translate(-10%,-10%) scale(1);} 50%{ transform: translate(10%,5%) scale(1.25);} }

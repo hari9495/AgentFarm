@@ -114,7 +114,7 @@ export default function QualityRoiPage() {
     }, null);
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <div style={{ minHeight: '100svh', background: 'var(--bg)' }}>
             <header style={{
                 background: 'var(--card)',
                 borderBottom: '1px solid var(--line)',

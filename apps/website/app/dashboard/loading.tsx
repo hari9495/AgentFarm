@@ -1,6 +1,6 @@
 export default function DashboardLoading() {
     return (
-        <div className="min-h-screen bg-[var(--bg-deep)] dark:bg-[var(--bg)] p-6 md:p-8">
+        <div className="min-h-svh bg-[var(--bg-deep)] dark:bg-[var(--bg)] p-6 md:p-8">
             <div className="animate-pulse space-y-4 max-w-6xl mx-auto">
                 <div className="h-8 w-56 rounded bg-[var(--line)] dark:bg-[var(--card)]" />
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

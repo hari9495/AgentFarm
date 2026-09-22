@@ -317,7 +317,7 @@ export default function ConnectorsHubClient({
     const connTone = connected === total ? 'ok' : connected > 0 ? 'warn' : 'err';
 
     return (
-        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+        <UiKit style={{ minHeight: '100svh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
             <Masthead
                 eyebrow="Integrations — Connector Registry"
                 title="Connectors"

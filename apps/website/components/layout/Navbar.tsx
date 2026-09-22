@@ -186,7 +186,7 @@ export default function Navbar() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-              className="md:hidden absolute inset-x-0 top-11 flex flex-col gap-0 z-40 max-h-[calc(100vh-2.75rem)] overflow-y-auto"
+              className="md:hidden absolute inset-x-0 top-11 flex flex-col gap-0 z-40 max-h-[calc(100svh-2.75rem)] overflow-y-auto"
               style={{ background: "#ffffff", borderTop: "1px solid var(--op-line)", backdropFilter: "blur(20px)" }}
             >
               <div className="px-4 py-4 flex flex-col gap-1">

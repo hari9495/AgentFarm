@@ -795,7 +795,7 @@ export default function CompanyPortalPage() {
         // Not signed in → redirect to login with return URL
         if (sessionEmail === null) {
             return (
-                <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6">
+                <div className="min-h-svh bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6">
                     <div className="max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 text-center">
                         <Shield className="w-9 h-9 text-blue-500 mx-auto" />
                         <h1 className="mt-3 text-xl font-bold text-slate-900 dark:text-slate-100">Sign in to continue</h1>
@@ -815,7 +815,7 @@ export default function CompanyPortalPage() {
 
         // Signed in but email not on the company operator allow-list
         return (
-            <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6">
+            <div className="min-h-svh bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6">
                 <div className="max-w-lg rounded-2xl border border-rose-200 dark:border-rose-900/40 bg-white dark:bg-slate-900 p-8 text-center">
                     <XCircle className="w-9 h-9 text-rose-500 mx-auto" />
                     <h1 className="mt-3 text-xl font-bold text-slate-900 dark:text-slate-100">Access not granted</h1>
@@ -849,7 +849,7 @@ export default function CompanyPortalPage() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="min-h-svh bg-slate-50 dark:bg-slate-950">
             {toast && (
                 <div className={`fixed top-4 right-4 z-50 rounded-xl px-4 py-2 text-sm font-semibold ${toast.ok ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"}`}>
                     {toast.message}

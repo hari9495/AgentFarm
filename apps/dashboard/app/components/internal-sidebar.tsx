@@ -237,7 +237,7 @@ export function InternalSidebar({
     };
 
     return (
-        <div className="flex flex-col h-screen sticky top-0 bg-[var(--card)] border-r border-[color:var(--line)] overflow-hidden">
+        <div className="flex flex-col h-svh sticky top-0 bg-[var(--card)] border-r border-[color:var(--line)] overflow-hidden">
             {/* Logo / header — when collapsed, the expand toggle takes the top
                 line (same row as expanded) so it's easy to find. */}
             <div className={`flex items-center h-14 border-b border-[color:var(--line)] shrink-0 ${collapsed ? 'justify-center px-2' : 'gap-2.5 px-4'}`}>

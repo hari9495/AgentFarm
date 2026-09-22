@@ -54,7 +54,7 @@ export default function BillingPreview() {
     const monthPct = Math.round((monthly.used / monthly.budget) * 100);
 
     return (
-        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+        <UiKit style={{ minHeight: '100svh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
             <Masthead
                 eyebrow="Billing — Subscription & Usage"
                 title="Billing"

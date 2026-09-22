@@ -77,7 +77,7 @@ export default function MarketplaceListingsPage() {
     });
 
     return (
-        <div className="min-h-screen bg-[var(--op-paper)] text-[color:var(--op-ink)]">
+        <div className="min-h-svh bg-[var(--op-paper)] text-[color:var(--op-ink)]">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="mb-8">
                     <Link

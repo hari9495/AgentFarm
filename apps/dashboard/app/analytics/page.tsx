@@ -414,7 +414,7 @@ export default function AnalyticsPage() {
     const auditKey = `${fromIso ?? ''}-${toIso ?? ''}-${workspaceId}`;
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <div style={{ minHeight: '100svh', background: 'var(--bg)' }}>
             {/* Top bar */}
             <header style={{
                 background: 'var(--card)',

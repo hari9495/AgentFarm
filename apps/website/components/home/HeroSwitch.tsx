@@ -116,7 +116,7 @@ function PreviewSwitchHero({ badge, title, description, ratings, primaryCta, sec
 
   return (
     <section ref={sectionRef} aria-label="Hero" className={cn('relative w-full bg-background', className)} style={scrollDriven ? { height: scrollLength } : undefined}>
-      <div className={cn(scrollDriven && 'sticky top-0 flex h-screen flex-col overflow-hidden')}>
+      <div className={cn(scrollDriven && 'sticky top-0 flex h-svh flex-col overflow-hidden')}>
         <div className={cn('mx-auto flex w-full max-w-7xl flex-col justify-center px-6 py-10 lg:py-14', scrollDriven && 'min-h-0 flex-1')}>
           <div className="flex flex-col-reverse justify-center gap-8 md:flex-row md:items-start md:gap-6 lg:gap-10 xl:gap-[72px]">
             <div className={cn('flex min-w-0 flex-col gap-5 md:w-[400px] md:shrink-0 md:flex-row md:gap-4 lg:w-[520px] lg:gap-6', badge && 'md:mt-11')}>

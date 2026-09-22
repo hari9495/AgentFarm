@@ -359,7 +359,7 @@ function LoginForm() {
 
 export default function LoginPage() {
     return (
-        <Suspense fallback={<div style={{ minHeight: '100vh', background: 'var(--bg)' }} />}>
+        <Suspense fallback={<div style={{ minHeight: '100svh', background: 'var(--bg)' }} />}>
             <LoginForm />
         </Suspense>
     );
@@ -368,7 +368,7 @@ export default function LoginPage() {
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
 const pageStyle: React.CSSProperties = {
-    minHeight: '100vh', background: 'var(--bg)',
+    minHeight: '100svh', background: 'var(--bg)',
     display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
 };
 

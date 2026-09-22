@@ -81,7 +81,7 @@ export default function AdminUsersPage() {
     const memberCount = users.filter((u) => u.role === "member").length;
 
     return (
-        <div className="site-shell min-h-screen">
+        <div className="site-shell min-h-svh">
 
             {/* Toast */}
             {toast && (

@@ -152,7 +152,7 @@ export default function ApprovalsQueue({ scope, agentSlug, headerTitle, headerSu
     };
 
     return (
-        <div className="min-h-screen bg-[var(--bg-deep)] dark:bg-[var(--bg)]">
+        <div className="min-h-svh bg-[var(--bg-deep)] dark:bg-[var(--bg)]">
             <div className="bg-[var(--card)] dark:bg-[var(--card)] border-b border-[color:var(--line)] dark:border-[color:var(--line)] px-6 py-5 md:px-8">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>

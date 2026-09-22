@@ -98,7 +98,7 @@ export default async function AdminPage() {
     ];
 
     return (
-        <div className="site-shell min-h-screen">
+        <div className="site-shell min-h-svh">
             {/* Hero */}
             <section className="relative overflow-hidden border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-blue-50 via-white to-white dark:from-slate-900 dark:to-slate-950">
                 <div className="absolute inset-0 pointer-events-none">

@@ -132,7 +132,7 @@ export default function AgentHealthClient() {
     const TD: React.CSSProperties = { padding: '11px 12px', fontSize: 13, borderBottom: '1px solid var(--line)', verticalAlign: 'middle' };
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg)', fontFamily: 'var(--font-sans, system-ui)' }}>
+        <div style={{ minHeight: '100svh', background: 'var(--bg)', fontFamily: 'var(--font-sans, system-ui)' }}>
             {/* Header */}
             <div style={{ padding: '28px 32px 0', maxWidth: 1100, margin: '0 auto' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>

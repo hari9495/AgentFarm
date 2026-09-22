@@ -149,7 +149,7 @@ export default function TenantSuperAdminPage() {
 
     if (authorized === false) {
         return (
-            <div className="site-shell min-h-screen flex items-center justify-center p-6">
+            <div className="site-shell min-h-svh flex items-center justify-center p-6">
                 <div className="max-w-lg rounded-2xl border border-rose-200 dark:border-rose-900/40 bg-white dark:bg-slate-900 p-6 text-center">
                     <div className="mx-auto mb-3 flex justify-center">
                         <PremiumIcon icon={XCircle} tone="rose" containerClassName="w-9 h-9 rounded-xl bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400" iconClassName="w-5 h-5" />
@@ -163,7 +163,7 @@ export default function TenantSuperAdminPage() {
     }
 
     return (
-        <div className="site-shell min-h-screen">
+        <div className="site-shell min-h-svh">
             {toast && (
                 <div className={`fixed top-4 right-4 z-50 rounded-xl px-4 py-2 text-sm font-semibold ${toast.ok ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"}`}>
                     {toast.message}

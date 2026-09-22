@@ -608,7 +608,7 @@ export default function AppSidebar({
             </div>
 
             {/* Desktop — always visible; collapsible + resizable */}
-            <div ref={asideRef} className="hidden md:flex flex-col min-h-screen shrink-0 relative">
+            <div ref={asideRef} className="hidden md:flex flex-col min-h-svh shrink-0 relative">
                 <SidebarContent
                     userName={userName}
                     userRole={userRole}

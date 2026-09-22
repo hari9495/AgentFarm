@@ -35,7 +35,7 @@ export default async function SecurityPage() {
     const sessions: import("@/components/dashboard/ActiveSessionsPanel").OwnSessionView[] = [];
 
     return (
-        <div className="min-h-screen bg-[var(--bg-deep)] dark:bg-[var(--bg)]">
+        <div className="min-h-svh bg-[var(--bg-deep)] dark:bg-[var(--bg)]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
                 {/* ── Hero header ─────────────────────────────────────── */}

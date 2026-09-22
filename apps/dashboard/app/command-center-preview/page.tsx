@@ -53,7 +53,7 @@ export default function CommandCenterPreview() {
     const allHealthy = health.every((h) => h.value >= 75);
 
     return (
-        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <UiKit style={{ minHeight: '100svh', background: 'var(--bg)' }}>
             <Masthead
                 eyebrow="Company Dashboard — Operations"
                 title="Command Center"

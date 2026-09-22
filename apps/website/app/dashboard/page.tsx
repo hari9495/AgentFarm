@@ -184,7 +184,7 @@ export default async function DashboardPage() {
     const activeCount = bots.filter(b => b.status === "active").length;
 
     return (
-        <div className="site-shell min-h-screen bg-[var(--bg-deep)]">
+        <div className="site-shell min-h-svh bg-[var(--bg-deep)]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
             {/* ── Hero ──────────────────────────────────────────────────────── */}

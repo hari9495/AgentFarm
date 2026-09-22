@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function DocsLayout({ children }: { children: React.ReactNode }) {
     return (
-        <div style={{ background: "#ffffff", minHeight: "100vh" }}>
+        <div style={{ background: "#ffffff", minHeight: "100svh" }}>
 
             {/* Docs top bar — sits below the marketing navbar (which is sticky at top-0) */}
             <div

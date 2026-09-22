@@ -30,7 +30,7 @@ export default function GovernancePreview() {
     const [killed, setKilled] = useState(false);
 
     return (
-        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+        <UiKit style={{ minHeight: '100svh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
             <Masthead
                 eyebrow="Governance — Control & Compliance"
                 title="Governance"

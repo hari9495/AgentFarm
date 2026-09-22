@@ -100,7 +100,7 @@ export default function HistoricalMetricsPage() {
     const maxCost = trend.length > 0 ? Math.max(...trend.map((w) => w.totalCostUsd), 0.001) : 0.001;
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <div style={{ minHeight: '100svh', background: 'var(--bg)' }}>
             <header style={{
                 background: 'var(--card)',
                 borderBottom: '1px solid var(--line)',

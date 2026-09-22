@@ -76,7 +76,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     };
 
     return (
-        <div className="editorial-app flex min-h-screen" style={{ background: 'var(--bg)' }}>
+        <div className="editorial-app flex min-h-svh" style={{ background: 'var(--bg)' }}>
             <AppSidebar
                 userName={displayName}
                 userRole={sidebarRole}

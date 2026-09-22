@@ -27,7 +27,7 @@ export default function AgentDetailPreview() {
     const [tab, setTab] = useState<'activity' | 'capabilities'>('activity');
 
     return (
-        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+        <UiKit style={{ minHeight: '100svh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
             {/* Header */}
             <header style={{ background: 'var(--bg)', borderBottom: '1px solid var(--line)', padding: '16px 28px 22px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>

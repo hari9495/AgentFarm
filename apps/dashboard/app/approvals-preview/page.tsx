@@ -40,7 +40,7 @@ export default function ApprovalsPreview() {
     const decide = (id: string, d: 'approved' | 'rejected') => setDecided((m) => ({ ...m, [id]: d }));
 
     return (
-        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+        <UiKit style={{ minHeight: '100svh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
             <Masthead
                 eyebrow="Governance — Approval Queue"
                 title="Approvals"

@@ -81,7 +81,7 @@ export default function MemoryHubClient({
     const [botId, setBotId] = useState('');
 
     return (
-        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+        <UiKit style={{ minHeight: '100svh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
             <Masthead
                 eyebrow="Memory & Knowledge"
                 title="Memory"

@@ -111,7 +111,7 @@ export default function LeadsPage() {
     const totalPages = Math.ceil(total / LIMIT);
 
     return (
-        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+        <UiKit style={{ minHeight: '100svh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
             <Masthead
                 eyebrow="Sales — Pipeline"
                 title="Lead Queue"

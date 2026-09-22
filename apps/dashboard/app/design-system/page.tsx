@@ -31,7 +31,7 @@ export default function DesignSystemGallery() {
     const [tab, setTab] = useState('overview');
     return (
         <TooltipProvider>
-            <div style={{ minHeight: '100vh', background: 'var(--background)', color: 'var(--foreground)', fontFamily: 'var(--font-inter), sans-serif' }}>
+            <div style={{ minHeight: '100svh', background: 'var(--background)', color: 'var(--foreground)', fontFamily: 'var(--font-inter), sans-serif' }}>
                 {/* Masthead */}
                 <header style={{ borderBottom: '1px solid var(--border)', padding: '18px 32px 22px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>

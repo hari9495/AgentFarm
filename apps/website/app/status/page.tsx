@@ -84,7 +84,7 @@ export default async function StatusPage() {
     });
 
     return (
-        <main className="min-h-screen bg-[var(--op-paper)] text-[var(--op-ink)]">
+        <main className="min-h-svh bg-[var(--op-paper)] text-[var(--op-ink)]">
             {/* Auto-refresh every 60s */}
             <StatusRefresher />
 

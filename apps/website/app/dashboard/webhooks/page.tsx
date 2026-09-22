@@ -123,7 +123,7 @@ export default function CustomerWebhooksPage() {
     const lbl = "block text-xs font-bold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] uppercase tracking-wider mb-1.5";
 
     return (
-        <div className="min-h-screen bg-[var(--bg-deep)]">
+        <div className="min-h-svh bg-[var(--bg-deep)]">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
                 {/* Dark hero */}

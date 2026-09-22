@@ -130,7 +130,7 @@ export default function DocsSidebar() {
         >
             <nav
                 className="sticky flex flex-col gap-1 py-6 px-3 overflow-y-auto"
-                style={{ top: 88, maxHeight: "calc(100vh - 88px)" }}
+                style={{ top: 88, maxHeight: "calc(100svh - 88px)" }}
             >
                 {/* Logo in sidebar */}
                 <div className="px-3 mb-4 flex items-center gap-2">

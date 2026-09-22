@@ -179,7 +179,7 @@ export default function AdminBotsPage() {
     };
 
     return (
-        <div className="site-shell min-h-screen">
+        <div className="site-shell min-h-svh">
 
             {/* Toast */}
             {toast && (

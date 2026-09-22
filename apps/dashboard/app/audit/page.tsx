@@ -236,7 +236,7 @@ export default function AuditPage() {
 
     if (!planChecked) {
         return (
-            <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ minHeight: '100svh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <p style={{ color: 'var(--ink-muted)', fontSize: '0.875rem' }}>Loading…</p>
             </div>
         );
@@ -244,7 +244,7 @@ export default function AuditPage() {
 
     if (!auditAccess) {
         return (
-            <main className="wf page-shell" style={{ minHeight: '100vh', padding: 24 }}>
+            <main className="wf page-shell" style={{ minHeight: '100svh', padding: 24 }}>
                 <style>{WF_CSS}</style>
                 <div className="wf-eyebrow" style={{ marginBottom: 5 }}>Audit &amp; Compliance</div>
                 <h1 className="wf-display" style={{ margin: '0 0 20px', fontSize: 36, color: 'var(--ink)' }}>Audit Log</h1>
@@ -254,7 +254,7 @@ export default function AuditPage() {
     }
 
     return (
-        <div className="wf" style={{ minHeight: '100vh' }}>
+        <div className="wf" style={{ minHeight: '100svh' }}>
             <style>{WF_CSS}</style>
             <header style={{ background: 'var(--paper)', borderBottom: '1px solid var(--rule)', padding: '14px 24px 18px', position: 'sticky', top: 0, zIndex: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>

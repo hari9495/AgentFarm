@@ -851,7 +851,7 @@ export default function DashboardIntegrationsPage() {
     const selectedBot = context?.options.find((o) => o.workspaceId === selectedWorkspaceId && o.botId === selectedBotId) ?? context?.options[0] ?? null;
 
     return (
-        <div className="min-h-screen bg-[var(--bg-deep)]">
+        <div className="min-h-svh bg-[var(--bg-deep)]">
             {/* Toast */}
             {toast && (
                 <div className={`fixed top-4 right-4 z-50 rounded-[3px] px-4 py-3 text-sm font-medium shadow-lg ${toast.type === "success" ? "bg-[var(--ok)] text-white" : "bg-[var(--danger)] text-white"}`}>

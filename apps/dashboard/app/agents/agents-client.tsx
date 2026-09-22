@@ -299,7 +299,7 @@ export default function AgentsPageClient({ workspaceIds }: { workspaceIds: strin
     const failedCount = agents.filter((a) => a.status === 'failed').length;
 
     return (
-        <div className="wf" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <div className="wf" style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column' }}>
             <style>{WF_CSS}</style>
 
             {/* ── Masthead ───────────────────────────────────────────────── */}

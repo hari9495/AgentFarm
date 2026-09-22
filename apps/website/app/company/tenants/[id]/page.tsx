@@ -142,7 +142,7 @@ export default function TenantDetailPage() {
 
     if (!authorized || loading) {
         return (
-            <div className="site-shell min-h-screen flex items-center justify-center">
+            <div className="site-shell min-h-svh flex items-center justify-center">
                 <p className="text-sm text-slate-500 dark:text-slate-400">{loading ? "Loading…" : "Checking access…"}</p>
             </div>
         );
@@ -150,7 +150,7 @@ export default function TenantDetailPage() {
 
     if (error || !tenant) {
         return (
-            <div className="site-shell min-h-screen flex flex-col items-center justify-center gap-4">
+            <div className="site-shell min-h-svh flex flex-col items-center justify-center gap-4">
                 <p className="text-sm text-rose-600 dark:text-rose-400">{error ?? "Tenant not found."}</p>
                 <Link href="/company" className="text-xs text-blue-600 dark:text-blue-400 underline">← Back to portal</Link>
             </div>
@@ -160,7 +160,7 @@ export default function TenantDetailPage() {
     const openIncidents = incidents.filter((i) => i.status !== "resolved");
 
     return (
-        <div className="site-shell min-h-screen px-4 py-8">
+        <div className="site-shell min-h-svh px-4 py-8">
             <div className="max-w-6xl mx-auto space-y-6">
 
                 {/* Back link */}

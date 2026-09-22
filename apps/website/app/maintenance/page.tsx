@@ -11,7 +11,7 @@ export const metadata: Metadata = {
  */
 export default function MaintenancePage() {
     return (
-        <div className="min-h-screen flex items-center justify-center px-4 bg-slate-50">
+        <div className="min-h-svh flex items-center justify-center px-4 bg-slate-50">
             <div className="max-w-md w-full text-center">
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-full mb-6">
                     <svg

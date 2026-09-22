@@ -255,7 +255,7 @@ export default function ActivityFeedClient({ workspaceIds }: { workspaceIds: str
     const failureCount = counts['failure'] ?? 0;
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg)', fontFamily: 'var(--font-sans, system-ui, sans-serif)' }}>
+        <div style={{ minHeight: '100svh', background: 'var(--bg)', fontFamily: 'var(--font-sans, system-ui, sans-serif)' }}>
             {/* ── Header ── */}
             <div style={{ padding: '28px 32px 0', maxWidth: 860, margin: '0 auto' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>

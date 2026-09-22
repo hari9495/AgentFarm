@@ -680,7 +680,7 @@ export default function HireWizardPage({ params }: Props) {
     const meta = ROLE_META[roleKey];
 
     return (
-        <div className="min-h-screen bg-[var(--op-paper)] flex flex-col">
+        <div className="min-h-svh bg-[var(--op-paper)] flex flex-col">
             {/* Header */}
             <header className="border-b border-[var(--op-line)] px-4 py-3">
                 <div className="max-w-lg mx-auto flex items-center gap-3">

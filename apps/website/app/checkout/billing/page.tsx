@@ -275,7 +275,7 @@ function BillingCheckoutContent() {
         : null;
 
     return (
-        <div className="relative min-h-screen flex items-center justify-center px-4 py-12 overflow-hidden" style={{ background: "var(--op-paper-2)", color: "var(--op-ink)" }}>
+        <div className="relative min-h-svh flex items-center justify-center px-4 py-12 overflow-hidden" style={{ background: "var(--op-paper-2)", color: "var(--op-ink)" }}>
             <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(45% 40% at 50% 0%, var(--op-indigo-soft), transparent 70%)" }} />
             <div className="relative op-rise w-full max-w-lg">
 
@@ -442,7 +442,7 @@ export default function BillingCheckoutPage() {
     return (
         <Suspense
             fallback={
-                <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--op-paper-2)" }}>
+                <div className="min-h-svh flex items-center justify-center" style={{ background: "var(--op-paper-2)" }}>
                     <p className="text-[14px] animate-pulse" style={{ fontFamily: "var(--font-mono)", color: "var(--op-muted)" }}>Loading checkout…</p>
                 </div>
             }

@@ -215,7 +215,7 @@ export default function SkillsHubClient({
     const [activeTab, setActiveTab] = useState<Tab>('marketplace');
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg)', fontFamily: "var(--font-inter), -apple-system, sans-serif", display: 'flex', flexDirection: 'column' }}>
+        <div style={{ minHeight: '100svh', background: 'var(--bg)', fontFamily: "var(--font-inter), -apple-system, sans-serif", display: 'flex', flexDirection: 'column' }}>
 
             {/* ── Top bar ──────────────────────────────────────────────── */}
             <header style={{ height: 56, background: 'var(--card)', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', padding: '0 20px', gap: 12, flexShrink: 0, position: 'sticky', top: 0, zIndex: 10 }}>

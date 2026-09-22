@@ -385,7 +385,7 @@ export default function PlatformMcpPage() {
     })).filter(g => g.connectors.length > 0);
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg)', fontFamily: "var(--font-inter), -apple-system, sans-serif" }}>
+        <div style={{ minHeight: '100svh', background: 'var(--bg)', fontFamily: "var(--font-inter), -apple-system, sans-serif" }}>
             {/* Add custom MCP modal */}
             {showAddCustom && (
                 <AddCustomMcpModal

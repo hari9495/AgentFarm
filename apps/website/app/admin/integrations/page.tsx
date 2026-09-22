@@ -132,7 +132,7 @@ export default function AdminIntegrationsPage() {
     const hasData = !loading && !error && integrations.length > 0;
 
     return (
-        <div className="site-shell min-h-screen">
+        <div className="site-shell min-h-svh">
             {adminToast && (
                 <div className={`fixed top-4 right-4 z-50 rounded-xl px-4 py-3 text-sm font-medium shadow-lg ${adminToast.type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}>
                     {adminToast.message}

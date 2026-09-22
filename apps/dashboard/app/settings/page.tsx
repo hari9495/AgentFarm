@@ -43,7 +43,7 @@ export default async function SettingsPage() {
     const planLabel = subscription.status === 'none' ? 'No active plan' : subscription.status;
 
     return (
-        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+        <UiKit style={{ minHeight: '100svh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
             <Masthead
                 eyebrow="Account — Security & Access"
                 title="Settings"

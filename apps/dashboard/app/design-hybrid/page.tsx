@@ -23,7 +23,7 @@ export default function DesignHybridPage() {
     ];
 
     return (
-        <UiKit style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <UiKit style={{ minHeight: '100svh', background: 'var(--bg)' }}>
             <Masthead
                 eyebrow="Operations — Command Center"
                 title="Command Center"

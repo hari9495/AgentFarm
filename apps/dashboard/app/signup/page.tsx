@@ -330,7 +330,7 @@ export default function SignupPage() {
 // ── Shared constants ──────────────────────────────────────────────────────────
 
 const pageStyle: React.CSSProperties = {
-    minHeight: '100vh', background: 'var(--bg)',
+    minHeight: '100svh', background: 'var(--bg)',
     display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
 };
 

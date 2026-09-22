@@ -119,7 +119,7 @@ export default function AuditPage() {
     });
 
     return (
-        <div className="site-shell min-h-screen">
+        <div className="site-shell min-h-svh">
             <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-5 md:px-8">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-3">

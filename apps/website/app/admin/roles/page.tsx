@@ -36,7 +36,7 @@ export default function AdminRolesPage() {
     // Data is currently hardcoded; will be replaced with API call
     const hasData = !loading && !error && roles.length > 0;
     return (
-        <div className="site-shell min-h-screen">
+        <div className="site-shell min-h-svh">
             <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-5 md:px-8">
                 <div className="flex items-center gap-3">
                     <PremiumIcon icon={Shield} tone="violet" containerClassName="h-9 w-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400" iconClassName="w-5 h-5" />

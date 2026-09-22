@@ -78,7 +78,7 @@ export default async function AgentDetailPage({
     ];
 
     return (
-        <div className="site-shell min-h-screen">
+        <div className="site-shell min-h-svh">
             {/* Header */}
             <div className="bg-[var(--card)] dark:bg-[var(--card)] border-b border-[color:var(--line)] dark:border-[color:var(--line)] px-6 py-5 md:px-8">
                 <div className="flex flex-wrap items-start justify-between gap-4">

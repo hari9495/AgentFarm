@@ -122,7 +122,7 @@ export default function CheckoutPage() {
 
     if (state.type === "success") {
         return (
-            <div className="min-h-screen px-4 py-16" style={{ color: "var(--op-ink)" }}>
+            <div className="min-h-svh px-4 py-16" style={{ color: "var(--op-ink)" }}>
                 <div className="op-rise max-w-2xl mx-auto rounded-2xl p-8" style={{ border: "1px solid var(--op-approved)", background: "var(--op-approved-soft)" }}>
                     <h1 className="font-display font-bold mb-4" style={{ fontSize: "1.75rem", letterSpacing: "-0.02em", color: "var(--op-ink)" }}>
                         Onboarding request received
@@ -146,7 +146,7 @@ export default function CheckoutPage() {
     }
 
     return (
-        <div className="min-h-screen px-4 py-12" style={{ color: "var(--op-ink)" }}>
+        <div className="min-h-svh px-4 py-12" style={{ color: "var(--op-ink)" }}>
             <div className="op-rise max-w-5xl mx-auto grid gap-6 lg:grid-cols-5">
                 <section className="lg:col-span-3 rounded-2xl bg-white p-7" style={{ border: "1px solid var(--op-line)", boxShadow: "0 1px 2px rgba(16,24,40,0.04)" }}>
                     <p className="op-eyebrow mb-2">Step 3 of 4</p>

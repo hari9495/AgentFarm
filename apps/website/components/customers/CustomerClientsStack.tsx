@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { customersPageContent as C } from '@/lib/marketing-content';
 
 export default function CustomerClientsStack() {
-  const stackHeight = `calc(100vh + ${C.caseStudies.length * 120}px)`;
+  const stackHeight = `calc(100svh + ${C.caseStudies.length * 120}px)`;
   return (
     <div className="op-wrap grid grid-cols-1 items-start gap-12 lg:grid-cols-2 lg:gap-20">
       {/* left — sticky stats */}

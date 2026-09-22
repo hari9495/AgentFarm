@@ -5,7 +5,7 @@ import { Check } from "lucide-react";
 
 export default function BillingSuccessPage() {
     return (
-        <div className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden" style={{ background: "var(--op-paper-2)", color: "var(--op-ink)" }}>
+        <div className="relative min-h-svh flex items-center justify-center px-4 overflow-hidden" style={{ background: "var(--op-paper-2)", color: "var(--op-ink)" }}>
             <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(45% 40% at 50% 0%, var(--op-approved-soft), transparent 70%)" }} />
 
             <div className="relative op-rise w-full max-w-md text-center">

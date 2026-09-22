@@ -79,7 +79,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         "Account";
 
     return (
-        <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="flex min-h-svh bg-slate-50 dark:bg-slate-950">
             <AppSidebar
                 userName={displayName}
                 userRole={sidebarRole}

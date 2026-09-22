@@ -422,7 +422,7 @@ export default function PlaybooksClient({
     });
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg)', fontFamily: 'var(--font-sans, system-ui, sans-serif)' }}>
+        <div style={{ minHeight: '100svh', background: 'var(--bg)', fontFamily: 'var(--font-sans, system-ui, sans-serif)' }}>
             {/* Header */}
             <div style={{ padding: '32px 32px 0', maxWidth: 1200, margin: '0 auto' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
