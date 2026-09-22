@@ -155,7 +155,7 @@ export default async function AgentDetailPage({
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-br from-[color-mix(in_srgb,var(--ok)_8%,transparent)] to-[color-mix(in_srgb,var(--accent)_8%,transparent)] dark:from-[color-mix(in_srgb,var(--ok)_14%,transparent)]/20 dark:to-[color-mix(in_srgb,var(--accent)_14%,transparent)]/20 rounded-xl border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/40 p-5">
+                        <div className="bg-[var(--bg-deep)] rounded-xl border border-[color:var(--line)] p-5">
                             <div className="flex items-center gap-2 mb-2">
                                 <PremiumIcon icon={ArrowUpRight} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="w-3.5 h-3.5" />
                                 <span className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Lifetime summary</span>
