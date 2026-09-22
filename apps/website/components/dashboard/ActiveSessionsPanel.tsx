@@ -56,7 +56,7 @@ export default function ActiveSessionsPanel({ sessions: initialSessions }: { ses
             <div className="px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)] flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <PremiumIcon icon={Monitor} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-3.5 h-3.5" />
-                    <h2 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Active Sessions</h2>
+                    <h2 className="text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Active Sessions</h2>
                 </div>
                 <span className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">{sessions.length} active</span>
             </div>

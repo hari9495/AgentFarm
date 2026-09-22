@@ -442,7 +442,7 @@ function AddConnectorModal({
                 <div className="flex items-center gap-3 p-5 border-b border-[color:var(--line)] dark:border-[color:var(--line)]">
                     <ConnectorIcon tool={connector.tool} size={36} />
                     <div>
-                        <h2 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Connect {connector.displayName}</h2>
+                        <h2 className="text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Connect {connector.displayName}</h2>
                         <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] capitalize">{connector.category.replace("_", " ")}</p>
                     </div>
                     <button
@@ -909,7 +909,7 @@ export default function DashboardIntegrationsPage() {
                     <section className="bg-[var(--card)] dark:bg-[var(--card)] rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] p-6">
                         <div className="flex items-center justify-between mb-4">
                             <div>
-                                <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Supported tools</h2>
+                                <h2 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Supported tools</h2>
                                 <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">All tools your agent can connect to. More added every sprint.</p>
                             </div>
                         </div>
@@ -963,7 +963,7 @@ export default function DashboardIntegrationsPage() {
                 {/* Connected tools */}
                 {configured.length > 0 && (
                     <section>
-                        <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide mb-3">
+                        <h2 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide mb-3">
                             Connected Tools <span className="font-normal text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] normal-case">({configured.length})</span>
                         </h2>
                         <div className="space-y-2">
@@ -992,7 +992,7 @@ export default function DashboardIntegrationsPage() {
                 {/* Available integrations */}
                 <section>
                     <div className="flex items-center justify-between mb-3">
-                        <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide">Available Integrations</h2>
+                        <h2 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide">Available Integrations</h2>
                     </div>
 
                     {/* Category filter */}
@@ -1053,7 +1053,7 @@ export default function DashboardIntegrationsPage() {
                     <div className="flex items-start gap-4">
                         <div className="h-10 w-10 rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)] flex items-center justify-center shrink-0 text-2xl">🔌</div>
                         <div className="flex-1">
-                            <p className="font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Using a custom or internal tool?</p>
+                            <p className="font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Using a custom or internal tool?</p>
                             <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1">
                                 Any tool with a REST API can be connected using category-specific Custom REST connectors for tasks, messaging, code, and email.
                             </p>

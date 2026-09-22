@@ -167,7 +167,7 @@ export default function CustomerAuditPage() {
 
                         <div className="mt-5 flex flex-wrap items-center gap-6 border-t border-[color:var(--line)] pt-4">
                             <div className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
-                                <span className="text-[color:var(--ink)] font-bold">{filtered.length}</span>
+                                <span className="text-[color:var(--ink)] font-semibold">{filtered.length}</span>
                                 {filtered.length === 1 ? "event" : "events"}
                             </div>
                         </div>

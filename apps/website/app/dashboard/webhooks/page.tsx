@@ -259,7 +259,7 @@ export default function CustomerWebhooksPage() {
                                 <div className="w-14 h-14 rounded-xl bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 flex items-center justify-center mx-auto mb-4">
                                     <ArrowDownToLine className="w-7 h-7 text-[color:var(--accent)]" />
                                 </div>
-                                <h3 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-1">No webhook sources yet</h3>
+                                <h3 className="text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-1">No webhook sources yet</h3>
                                 <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] max-w-sm mx-auto mb-5 leading-relaxed">
                                     Add a source to let GitHub, Jira, Slack, or any service push events directly to your agents.
                                 </p>
@@ -277,7 +277,7 @@ export default function CustomerWebhooksPage() {
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                                    <p className="font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{source.name}</p>
+                                                    <p className="font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{source.name}</p>
                                                     <span className="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/40">Active</span>
                                                 </div>
                                                 {source.description && <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mb-2">{source.description}</p>}

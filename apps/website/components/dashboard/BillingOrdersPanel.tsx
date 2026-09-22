@@ -81,7 +81,7 @@ export default function BillingOrdersPanel({ canProvision }: { canProvision: boo
     return (
         <div className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden">
             <div className="px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)] flex items-center justify-between">
-                <h2 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Invoice History</h2>
+                <h2 className="text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Invoice History</h2>
                 {loadState === "ready" && (
                     <span className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                         {orders.length} {orders.length === 1 ? "order" : "orders"}
@@ -118,7 +118,7 @@ export default function BillingOrdersPanel({ canProvision }: { canProvision: boo
                                         {order.invoice?.number ?? order.id.slice(0, 12)}
                                     </td>
                                     <td className="px-4 py-3.5 text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">{formatOrderDate(order.createdAt)}</td>
-                                    <td className="px-4 py-3.5 font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">
+                                    <td className="px-4 py-3.5 font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">
                                         {formatOrderAmount(order.amountCents, order.currency)}
                                     </td>
                                     <td className="px-4 py-3.5">

@@ -169,7 +169,7 @@ function RegisterForm({ onSave, onCancel }: { onSave: (data: unknown) => Promise
                 {/* Step 3 */}
                 {step === 3 && (
                     <>
-                        <div className="flex items-center justify-between"><div><p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Define what agents can do</p><p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">Each action is a typed API call. Skip to register without actions now.</p></div><button onClick={addAction} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] text-xs font-semibold hover:border-[color:var(--line)] transition-colors"><Plus className="w-3 h-3" />Add action</button></div>
+                        <div className="flex items-center justify-between"><div><p className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Define what agents can do</p><p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">Each action is a typed API call. Skip to register without actions now.</p></div><button onClick={addAction} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] text-xs font-semibold hover:border-[color:var(--line)] transition-colors"><Plus className="w-3 h-3" />Add action</button></div>
                         <div className="space-y-3">
                             {actions.map((action, i) => (
                                 <div key={i} className="rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)]/50 p-4">
@@ -300,7 +300,7 @@ export default function CustomerAdaptersPage() {
                                 <div key={title} className="flex gap-3">
                                     <span className="text-2xl">{icon}</span>
                                     <div>
-                                        <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{title}</p>
+                                        <p className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{title}</p>
                                         <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5 leading-relaxed">{desc}</p>
                                     </div>
                                 </div>
@@ -323,7 +323,7 @@ export default function CustomerAdaptersPage() {
                 {!loading && adapters.length > 0 && (
                     <div>
                         <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide">
+                            <h2 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide">
                                 Registered Adapters <span className="font-normal text-[color:var(--ink-muted)] normal-case">({adapters.length})</span>
                             </h2>
                             <button onClick={load} className="flex items-center gap-1.5 text-xs text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] transition-colors"><RefreshCw className="w-3 h-3" />Refresh</button>
@@ -338,7 +338,7 @@ export default function CustomerAdaptersPage() {
                                             <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${adapter.status === "active" ? "bg-[var(--ok)]" : adapter.status === "error" ? "bg-[var(--danger)]" : "bg-[var(--bg-deep)]"}`} />
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 flex-wrap mb-1">
-                                                    <p className="font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] text-sm">{adapter.name}</p>
+                                                    <p className="font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] text-sm">{adapter.name}</p>
                                                     <span className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] bg-[var(--bg-deep)] dark:bg-[var(--card)] rounded-full px-2 py-0.5">{adapter.type.replace(/_/g, " ")}</span>
                                                     {adapter.version && <span className="text-[10px] text-[color:var(--ink-muted)]">v{adapter.version}</span>}
                                                 </div>
@@ -367,7 +367,7 @@ export default function CustomerAdaptersPage() {
                                                     {adapter.actions.map((a, i) => (
                                                         <div key={i} className="flex items-center gap-2 flex-wrap">
                                                             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded font-mono ${METHOD_COLORS[a.method]}`}>{a.method}</span>
-                                                            <span className="text-xs font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] font-mono">{a.name}</span>
+                                                            <span className="text-xs font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] font-mono">{a.name}</span>
                                                             <span className="text-xs text-[color:var(--ink-muted)] font-mono">{a.path}</span>
                                                             {a.description && <span className="text-xs text-[color:var(--ink-muted)]">— {a.description}</span>}
                                                         </div>

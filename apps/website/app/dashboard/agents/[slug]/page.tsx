@@ -88,7 +88,7 @@ export default async function AgentDetailPage({
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
-                                <h1 className="text-lg font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{agentName}</h1>
+                                <h1 className="text-lg font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{agentName}</h1>
                                 <span className="flex items-center gap-1.5 text-xs font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                                     <span className={`h-1.5 w-1.5 rounded-full ${meta.color}`} />
                                     {meta.label}
@@ -121,7 +121,7 @@ export default async function AgentDetailPage({
                     {/* Approval history */}
                     <div className="xl:col-span-2 bg-[var(--card)] dark:bg-[var(--card)] rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)]">
                         <div className="px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)] flex items-center justify-between">
-                            <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Approval Activity</h2>
+                            <h2 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Approval Activity</h2>
                             <span className="text-xs text-[color:var(--ink-muted)]">0 recent</span>
                         </div>
                         <div className="px-5 py-10 text-center">
@@ -133,7 +133,7 @@ export default async function AgentDetailPage({
                     {/* Configuration & quality */}
                     <div className="space-y-4">
                         <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] p-5">
-                            <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-4">Configuration</h2>
+                            <h2 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-4">Configuration</h2>
                             <dl className="space-y-3 text-xs">
                                 <div className="flex items-start justify-between gap-3">
                                     <dt className="text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] shrink-0">Status</dt>
@@ -158,7 +158,7 @@ export default async function AgentDetailPage({
                         <div className="bg-gradient-to-br from-[color-mix(in_srgb,var(--ok)_8%,transparent)] to-[color-mix(in_srgb,var(--accent)_8%,transparent)] dark:from-[color-mix(in_srgb,var(--ok)_14%,transparent)]/20 dark:to-[color-mix(in_srgb,var(--accent)_14%,transparent)]/20 rounded-xl border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/40 p-5">
                             <div className="flex items-center gap-2 mb-2">
                                 <PremiumIcon icon={ArrowUpRight} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="w-3.5 h-3.5" />
-                                <span className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Lifetime summary</span>
+                                <span className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Lifetime summary</span>
                             </div>
                             <p className="text-xs text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] leading-relaxed">
                                 Agent active since {new Date(agent.createdAt).toLocaleDateString()}. Last seen {formatRelativeTime(lastActivityTs).toLowerCase()}.

@@ -77,11 +77,11 @@ export default async function SecurityPage() {
 
                         <div className="mt-5 flex flex-wrap items-center gap-6 border-t border-[color:var(--line)] pt-4">
                             <div className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
-                                <span className="text-[color:var(--ink)] font-bold">{sessions.length}</span>
+                                <span className="text-[color:var(--ink)] font-semibold">{sessions.length}</span>
                                 {sessions.length === 1 ? "active session" : "active sessions"}
                             </div>
                             <div className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
-                                <span className="text-[color:var(--ink)] font-bold">{roleDisplayName(user?.role)}</span>
+                                <span className="text-[color:var(--ink)] font-semibold">{roleDisplayName(user?.role)}</span>
                                 role
                             </div>
                         </div>
@@ -94,7 +94,7 @@ export default async function SecurityPage() {
                         <div className="flex items-center gap-3 mb-4">
                             <PremiumIcon icon={Mail} tone="sky" containerClassName="h-9 w-9 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 shrink-0 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-5 h-5" />
                             <div>
-                                <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Sign-in method</p>
+                                <p className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Sign-in method</p>
                                 <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">How you access your account</p>
                             </div>
                         </div>
@@ -120,7 +120,7 @@ export default async function SecurityPage() {
                         <div className="flex items-center gap-3 mb-4">
                             <PremiumIcon icon={Smartphone} tone="amber" containerClassName="h-9 w-9 rounded-lg bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40 shrink-0 text-[color:var(--warn)] dark:text-[color:var(--warn)]" iconClassName="w-5 h-5" />
                             <div>
-                                <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Multi-factor authentication</p>
+                                <p className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Multi-factor authentication</p>
                                 <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">Extra verification at sign-in</p>
                             </div>
                         </div>
@@ -143,7 +143,7 @@ export default async function SecurityPage() {
                 <div className="rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
                     <div className="flex items-center gap-2 mb-2">
                         <PremiumIcon icon={ShieldCheck} tone="rose" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 text-[color:var(--danger)] dark:text-[color:var(--danger)]" iconClassName="w-3.5 h-3.5" />
-                        <h3 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">About account security</h3>
+                        <h3 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">About account security</h3>
                     </div>
                     <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                         {canManagePolicy

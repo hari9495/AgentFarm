@@ -302,7 +302,7 @@ export default async function DashboardPage() {
                                                     </span>
                                                 </td>
                                                 <td className="px-5 py-3.5">
-                                                    <span className="font-bold text-[color:var(--ink)] tabular-nums">{w.tasks}</span>
+                                                    <span className="font-semibold text-[color:var(--ink)] tabular-nums">{w.tasks}</span>
                                                 </td>
                                                 <td className="px-5 py-3.5">
                                                     {w.reliability > 0 ? (

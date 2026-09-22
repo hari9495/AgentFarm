@@ -130,15 +130,15 @@ export default async function RolesPermissionsPage() {
 
                         <div className="mt-5 flex flex-wrap items-center gap-6 border-t border-[color:var(--line)] pt-4">
                             <div className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
-                                <span className="text-[color:var(--ink)] font-bold">{roleLabel(displayRole)}</span>
+                                <span className="text-[color:var(--ink)] font-semibold">{roleLabel(displayRole)}</span>
                                 your current role
                             </div>
                             <div className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
-                                <span className="text-[color:var(--ink)] font-bold">{roleRows.length}</span>
+                                <span className="text-[color:var(--ink)] font-semibold">{roleRows.length}</span>
                                 roles defined
                             </div>
                             <div className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
-                                <span className="text-[color:var(--ink)] font-bold">{modules.length}</span>
+                                <span className="text-[color:var(--ink)] font-semibold">{modules.length}</span>
                                 permission areas
                             </div>
                         </div>
@@ -178,7 +178,7 @@ export default async function RolesPermissionsPage() {
                 {/* ── Permission matrix ───────────────────────────────── */}
                 <div className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden">
                     <div className="px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)] flex items-center justify-between">
-                        <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] inline-flex items-center gap-1.5">
+                        <h2 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] inline-flex items-center gap-1.5">
                             <PremiumIcon icon={Lock} tone="indigo" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-3.5 h-3.5" />
                             Permission matrix
                         </h2>
@@ -238,7 +238,7 @@ export default async function RolesPermissionsPage() {
                 <div className="rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
                     <div className="flex items-center gap-2 mb-2">
                         <PremiumIcon icon={CheckSquare} tone="indigo" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-3.5 h-3.5" />
-                        <h3 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">About roles in your workspace</h3>
+                        <h3 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">About roles in your workspace</h3>
                     </div>
                     <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                         {canManageMembers

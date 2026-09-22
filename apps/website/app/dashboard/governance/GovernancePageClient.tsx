@@ -165,7 +165,7 @@ function WorkflowTemplateForm({ onSave, onCancel }: { onSave: (t: Partial<Workfl
         <div className="rounded-xl border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/30 bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]/50 dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/10 p-6">
             <div className="flex items-center justify-between mb-5">
                 <div>
-                    <h3 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">New Approval Workflow</h3>
+                    <h3 className="text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">New Approval Workflow</h3>
                     <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">Define who approves, in what order, with what SLA</p>
                 </div>
                 <button onClick={onCancel} className="rounded-full p-1.5 hover:bg-[var(--line)] dark:hover:bg-[var(--card)] text-[color:var(--ink-muted)] transition-colors"><X className="w-4 h-4" /></button>
@@ -304,7 +304,7 @@ function WorkflowsSection() {
         <div className="space-y-5">
             <div className="flex items-center justify-between">
                 <div>
-                    <h3 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Approval Workflow Templates</h3>
+                    <h3 className="text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Approval Workflow Templates</h3>
                     <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">
                         Templates define the multi-step process agents must go through for high-risk actions.
                         Each template specifies who approves at each stage, the SLA, and what happens if a stage is missed.
@@ -323,7 +323,7 @@ function WorkflowsSection() {
                     <div className="w-14 h-14 rounded-xl bg-[var(--accent)]/10 flex items-center justify-center mx-auto mb-4">
                         <GitBranch className="w-7 h-7 text-[color:var(--accent)]" />
                     </div>
-                    <h3 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-1">No workflows yet</h3>
+                    <h3 className="text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-1">No workflows yet</h3>
                     <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] max-w-sm mx-auto mb-5">
                         Without workflows, all approvals are flat single-person decisions.
                         Create a template to enforce multi-stage reviews for high-stakes actions.
@@ -342,7 +342,7 @@ function WorkflowsSection() {
                                         <GitBranch className="w-5 h-5 text-[color:var(--accent)]" />
                                     </div>
                                     <div>
-                                        <p className="font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{t.name}</p>
+                                        <p className="font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{t.name}</p>
                                         <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">
                                             {t.stages?.length ?? 0} stage{(t.stages?.length ?? 0) !== 1 ? "s" : ""} ·
                                             {t.policy_version ? ` v${t.policy_version}` : " draft"}
@@ -438,7 +438,7 @@ function PluginsSection() {
         <div className="space-y-5">
             <div className="flex items-start justify-between gap-4">
                 <div>
-                    <h3 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Compliance Plugins</h3>
+                    <h3 className="text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Compliance Plugins</h3>
                     <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">
                         Enable the plugins that match your compliance requirements. Every change is logged to the audit trail — who enabled what, and when.
                     </p>
@@ -470,7 +470,7 @@ function PluginsSection() {
                                     </div>
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-2 flex-wrap">
-                                            <p className="font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] text-sm">{plugin.name}</p>
+                                            <p className="font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] text-sm">{plugin.name}</p>
                                             <span className={`text-[10px] font-bold uppercase tracking-wide rounded-full px-2 py-0.5 ${categoryColor(plugin.category)}`}>
                                                 {categoryLabel(plugin.category)}
                                             </span>
@@ -609,7 +609,7 @@ function RetentionSection() {
             {/* Header */}
             <div className="flex items-start justify-between gap-4">
                 <div>
-                    <h3 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Data Retention Policies</h3>
+                    <h3 className="text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Data Retention Policies</h3>
                     <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">
                         Control how long AgentFarm keeps your data. Each policy sets a TTL (time-to-live) on
                         a specific data type — after which records are automatically deleted.
@@ -640,7 +640,7 @@ function RetentionSection() {
                 <div className="rounded-xl border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/30 bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]/40 dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/10 p-6">
                     <div className="flex items-center justify-between mb-5">
                         <div>
-                            <h3 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">New Retention Policy</h3>
+                            <h3 className="text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">New Retention Policy</h3>
                             <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">Set how long a specific type of data should be kept</p>
                         </div>
                         <button onClick={() => setShowForm(false)} className="rounded-full p-1.5 hover:bg-[var(--line)] dark:hover:bg-[var(--card)] text-[color:var(--ink-muted)] transition-colors">
@@ -724,7 +724,7 @@ function RetentionSection() {
                     <div className="w-14 h-14 rounded-xl bg-[var(--accent)]/10 flex items-center justify-center mx-auto mb-4">
                         <Database className="w-7 h-7 text-[color:var(--accent)]" />
                     </div>
-                    <h3 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-1">No retention policies yet</h3>
+                    <h3 className="text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-1">No retention policies yet</h3>
                     <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] max-w-sm mx-auto mb-5">
                         Without policies, all data is kept indefinitely. Create your first policy to
                         control costs and meet your compliance requirements.
@@ -745,7 +745,7 @@ function RetentionSection() {
                                             <Database className="w-5 h-5 text-[color:var(--accent)]" />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{p.name}</p>
+                                            <p className="font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{p.name}</p>
                                             <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">
                                                 {dt?.label ?? p.roleKey} ·{" "}
                                                 {p.retentionDays ? `${p.retentionDays} days` : "Never delete"} ·{" "}
@@ -825,7 +825,7 @@ export default function GovernancePageClient() {
                 <div>
                     <div className="flex items-center justify-between mb-5">
                         <div>
-                            <h2 className="text-lg font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Governance Health</h2>
+                            <h2 className="text-lg font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Governance Health</h2>
                             <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">Is your oversight system working? Auto-refreshes every 30s.</p>
                         </div>
                         <button onClick={refreshKpis} disabled={kpiLoading} className="flex items-center gap-1.5 text-sm font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] dark:hover:text-[color:var(--ink)] transition-colors">

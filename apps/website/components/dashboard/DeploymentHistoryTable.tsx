@@ -63,7 +63,7 @@ export function DeploymentHistoryContent({
     return (
         <div className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)]">
-                <p className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] flex items-center gap-2">
+                <p className="text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] flex items-center gap-2">
                     <PremiumIcon icon={Rocket} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="w-3.5 h-3.5" />
                     Deployment History
                 </p>

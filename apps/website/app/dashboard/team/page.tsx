@@ -117,7 +117,7 @@ export default async function TeamPage() {
                 <div className="rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
                     <div className="flex items-center gap-2 mb-2">
                         <PremiumIcon icon={ShieldCheck} tone="violet" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-3.5 h-3.5" />
-                        <h3 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">About roles</h3>
+                        <h3 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">About roles</h3>
                     </div>
                     <ul className="space-y-1.5 text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] list-disc list-inside">
                         {canManageMembers ? (

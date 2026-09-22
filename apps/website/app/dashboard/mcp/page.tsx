@@ -150,7 +150,7 @@ export default function CustomerMcpPage() {
                         <div className="flex items-start gap-3 mb-5">
                             <Cpu className="w-5 h-5 text-[color:var(--accent)] dark:text-[color:var(--accent)] shrink-0 mt-0.5" />
                             <div>
-                                <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-1">
+                                <p className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-1">
                                     What is an MCP server?
                                 </p>
                                 <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] leading-relaxed">
@@ -164,7 +164,7 @@ export default function CustomerMcpPage() {
                             {USE_CASES.map(({ icon, title, desc }) => (
                                 <div key={title} className="rounded-lg bg-[var(--card)] dark:bg-[var(--card)] border border-[color:var(--line)] dark:border-[color:var(--line)] p-4">
                                     <div className="text-2xl mb-2">{icon}</div>
-                                    <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-1">{title}</p>
+                                    <p className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-1">{title}</p>
                                     <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] leading-relaxed">{desc}</p>
                                 </div>
                             ))}
@@ -274,7 +274,7 @@ export default function CustomerMcpPage() {
                 {!loading && servers.length > 0 && (
                     <div>
                         <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide">
+                            <h2 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide">
                                 Your MCP Servers
                                 <span className="font-normal text-[color:var(--ink-muted)] normal-case ml-1">({servers.length})</span>
                             </h2>
@@ -294,7 +294,7 @@ export default function CustomerMcpPage() {
 
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                                    <p className="font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{server.name}</p>
+                                                    <p className="font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{server.name}</p>
                                                     <span className={`text-[11px] font-semibold rounded-full px-2 py-0.5 ${server.isActive ? "bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" : "bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]"}`}>
                                                         {server.isActive ? "Active" : "Inactive"}
                                                     </span>
@@ -441,7 +441,7 @@ function ConnectToolCatalog({ onActivated }: { onActivated: () => void | Promise
                     <div key={c.id} className="rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] p-4 flex flex-col">
                         <div className="flex items-start justify-between mb-2">
                             <div>
-                                <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{c.displayName}</p>
+                                <p className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{c.displayName}</p>
                                 <p className="text-xs text-[color:var(--ink-muted)] uppercase tracking-wider">{c.category}</p>
                             </div>
                             {!c.live && (
@@ -465,7 +465,7 @@ function ConnectToolCatalog({ onActivated }: { onActivated: () => void | Promise
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setConfiguring(null)}>
                     <div className="w-full max-w-md rounded-xl bg-[var(--card)] dark:bg-[var(--card)] border border-[color:var(--line)] dark:border-[color:var(--line)] shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
                         <div className="px-6 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)]">
-                            <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Connect {configuring.displayName}</p>
+                            <p className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Connect {configuring.displayName}</p>
                             <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">Enter your {configuring.displayName} credentials. Stored encrypted — never shown again.</p>
                         </div>
                         <form onSubmit={activate} className="p-6 space-y-4">

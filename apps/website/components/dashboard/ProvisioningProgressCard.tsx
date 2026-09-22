@@ -123,7 +123,7 @@ export function ProvisioningProgressCardContent(props: {
         <div className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
             <div className="flex items-start justify-between gap-3">
                 <div>
-                    <p className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] flex items-center gap-2">
+                    <p className="text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] flex items-center gap-2">
                         <PremiumIcon icon={Clock3} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-3.5 h-3.5" />
                         Provisioning Progress
                     </p>

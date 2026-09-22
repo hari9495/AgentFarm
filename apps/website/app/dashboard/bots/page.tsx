@@ -226,7 +226,7 @@ export default function DashboardBotsPage() {
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-1">
                                                         <span className={`w-2 h-2 rounded-full shrink-0 ${meta.dot}`} />
-                                                        <h2 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] truncate">{bot.name}</h2>
+                                                        <h2 className="text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] truncate">{bot.name}</h2>
                                                     </div>
                                                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${toneClass[bot.tone] ?? toneClass.sky}`}>
                                                         {bot.role}
@@ -244,7 +244,7 @@ export default function DashboardBotsPage() {
                                             <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
                                                 <div className="rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)] px-3 py-2.5 flex flex-col gap-0.5 min-w-0">
                                                     <span className="text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] uppercase tracking-wide text-[10px] font-semibold truncate">Tasks</span>
-                                                    <span className="font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] flex items-center gap-1 min-w-0">
+                                                    <span className="font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] flex items-center gap-1 min-w-0">
                                                         <PremiumIcon icon={Activity} tone="slate" containerClassName="w-5 h-5 rounded-[2px] bg-[var(--line)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-3 h-3" /><span className="truncate">{bot.tasksCompleted}</span>
                                                     </span>
                                                 </div>
@@ -256,7 +256,7 @@ export default function DashboardBotsPage() {
                                                 </div>
                                                 <div className="rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)] px-3 py-2.5 flex flex-col gap-0.5 min-w-0">
                                                     <span className="text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] uppercase tracking-wide text-[10px] font-semibold truncate">Last Active</span>
-                                                    <span className="font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] flex items-center gap-1 min-w-0">
+                                                    <span className="font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] flex items-center gap-1 min-w-0">
                                                         <PremiumIcon icon={Clock} tone="slate" containerClassName="w-5 h-5 rounded-[2px] bg-[var(--line)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-3 h-3" /><span className="truncate">{formatTime(bot.lastActivityAt)}</span>
                                                     </span>
                                                 </div>

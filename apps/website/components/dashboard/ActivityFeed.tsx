@@ -97,7 +97,7 @@ export default function ActivityFeed() {
             <div className="bg-[var(--card)] dark:bg-[var(--card)] border-b border-[color:var(--line)] dark:border-[color:var(--line)] px-6 py-5 md:px-8">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <h1 className="text-lg font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Live Activity</h1>
+                        <h1 className="text-lg font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Live Activity</h1>
                         <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">Team standup view across all active agents</p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -176,7 +176,7 @@ export default function ActivityFeed() {
                                         </span>
                                         <div className="flex flex-wrap items-center justify-between gap-2">
                                             <div className="flex items-center gap-2">
-                                                <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{item.action}</p>
+                                                <p className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{item.action}</p>
                                                 {outcome ? (
                                                     <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${approvalBadgeStyle[outcome]}`}>
                                                         {approvalLabel[outcome]}

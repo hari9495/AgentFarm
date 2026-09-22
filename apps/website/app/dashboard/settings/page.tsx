@@ -99,7 +99,7 @@ export default async function SettingsPage() {
                 <section>
                     <div className="flex items-center gap-2 mb-4">
                         <PremiumIcon icon={Clock3} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-3.5 h-3.5" />
-                        <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide">Shift Schedule</h2>
+                        <h2 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide">Shift Schedule</h2>
                     </div>
                     <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] overflow-hidden">
                         <ShiftScheduleTable agents={shiftAgents} />
@@ -110,7 +110,7 @@ export default async function SettingsPage() {
                 <section>
                     <div className="flex items-center gap-2 mb-4">
                         <PremiumIcon icon={Shield} tone="violet" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-3.5 h-3.5" />
-                        <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide">Policy Presets</h2>
+                        <h2 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide">Policy Presets</h2>
                     </div>
                     <div className="grid sm:grid-cols-2 gap-4">
                         {[
@@ -129,7 +129,7 @@ export default async function SettingsPage() {
                         ].map(({ preset, name, description, badges }) => (
                             <div key={name} className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
                                 <div className="flex items-center justify-between mb-3 gap-3">
-                                    <h3 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{name}</h3>
+                                    <h3 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{name}</h3>
                                     <ApplyPolicyPresetButton preset={preset} />
                                 </div>
                                 <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] leading-relaxed mb-3">{description}</p>
@@ -151,7 +151,7 @@ export default async function SettingsPage() {
                 <section>
                     <div className="flex items-center gap-2 mb-4">
                         <PremiumIcon icon={Shield} tone="amber" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40 text-[color:var(--warn)] dark:text-[color:var(--warn)]" iconClassName="w-3.5 h-3.5" />
-                        <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide">Current Approval Policy</h2>
+                        <h2 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide">Current Approval Policy</h2>
                     </div>
                     <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] divide-y divide-[color:var(--line)] dark:divide-[color:var(--line)]/70">
                         {policyRows.length === 0 ? (
@@ -183,7 +183,7 @@ export default async function SettingsPage() {
                 <section>
                     <div className="flex items-center gap-2 mb-4">
                         <PremiumIcon icon={Zap} tone="violet" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-3.5 h-3.5" />
-                        <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide">Integrations</h2>
+                        <h2 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide">Integrations</h2>
                     </div>
                     <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] p-5 flex items-center gap-4">
                         <PremiumIcon icon={Link2} tone="violet" containerClassName="h-10 w-10 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)] shrink-0" iconClassName="w-5 h-5" />
@@ -203,7 +203,7 @@ export default async function SettingsPage() {
                 <section>
                     <div className="flex items-center gap-2 mb-4">
                         <PremiumIcon icon={Settings} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="w-3.5 h-3.5" />
-                        <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide">Notification Preferences</h2>
+                        <h2 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] uppercase tracking-wide">Notification Preferences</h2>
                     </div>
                     <NotificationPreferencesPanel initialPrefs={defaultPrefs} />
                 </section>

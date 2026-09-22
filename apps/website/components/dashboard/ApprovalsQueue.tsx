@@ -156,17 +156,17 @@ export default function ApprovalsQueue({ scope, agentSlug, headerTitle, headerSu
             <div className="bg-[var(--card)] dark:bg-[var(--card)] border-b border-[color:var(--line)] dark:border-[color:var(--line)] px-6 py-5 md:px-8">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <h1 className="text-lg font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{headerTitle}</h1>
-                        <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">{headerSubtitle}</p>
+                        <h1 className="text-xl font-semibold text-[color:var(--ink)] tracking-[-0.01em]">{headerTitle}</h1>
+                        <p className="mt-0.5 text-[13px] text-[color:var(--ink-muted)]">{headerSubtitle}</p>
                     </div>
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => void loadApprovals()}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-1.5 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--line)] px-3 py-2 text-xs font-semibold text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:border-[color:var(--line-strong)] transition-colors"
                         >
-                            <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-3.5 h-3.5" /> Refresh
+                            <RefreshCw className="w-3.5 h-3.5" /> Refresh
                         </button>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] text-[color:var(--danger)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 dark:text-[color:var(--danger)] px-2 py-1 text-xs font-bold">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] text-[color:var(--danger)] px-2.5 py-1 text-xs font-semibold">
                             {pendingCount} pending
                         </span>
                     </div>
@@ -235,9 +235,9 @@ export default function ApprovalsQueue({ scope, agentSlug, headerTitle, headerSu
                                             </span>
                                         ) : null}
                                     </div>
-                                    <div className="rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)]/60 border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2">
-                                        <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mb-0.5">Customer asked</p>
-                                        <p className="text-sm font-medium text-[color:var(--ink)] dark:text-[color:var(--ink)]">{item.title}</p>
+                                    <div className="rounded-lg bg-[var(--bg-deep)] px-3.5 py-2.5">
+                                        <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--ink-muted)] mb-1">Customer asked</p>
+                                        <p className="text-sm font-medium text-[color:var(--ink)]">{item.title}</p>
                                     </div>
                                     {item.reason && (
                                         <p className="text-xs text-[color:var(--warn)] dark:text-[color:var(--warn)] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/20 border border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] rounded-lg px-3 py-1.5">
@@ -254,8 +254,8 @@ export default function ApprovalsQueue({ scope, agentSlug, headerTitle, headerSu
                                         <span>
                                             <strong className="text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">Requested by:</strong> {item.requestedBy}
                                         </span>
-                                        <span className="inline-flex items-center gap-1">
-                                            <PremiumIcon icon={Clock3} tone="slate" containerClassName="w-5 h-5 rounded-[2px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-3 h-3" />
+                                        <span className="inline-flex items-center gap-1.5">
+                                            <Clock3 className="w-3.5 h-3.5 text-[color:var(--ink-muted)]" />
                                             {fromNow(item.createdAt)}
                                         </span>
                                     </div>
@@ -287,40 +287,36 @@ export default function ApprovalsQueue({ scope, agentSlug, headerTitle, headerSu
                                     <button
                                         disabled={activeId === item.id}
                                         onClick={() => void mutateApproval(item.id, "approve")}
-                                        className="inline-flex items-center gap-1 rounded-lg bg-[var(--ok)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--ok)] disabled:opacity-60"
+                                        className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--ok)] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[color-mix(in_srgb,var(--ok)_88%,#000)] active:scale-[0.98] transition-all disabled:opacity-60"
                                     >
-                                        {activeId === item.id ? (
-                                            <PremiumIcon icon={LoaderCircle} tone="emerald" containerClassName="w-5 h-5 rounded-[2px] bg-[var(--card)] text-white border-[color:var(--line)]" iconClassName="w-3 h-3 animate-spin" />
-                                        ) : (
-                                            <PremiumIcon icon={Check} tone="emerald" containerClassName="w-5 h-5 rounded-[2px] bg-[var(--card)] text-white border-[color:var(--line)]" iconClassName="w-3 h-3" />
-                                        )}
-                                        {activeId === item.id ? "Processing..." : "Approve"}
+                                        {activeId === item.id
+                                            ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
+                                            : <Check className="w-3.5 h-3.5" />}
+                                        {activeId === item.id ? "Processing…" : "Approve"}
                                     </button>
                                     <button
                                         disabled={activeId === item.id}
                                         onClick={() => void mutateApproval(item.id, "reject")}
-                                        className="inline-flex items-center gap-1 rounded-lg border border-[color:var(--line-strong)] dark:border-[color:var(--line)] px-3 py-2 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] disabled:opacity-60"
+                                        className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--line)] px-3.5 py-2 text-xs font-semibold text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:border-[color:var(--line-strong)] transition-colors disabled:opacity-60"
                                     >
-                                        {activeId === item.id ? (
-                                            <PremiumIcon icon={LoaderCircle} tone="slate" containerClassName="w-5 h-5 rounded-[2px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-3 h-3 animate-spin" />
-                                        ) : (
-                                            <PremiumIcon icon={X} tone="slate" containerClassName="w-5 h-5 rounded-[2px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-3 h-3" />
-                                        )}
-                                        {activeId === item.id ? "Processing..." : "Reject"}
+                                        {activeId === item.id
+                                            ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
+                                            : <X className="w-3.5 h-3.5" />}
+                                        {activeId === item.id ? "Processing…" : "Reject"}
                                     </button>
                                     {canAudit ? (
                                         <Link
                                             href={`/dashboard/activity?ref=${item.id}`}
-                                            className="inline-flex items-center gap-1 rounded-lg border border-[color:var(--line-strong)] dark:border-[color:var(--line)] px-3 py-2 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"
+                                            className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--line)] px-3.5 py-2 text-xs font-semibold text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:border-[color:var(--line-strong)] transition-colors"
                                         >
-                                            <PremiumIcon icon={ShieldAlert} tone="slate" containerClassName="w-5 h-5 rounded-[2px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-3 h-3" /> Audit trail
+                                            <ShieldAlert className="w-3.5 h-3.5" /> Audit trail
                                         </Link>
                                     ) : (
                                         <span
                                             title="Audit trail requires admin access"
-                                            className="inline-flex items-center gap-1 rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2 text-xs font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-soft)] cursor-not-allowed select-none"
+                                            className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--line)] px-3.5 py-2 text-xs font-semibold text-[color:var(--ink-muted)] cursor-not-allowed select-none"
                                         >
-                                            <PremiumIcon icon={ShieldAlert} tone="slate" containerClassName="w-5 h-5 rounded-[2px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-soft)]" iconClassName="w-3 h-3" /> Audit trail
+                                            <ShieldAlert className="w-3.5 h-3.5" /> Audit trail
                                         </span>
                                     )}
                                 </div>

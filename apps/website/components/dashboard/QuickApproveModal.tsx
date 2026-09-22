@@ -111,7 +111,7 @@ export default function QuickApproveModal({ approval, onClose, onApproved }: Pro
                                     </span>
                                     <span className="text-[11px] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">{approval.age}</span>
                                 </div>
-                                <p className="mt-1.5 text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] leading-snug">
+                                <p className="mt-1.5 text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] leading-snug">
                                     {approval.title}
                                 </p>
                             </div>

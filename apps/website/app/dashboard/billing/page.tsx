@@ -247,7 +247,7 @@ export default async function BillingPage() {
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                     <div className="xl:col-span-2 rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden">
                         <div className="px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)]">
-                            <h2 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Plan Options</h2>
+                            <h2 className="text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Plan Options</h2>
                             <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">Compare plans available on your account</p>
                         </div>
                         {plans.length > 0 ? (
@@ -259,7 +259,7 @@ export default async function BillingPage() {
                                         <div key={plan.id} className={`rounded-lg border p-4 flex flex-col gap-3 transition-all ${isCurrent ? "border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/30 ring-2 ring-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:ring-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]" : "border-[color:var(--line)] dark:border-[color:var(--line)]"}`}>
                                             <div className="flex items-start justify-between">
                                                 <div>
-                                                    <p className="font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{plan.name}</p>
+                                                    <p className="font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{plan.name}</p>
                                                     <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">{plan.agentSlots} agent slots</p>
                                                 </div>
                                                 {isCurrent && (
@@ -308,7 +308,7 @@ export default async function BillingPage() {
 
                     <div className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden">
                         <div className="px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)]">
-                            <h2 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Seat Usage</h2>
+                            <h2 className="text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Seat Usage</h2>
                             <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">Current capacity on your plan</p>
                         </div>
                         <div className="p-4 space-y-3">
@@ -349,7 +349,7 @@ export default async function BillingPage() {
                 {/* 6-month spend trend */}
                 <div className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] flex items-center gap-2">
+                        <h2 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] flex items-center gap-2">
                             <PremiumIcon icon={TrendingUp} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="w-3.5 h-3.5" />
                             6-Month Spend Trend
                         </h2>

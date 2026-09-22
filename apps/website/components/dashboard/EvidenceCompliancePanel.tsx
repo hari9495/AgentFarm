@@ -125,7 +125,7 @@ export default function EvidenceCompliancePanel() {
             <div className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <h1 className="text-lg font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Evidence & Compliance</h1>
+                        <h1 className="text-lg font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Evidence & Compliance</h1>
                         <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                             Approval SLA, audit freshness, and export-ready evidence pack.
                         </p>
@@ -185,7 +185,7 @@ export default function EvidenceCompliancePanel() {
                 ].map((card) => (
                     <div key={card.label} className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-4">
                         <p className="text-xs font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">{card.label}</p>
-                        <p className="mt-2 text-2xl font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{loading ? "..." : card.value}</p>
+                        <p className="mt-2 text-2xl font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{loading ? "..." : card.value}</p>
                         <p className="mt-1 text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">{card.sub}</p>
                     </div>
                 ))}
@@ -202,7 +202,7 @@ export default function EvidenceCompliancePanel() {
 
             <div className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5 space-y-4">
                 <div className="flex items-center justify-between gap-3">
-                    <h2 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Audit Event Query</h2>
+                    <h2 className="text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Audit Event Query</h2>
                     <button
                         onClick={() => void loadAuditEvents()}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-1.5 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"

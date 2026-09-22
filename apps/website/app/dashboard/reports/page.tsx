@@ -192,7 +192,7 @@ export default async function DashboardReportsPage() {
                     {/* Agent output table */}
                     <div className="xl:col-span-2 rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden">
                         <div className="px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)] flex items-center justify-between">
-                            <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] flex items-center gap-2">
+                            <h2 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] flex items-center gap-2">
                                 <PremiumIcon icon={Users} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-3.5 h-3.5" />
                                 Agent Output
                             </h2>
@@ -225,7 +225,7 @@ export default async function DashboardReportsPage() {
                                                         <span className="text-xs font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{row.agent}</span>
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-3.5 font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{row.tasks}</td>
+                                                <td className="px-4 py-3.5 font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{row.tasks}</td>
                                                 <td className="px-4 py-3.5 font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">{row.pending}</td>
                                                 <td className="px-4 py-3.5 font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">{row.decided7d}</td>
                                                 <td className="px-4 py-3.5">
@@ -251,7 +251,7 @@ export default async function DashboardReportsPage() {
                     <div className="space-y-4">
                         {/* Risk distribution */}
                         <div className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
-                            <h3 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-4 flex items-center gap-2">
+                            <h3 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-4 flex items-center gap-2">
                                 <PremiumIcon icon={ShieldAlert} tone="amber" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40 text-[color:var(--warn)] dark:text-[color:var(--warn)]" iconClassName="w-3.5 h-3.5" />
                                 Risk Distribution
                             </h3>
@@ -271,7 +271,7 @@ export default async function DashboardReportsPage() {
                                                     <span className={`w-2 h-2 rounded-full ${r.color}`} />
                                                     {r.label}
                                                 </span>
-                                                <span className="font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{r.count} <span className="font-normal text-[color:var(--ink-muted)]">({r.pct}%)</span></span>
+                                                <span className="font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{r.count} <span className="font-normal text-[color:var(--ink-muted)]">({r.pct}%)</span></span>
                                             </div>
                                         ))}
                                     </div>
@@ -281,7 +281,7 @@ export default async function DashboardReportsPage() {
 
                         {/* Approval volume trend */}
                         <div className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
-                            <h3 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-1 flex items-center gap-2">
+                            <h3 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-1 flex items-center gap-2">
                                 <PremiumIcon icon={TrendingUp} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="w-3.5 h-3.5" />
                                 Approval Volume
                             </h3>
@@ -297,7 +297,7 @@ export default async function DashboardReportsPage() {
                         <div className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
                             <div className="flex items-center gap-2 mb-3">
                                 <PremiumIcon icon={Clock} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-3.5 h-3.5" />
-                                <h3 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Avg. Decision Latency</h3>
+                                <h3 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Avg. Decision Latency</h3>
                             </div>
                             <p className="text-3xl font-extrabold text-[color:var(--accent)] dark:text-[color:var(--accent)] tabular-nums">{avgLatencyLabel}</p>
                             <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1">

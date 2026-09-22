@@ -121,15 +121,15 @@ export default function TeamRosterClient({
             <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-[color:var(--line)] pt-4">
                 <div className="flex flex-wrap items-center gap-6">
                     <div className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
-                        <span className="text-[color:var(--ink)] font-bold">{members.length}</span>
+                        <span className="text-[color:var(--ink)] font-semibold">{members.length}</span>
                         {members.length === 1 ? "teammate" : "teammates"}
                     </div>
                     <div className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
-                        <span className="text-[color:var(--ink)] font-bold">{adminCount}</span>
+                        <span className="text-[color:var(--ink)] font-semibold">{adminCount}</span>
                         {adminCount === 1 ? "admin" : "admins"}
                     </div>
                     <div className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
-                        <span className="text-[color:var(--ink)] font-bold">{memberCount}</span>
+                        <span className="text-[color:var(--ink)] font-semibold">{memberCount}</span>
                         {memberCount === 1 ? "member" : "members"}
                     </div>
                 </div>
@@ -149,7 +149,7 @@ export default function TeamRosterClient({
                     onSubmit={(e) => void handleAddMember(e)}
                     className="mt-6 rounded-xl border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/60 bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/30 p-5 space-y-4"
                 >
-                    <h3 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] flex items-center gap-2">
                         <PremiumIcon icon={Users} tone="violet" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-3.5 h-3.5" />
                         Add a new team member
                     </h3>
@@ -224,7 +224,7 @@ export default function TeamRosterClient({
 
             <div className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden mt-6">
                 <div className="px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)] flex items-center justify-between">
-                    <h2 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Roster</h2>
+                    <h2 className="text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Roster</h2>
                     <span className="inline-flex items-center justify-center text-xs font-bold bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] rounded-full px-2.5 py-1">
                         {members.length} {members.length === 1 ? "member" : "members"}
                     </span>

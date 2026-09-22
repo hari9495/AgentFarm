@@ -286,17 +286,17 @@ export default async function AgentsIndexPage({
                         {/* Mini stats bar */}
                         <div className="mt-5 flex flex-wrap gap-6">
                             <div className="text-center">
-                                <p className="text-xl font-bold text-[color:var(--ink)] leading-none">{activeCount}</p>
+                                <p className="text-xl font-semibold text-[color:var(--ink)] leading-none">{activeCount}</p>
                                 <p className="text-[10px] text-[color:var(--ink-muted)] mt-0.5 uppercase tracking-wide">Active</p>
                             </div>
                             <div className="w-px h-8 bg-[var(--card)] self-center" />
                             <div className="text-center">
-                                <p className="text-xl font-bold text-[color:var(--ink)] leading-none">{totalTasks}</p>
+                                <p className="text-xl font-semibold text-[color:var(--ink)] leading-none">{totalTasks}</p>
                                 <p className="text-[10px] text-[color:var(--ink-muted)] mt-0.5 uppercase tracking-wide">Total Tasks</p>
                             </div>
                             <div className="w-px h-8 bg-[var(--card)] self-center" />
                             <div className="text-center">
-                                <p className="text-xl font-bold text-[color:var(--ink)] leading-none">{avgReliability === "—" ? "—" : `${avgReliability}%`}</p>
+                                <p className="text-xl font-semibold text-[color:var(--ink)] leading-none">{avgReliability === "—" ? "—" : `${avgReliability}%`}</p>
                                 <p className="text-[10px] text-[color:var(--ink-muted)] mt-0.5 uppercase tracking-wide">Avg Reliability</p>
                             </div>
                         </div>
@@ -361,7 +361,7 @@ export default async function AgentsIndexPage({
                 {agents.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-6 py-16 text-center">
                         <Cpu className="mx-auto h-8 w-8 text-[color:var(--ink-muted)] dark:text-[color:var(--ink-soft)]" />
-                        <h2 className="mt-3 text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">No agents deployed yet</h2>
+                        <h2 className="mt-3 text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">No agents deployed yet</h2>
                         <p className="mt-1 text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] max-w-sm mx-auto">
                             Deploy an AI worker from the marketplace to see its task history, quality metrics, and approvals here.
                         </p>
@@ -395,7 +395,7 @@ export default async function AgentsIndexPage({
                                 </div>
 
                                 {/* Name */}
-                                <h2 className="mt-3 text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] group-hover:text-[color:var(--accent)] dark:group-hover:text-[color:var(--accent)] transition-colors">
+                                <h2 className="mt-3 text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] group-hover:text-[color:var(--accent)] dark:group-hover:text-[color:var(--accent)] transition-colors">
                                     {agent.name}
                                 </h2>
 
@@ -466,7 +466,7 @@ export default async function AgentsIndexPage({
                                             <ClipboardCheck className="h-3.5 w-3.5 text-[color:var(--accent)] dark:text-[color:var(--accent)]" />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] leading-none">{agent.tasks}</p>
+                                            <p className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] leading-none">{agent.tasks}</p>
                                             <p className="text-[10px] text-[color:var(--ink-muted)] mt-0.5">tasks done</p>
                                         </div>
                                     </div>
@@ -475,7 +475,7 @@ export default async function AgentsIndexPage({
                                             <Shield className="h-3.5 w-3.5 text-[color:var(--ok)] dark:text-[color:var(--ok)]" />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] leading-none">{agent.reliability !== null ? `${agent.reliability}%` : "—"}</p>
+                                            <p className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] leading-none">{agent.reliability !== null ? `${agent.reliability}%` : "—"}</p>
                                             <p className="text-[10px] text-[color:var(--ink-muted)] mt-0.5">reliability</p>
                                         </div>
                                     </div>

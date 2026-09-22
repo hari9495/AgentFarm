@@ -54,7 +54,7 @@ export default function RiskyActionTrigger({ agentSlug, agentName }: Props) {
         <div className="bg-gradient-to-br from-[color-mix(in_srgb,var(--danger)_8%,transparent)] to-[color-mix(in_srgb,var(--warn)_8%,transparent)] dark:from-[color-mix(in_srgb,var(--danger)_14%,transparent)]/20 dark:to-[color-mix(in_srgb,var(--warn)_14%,transparent)]/20 rounded-xl border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40 p-5">
             <div className="flex items-center gap-2 mb-2">
                 <PremiumIcon icon={ShieldAlert} tone="rose" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 text-[color:var(--danger)] dark:text-[color:var(--danger)]" iconClassName="w-3.5 h-3.5" />
-                <span className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Approval Simulation</span>
+                <span className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Approval Simulation</span>
             </div>
             <p className="text-xs text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] leading-relaxed">
                 Trigger a high-risk operation request for this agent to validate routing through pending approvals and decision handling.

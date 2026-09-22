@@ -183,7 +183,7 @@ export default function SupportPage() {
 
                 {showForm && (
                     <form onSubmit={handleSubmit} className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5 space-y-4">
-                        <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Describe what's going wrong</h2>
+                        <h2 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Describe what's going wrong</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="sm:col-span-2">
                                 <label className="block text-xs font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mb-1.5">Title (optional)</label>
@@ -220,7 +220,7 @@ export default function SupportPage() {
 
                 <div className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden">
                     <div className="px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)] flex items-center justify-between">
-                        <h2 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Your issues</h2>
+                        <h2 className="text-base font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Your issues</h2>
                         <button type="button" onClick={() => void load()} className="inline-flex items-center gap-1.5 text-xs font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] dark:hover:text-[color:var(--ink)]">
                             <RefreshCw className="w-3.5 h-3.5" /> Refresh
                         </button>

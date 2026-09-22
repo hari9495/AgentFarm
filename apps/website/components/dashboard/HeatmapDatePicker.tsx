@@ -96,7 +96,7 @@ export default function HeatmapDatePicker({ fromValue, toValue, minDate, maxDate
                             <div className="h-6 w-6 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 flex items-center justify-center shrink-0">
                                 <Calendar className="h-3.5 w-3.5 text-[color:var(--accent)] dark:text-[color:var(--accent)]" />
                             </div>
-                            <p className="text-xs font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Pick a date range</p>
+                            <p className="text-xs font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Pick a date range</p>
                         </div>
                         <button onClick={handleCancel} className="h-6 w-6 rounded-lg flex items-center justify-center text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition-colors">
                             <X className="h-3.5 w-3.5" />

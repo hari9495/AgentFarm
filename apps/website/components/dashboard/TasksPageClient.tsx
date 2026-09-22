@@ -320,7 +320,7 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                 {agents.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-6 py-16 text-center">
                         <Play className="mx-auto h-8 w-8 text-[color:var(--ink-muted)] dark:text-[color:var(--ink-soft)]" />
-                        <h2 className="mt-3 text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">No agents deployed</h2>
+                        <h2 className="mt-3 text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">No agents deployed</h2>
                         <p className="mt-1 text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">Deploy an agent first before submitting tasks.</p>
                     </div>
                 ) : (
@@ -328,7 +328,7 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
 
                         {/* Submission form */}
                         <div className="lg:col-span-2 bg-[var(--card)] dark:bg-[var(--card)] rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] shadow-sm p-5 space-y-4">
-                            <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">New Task</h2>
+                            <h2 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">New Task</h2>
 
                             <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
                                 {/* Agent selector */}
@@ -457,7 +457,7 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                         {/* Task history */}
                         <div className="lg:col-span-3 bg-[var(--card)] dark:bg-[var(--card)] rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] shadow-sm overflow-hidden">
                             <div className="flex items-center justify-between px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)]">
-                                <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Task History</h2>
+                                <h2 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Task History</h2>
                                 <button
                                     onClick={() => void fetchTasks(selectedBotId)}
                                     disabled={loadingTasks}
