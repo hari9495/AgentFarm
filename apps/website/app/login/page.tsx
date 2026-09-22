@@ -23,15 +23,18 @@ function BrandMark() {
 /** Page shell: soft light bg + wash, centered card, logo above, slim footer. */
 function AuthShell({ children }: { children: React.ReactNode }) {
     return (
-        <div className="relative min-h-screen flex flex-col overflow-hidden" style={{ background: "var(--op-paper-2)", color: "var(--op-ink)" }}>
+        <div className="relative min-h-svh flex flex-col overflow-hidden" style={{ background: "var(--op-paper-2)", color: "var(--op-ink)" }}>
             <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(45% 40% at 50% 0%, var(--op-indigo-soft), transparent 70%)" }} />
-            <main className="relative flex-1 flex items-center justify-center px-4 py-4">
-                <div className="op-rise w-full max-w-[400px]">
-                    <div className="flex justify-center mb-5"><BrandMark /></div>
+            {/* Fluid vertical rhythm: padding scales with viewport height (clamp on vh),
+                so the card never overflows on short screens and breathes on tall ones —
+                proportional, no scrollbar, from a 13" laptop up to an 84" display. */}
+            <main className="relative flex-1 flex items-center justify-center px-4 py-[clamp(0.5rem,3vh,3rem)]">
+                <div className="op-rise w-full max-w-[clamp(400px,30vw,460px)]">
+                    <div className="flex justify-center mb-[clamp(0.75rem,2.5vh,1.5rem)]"><BrandMark /></div>
                     {children}
                 </div>
             </main>
-            <footer className="relative flex flex-wrap items-center justify-center gap-x-4 gap-y-1 pb-3 text-[12px]" style={{ fontFamily: "var(--font-mono)", color: "var(--op-muted)" }}>
+            <footer className="relative flex flex-wrap items-center justify-center gap-x-4 gap-y-1 pb-[clamp(0.75rem,2vh,1.5rem)] text-[12px]" style={{ fontFamily: "var(--font-mono)", color: "var(--op-muted)" }}>
                 <span>© {new Date().getFullYear()} AgentFarms</span>
                 <Link href="/privacy" className="hover:text-[color:var(--op-indigo)] transition-colors">Privacy</Link>
                 <Link href="/terms" className="hover:text-[color:var(--op-indigo)] transition-colors">Terms</Link>
