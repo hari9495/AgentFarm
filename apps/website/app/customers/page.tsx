@@ -3,6 +3,7 @@ import { customersPageContent as C } from '@/lib/marketing-content';
 import SubPageHero from '@/components/shared/SubPageHero';
 import SharedCTA from '@/components/shared/SharedCTA';
 import CustomerClientsStack from '@/components/customers/CustomerClientsStack';
+import { Reveal } from '@/components/motion';
 
 export const metadata: Metadata = C.metadata;
 
@@ -40,6 +41,7 @@ export default function CustomersPage() {
       />
 
       {/* Logo strip */}
+      <Reveal>
       <section className="op-soft" style={{ paddingTop: 40, paddingBottom: 40 }}>
         <div className="op-wrap text-center">
           <p className="mb-8 text-[13px]" style={{ color: 'var(--op-muted)' }}>{C.logosTitle}</p>
@@ -53,6 +55,7 @@ export default function CustomersPage() {
           </div>
         </div>
       </section>
+      </Reveal>
 
       {/* Stats + case studies (21st.dev: ravikatiyar162/testimonial-card) */}
       <section className="op-light" style={{ paddingTop: 72, paddingBottom: 72 }}>
@@ -60,6 +63,7 @@ export default function CustomersPage() {
       </section>
 
       {/* CTA (21st.dev: shadcnblocks/cta11) */}
+      <Reveal>
       <section className="op-soft" style={{ paddingTop: 88, paddingBottom: 88 }}>
         <SharedCTA
           badge="14-day free trial · no card required"
@@ -70,6 +74,7 @@ export default function CustomersPage() {
           trustItems={['Policy-aware approvals', 'Tenant-isolated runtime', 'Full evidence trail']}
         />
       </section>
+      </Reveal>
     </div>
   );
 }

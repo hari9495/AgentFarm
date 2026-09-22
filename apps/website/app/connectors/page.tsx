@@ -1,4 +1,5 @@
 "use client";
+import { Reveal } from '@/components/motion';
 
 import { useState, useEffect } from "react";
 
@@ -588,7 +589,7 @@ export default function ConnectorsPage() {
             <div className="max-w-5xl mx-auto space-y-8">
 
                 {/* Connector showcase gallery */}
-                <section className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] p-6">
+                <Reveal><section className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface-card)] p-6">
                     <div className="flex items-center justify-between mb-5">
                         <div>
                             <h2 className="text-base font-semibold text-[var(--ink)]">Available connectors</h2>
@@ -627,7 +628,7 @@ export default function ConnectorsPage() {
                             })
                         )}
                     </div>
-                </section>
+                </section></Reveal>
 
                 {/* Header */}
                 <div>
@@ -638,7 +639,7 @@ export default function ConnectorsPage() {
                 </div>
 
                 {context && context.options.length > 0 && (
-                    <section className="bg-[var(--surface-card)] rounded-xl border border-[var(--hairline)] p-4">
+                    <Reveal><section className="bg-[var(--surface-card)] rounded-xl border border-[var(--hairline)] p-4">
                         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                             <div>
                                 <p className="text-sm font-semibold text-[var(--ink)]">Bot-scoped integration context</p>
@@ -681,12 +682,12 @@ export default function ConnectorsPage() {
                                 </div>
                             );
                         })()}
-                    </section>
+                    </section></Reveal>
                 )}
 
                 {/* Connected tools summary */}
                 {configured.length > 0 && (
-                    <section>
+                    <Reveal><section>
                         <h2 className="text-base font-semibold text-[var(--ink)] mb-3">
                             Your Connected Tools <span className="text-[var(--ash)] font-normal">({configured.length})</span>
                         </h2>
@@ -700,7 +701,7 @@ export default function ConnectorsPage() {
                                 />
                             ))}
                         </div>
-                    </section>
+                    </section></Reveal>
                 )}
 
                 {/* No connections state */}
@@ -713,7 +714,7 @@ export default function ConnectorsPage() {
                 )}
 
                 {/* Available integrations */}
-                <section>
+                <Reveal><section>
                     <div className="flex items-center justify-between mb-3">
                         <h2 className="text-base font-semibold text-[var(--ink)]">Available Integrations</h2>
                     </div>
@@ -761,10 +762,10 @@ export default function ConnectorsPage() {
                             })}
                         </div>
                     )}
-                </section>
+                </section></Reveal>
 
                 {/* Custom REST API callout */}
-                <section className="bg-[var(--surface-el)] border border-[var(--hairline)] rounded-xl p-5">
+                <Reveal><section className="bg-[var(--surface-el)] border border-[var(--hairline)] rounded-xl p-5">
                     <div className="flex items-start gap-3">
                         <span className="text-2xl">🔌</span>
                         <div className="flex-1">
@@ -783,7 +784,7 @@ export default function ConnectorsPage() {
                             + Custom API
                         </button>
                     </div>
-                </section>
+                </section></Reveal>
 
             </div>
         </div>

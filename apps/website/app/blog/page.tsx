@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Reveal } from '@/components/motion';
 import Link from 'next/link';
 import { blogListingContent, blogPostsContent } from '@/lib/marketing-content';
 import BlogGridClean from '@/components/blog/BlogGridClean';
@@ -36,12 +37,12 @@ export default function BlogPage() {
       />
 
       {/* Post grid — pulled BlogGridClean (21st.dev: efferd/blog-section) */}
-      <section className="op-light" style={{ paddingTop: 40, paddingBottom: 80 }}>
+      <Reveal><section className="op-light" style={{ paddingTop: 40, paddingBottom: 80 }}>
         <BlogGridClean posts={[...blogPostsContent]} />
-      </section>
+      </section></Reveal>
 
       {/* CTA — shared SharedCTA (21st.dev: shadcnblocks/cta11) */}
-      <section className="op-soft" style={{ paddingTop: 88, paddingBottom: 88 }}>
+      <Reveal><section className="op-soft" style={{ paddingTop: 88, paddingBottom: 88 }}>
         <SharedCTA
           badge="14-day free trial · no card required"
           heading="Ready to see a worker in action?"
@@ -49,7 +50,7 @@ export default function BlogPage() {
           primary={{ label: 'Start free trial', href: '/get-started' }}
           secondary={{ label: 'View changelog', href: '/changelog' }}
         />
-      </section>
+      </section></Reveal>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Reveal } from '@/components/motion';
 import { Check } from 'lucide-react';
 import Link from 'next/link';
 import { marketplaceBots } from '@/lib/bots';
@@ -65,7 +66,7 @@ export default function PricingPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(pageSchemas) }} />
 
       {/* Hero */}
-      <section className="op-light relative overflow-hidden">
+      <Reveal><section className="op-light relative overflow-hidden">
         <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(55% 50% at 50% 0%, var(--op-indigo-soft), transparent 70%)' }} />
         <div className="op-wrap-narrow relative text-center" style={{ paddingTop: 88, paddingBottom: 56 }}>
           <p className="op-eyebrow op-rise op-d1">{pricingPageContent.hero.eyebrow}</p>
@@ -73,21 +74,21 @@ export default function PricingPage() {
           <p className="op-rise op-d3 mt-5 mx-auto max-w-xl text-[1.075rem] leading-relaxed" style={{ color: 'var(--op-muted)' }}>{pricingPageContent.hero.description}</p>
           <p className="op-rise op-d4 mt-3 text-[13px]" style={{ fontFamily: 'var(--font-mono)', color: 'var(--op-muted)' }}>{pricingPageContent.hero.footnoteTemplate.replace('{count}', String(availableMarketplaceBots.length))}</p>
         </div>
-      </section>
+      </section></Reveal>
 
       {/* Plans + billing toggle */}
-      <section className="op-soft" style={{ paddingTop: 8, paddingBottom: 40 }}>
+      <Reveal><section className="op-soft" style={{ paddingTop: 8, paddingBottom: 40 }}>
         <PricingPlansToggle plans={plans} />
         <p className="op-wrap mt-7 text-center text-[13px]" style={{ fontFamily: 'var(--font-mono)', color: 'var(--op-muted)' }}>{pricingPageContent.pageFooterNote}</p>
-      </section>
+      </section></Reveal>
 
       {/* Feature comparison table */}
-      <section className="op-light" style={{ paddingTop: 72, paddingBottom: 72 }}>
+      <Reveal><section className="op-light" style={{ paddingTop: 72, paddingBottom: 72 }}>
         <PricingComparison />
-      </section>
+      </section></Reveal>
 
       {/* Decision helper cards */}
-      <section className="op-soft" style={{ paddingTop: 72, paddingBottom: 72 }}>
+      <Reveal><section className="op-soft" style={{ paddingTop: 72, paddingBottom: 72 }}>
         <div className="op-wrap">
           <div className="grid md:grid-cols-3 gap-5">
             {decisionCards.map((card) => (
@@ -99,15 +100,15 @@ export default function PricingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section></Reveal>
 
       {/* FAQ accordion (21st.dev: moumensoliman/faq-section-shadcnui) */}
-      <section className="op-light" aria-label="Pricing FAQ" style={{ paddingTop: 88, paddingBottom: 88 }}>
+      <Reveal><section className="op-light" aria-label="Pricing FAQ" style={{ paddingTop: 88, paddingBottom: 88 }}>
         <SharedFAQ heading="Frequently asked questions" faqs={pricingPageContent.faqs.map((f) => ({ question: f.q, answer: f.a }))} />
-      </section>
+      </section></Reveal>
 
       {/* CTA (21st.dev: shadcnblocks/cta11) */}
-      <section className="op-soft" style={{ paddingTop: 88, paddingBottom: 88 }}>
+      <Reveal><section className="op-soft" style={{ paddingTop: 88, paddingBottom: 88 }}>
         <SharedCTA
           badge="14-day free trial · no card required"
           heading="Ready to deploy your first worker?"
@@ -116,7 +117,7 @@ export default function PricingPage() {
           secondary={{ label: 'Talk to sales', href: '/book-demo' }}
           trustItems={['Policy-aware approvals', 'Tenant-isolated runtime', 'Full evidence trail']}
         />
-      </section>
+      </section></Reveal>
     </div>
   );
 }

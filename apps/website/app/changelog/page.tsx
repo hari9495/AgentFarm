@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Reveal } from '@/components/motion';
 import { changelogEntriesContent, changelogListingContent } from '@/lib/marketing-content';
 import ChangelogTimeline from '@/components/changelog/ChangelogTimeline';
 import SubPageHero from '@/components/shared/SubPageHero';
@@ -48,12 +49,12 @@ export default function ChangelogPage() {
       />
 
       {/* Entries — pulled ChangelogTimeline (21st.dev: shadcnblocks/changelog-1) */}
-      <section className="op-light" style={{ paddingTop: 56, paddingBottom: 80 }}>
+      <Reveal><section className="op-light" style={{ paddingTop: 56, paddingBottom: 80 }}>
         <ChangelogTimeline entries={changelogEntriesContent} filters={changelogListingContent.filters} />
-      </section>
+      </section></Reveal>
 
       {/* CTA — shared SharedCTA (21st.dev: shadcnblocks/cta11) */}
-      <section className="op-soft" style={{ paddingTop: 88, paddingBottom: 88 }}>
+      <Reveal><section className="op-soft" style={{ paddingTop: 88, paddingBottom: 88 }}>
         <SharedCTA
           badge="Shipped weekly"
           heading="Want these updates as they land?"
@@ -61,7 +62,7 @@ export default function ChangelogPage() {
           primary={{ label: 'Start free trial', href: '/get-started' }}
           secondary={{ label: 'Read the blog', href: '/blog' }}
         />
-      </section>
+      </section></Reveal>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic'
+import { Reveal } from '@/components/motion';
 
 import type { Metadata } from 'next';
 import { StatusRefresher } from './StatusRefresher';
@@ -89,7 +90,7 @@ export default async function StatusPage() {
             <StatusRefresher />
 
             {/* Header */}
-            <section className="max-w-3xl mx-auto px-6 pt-20 pb-10">
+            <Reveal><section className="max-w-3xl mx-auto px-6 pt-20 pb-10">
                 <p className="op-eyebrow mb-3">System status</p>
                 <h1 className="font-[family-name:var(--font-display)] text-4xl font-extrabold tracking-[-0.03em] text-[var(--op-ink)] mb-2">
                     System Status
@@ -97,10 +98,10 @@ export default async function StatusPage() {
                 <p className="text-[var(--op-muted)] text-sm">
                     Last updated: <span className="text-[var(--op-ink-soft)]">{lastUpdated}</span>
                 </p>
-            </section>
+            </section></Reveal>
 
             {/* Overall status banner */}
-            <section className="max-w-3xl mx-auto px-6 mb-10">
+            <Reveal><section className="max-w-3xl mx-auto px-6 mb-10">
                 <div
                     className={`flex items-center gap-4 rounded-2xl border px-6 py-5 ${STATUS_BANNER_BG[overallStatus]}`}
                 >
@@ -111,10 +112,10 @@ export default async function StatusPage() {
                         {bannerLabel}
                     </span>
                 </div>
-            </section>
+            </section></Reveal>
 
             {/* Services table */}
-            <section className="max-w-3xl mx-auto px-6 mb-12">
+            <Reveal><section className="max-w-3xl mx-auto px-6 mb-12">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--op-muted)] mb-4">
                     Services
                 </h2>
@@ -154,10 +155,10 @@ export default async function StatusPage() {
                         ))}
                     </div>
                 )}
-            </section>
+            </section></Reveal>
 
             {/* Incidents section */}
-            <section className="max-w-3xl mx-auto px-6 mb-20">
+            <Reveal><section className="max-w-3xl mx-auto px-6 mb-20">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-[var(--op-muted)] mb-4">
                     Active Incidents
                 </h2>
@@ -189,7 +190,7 @@ export default async function StatusPage() {
                         ))}
                     </div>
                 )}
-            </section>
+            </section></Reveal>
         </main>
     );
 }

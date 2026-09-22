@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Reveal } from '@/components/motion';
 import { ArrowRight, Check } from 'lucide-react';
 import Link from 'next/link';
 import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
@@ -28,12 +29,12 @@ export default function UseCasesPage() {
       />
 
       {/* Case studies — tabbed explorer (Option B) */}
-      <section className="op-soft" style={{ paddingTop: 72, paddingBottom: 72 }}>
+      <Reveal><section className="op-soft" style={{ paddingTop: 72, paddingBottom: 72 }}>
         <UseCasesTabs />
-      </section>
+      </section></Reveal>
 
       {/* ROI estimate */}
-      <section className="op-light" style={{ paddingTop: 80, paddingBottom: 80 }}>
+      <Reveal><section className="op-light" style={{ paddingTop: 80, paddingBottom: 80 }}>
         <div className="op-wrap">
           <div className="mb-12 text-center">
             <p className="op-eyebrow">ROI estimate</p>
@@ -52,10 +53,10 @@ export default function UseCasesPage() {
           </div>
           <p className="mt-6 text-center text-[12px]" style={{ color: 'var(--op-muted)' }}>Estimate based on $80/hr blended labor cost across all role types and median AgentFarms automation rates.</p>
         </div>
-      </section>
+      </section></Reveal>
 
       {/* CTA (21st.dev: shadcnblocks/cta11) */}
-      <section className="op-soft" style={{ paddingTop: 88, paddingBottom: 88 }}>
+      <Reveal><section className="op-soft" style={{ paddingTop: 88, paddingBottom: 88 }}>
         <SharedCTA
           badge="14-day free trial · no card required"
           heading="Which departments would you staff first?"
@@ -64,7 +65,7 @@ export default function UseCasesPage() {
           secondary={{ label: 'Browse agent roles', href: '/marketplace' }}
           trustItems={['Policy-aware approvals', 'Tenant-isolated runtime', 'Full evidence trail']}
         />
-      </section>
+      </section></Reveal>
     </div>
   );
 }

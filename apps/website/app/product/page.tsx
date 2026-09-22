@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Reveal } from '@/components/motion';
 import { productPageContent } from '@/lib/marketing-content';
 import ProductHeroSplit from '@/components/product/ProductHeroSplit';
 import HowItWorksSteps from '@/components/product/HowItWorksSteps';
@@ -22,19 +23,19 @@ export default function ProductPage() {
     <div>
       <ProductHeroSplit />
 
-      <section className="op-soft" style={{ paddingTop: 80, paddingBottom: 80 }}>
+      <Reveal><section className="op-soft" style={{ paddingTop: 80, paddingBottom: 80 }}>
         <HowItWorksSteps />
-      </section>
+      </section></Reveal>
 
-      <section className="op-light" style={{ paddingTop: 80, paddingBottom: 80 }}>
+      <Reveal><section className="op-light" style={{ paddingTop: 80, paddingBottom: 80 }}>
         <ProductFeaturesGrid />
-      </section>
+      </section></Reveal>
 
-      <section className="op-soft" style={{ paddingTop: 80, paddingBottom: 80 }}>
+      <Reveal><section className="op-soft" style={{ paddingTop: 80, paddingBottom: 80 }}>
         <ProductDemoFramed />
-      </section>
+      </section></Reveal>
 
-      <section className="op-light" style={{ paddingTop: 88, paddingBottom: 88 }}>
+      <Reveal><section className="op-light" style={{ paddingTop: 88, paddingBottom: 88 }}>
         <SharedCTA
           badge="14-day free trial · no card required"
           heading={productPageContent.cta.title}
@@ -42,7 +43,7 @@ export default function ProductPage() {
           primary={{ label: productPageContent.cta.button.label, href: productPageContent.cta.button.href }}
           secondary={{ label: 'How it works', href: '/how-it-works' }}
         />
-      </section>
+      </section></Reveal>
     </div>
   );
 }

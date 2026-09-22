@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Reveal } from '@/components/motion';
 import { CheckCircle2 } from 'lucide-react';
 import SubPageHero from '@/components/shared/SubPageHero';
 import SharedCTA from '@/components/shared/SharedCTA';
@@ -101,7 +102,7 @@ export default function IntegrationsPage() {
       />
 
       {/* Highlights */}
-      <section className="op-soft" style={{ paddingTop: 48, paddingBottom: 48 }}>
+      <Reveal><section className="op-soft" style={{ paddingTop: 48, paddingBottom: 48 }}>
         <div className="op-wrap">
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {highlights.map((h) => (
@@ -112,19 +113,19 @@ export default function IntegrationsPage() {
             ))}
           </ul>
         </div>
-      </section>
+      </section></Reveal>
 
       {/* Connector catalog — pulled IntegrationsCardGrid (21st.dev: meschacirung/integrations-three) */}
-      <section className="op-light" style={{ paddingTop: 72, paddingBottom: 72 }}>
+      <Reveal><section className="op-light" style={{ paddingTop: 72, paddingBottom: 72 }}>
         <div className="op-wrap mb-12">
           <h2 className="font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight sm:text-4xl" style={{ letterSpacing: '-0.025em', color: 'var(--op-ink)' }}>Integrate with your favorite tools</h2>
           <p className="mt-3 max-w-xl text-[17px]" style={{ color: 'var(--op-muted)' }}>Connect seamlessly across code, tasks, messaging, CRM, support, and infrastructure — every write gated by policy.</p>
         </div>
         <IntegrationsCardGrid categories={categories} />
-      </section>
+      </section></Reveal>
 
       {/* CTA — shared SharedCTA (21st.dev: shadcnblocks/cta11) */}
-      <section className="op-soft" style={{ paddingTop: 88, paddingBottom: 88 }}>
+      <Reveal><section className="op-soft" style={{ paddingTop: 88, paddingBottom: 88 }}>
         <SharedCTA
           badge="Enterprise · custom connectors"
           heading="Need a connector that's not listed?"
@@ -132,7 +133,7 @@ export default function IntegrationsPage() {
           primary={{ label: 'Request a connector', href: '/contact' }}
           secondary={{ label: 'Setup guide', href: '/docs/quickstart' }}
         />
-      </section>
+      </section></Reveal>
     </div>
   );
 }

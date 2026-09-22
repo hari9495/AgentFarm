@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Reveal } from '@/components/motion';
 import BookDemoSectionB from '@/components/book-demo/BookDemoSectionB';
 
 export const metadata: Metadata = {
@@ -18,9 +19,9 @@ export default function BookDemoPage() {
   return (
     <div>
       {/* Book-a-demo section — pulled layout (21st.dev: designali-in/book-a-demo-3) */}
-      <section className="op-light" style={{ paddingTop: 72, paddingBottom: 96 }}>
+      <Reveal><section className="op-light" style={{ paddingTop: 72, paddingBottom: 96 }}>
         <BookDemoSectionB />
-      </section>
+      </section></Reveal>
     </div>
   );
 }

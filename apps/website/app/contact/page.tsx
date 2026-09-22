@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Reveal } from '@/components/motion';
 import { contactItems } from '@/components/contact/contact-data';
 import ContactSplitSection from '@/components/contact/ContactSplitSection';
 import ContactForm from '@/components/shared/ContactForm';
@@ -12,7 +13,7 @@ export default function ContactPage() {
   return (
     <div>
       {/* Contact section — pulled two-column split (21st.dev: shadcnspace/contact-01) */}
-      <section className="op-light" style={{ paddingTop: 72, paddingBottom: 96 }}>
+      <Reveal><section className="op-light" style={{ paddingTop: 72, paddingBottom: 96 }}>
         <ContactSplitSection
           eyebrow="Contact"
           title="Get in touch"
@@ -21,7 +22,7 @@ export default function ContactPage() {
         >
           <ContactForm />
         </ContactSplitSection>
-      </section>
+      </section></Reveal>
     </div>
   );
 }

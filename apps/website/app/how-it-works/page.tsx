@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Reveal } from '@/components/motion';
 import { ArrowRight, Check } from 'lucide-react';
 import Link from 'next/link';
 import { howItWorksPageContent as C } from '@/lib/marketing-content';
@@ -44,7 +45,7 @@ export default function HowItWorksPage() {
       />
 
       {/* Quick timeline band */}
-      <section className="op-soft" style={{ paddingTop: 28, paddingBottom: 28 }}>
+      <Reveal><section className="op-soft" style={{ paddingTop: 28, paddingBottom: 28 }}>
         <div className="op-wrap">
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-3">
             {C.timeline.map((item, i) => (
@@ -57,15 +58,15 @@ export default function HowItWorksPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section></Reveal>
 
       {/* Steps — interactive showcase (Option A) with relevant product mocks */}
-      <section className="op-light" style={{ paddingTop: 80, paddingBottom: 80 }}>
+      <Reveal><section className="op-light" style={{ paddingTop: 80, paddingBottom: 80 }}>
         <FeatureStepsShowcase />
-      </section>
+      </section></Reveal>
 
       {/* CTA (21st.dev: shadcnblocks/cta11) */}
-      <section className="op-soft" style={{ paddingTop: 88, paddingBottom: 88 }}>
+      <Reveal><section className="op-soft" style={{ paddingTop: 88, paddingBottom: 88 }}>
         <SharedCTA
           badge="14-day free trial · no card required"
           heading={C.cta.title}
@@ -74,7 +75,7 @@ export default function HowItWorksPage() {
           secondary={{ label: 'Book a demo', href: '/book-demo' }}
           trustItems={['Policy-aware approvals', 'Tenant-isolated runtime', 'Full evidence trail']}
         />
-      </section>
+      </section></Reveal>
     </div>
   );
 }

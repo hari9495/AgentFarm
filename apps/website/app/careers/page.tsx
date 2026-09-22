@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Reveal } from '@/components/motion';
 import { openRoles, values, perks } from '@/components/careers/careers-data';
 import CareersCards from '@/components/careers/CareersCards';
 import SubPageHero from '@/components/shared/SubPageHero';
@@ -46,7 +47,7 @@ export default function CareersPage() {
       />
 
       {/* How we work */}
-      <section className="op-soft" style={{ paddingTop: 80, paddingBottom: 80 }}>
+      <Reveal><section className="op-soft" style={{ paddingTop: 80, paddingBottom: 80 }}>
         <div className="op-wrap">
           <h2 className="mb-12 text-center font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight sm:text-4xl" style={{ letterSpacing: '-0.025em', color: 'var(--op-ink)' }}>How we work</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -65,10 +66,10 @@ export default function CareersPage() {
             })}
           </div>
         </div>
-      </section>
+      </section></Reveal>
 
       {/* Open roles — pulled CareersCards (21st.dev: educalvolpz/job-listing) */}
-      <section id="open-roles" className="op-light" style={{ paddingTop: 80, paddingBottom: 80 }}>
+      <Reveal><section id="open-roles" className="op-light" style={{ paddingTop: 80, paddingBottom: 80 }}>
         <div className="op-wrap-narrow mb-8">
           <h2 className="font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight sm:text-4xl" style={{ letterSpacing: '-0.025em', color: 'var(--op-ink)' }}>Open roles</h2>
           <p className="mt-2 text-[15px]" style={{ color: 'var(--op-muted)' }}>{openRoles.length} positions currently open — click a role for details.</p>
@@ -80,10 +81,10 @@ export default function CareersPage() {
             <a href="/contact" className="text-[15px] font-medium transition-colors" style={{ color: 'var(--op-indigo)' }}>Send us a general application &rarr;</a>
           </div>
         </div>
-      </section>
+      </section></Reveal>
 
       {/* Perks */}
-      <section className="op-soft" style={{ paddingTop: 80, paddingBottom: 80 }}>
+      <Reveal><section className="op-soft" style={{ paddingTop: 80, paddingBottom: 80 }}>
         <div className="op-wrap">
           <h2 className="mb-10 text-center font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight sm:text-4xl" style={{ letterSpacing: '-0.025em', color: 'var(--op-ink)' }}>Benefits &amp; perks</h2>
           <div className="mx-auto grid max-w-[860px] gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -95,10 +96,10 @@ export default function CareersPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section></Reveal>
 
       {/* CTA — shared SharedCTA (21st.dev: shadcnblocks/cta11) */}
-      <section className="op-light" style={{ paddingTop: 88, paddingBottom: 88 }}>
+      <Reveal><section className="op-light" style={{ paddingTop: 88, paddingBottom: 88 }}>
         <SharedCTA
           badge="We hire for people before roles"
           heading="Ready to join the team?"
@@ -106,7 +107,7 @@ export default function CareersPage() {
           primary={{ label: 'See open roles', href: '#open-roles' }}
           secondary={{ label: 'Get in touch', href: '/contact' }}
         />
-      </section>
+      </section></Reveal>
     </div>
   );
 }

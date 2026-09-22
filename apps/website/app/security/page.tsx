@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Reveal } from '@/components/motion';
 import { ArrowRight, CheckCircle2, Shield } from 'lucide-react';
 import { securityPageContent } from '@/lib/marketing-content';
 import { breadcrumbSchema } from '@/lib/seo-schemas';
@@ -68,7 +69,7 @@ export default function SecurityPage() {
       />
 
       {/* Certifications */}
-      <section className="op-soft" style={{ paddingTop: 64, paddingBottom: 64 }}>
+      <Reveal><section className="op-soft" style={{ paddingTop: 64, paddingBottom: 64 }}>
         <div className="op-wrap">
           <p className="mb-10 text-center text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--op-muted)' }}>{certificationsTitle}</p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -86,15 +87,15 @@ export default function SecurityPage() {
             })}
           </div>
         </div>
-      </section>
+      </section></Reveal>
 
       {/* Architecture features — pulled SecurityFeaturesCards (21st.dev: gooseui icon cards) */}
-      <section className="op-light" style={{ paddingTop: 80, paddingBottom: 80 }}>
+      <Reveal><section className="op-light" style={{ paddingTop: 80, paddingBottom: 80 }}>
         <SecurityFeaturesCards title={architectureTitle} subtitle={architectureSubtitle} features={features} />
-      </section>
+      </section></Reveal>
 
       {/* Security checklist */}
-      <section className="op-soft" style={{ paddingTop: 80, paddingBottom: 80 }}>
+      <Reveal><section className="op-soft" style={{ paddingTop: 80, paddingBottom: 80 }}>
         <div className="op-wrap">
           <div className="mb-10 text-center">
             <p className="op-eyebrow">{checklist.eyebrow}</p>
@@ -115,15 +116,15 @@ export default function SecurityPage() {
             </a>
           </div>
         </div>
-      </section>
+      </section></Reveal>
 
       {/* FAQ — shared SharedFAQ (21st.dev: moumensoliman/faq-section) */}
-      <section className="op-light" style={{ paddingTop: 80, paddingBottom: 80 }}>
+      <Reveal><section className="op-light" style={{ paddingTop: 80, paddingBottom: 80 }}>
         <SharedFAQ heading="Security FAQ" faqs={faqs.map((f) => ({ question: f.question, answer: f.answer }))} />
-      </section>
+      </section></Reveal>
 
       {/* CTA — shared SharedCTA (21st.dev: shadcnblocks/cta11) */}
-      <section className="op-soft" style={{ paddingTop: 88, paddingBottom: 88 }}>
+      <Reveal><section className="op-soft" style={{ paddingTop: 88, paddingBottom: 88 }}>
         <SharedCTA
           badge="Enterprise-grade by default"
           heading={cta.title}
@@ -131,7 +132,7 @@ export default function SecurityPage() {
           primary={{ label: cta.primary.label, href: cta.primary.href }}
           secondary={{ label: cta.secondary.label, href: cta.secondary.href }}
         />
-      </section>
+      </section></Reveal>
     </div>
   );
 }
