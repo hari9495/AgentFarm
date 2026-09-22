@@ -308,7 +308,7 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                                 Tasks
                             </div>
                         </div>
-                        <h1 className="text-3xl font-extrabold text-[color:var(--ink)] tracking-tight">Submit a Task</h1>
+                        <h1 className="text-3xl font-semibold text-[color:var(--ink)] tracking-tight">Submit a Task</h1>
                         <p className="mt-2 text-[color:var(--ink-muted)] text-sm max-w-xl">
                             Run any AI agent on demand. Pick an agent, describe the goal, and optionally wire a connector action.
                         </p>

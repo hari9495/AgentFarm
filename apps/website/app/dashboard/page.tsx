@@ -367,11 +367,11 @@ export default async function DashboardPage() {
                             </div>
                             <div className="mt-4 pt-4 border-t border-[color:var(--line)] grid grid-cols-2 gap-3">
                                 <div className="rounded-lg bg-[var(--bg-deep)] border border-[color:var(--line)] px-3 py-2.5 text-center">
-                                    <p className="text-lg font-extrabold text-[color:var(--ink)] tabular-nums">{thisWeekTasks > 0 ? thisWeekTasks : "—"}</p>
+                                    <p className="text-lg font-semibold text-[color:var(--ink)] tabular-nums">{thisWeekTasks > 0 ? thisWeekTasks : "—"}</p>
                                     <p className="text-[11px] text-[color:var(--ink-muted)] font-medium">Tasks this week</p>
                                 </div>
                                 <div className="rounded-lg bg-[var(--bg-deep)] border border-[color:var(--line)] px-3 py-2.5 text-center">
-                                    <p className="text-lg font-extrabold text-[color:var(--ink)] tabular-nums">{usage?.totalTasks ?? "—"}</p>
+                                    <p className="text-lg font-semibold text-[color:var(--ink)] tabular-nums">{usage?.totalTasks ?? "—"}</p>
                                     <p className="text-[11px] text-[color:var(--ink-muted)] font-medium">Total (30 days)</p>
                                 </div>
                             </div>

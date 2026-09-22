@@ -111,7 +111,7 @@ export default async function AgentDetailPage({
                     {kpis.map(({ label, value, icon: Icon, iconBg, iconColor }) => (
                         <div key={label} className="bg-[var(--card)] dark:bg-[var(--card)] rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] p-4">
                             <PremiumIcon icon={Icon} tone="sky" containerClassName={`h-8 w-8 rounded-lg ${iconBg} ${iconColor} mb-3`} iconClassName="w-4 h-4" />
-                            <p className="text-2xl font-extrabold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{value}</p>
+                            <p className="text-2xl font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{value}</p>
                             <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">{label}</p>
                         </div>
                     ))}

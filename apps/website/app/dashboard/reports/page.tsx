@@ -179,7 +179,7 @@ export default async function DashboardReportsPage() {
                             <div className="flex items-center justify-between mb-3">
                                 <PremiumIcon icon={icon} tone={tone} containerClassName="w-9 h-9 rounded-lg" iconClassName="w-4.5 h-4.5" />
                             </div>
-                            <p className="text-2xl font-extrabold text-[color:var(--ink)] dark:text-[color:var(--ink)] tabular-nums">{value}</p>
+                            <p className="text-2xl font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] tabular-nums">{value}</p>
                             <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1">{label}</p>
                         </div>
                     ))}
@@ -296,7 +296,7 @@ export default async function DashboardReportsPage() {
                                 <PremiumIcon icon={Clock} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-3.5 h-3.5" />
                                 <h3 className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Avg. Decision Latency</h3>
                             </div>
-                            <p className="text-3xl font-extrabold text-[color:var(--accent)] dark:text-[color:var(--accent)] tabular-nums">{avgLatencyLabel}</p>
+                            <p className="text-3xl font-semibold text-[color:var(--accent)] dark:text-[color:var(--accent)] tabular-nums">{avgLatencyLabel}</p>
                             <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1">
                                 {latencies.length > 0
                                     ? `Across ${latencies.length} decided ${latencies.length === 1 ? "approval" : "approvals"}`

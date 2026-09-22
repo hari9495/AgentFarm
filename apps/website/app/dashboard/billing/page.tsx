@@ -187,7 +187,7 @@ export default async function BillingPage() {
                                 </span>
                             )}
                         </div>
-                        <p className="text-2xl font-extrabold text-[color:var(--ink)] dark:text-[color:var(--ink)] tabular-nums">
+                        <p className="text-2xl font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] tabular-nums">
                             {monthlySpend !== null ? formatUsd(monthlySpend) : "—"}
                         </p>
                         <p className="mt-1 text-sm font-medium text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">Spend (last 30 days)</p>
@@ -205,7 +205,7 @@ export default async function BillingPage() {
                                 </span>
                             )}
                         </div>
-                        <p className="text-2xl font-extrabold text-[color:var(--ink)] dark:text-[color:var(--ink)] tabular-nums">
+                        <p className="text-2xl font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] tabular-nums">
                             {seatLimit !== null ? `${seatsUsed} / ${seatLimit}` : seatsUsed}
                         </p>
                         <p className="mt-1 text-sm font-medium text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">Worker Seats</p>
@@ -230,7 +230,7 @@ export default async function BillingPage() {
                                 </span>
                             )}
                         </div>
-                        <p className="text-2xl font-extrabold text-[color:var(--ink)] dark:text-[color:var(--ink)]">
+                        <p className="text-2xl font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">
                             {currentPlan?.name ?? "No active plan"}
                         </p>
                         <p className="mt-1 text-sm font-medium text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">Current Plan</p>
@@ -266,7 +266,7 @@ export default async function BillingPage() {
                                                 )}
                                             </div>
                                             <div>
-                                                <span className="text-2xl font-extrabold text-[color:var(--ink)] dark:text-[color:var(--ink)]">${plan.priceUsd}</span>
+                                                <span className="text-2xl font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">${plan.priceUsd}</span>
                                                 <span className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] ml-1">/ worker / mo</span>
                                             </div>
                                             {features.length > 0 && (

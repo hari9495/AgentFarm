@@ -211,7 +211,7 @@ export default function KpiCards() {
 
                         {/* Metric */}
                         <div>
-                            <p className="text-3xl font-extrabold text-[color:var(--ink)] tabular-nums leading-none tracking-tight">
+                            <p className="text-3xl font-semibold text-[color:var(--ink)] tabular-nums leading-none tracking-tight">
                                 {stat.label}
                             </p>
                             <p className="mt-1 text-sm font-semibold text-[color:var(--ink-soft)]">{cfg.label}</p>

@@ -91,7 +91,7 @@ export default function OverviewApprovalQueue() {
                 <div className="px-5 py-4 border-b border-[color:var(--line)] flex items-center justify-between">
                     <h2 className="text-[15px] font-semibold text-[color:var(--ink)]">Approval Queue</h2>
                     {!loading && items.length > 0 && (
-                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--danger)] text-white text-xs font-extrabold shadow-sm shadow-rose-500/30">
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--danger)] text-white text-xs font-semibold shadow-sm shadow-rose-500/30">
                             {items.length}
                         </span>
                     )}

@@ -81,7 +81,7 @@ export default async function DeploymentsPage() {
                         <div key={label} className="rounded-xl border border-[color:var(--line)] bg-[var(--card)] p-5 flex items-center gap-3 shadow-sm">
                             <PremiumIcon icon={icon} tone={tone} containerClassName="w-10 h-10 rounded-lg shrink-0" iconClassName="w-5 h-5" />
                             <div className="min-w-0">
-                                <p className="text-2xl font-extrabold text-[color:var(--ink)] leading-none">{value}</p>
+                                <p className="text-2xl font-semibold text-[color:var(--ink)] leading-none">{value}</p>
                                 <p className="text-xs text-[color:var(--ink-muted)] mt-0.5 truncate">{label}</p>
                             </div>
                         </div>
