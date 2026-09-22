@@ -1,8 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { motion, useReducedMotion } from "motion/react";
+import { spring } from "@/components/motion";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef, useCallback } from "react";
+
+const MotionLink = motion.create(Link);
 import {
     Activity,
     ArrowUpRight,
@@ -181,13 +185,16 @@ function NavLink({
     badges,
     onClick,
     collapsed,
+    scope,
 }: {
     item: NavItem;
     badges: BadgeCounts;
     onClick?: () => void;
     collapsed?: boolean;
+    scope: string;
 }) {
     const pathname = usePathname();
+    const reduce = useReducedMotion();
     const active = item.exact
         ? pathname === item.href
         : pathname === item.href || pathname.startsWith(item.href + "/");
@@ -196,13 +203,15 @@ function NavLink({
     const count = item.badge ? badges[item.badge] : 0;
 
     return (
-        <Link
+        <MotionLink
             href={item.href}
             onClick={onClick}
             title={collapsed ? item.label : undefined}
+            whileTap={reduce ? undefined : { scale: 0.975 }}
+            transition={spring.snappy}
             className={`
                 group relative flex items-center gap-3 rounded-[3px] py-2.5 text-sm
-                font-medium transition-all duration-150 select-none
+                font-medium transition-colors duration-150 select-none
                 ${collapsed ? "justify-center px-0" : "px-3"}
                 ${active
                     ? "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[color:var(--accent)]"
@@ -210,9 +219,13 @@ function NavLink({
                 }
             `}
         >
-            {/* Left accent bar */}
+            {/* Left accent bar — glides between items on navigation */}
             {active && (
-                <span className="absolute left-0 inset-y-[6px] w-[3px] rounded-r-full bg-[var(--accent)]" />
+                <motion.span
+                    layoutId={`navbar-${scope}`}
+                    className="absolute left-0 inset-y-[6px] w-[3px] rounded-r-full bg-[var(--accent)]"
+                    transition={reduce ? { duration: 0 } : spring.smooth}
+                />
             )}
 
             {/* Icon container */}
@@ -243,7 +256,7 @@ function NavLink({
             {!collapsed && !active && !count && (
                 <ChevronRight className="w-3 h-3 text-[color:var(--ink-muted)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
             )}
-        </Link>
+        </MotionLink>
     );
 }
 
@@ -259,6 +272,7 @@ function SidebarContent({
     collapsed = false,
     width = SIDEBAR_DEFAULT,
     onToggleCollapse,
+    scope,
 }: {
     userName: string;
     userRole: SidebarUserRole;
@@ -269,6 +283,7 @@ function SidebarContent({
     collapsed?: boolean;
     width?: number;
     onToggleCollapse?: () => void;
+    scope: string;
 }) {
     const router = useRouter();
     const { theme, toggle } = useTheme();
@@ -385,6 +400,7 @@ function SidebarContent({
                                     badges={badges}
                                     onClick={onClose}
                                     collapsed={collapsed}
+                                    scope={scope}
                                 />
                             ))}
                         </div>
@@ -587,6 +603,7 @@ export default function AppSidebar({
                     showCompanyPortal={showCompanyPortal}
                     badges={badges}
                     onClose={() => setOpen(false)}
+                    scope="mobile"
                 />
             </div>
 
@@ -601,6 +618,7 @@ export default function AppSidebar({
                     collapsed={collapsed}
                     width={width}
                     onToggleCollapse={toggle}
+                    scope="desktop"
                 />
                 {/* Resize handle (expanded only) */}
                 {!collapsed && (

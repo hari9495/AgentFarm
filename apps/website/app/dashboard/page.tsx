@@ -13,6 +13,7 @@ import {
     AlertTriangle,
 } from "lucide-react";
 import ButtonLink from "@/components/shared/ButtonLink";
+import { Reveal, StatusPulse } from "@/components/motion";
 import DeploymentStatusPanel from "@/components/dashboard/DeploymentStatusPanel";
 import KpiCards from "@/components/dashboard/KpiCardsV2";
 import OverviewApprovalQueue from "@/components/dashboard/OverviewApprovalQueue";
@@ -187,6 +188,7 @@ export default async function DashboardPage() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
             {/* ── Hero ──────────────────────────────────────────────────────── */}
+            <Reveal>
             <section className="relative overflow-hidden rounded-[4px] border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
                 <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
@@ -240,21 +242,22 @@ export default async function DashboardPage() {
                     </div>
                 </div>
             </section>
+            </Reveal>
 
             {/* ── Widgets ──────────────────────────────────────────────────── */}
             <div className="space-y-6">
 
                 {/* KPI cards */}
-                <KpiCards />
+                <Reveal delay={0.05}><KpiCards /></Reveal>
 
                 {/* Provisioning + Deployment */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <Reveal delay={0.1} className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                     <ProvisioningProgressCard />
                     <DeploymentStatusPanel />
-                </div>
+                </Reveal>
 
                 {/* Workers table + Approval queue */}
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <Reveal delay={0.15} className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
                     {/* Workers table */}
                     <div className="xl:col-span-2 rounded-[4px] border border-[color:var(--line)] bg-[var(--card)] overflow-hidden shadow-sm">
@@ -266,7 +269,7 @@ export default async function DashboardPage() {
                                 <h2 className="text-sm font-bold text-[color:var(--ink)]">Active AI Teammates</h2>
                             </div>
                             <span className="flex items-center gap-1.5 text-xs font-semibold text-[color:var(--ok)]">
-                                <span className="w-2 h-2 rounded-full bg-[var(--ok)] animate-pulse" />
+                                <StatusPulse color="var(--ok)" />
                                 Live
                             </span>
                         </div>
@@ -338,10 +341,10 @@ export default async function DashboardPage() {
 
                     {/* Approval queue */}
                     <OverviewApprovalQueue />
-                </div>
+                </Reveal>
 
                 {/* Weekly Activity + Timeline + Ops Health */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <Reveal delay={0.2} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                     {/* Weekly task activity */}
                     <div className="rounded-[4px] border border-[color:var(--line)] bg-[var(--card)] overflow-hidden shadow-sm">
@@ -461,7 +464,7 @@ export default async function DashboardPage() {
                         </div>
                     </div>
 
-                </div>
+                </Reveal>
             </div>
             </div>
         </div>

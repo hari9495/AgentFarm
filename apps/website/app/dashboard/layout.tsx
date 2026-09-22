@@ -1,4 +1,5 @@
 import AppSidebar from "@/components/layout/AppSidebar";
+import { PageTransition } from "@/components/motion";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -83,7 +84,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
                 badges={badges}
             />
             <div className="flex-1 min-w-0 overflow-auto">
-                {children}
+                <PageTransition>{children}</PageTransition>
             </div>
         </div>
     );
