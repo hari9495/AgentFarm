@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { PageTransition } from "@/components/motion";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import MobileStickyCTA from "./MobileStickyCTA";
@@ -20,7 +21,9 @@ export default function MarketingShell({ children }: { children: React.ReactNode
                 <AnnouncementBar />
                 <Navbar />
             </div>
-            <main className="relative z-[1]">{children}</main>
+            <main className="relative z-[1]">
+                <PageTransition>{children}</PageTransition>
+            </main>
             <MobileStickyCTA />
             <Footer />
         </>
