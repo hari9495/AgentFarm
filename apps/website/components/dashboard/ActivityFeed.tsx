@@ -95,22 +95,16 @@ export default function ActivityFeed() {
     return (
         <div className="min-h-svh bg-[var(--bg-deep)] dark:bg-[var(--bg)]">
             <div className="bg-[var(--card)] dark:bg-[var(--card)] border-b border-[color:var(--line)] dark:border-[color:var(--line)] px-6 py-5 md:px-8">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <h1 className="text-lg font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Live Activity</h1>
-                        <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">Team standup view across all active agents</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => void load()}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-1.5 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"
-                        >
-                            <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="h-3.5 w-3.5" /> Refresh
-                        </button>
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] text-[color:var(--ok)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 dark:text-[color:var(--ok)] px-3 py-1 text-xs font-semibold">
-                            <PremiumIcon icon={Activity} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/50 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="w-3.5 h-3.5" /> Streaming
-                        </span>
-                    </div>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                    <button
+                        onClick={() => void load()}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--line)] px-3.5 py-2 text-xs font-semibold text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:border-[color:var(--line-strong)] transition-colors"
+                    >
+                        <RefreshCw className="w-3.5 h-3.5" /> Refresh
+                    </button>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] text-[color:var(--ok)] px-3 py-1.5 text-xs font-semibold">
+                        <Activity className="w-3.5 h-3.5" /> Streaming
+                    </span>
                 </div>
 
                 {/* X3: Filter chips */}
