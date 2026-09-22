@@ -39,30 +39,36 @@ function formatLabel(from: string, to: string) {
     return f.toLocaleDateString("en-US", opts) + " – " + t.toLocaleDateString("en-US", opts);
 }
 
-// ── Daily bar chart ───────────────────────────────────────────────────────────
+// ── Sparkline ─────────────────────────────────────────────────────────────────
+// A quiet trend line with a soft area wash and an accent end-dot. Reads as a
+// premium metric detail, not a chunky chart. Monochrome so it never competes
+// with the number.
 
-const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
-
-function DailyBars({ values, barBg }: { values: number[]; barBg: string }) {
-    const max = Math.max(...values) || 1;
+function MiniSpark({ values }: { values: number[] }) {
+    if (!values || values.length < 2) return <div style={{ width: 72, height: 30 }} />;
+    const w = 72, h = 30, pad = 3;
+    const max = Math.max(...values), min = Math.min(...values), rng = max - min || 1;
+    const pts = values.map((v, i) => {
+        const x = (i / (values.length - 1)) * w;
+        const y = h - pad - ((v - min) / rng) * (h - pad * 2);
+        return [x, y] as const;
+    });
+    const line = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+    const area = `0,${h} ${line} ${w},${h}`;
+    const [ex, ey] = pts[pts.length - 1]!;
+    const gid = `spk${Math.round(min)}${Math.round(max)}${values.length}`;
     return (
-        <div style={{ display: "flex", alignItems: "flex-end", gap: "3px", height: "40px" }}>
-            {values.map((v, i) => {
-                const pct = Math.max(12, Math.round((v / max) * 100));
-                const isToday = i === values.length - 1;
-                return (
-                    <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "3px" }}>
-                        <div
-                            className={barBg + (isToday ? "" : " opacity-50")}
-                            style={{ width: "100%", height: pct + "%", borderRadius: "3px", transition: "all 0.3s" }}
-                        />
-                        <span style={{ fontSize: "9px", fontWeight: 600, lineHeight: 1, color: isToday ? "#475569" : "#cbd5e1" }}>
-                            {DAY_LABELS[i]}
-                        </span>
-                    </div>
-                );
-            })}
-        </div>
+        <svg width={w} height={h} className="shrink-0 overflow-visible" aria-hidden>
+            <defs>
+                <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.16" />
+                    <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
+                </linearGradient>
+            </defs>
+            <polygon points={area} fill={`url(#${gid})`} />
+            <polyline points={line} fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.85" />
+            <circle cx={ex} cy={ey} r="2.4" fill="var(--accent)" />
+        </svg>
     );
 }
 
@@ -70,20 +76,17 @@ function DailyBars({ values, barBg }: { values: number[]; barBg: string }) {
 
 function SkeletonCard() {
     return (
-        <div className="relative rounded-[4px] border border-[color:var(--line)] bg-[var(--card)] p-5 flex flex-col gap-4 shadow-sm overflow-hidden animate-pulse">
-            <div className="flex items-start justify-between gap-3">
-                <div className="w-10 h-10 rounded-[3px] bg-[var(--line)]" />
-                <div className="h-6 w-16 rounded-full bg-[var(--line)]" />
+        <div className="rounded-xl border border-[color:var(--line)] bg-[var(--card)] p-5 animate-pulse">
+            <div className="flex items-center justify-between">
+                <div className="h-3.5 w-24 rounded bg-[var(--line)]" />
+                <div className="h-4 w-4 rounded bg-[var(--line)]" />
             </div>
-            <div className="space-y-2">
-                <div className="h-8 w-24 rounded bg-[var(--line)]" />
-                <div className="h-4 w-32 rounded bg-[var(--line)]" />
-                <div className="h-3 w-20 rounded bg-[var(--line)]" />
-            </div>
-            <div className="h-10 w-full rounded bg-[var(--line)]" />
-            <div className="flex items-center justify-between pt-1 border-t border-[color:var(--line)]">
-                <div className="h-5 w-28 rounded-full bg-[var(--line)]" />
-                <div className="h-3 w-8 rounded bg-[var(--line)]" />
+            <div className="mt-4 flex items-end justify-between gap-3">
+                <div className="space-y-2">
+                    <div className="h-8 w-20 rounded bg-[var(--line)]" />
+                    <div className="h-3 w-28 rounded bg-[var(--line)]" />
+                </div>
+                <div className="h-[30px] w-[72px] rounded bg-[var(--line)]" />
             </div>
         </div>
     );
@@ -92,10 +95,10 @@ function SkeletonCard() {
 // ── Card config ───────────────────────────────────────────────────────────────
 
 const CARDS = [
-    { key: "tasksCompleted"  as const, icon: CheckCircle2,  border: "border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]",     bg: "bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] to-[var(--card)]",     iconBg: "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]",     iconColor: "text-[color:var(--accent)]",     barBg: "bg-[var(--accent)]",     dPos: "text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]", dNeg: "text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]", label: "Tasks Completed"   },
-    { key: "prsMerged"       as const, icon: GitPullRequest, border: "border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]",  bg: "bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] to-[var(--card)]",  iconBg: "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]",  iconColor: "text-[color:var(--accent)]",  barBg: "bg-[var(--accent)]",  dPos: "text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]", dNeg: "text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]", label: "PRs Merged"        },
-    { key: "medianCycleTime" as const, icon: Timer,          border: "border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)]",   bg: "bg-gradient-to-br from-[color-mix(in_srgb,var(--warn)_8%,transparent)] to-[var(--card)]",   iconBg: "bg-[color-mix(in_srgb,var(--warn)_10%,transparent)]",   iconColor: "text-[color:var(--warn)]",   barBg: "bg-[var(--warn)]",   dPos: "text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]", dNeg: "text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]", label: "Median Cycle Time" },
-    { key: "estimatedSavings" as const, icon: TrendingUp,   border: "border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]", bg: "bg-gradient-to-br from-[color-mix(in_srgb,var(--ok)_8%,transparent)] to-[var(--card)]", iconBg: "bg-[color-mix(in_srgb,var(--ok)_10%,transparent)]", iconColor: "text-[color:var(--ok)]", barBg: "bg-[var(--ok)]", dPos: "text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]", dNeg: "text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]", label: "Estimated Savings" },
+    { key: "tasksCompleted"   as const, icon: CheckCircle2,   label: "Tasks Completed"   },
+    { key: "prsMerged"        as const, icon: GitPullRequest, label: "PRs Merged"        },
+    { key: "medianCycleTime"  as const, icon: Timer,          label: "Median Cycle Time" },
+    { key: "estimatedSavings" as const, icon: TrendingUp,     label: "Estimated Savings" },
 ] as const;
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -257,53 +260,36 @@ export default function KpiCardsV2() {
             {filterBar}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                {CARDS.map((cfg, idx) => {
+                {CARDS.map((cfg) => {
                     const stat = data.stats[cfg.key];
                     const Icon = cfg.icon;
                     const isDown = stat.delta?.startsWith("−") || stat.delta?.startsWith("-");
-                    const dClass = stat.positive ? cfg.dPos : cfg.dNeg;
                     return (
                         <div
                             key={cfg.key}
-                            style={{ animationDelay: idx * 60 + "ms" }}
-                            className={"choreo-rise relative rounded-[4px] border " + cfg.border + " " + cfg.bg + " p-5 flex flex-col gap-3 shadow-sm hover:shadow-md hover:-translate-y-0.5 [transition:transform_220ms_cubic-bezier(0.22,1,0.36,1),box-shadow_220ms_cubic-bezier(0.22,1,0.36,1)]"}
+                            className="group rounded-xl border border-[color:var(--line)] bg-[var(--card)] p-5 [transition:box-shadow_220ms_cubic-bezier(0.22,1,0.36,1),transform_220ms_cubic-bezier(0.22,1,0.36,1),border-color_220ms] hover:-translate-y-px hover:border-[color:var(--line-strong)] hover:shadow-[0_6px_24px_-12px_rgba(16,24,40,0.18)]"
                         >
-                            {/* Top: icon + delta */}
-                            <div className="flex items-start justify-between gap-3">
-                                <div className={"w-10 h-10 rounded-[3px] " + cfg.iconBg + " flex items-center justify-center shrink-0"}>
-                                    <Icon className={"w-5 h-5 " + cfg.iconColor} />
-                                </div>
-                                {stat.delta !== null
-                                    ? <span className={"inline-flex items-center gap-1 text-xs font-bold rounded-full px-2.5 py-1 " + dClass}>
-                                        {isDown ? <ArrowDownRight className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
-                                        {stat.delta}
-                                      </span>
-                                    : <span className="inline-flex items-center text-xs font-semibold rounded-full px-2.5 py-1 text-[color:var(--ink-muted)] bg-[var(--bg-deep)]">—</span>
-                                }
+                            {/* Label + quiet icon */}
+                            <div className="flex items-center justify-between gap-3">
+                                <span className="text-[13px] font-medium text-[color:var(--ink-muted)] truncate">{cfg.label}</span>
+                                <Icon className="w-4 h-4 shrink-0 text-[color:var(--ink-muted)] opacity-40 [transition:opacity_220ms] group-hover:opacity-70" />
                             </div>
 
-                            {/* Metric */}
-                            <div>
-                                <p className="text-3xl font-extrabold text-[color:var(--ink)] tabular-nums leading-none tracking-tight">{stat.label}</p>
-                                <p className="mt-1 text-sm font-semibold text-[color:var(--ink-soft)]">{cfg.label}</p>
-                                <p className="text-xs text-[color:var(--ink-muted)] mt-0.5">{stat.sub}</p>
-                            </div>
-
-                            {/* Daily bars */}
-                            <DailyBars values={stat.trend} barBg={cfg.barBg} />
-
-                            {/* Bottom: agent + live */}
-                            <div className="flex items-center justify-between pt-1 border-t border-[color:var(--line)]">
-                                <div className="flex items-center gap-1.5">
-                                    <span className={"inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold text-white shrink-0 " + agent.aBg}>
-                                        {agent.ini}
-                                    </span>
-                                    <span className="text-[11px] text-[color:var(--ink-muted)] font-medium truncate">{agent.name}</span>
+                            {/* Number + delta, sparkline right */}
+                            <div className="mt-3 flex items-end justify-between gap-3">
+                                <div className="min-w-0">
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-[30px] leading-none font-semibold tracking-[-0.02em] text-[color:var(--ink)] tabular-nums">{stat.label}</span>
+                                        {stat.delta !== null && (
+                                            <span className={"inline-flex items-center gap-0.5 text-xs font-semibold " + (stat.positive ? "text-[color:var(--ok)]" : "text-[color:var(--danger)]")}>
+                                                {isDown ? <ArrowDownRight className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
+                                                {stat.delta}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="mt-2 text-xs text-[color:var(--ink-muted)] truncate">{stat.sub}</p>
                                 </div>
-                                <div className="flex items-center gap-1 shrink-0">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--ok)] animate-pulse" />
-                                    <span className="text-[9px] font-semibold text-[color:var(--ink-muted)] uppercase tracking-wider">Live</span>
-                                </div>
+                                <MiniSpark values={stat.trend} />
                             </div>
                         </div>
                     );

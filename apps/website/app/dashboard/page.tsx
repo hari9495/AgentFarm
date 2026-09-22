@@ -4,7 +4,6 @@ import {
     CheckCircle2,
     ChevronRight,
     Clock3,
-    LayoutGrid,
     Rocket,
     ShieldCheck,
     Users,
@@ -18,7 +17,6 @@ import DeploymentStatusPanel from "@/components/dashboard/DeploymentStatusPanel"
 import KpiCards from "@/components/dashboard/KpiCardsV2";
 import OverviewApprovalQueue from "@/components/dashboard/OverviewApprovalQueue";
 import ProvisioningProgressCard from "@/components/dashboard/ProvisioningProgressCard";
-import PremiumIcon from "@/components/shared/PremiumIcon";
 import { portalFetch } from "@/lib/portal-server";
 
 export const metadata: Metadata = {
@@ -189,59 +187,51 @@ export default async function DashboardPage() {
 
             {/* ── Hero ──────────────────────────────────────────────────────── */}
             <Reveal>
-            <section className="relative overflow-hidden rounded-[4px] border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
-                <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.07)_0%,transparent_60%)]" />
+            <header className="flex flex-col gap-5">
+                {/* Breadcrumb */}
+                <div className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
+                    <span>Customer Dashboard</span>
+                    <ChevronRight className="w-3 h-3" />
+                    <span className="text-[color:var(--ink-soft)]">Overview</span>
                 </div>
 
-                <div className="relative px-6 sm:px-8 py-6 sm:py-8">
-                    <div className="flex items-center gap-2 mb-5">
-                        <div className="flex items-center gap-2 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
-                            <PremiumIcon icon={LayoutGrid} tone="sky" containerClassName="w-4 h-4 rounded bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[color:var(--accent)]" iconClassName="w-2.5 h-2.5" />
-                            Customer Dashboard
-                        </div>
-                        <ChevronRight className="w-3.5 h-3.5 text-[color:var(--ink-muted)]" />
-                        <span className="text-xs text-[color:var(--ink-muted)]">Overview</span>
+                {/* Title + actions */}
+                <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+                    <div className="flex-1 min-w-0 max-w-xl">
+                        <h1 className="text-[26px] sm:text-[28px] font-semibold text-[color:var(--ink)] tracking-[-0.02em] leading-[1.15]">
+                            AI Teammate Operations
+                        </h1>
+                        <p className="mt-2 text-[15px] text-[color:var(--ink-soft)] leading-relaxed">
+                            Monitor tasks, approvals, and delivery outcomes across every AI teammate in real time.
+                        </p>
                     </div>
-
-                    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
-                        <div>
-                            <h1 className="text-3xl sm:text-4xl font-extrabold text-[color:var(--ink)] tracking-tight leading-tight">
-                                AI Teammate Operations
-                            </h1>
-                            <p className="mt-2 text-[color:var(--ink-soft)] text-base max-w-lg">
-                                Monitor tasks, approvals, and delivery outcomes across every AI teammate in real time.
-                            </p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-3 shrink-0">
-                            <ButtonLink href="/marketplace" size="sm">
-                                <Zap className="w-3.5 h-3.5" />
-                                Add AI Teammate
-                            </ButtonLink>
-                            <ButtonLink href="/dashboard/billing" size="sm" variant="outline" className="!bg-[var(--card)] !text-[color:var(--ink)] !border-[color:var(--line)] hover:!bg-[var(--bg-deep)]">
-                                Manage Plan
-                            </ButtonLink>
-                        </div>
-                    </div>
-
-                    {/* Mini stats bar */}
-                    <div className="mt-5 flex flex-wrap items-center gap-6 border-t border-[color:var(--line)] pt-4">
-                        {[
-                            { icon: <Users className="w-3.5 h-3.5 text-[color:var(--accent)]" />,            label: `${activeCount > 0 ? activeCount : bots.length || "—"} active teammate${activeCount !== 1 ? "s" : ""}` },
-                            { icon: <CheckCircle2 className="w-3.5 h-3.5 text-[color:var(--ok)]" />,  label: `${thisWeekTasks > 0 ? thisWeekTasks : "—"} tasks this week` },
-                            { icon: <Clock3 className="w-3.5 h-3.5 text-[color:var(--warn)]" />,          label: successRatePct !== null ? `${successRatePct}% success rate` : "No task data yet" },
-                            { icon: <ShieldCheck className="w-3.5 h-3.5 text-[color:var(--accent)]" />,    label: "Task isolation enforced" },
-                            { icon: <TrendingUp className="w-3.5 h-3.5 text-[color:var(--ok)]" />,    label: usage?.totalCostUsd != null ? `$${usage.totalCostUsd.toFixed(0)} AI cost this month` : "No billing data" },
-                        ].map(({ icon, label }) => (
-                            <div key={label} className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-soft)]">
-                                {icon}
-                                {label}
-                            </div>
-                        ))}
+                    <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                        <ButtonLink href="/marketplace" size="sm">
+                            <Zap className="w-3.5 h-3.5" />
+                            Add AI Teammate
+                        </ButtonLink>
+                        <ButtonLink href="/dashboard/billing" size="sm" variant="outline" className="!bg-[var(--card)] !text-[color:var(--ink)] !border-[color:var(--line)] hover:!bg-[var(--bg-deep)]">
+                            Manage Plan
+                        </ButtonLink>
                     </div>
                 </div>
-            </section>
+
+                {/* Quiet inline stat row */}
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2.5 border-t border-[color:var(--line)] pt-4">
+                    {[
+                        { icon: <Users className="w-3.5 h-3.5 text-[color:var(--ink-muted)]" />,       label: `${activeCount > 0 ? activeCount : bots.length || "—"} active teammate${activeCount !== 1 ? "s" : ""}` },
+                        { icon: <CheckCircle2 className="w-3.5 h-3.5 text-[color:var(--ok)]" />,        label: `${thisWeekTasks > 0 ? thisWeekTasks : "—"} tasks this week` },
+                        { icon: <Clock3 className="w-3.5 h-3.5 text-[color:var(--ink-muted)]" />,      label: successRatePct !== null ? `${successRatePct}% success rate` : "No task data yet" },
+                        { icon: <ShieldCheck className="w-3.5 h-3.5 text-[color:var(--ink-muted)]" />, label: "Task isolation enforced" },
+                        { icon: <TrendingUp className="w-3.5 h-3.5 text-[color:var(--ink-muted)]" />,  label: usage?.totalCostUsd != null ? `$${usage.totalCostUsd.toFixed(0)} AI cost this month` : "No billing data" },
+                    ].map(({ icon, label }) => (
+                        <div key={label} className="flex items-center gap-1.5 text-[13px] font-medium text-[color:var(--ink-soft)]">
+                            {icon}
+                            {label}
+                        </div>
+                    ))}
+                </div>
+            </header>
             </Reveal>
 
             {/* ── Widgets ──────────────────────────────────────────────────── */}
