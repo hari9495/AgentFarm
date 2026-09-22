@@ -70,7 +70,7 @@ export function InfraMonitoringPanel() {
                 </select>
                 <input placeholder="tenant id (blank = all customers)" value={tenantId} onChange={(e) => setTenantId(e.target.value)} style={{ minWidth: 240 }} />
                 <input placeholder="search…" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void load(); }} />
-                <button type="button" onClick={() => void load()} disabled={loading}>{loading ? 'Loading…' : 'Run'}</button>
+                <button type="button" onClick={() => void load()} disabled={loading} style={{ border: 'none', borderRadius: 'var(--radius-md)', background: 'var(--accent)', color: '#fff', padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? 'Loading…' : 'Run'}</button>
             </div>
             {error && <p style={{ color: 'crimson' }}>{error}</p>}
             {!loading && !error && rows.length === 0 && <p>No records. (Telemetry appears once the collector runs on a customer VM.)</p>}

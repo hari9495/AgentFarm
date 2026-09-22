@@ -1950,6 +1950,25 @@ textarea {
     font-family: inherit;
 }
 
+/* Bare form controls: Tailwind Preflight strips the native border and many
+   panels relied on it, leaving borderless inputs. Give a sensible bordered
+   default via :where() (zero specificity) so ANY component that styles its own
+   controls — inline, className or Tailwind — still overrides this. Non-text
+   input types are excluded so checkboxes/radios/sliders stay native. */
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]), select, textarea) {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--card);
+    color: var(--ink);
+    padding: 8px 10px;
+    font-size: 13px;
+}
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]), select, textarea):focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
 .approval-toolbar {
     display: flex;
     gap: 0.5rem;
