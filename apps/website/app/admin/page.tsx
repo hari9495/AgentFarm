@@ -100,16 +100,15 @@ export default async function AdminPage() {
     return (
         <div className="site-shell min-h-svh">
             {/* Hero */}
-            <section className="relative overflow-hidden border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-blue-50 via-white to-white dark:from-slate-900 dark:to-slate-950">
+            <section className="relative overflow-hidden border-b border-slate-200 dark:border-slate-800 bg-white dark:from-slate-900 dark:to-slate-950">
                 <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_55%_90%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
                 </div>
                 <div className="relative max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
                     <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-700 dark:text-blue-300 mb-3">
                         <PremiumIcon icon={Shield} tone="sky" containerClassName="w-5 h-5 rounded-md bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300" iconClassName="w-3 h-3" />
                         Admin Console
                     </div>
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight max-w-xl leading-tight">
+                    <h1 className="text-3xl sm:text-4xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight max-w-xl leading-tight">
                         Govern identity,<br className="hidden sm:block" /> policy, and spend
                     </h1>
                     <p className="mt-2 text-slate-600 dark:text-slate-400 text-base max-w-lg">
@@ -137,7 +136,7 @@ export default async function AdminPage() {
                                 <PremiumIcon icon={Icon} tone="sky" containerClassName={`w-10 h-10 rounded-xl ${iconBg} ${iconColor}`} iconClassName="w-5 h-5" />
                             </div>
                             <div>
-                                <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tabular-nums leading-none">{value}</p>
+                                <p className="text-2xl font-semibold text-slate-900 dark:text-slate-100 tabular-nums leading-none">{value}</p>
                                 <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-300">{label}</p>
                                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{sub}</p>
                             </div>
@@ -274,7 +273,7 @@ export default async function AdminPage() {
                 </div>
 
                 {/* Billing placeholder */}
-                <div className="rounded-2xl border border-amber-200 dark:border-amber-800/40 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 p-5 flex flex-wrap items-center justify-between gap-4">
+                <div className="rounded-2xl border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:from-amber-950/30 dark:to-orange-950/20 p-5 flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-start gap-3">
                         <PremiumIcon icon={Building2} tone="amber" containerClassName="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/50 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" iconClassName="w-5 h-5" />
                         <div>

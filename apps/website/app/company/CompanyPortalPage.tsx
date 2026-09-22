@@ -986,14 +986,13 @@ export default function CompanyPortalPage() {
                 </div>
             )}
 
-            <section className="relative overflow-hidden border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-blue-50 via-white to-white dark:from-slate-900 dark:to-slate-950">
-                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_55%_90%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
+            <section className="relative overflow-hidden border-b border-slate-200 dark:border-slate-800 bg-white dark:from-slate-900 dark:to-slate-950">
                 <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
                     <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-700 dark:text-blue-300 mb-4">
                         <Crown className="w-3.5 h-3.5" />
                         AgentFarms Company Portal
                     </div>
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
+                    <h1 className="text-3xl sm:text-4xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
                         Control every customer tenant from one place
                     </h1>
                     <p className="mt-2 text-slate-600 dark:text-slate-400 max-w-3xl">
@@ -1224,15 +1223,15 @@ export default function CompanyPortalPage() {
                             <div className="grid grid-cols-3 gap-3 mb-4">
                                 <div className="rounded-lg bg-slate-50 dark:bg-slate-800 p-3">
                                     <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Total MRR</p>
-                                    <p className="mt-1 text-lg font-extrabold text-slate-900 dark:text-slate-100">{money(billing?.totalMrrCents ?? 0)}</p>
+                                    <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">{money(billing?.totalMrrCents ?? 0)}</p>
                                 </div>
                                 <div className="rounded-lg bg-slate-50 dark:bg-slate-800 p-3">
                                     <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Open Invoices</p>
-                                    <p className="mt-1 text-lg font-extrabold text-slate-900 dark:text-slate-100">{billing?.openInvoices ?? 0}</p>
+                                    <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">{billing?.openInvoices ?? 0}</p>
                                 </div>
                                 <div className="rounded-lg bg-slate-50 dark:bg-slate-800 p-3">
                                     <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Enterprise</p>
-                                    <p className="mt-1 text-lg font-extrabold text-slate-900 dark:text-slate-100">{billing?.tenantsOnEnterprise ?? 0}</p>
+                                    <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">{billing?.tenantsOnEnterprise ?? 0}</p>
                                 </div>
                             </div>
                             <div className="space-y-2 max-h-[260px] overflow-auto">
@@ -1484,15 +1483,15 @@ export default function CompanyPortalPage() {
                         <div className="p-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div className="rounded-lg bg-slate-50 dark:bg-slate-800 p-3">
                                 <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Super Admins</p>
-                                <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">{roleMetrics.superAdmins}</p>
+                                <p className="text-2xl font-semibold text-slate-900 dark:text-slate-100 mt-1">{roleMetrics.superAdmins}</p>
                             </div>
                             <div className="rounded-lg bg-slate-50 dark:bg-slate-800 p-3">
                                 <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Admins</p>
-                                <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">{roleMetrics.admins}</p>
+                                <p className="text-2xl font-semibold text-slate-900 dark:text-slate-100 mt-1">{roleMetrics.admins}</p>
                             </div>
                             <div className="rounded-lg bg-slate-50 dark:bg-slate-800 p-3">
                                 <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Members</p>
-                                <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 mt-1">{roleMetrics.members}</p>
+                                <p className="text-2xl font-semibold text-slate-900 dark:text-slate-100 mt-1">{roleMetrics.members}</p>
                             </div>
                             <div className="sm:col-span-3 rounded-lg border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/20 p-3 text-xs text-blue-800 dark:text-blue-300">
                                 Company operators can resolve incidents and control fleet bots directly without logging into each customer instance.
@@ -1578,7 +1577,7 @@ function MetricCard({
             <span className={`inline-flex items-center justify-center w-9 h-9 rounded-xl ${styleMap[tone]}`}>
                 <Icon className="w-4.5 h-4.5" />
             </span>
-            <p className="mt-3 text-2xl font-extrabold text-slate-900 dark:text-slate-100">{value}</p>
+            <p className="mt-3 text-2xl font-semibold text-slate-900 dark:text-slate-100">{value}</p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{label}</p>
         </div>
     );

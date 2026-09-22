@@ -91,15 +91,15 @@ export default function AdminRolesPage() {
                         <div className="grid md:grid-cols-3 gap-4">
                             <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
                                 <p className="text-xs text-slate-500 dark:text-slate-400">Defined roles</p>
-                                <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">{roles.length}</p>
+                                <p className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{roles.length}</p>
                             </div>
                             <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
                                 <p className="text-xs text-slate-500 dark:text-slate-400">Permission modules</p>
-                                <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">{modules.length}</p>
+                                <p className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{modules.length}</p>
                             </div>
                             <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
                                 <p className="text-xs text-slate-500 dark:text-slate-400">Users assigned</p>
-                                <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">28</p>
+                                <p className="text-2xl font-semibold text-slate-900 dark:text-slate-100">28</p>
                             </div>
                         </div>
 

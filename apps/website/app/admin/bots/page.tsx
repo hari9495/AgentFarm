@@ -192,13 +192,13 @@ export default function AdminBotsPage() {
             )}
 
             {/* Header */}
-            <section className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950">
+            <section className="border-b border-slate-200 dark:border-slate-800 bg-slate-900">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
                     <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-amber-300 mb-4">
                         <PremiumIcon icon={Bot} tone="amber" containerClassName="w-5 h-5 rounded-md bg-amber-300/15 text-amber-200 border-amber-200/30" iconClassName="w-3 h-3" />
                         Bot Control Panel
                     </div>
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight max-w-xl">
+                    <h1 className="text-3xl sm:text-4xl font-semibold text-slate-900 tracking-tight leading-tight max-w-xl">
                         Configure and control AI workers
                     </h1>
                     <p className="mt-2 text-slate-400 max-w-lg">
@@ -232,7 +232,7 @@ export default function AdminBotsPage() {
                                     <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${m.dot}`} />
                                     <div>
                                         <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{m.label}</p>
-                                        <p className="text-xl font-extrabold text-slate-900 dark:text-slate-100 leading-none mt-0.5">{count}</p>
+                                        <p className="text-xl font-semibold text-slate-900 dark:text-slate-100 leading-none mt-0.5">{count}</p>
                                     </div>
                                 </div>
                             );

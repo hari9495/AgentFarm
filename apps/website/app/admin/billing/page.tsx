@@ -125,14 +125,13 @@ export default function AdminBillingPage() {
         <div className="site-shell min-h-svh">
 
             {/* Page header */}
-            <section className="relative overflow-hidden border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-blue-50 via-white to-white dark:from-slate-900 dark:to-slate-950">
-                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_55%_90%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
+            <section className="relative overflow-hidden border-b border-slate-200 dark:border-slate-800 bg-white dark:from-slate-900 dark:to-slate-950">
                 <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
                     <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-blue-700 dark:text-blue-300 mb-4">
                         <PremiumIcon icon={CreditCard} tone="sky" containerClassName="w-5 h-5 rounded-md bg-blue-100 text-blue-600" iconClassName="w-3 h-3" />
                         Admin Billing
                     </div>
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight leading-tight max-w-xl">
+                    <h1 className="text-3xl sm:text-4xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight leading-tight max-w-xl">
                         Plan, seats, and invoice management
                     </h1>
                     <p className="mt-2 text-slate-600 dark:text-slate-400 max-w-lg">
@@ -161,7 +160,7 @@ export default function AdminBillingPage() {
                                 +9.1%
                             </span>
                         </div>
-                        <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tabular-nums">$6,920</p>
+                        <p className="text-2xl font-semibold text-slate-900 dark:text-slate-100 tabular-nums">$6,920</p>
                         <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-300">Monthly Spend</p>
                         <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">vs last month</p>
                     </div>
@@ -173,7 +172,7 @@ export default function AdminBillingPage() {
                                 {seatPct}% used
                             </span>
                         </div>
-                        <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tabular-nums">46 / 50</p>
+                        <p className="text-2xl font-semibold text-slate-900 dark:text-slate-100 tabular-nums">46 / 50</p>
                         <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-300">Worker Seats</p>
                         <div className="mt-2 w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-700">
                             <div className="h-1.5 rounded-full bg-amber-500" style={{ width: `${seatPct}%` }} />
@@ -181,14 +180,14 @@ export default function AdminBillingPage() {
                         <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">4 seats remaining</p>
                     </div>
 
-                    <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800/50 bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-950/30 dark:to-blue-950/20 p-5">
+                    <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800/50 bg-white dark:from-emerald-950/30 dark:to-blue-950/20 p-5">
                         <div className="flex items-center justify-between mb-4">
                             <PremiumIcon icon={Zap} tone="emerald" containerClassName="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400" iconClassName="w-5 h-5" />
                             <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 rounded-full px-2.5 py-1">
                                 Active
                             </span>
                         </div>
-                        <p className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">Pro+</p>
+                        <p className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Pro+</p>
                         <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-300">Current Plan</p>
                         <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Renews May 1, 2026</p>
                     </div>
@@ -217,7 +216,7 @@ export default function AdminBillingPage() {
                                         )}
                                     </div>
                                     <div>
-                                        <span className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">{plan.price}</span>
+                                        <span className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{plan.price}</span>
                                         <span className="text-xs text-slate-500 dark:text-slate-400 ml-1">{plan.unit}</span>
                                     </div>
                                     <ul className="space-y-1.5">
