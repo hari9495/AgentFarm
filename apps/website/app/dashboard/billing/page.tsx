@@ -221,7 +221,7 @@ export default async function BillingPage() {
                         )}
                     </div>
 
-                    <div className="rounded-xl border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/50 bg-gradient-to-br from-[color-mix(in_srgb,var(--ok)_8%,transparent)] to-[color-mix(in_srgb,var(--accent)_8%,transparent)] dark:from-[color-mix(in_srgb,var(--ok)_14%,transparent)]/30 dark:to-[color-mix(in_srgb,var(--accent)_14%,transparent)]/20 p-5">
+                    <div className="rounded-xl border border-[color:var(--line)] bg-[var(--card)] p-5">
                         <div className="flex items-center justify-between mb-4">
                             <PremiumIcon icon={Zap} tone="emerald" containerClassName="w-10 h-10 rounded-lg bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/50 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="w-5 h-5" />
                             {subscription && subscription.status && subscription.status !== "none" && (
