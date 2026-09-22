@@ -39,7 +39,6 @@ import {
     ArrowDownToLine,
     UsersRound,
     X,
-    ChevronRight,
     PanelLeftClose,
     PanelLeftOpen,
     type LucideIcon,
@@ -210,11 +209,11 @@ function NavLink({
             whileTap={reduce ? undefined : { scale: 0.975 }}
             transition={spring.snappy}
             className={`
-                group relative flex items-center gap-3 rounded-lg py-2.5 text-sm
+                group relative flex items-center gap-2.5 rounded-lg text-[13px]
                 font-medium transition-colors duration-150 select-none
-                ${collapsed ? "justify-center px-0" : "px-3"}
+                ${collapsed ? "justify-center px-0 h-9" : "px-2.5 py-2"}
                 ${active
-                    ? "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[color:var(--accent)]"
+                    ? "bg-[color-mix(in_srgb,var(--accent)_9%,transparent)] text-[color:var(--accent)]"
                     : "text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink)]"
                 }
             `}
@@ -223,38 +222,27 @@ function NavLink({
             {active && (
                 <motion.span
                     layoutId={`navbar-${scope}`}
-                    className="absolute left-0 inset-y-[6px] w-[3px] rounded-r-full bg-[var(--accent)]"
+                    className="absolute left-0 inset-y-1.5 w-[3px] rounded-r-full bg-[var(--accent)]"
                     transition={reduce ? { duration: 0 } : spring.smooth}
                 />
             )}
 
-            {/* Icon container */}
-            <span className={`
-                relative flex items-center justify-center w-8 h-8 rounded-lg shrink-0 transition-all duration-150
-                ${active
-                    ? "bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-[color:var(--accent)]"
-                    : "text-[color:var(--ink-muted)] group-hover:text-[color:var(--ink-soft)] group-hover:bg-[var(--line)]/70"
-                }
-            `}>
-                <Icon className="w-[17px] h-[17px]" style={!active ? { color: "var(--nav-tint, var(--ink-muted))" } : undefined} />
-                {/* Collapsed: badge as a dot on the icon */}
+            {/* Plain icon — uniform monochrome, accent only when active */}
+            <span className="relative flex shrink-0">
+                <Icon className={`w-[18px] h-[18px] transition-colors duration-150 ${active ? "text-[color:var(--accent)]" : "text-[color:var(--ink-muted)] group-hover:text-[color:var(--ink-soft)]"}`} />
                 {collapsed && count > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[var(--danger)] ring-2 ring-[color:var(--card)]" />
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[var(--danger)] ring-2 ring-[color:var(--card)]" />
                 )}
             </span>
 
             {!collapsed && (
-                <span className="flex-1 truncate tracking-[-0.01em]">{item.label}</span>
+                <span className="flex-1 truncate tracking-[-0.006em]">{item.label}</span>
             )}
 
             {!collapsed && count > 0 && (
-                <span className="inline-flex items-center justify-center min-w-[20px] h-5 rounded-full bg-[var(--danger)] text-white text-[10px] font-bold px-1.5 shrink-0 shadow-sm ">
+                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-[var(--danger)] text-white text-[10px] font-semibold px-1.5 shrink-0">
                     {count > 99 ? "99+" : count}
                 </span>
-            )}
-
-            {!collapsed && !active && !count && (
-                <ChevronRight className="w-3 h-3 text-[color:var(--ink-muted)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
             )}
         </MotionLink>
     );
@@ -385,12 +373,9 @@ function SidebarContent({
                         {collapsed ? (
                             <div className="h-px bg-[var(--line)] mx-2 mb-2" />
                         ) : (
-                            <div className="flex items-center gap-2 px-3 mb-2">
-                                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[color:var(--ink-muted)]">
-                                    {group.label}
-                                </p>
-                                <div className="flex-1 h-px bg-[var(--line)]" />
-                            </div>
+                            <p className="px-2.5 mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[color:var(--ink-muted)]">
+                                {group.label}
+                            </p>
                         )}
                         <div className="space-y-0.5">
                             {group.items.map((item) => (
@@ -415,12 +400,9 @@ function SidebarContent({
                         {collapsed ? (
                             <div className="h-px bg-[var(--line)] mx-2 mb-2" />
                         ) : (
-                            <div className="flex items-center gap-2 px-3 mb-2">
-                                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[color:var(--ink-muted)]">
-                                    Internal
-                                </p>
-                                <div className="flex-1 h-px bg-[var(--line)]" />
-                            </div>
+                            <p className="px-2.5 mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[color:var(--ink-muted)]">
+                                Internal
+                            </p>
                         )}
                         <div className="space-y-0.5">
                             {userRole === "superadmin" && (
@@ -429,24 +411,20 @@ function SidebarContent({
                                         href="/admin"
                                         onClick={onClose}
                                         title={collapsed ? "Admin Console" : undefined}
-                                        className={`group flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink)] transition-all ${collapsed ? "justify-center px-0" : "px-3"}`}
+                                        className={`group flex items-center gap-2.5 rounded-lg text-[13px] font-medium text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink)] transition-colors ${collapsed ? "justify-center px-0 h-9" : "px-2.5 py-2"}`}
                                     >
-                                        <span className="flex items-center justify-center w-8 h-8 rounded-lg text-[color:var(--ink-muted)] group-hover:text-[color:var(--ink-soft)] group-hover:bg-[var(--line)]/70 transition-all">
-                                            <Shield className="w-[17px] h-[17px]" style={{ color: "var(--nav-tint, var(--ink-muted))" }} />
-                                        </span>
-                                        {!collapsed && <span className="flex-1 truncate tracking-[-0.01em]">Admin Console</span>}
+                                        <Shield className="w-[18px] h-[18px] shrink-0 text-[color:var(--ink-muted)] group-hover:text-[color:var(--ink-soft)] transition-colors" />
+                                        {!collapsed && <span className="flex-1 truncate tracking-[-0.006em]">Admin Console</span>}
                                         {!collapsed && <ArrowUpRight className="w-3.5 h-3.5 text-[color:var(--ink-muted)] shrink-0" />}
                                     </Link>
                                     <Link
                                         href="/admin/bots"
                                         onClick={onClose}
                                         title={collapsed ? "Manage Bots" : undefined}
-                                        className={`group flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink)] transition-all ${collapsed ? "justify-center px-0" : "px-3"}`}
+                                        className={`group flex items-center gap-2.5 rounded-lg text-[13px] font-medium text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink)] transition-colors ${collapsed ? "justify-center px-0 h-9" : "px-2.5 py-2"}`}
                                     >
-                                        <span className="flex items-center justify-center w-8 h-8 rounded-lg text-[color:var(--ink-muted)] group-hover:text-[color:var(--ink-soft)] group-hover:bg-[var(--line)]/70 transition-all">
-                                            <Bot className="w-[17px] h-[17px]" style={{ color: "var(--nav-tint, var(--ink-muted))" }} />
-                                        </span>
-                                        {!collapsed && <span className="flex-1 truncate tracking-[-0.01em]">Manage Bots</span>}
+                                        <Bot className="w-[18px] h-[18px] shrink-0 text-[color:var(--ink-muted)] group-hover:text-[color:var(--ink-soft)] transition-colors" />
+                                        {!collapsed && <span className="flex-1 truncate tracking-[-0.006em]">Manage Bots</span>}
                                         {!collapsed && <ArrowUpRight className="w-3.5 h-3.5 text-[color:var(--ink-muted)] shrink-0" />}
                                     </Link>
                                 </>
@@ -456,12 +434,10 @@ function SidebarContent({
                                     href="/company"
                                     onClick={onClose}
                                     title={collapsed ? "Company Portal" : undefined}
-                                    className={`group flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium text-[color:var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] hover:text-[color:var(--accent)] transition-all ${collapsed ? "justify-center px-0" : "px-3"}`}
+                                    className={`group flex items-center gap-2.5 rounded-lg text-[13px] font-medium text-[color:var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_9%,transparent)] transition-colors ${collapsed ? "justify-center px-0 h-9" : "px-2.5 py-2"}`}
                                 >
-                                    <span className="flex items-center justify-center w-8 h-8 rounded-lg text-[color:var(--accent)] group-hover:bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] transition-all">
-                                        <ShieldCheck className="w-[17px] h-[17px]" />
-                                    </span>
-                                    {!collapsed && <span className="flex-1 truncate tracking-[-0.01em]">Company Portal</span>}
+                                    <ShieldCheck className="w-[18px] h-[18px] shrink-0" />
+                                    {!collapsed && <span className="flex-1 truncate tracking-[-0.006em]">Company Portal</span>}
                                     {!collapsed && <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />}
                                 </Link>
                             )}
