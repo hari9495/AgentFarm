@@ -40,6 +40,7 @@ import { DeveloperAgentStatusPanel } from './components/developer-agent-status-p
 import { MissionHero } from './components/mission-hero';
 import CommandCenterOverview from './components/command-center-overview';
 import { InternalSidebar } from './components/internal-sidebar';
+import { AccountMenu } from './components/account-menu';
 import { OnboardingChecklist } from './components/onboarding-checklist';
 
 type TenantSummary = {
@@ -1285,6 +1286,7 @@ export default async function HomePage({
                                 title={unifiedView ? 'Switch to tabbed view' : 'Switch to unified single-page view'}>
                                 {unifiedView ? 'Tabbed' : 'Unified'}
                             </Link>
+                            <AccountMenu workspaceName={workspace.workspace_name} />
                         </div>
                     </header>
 

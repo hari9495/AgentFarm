@@ -1,8 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import { spring } from '@/components/motion';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -11,7 +9,7 @@ const MotionButton = motion.button;
 const MotionLink = motion.create(Link);
 import {
     Cpu, Brain, ShoppingBag, LayoutDashboard, ClipboardCheck,
-    Activity, FileText, Search, LogOut, HeartPulse,
+    Activity, FileText, Search, HeartPulse,
     ChevronDown, ListChecks, ShieldCheck, Link2,
     BarChart2, CreditCard, Wrench,
     MessageSquare, DollarSign, PieChart, LineChart, Trophy, Bell,
@@ -25,8 +23,6 @@ import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import type { DashboardTab } from './dashboard-navigation';
 import { getDashboardTabStorageKey } from './dashboard-tab-storage';
 import { NotificationBell } from './notification-bell';
-import { ThemeToggle } from './theme-toggle';
-import { LocaleSwitcher } from './locale-switcher';
 import { useSidebarCollapse } from './sidebar-collapse-context';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -191,33 +187,6 @@ export function InternalSidebar({
     const searchParams = useSearchParams();
     const { collapsed, toggle } = useSidebarCollapse();
 
-    // Account menu (top header) — theme, language, sign out. Positioned `fixed`
-    // off the trigger rect so the sidebar's overflow-hidden can't clip it.
-    const acctRef = useRef<HTMLButtonElement>(null);
-    const [menuOpen, setMenuOpen] = useState(false);
-    const [menuRect, setMenuRect] = useState<{ left: number; top: number; width: number } | null>(null);
-    const toggleMenu = () => {
-        const r = acctRef.current?.getBoundingClientRect();
-        if (r) setMenuRect({ left: r.left, top: r.bottom + 6, width: collapsed ? 232 : r.width });
-        setMenuOpen((v) => !v);
-    };
-    useEffect(() => {
-        if (!menuOpen) return;
-        const close = () => setMenuOpen(false);
-        window.addEventListener('resize', close);
-        window.addEventListener('scroll', close, true);
-        return () => {
-            window.removeEventListener('resize', close);
-            window.removeEventListener('scroll', close, true);
-        };
-    }, [menuOpen]);
-
-    const handleSignOut = async () => {
-        await fetch('/api/auth/logout', { method: 'POST' });
-        document.cookie = 'agentfarm_internal_session=; path=/; max-age=0; samesite=strict';
-        window.location.href = '/login';
-    };
-
     const handleTabSelect = (tab: DashboardTab) => {
         window.localStorage.setItem(getDashboardTabStorageKey(workspaceId), tab);
         const params = new URLSearchParams(searchParams.toString());
@@ -238,28 +207,14 @@ export function InternalSidebar({
 
     return (
         <div className="flex flex-col h-svh sticky top-0 bg-[var(--card)] border-r border-[color:var(--line)] overflow-hidden">
-            {/* Account header — workspace identity + menu (dark mode, language, sign out) */}
-            <div className={`flex items-center h-14 border-b border-[color:var(--line)] shrink-0 ${collapsed ? 'justify-center px-2 gap-1' : 'gap-1 px-2.5'}`}>
-                <button
-                    ref={acctRef}
-                    type="button"
-                    onClick={toggleMenu}
-                    aria-haspopup="menu"
-                    aria-expanded={menuOpen}
-                    title={collapsed ? workspaceName : undefined}
-                    className={`group flex items-center rounded-lg hover:bg-[var(--bg-deep)] transition-colors min-w-0 ${collapsed ? 'justify-center p-1' : 'flex-1 gap-2.5 px-2 py-1.5'}`}
-                >
-                    <span className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center text-[11px] font-bold text-red-600 shrink-0">
-                        {workspaceName.slice(0, 2).toUpperCase()}
+            {/* Brand header */}
+            <div className={`flex items-center h-14 border-b border-[color:var(--line)] shrink-0 ${collapsed ? 'justify-center px-2' : 'gap-2.5 px-4'}`}>
+                {!collapsed && (
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg shadow-sm shrink-0" style={{ background: 'var(--accent)' }}>
+                        <Cpu className="w-3.5 h-3.5 text-white" aria-hidden="true" />
                     </span>
-                    {!collapsed && (
-                        <span className="flex-1 min-w-0 text-left">
-                            <span className="block text-[13px] font-semibold text-[color:var(--ink)] truncate leading-tight">{workspaceName}</span>
-                            <span className="block text-[10px] text-[color:var(--ink-muted)] truncate leading-tight">Active workspace</span>
-                        </span>
-                    )}
-                    {!collapsed && <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-[color:var(--ink-muted)] transition-transform ${menuOpen ? 'rotate-180' : ''}`} aria-hidden="true" />}
-                </button>
+                )}
+                {!collapsed && <span className="text-sm font-bold tracking-tight text-[color:var(--ink)] flex-1">AgentFarms Ops</span>}
                 {!collapsed && <NotificationBell workspaceId={workspaceId} />}
                 <button
                     type="button"
@@ -271,33 +226,6 @@ export function InternalSidebar({
                     {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
                 </button>
             </div>
-
-            {/* Account dropdown — portalled to <body> so no transformed/overflow
-                ancestor can clip or mis-anchor the fixed panel. */}
-            {menuOpen && menuRect && typeof document !== 'undefined' && createPortal(
-                <>
-                    <div className="fixed inset-0 z-[60]" onClick={() => setMenuOpen(false)} aria-hidden="true" />
-                    <div
-                        role="menu"
-                        className="fixed z-[61] rounded-lg border border-[color:var(--line)] bg-[var(--card)] p-1.5 space-y-0.5"
-                        style={{ left: menuRect.left, top: menuRect.top, width: menuRect.width, minWidth: 208, boxShadow: 'var(--shadow-lg)' }}
-                    >
-                        <ThemeToggle />
-                        <LocaleSwitcher openUp={false} />
-                        <div className="h-px bg-[var(--line)] my-1" />
-                        <button
-                            type="button"
-                            onClick={handleSignOut}
-                            role="menuitem"
-                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm w-full text-left text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink-soft)] transition-colors"
-                        >
-                            <LogOut className="w-4 h-4 shrink-0" aria-hidden="true" />
-                            <span>Sign out</span>
-                        </button>
-                    </div>
-                </>,
-                document.body,
-            )}
 
             {/* Nav */}
             <nav className={`flex-1 overflow-y-auto py-4 space-y-5 sidebar-scroll ${collapsed ? 'px-2 rail-scroll' : 'px-3'}`}>
