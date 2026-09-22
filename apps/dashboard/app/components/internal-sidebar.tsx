@@ -27,46 +27,12 @@ import { ThemeToggle } from './theme-toggle';
 import { LocaleSwitcher } from './locale-switcher';
 import { useSidebarCollapse } from './sidebar-collapse-context';
 
-// ─── Color system ────────────────────────────────────────────────────────────
-
-type NavColor =
-    | 'blue' | 'purple' | 'green' | 'amber' | 'red' | 'rose'
-    | 'pink' | 'orange' | 'teal' | 'cyan' | 'indigo' | 'sky'
-    | 'violet' | 'gold' | 'emerald' | 'slate';
-
-// Section-accent nav icons — a glyph tinted by its SECTION (not per-item), via
-// an inherited --nav-tint CSS var set on each section wrapper. Falls back to
-// muted when no section tint is in scope. Active item still overrides to accent.
-// Colour encodes area, not decoration — one cool hue per group, no rainbow.
-const MONO_ICON = { bg: 'transparent', text: 'var(--nav-tint, var(--sidebar-muted))' } as const;
-
-// One calm, cool-family hue per section. Distinct from the status palette
-// (green/amber/red stay reserved for signals) so area-coding never reads as state.
-const tint = (hex: string) => ({ ['--nav-tint']: hex } as React.CSSProperties);
-const SECTION_TINT = {
-    operations: '#3B82F6', // blue
-    workforce:  '#6366F1', // indigo
-    devtools:   '#8B5CF6', // violet
-    analytics:  '#0EA5E9', // sky
-    audit:      '#64748B', // slate
-    platform:   '#06B6D4', // cyan
-    business:   '#14B8A6', // teal
-    settings:   '#7C83A3', // muted slate-violet
-} as const;
-const COLOR_MAP: Record<NavColor, { bg: string; text: string }> = {
-    blue: MONO_ICON, purple: MONO_ICON, green: MONO_ICON, amber: MONO_ICON,
-    red: MONO_ICON, rose: MONO_ICON, pink: MONO_ICON, orange: MONO_ICON,
-    teal: MONO_ICON, cyan: MONO_ICON, indigo: MONO_ICON, sky: MONO_ICON,
-    violet: MONO_ICON, gold: MONO_ICON, emerald: MONO_ICON, slate: MONO_ICON,
-};
-
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type NavItemDef = {
     key: DashboardTab;
     label: string;
     icon: LucideIcon;
-    color: NavColor;
 };
 
 type WorkspaceOption = {
@@ -87,10 +53,10 @@ type InternalSidebarProps = {
 // ─── Tab nav items (Operations section) ─────────────────────────────────────
 
 const navItems: NavItemDef[] = [
-    { key: 'overview',      label: 'Overview',      icon: LayoutDashboard, color: 'blue'   },
-    { key: 'approvals',     label: 'Approvals',     icon: ClipboardCheck,  color: 'rose'   },
-    { key: 'observability', label: 'Observability', icon: Activity,        color: 'orange' },
-    { key: 'audit',         label: 'Evidence',      icon: FileText,        color: 'teal'   },
+    { key: 'overview',      label: 'Overview',      icon: LayoutDashboard },
+    { key: 'approvals',     label: 'Approvals',     icon: ClipboardCheck },
+    { key: 'observability', label: 'Observability', icon: Activity },
+    { key: 'audit',         label: 'Evidence',      icon: FileText },
 ];
 
 // ─── NavItem (tab-based) ─────────────────────────────────────────────────────
@@ -164,13 +130,11 @@ function SidebarLink({
     href,
     label,
     Icon,
-    color,
     badge,
 }: {
     href: string;
     label: string;
     Icon: LucideIcon;
-    color: NavColor;
     badge?: string;
 }) {
     const reduce = useReducedMotion();
@@ -303,7 +267,7 @@ export function InternalSidebar({
                 )}
 
                 {/* ── Operations ────────────────────────────────────── */}
-                <div style={tint(SECTION_TINT.operations)}>
+                <div>
                     <SectionLabel>Operations</SectionLabel>
                     <div className="space-y-0.5">
                         {navItems.map((item) => (
@@ -315,63 +279,63 @@ export function InternalSidebar({
                                 onClick={() => handleTabSelect(item.key)}
                             />
                         ))}
-                        <SidebarLink href="/activity"          label="Activity"         Icon={Bell}          color="violet" />
-                        <SidebarLink href="/approvals/mobile"  label="Mobile Approvals" Icon={ClipboardCheck} color="sky"    badge="Mobile" />
+                        <SidebarLink href="/activity"          label="Activity"         Icon={Bell} />
+                        <SidebarLink href="/approvals/mobile"  label="Mobile Approvals" Icon={ClipboardCheck}    badge="Mobile" />
                     </div>
                 </div>
 
                 {/* ── Workforce ─────────────────────────────────────── */}
-                <div style={tint(SECTION_TINT.workforce)}>
+                <div>
                     <SectionLabel>Workforce</SectionLabel>
                     <div className="space-y-0.5">
-                        <SidebarLink href="/agents"          label="Team"             Icon={Users}       color="slate"  />
-                        <SidebarLink href="/agents/health"   label="Team Health"      Icon={HeartPulse}  color="slate"  />
-                        <SidebarLink href="/agents/compare"  label="Compare"          Icon={BarChart2}    color="slate"  />
-                        <SidebarLink href="/tasks"           label="Tasks"            Icon={ListChecks}  color="amber"  />
-                        <SidebarLink href="/tasks?tab=queue" label="Task Queue"       Icon={Layers}      color="orange" />
-                        <SidebarLink href="/playbooks"       label="Playbooks"        Icon={BookOpen}    color="indigo" />
-                        <SidebarLink href="/devops"          label="DevOps Hub"       Icon={Wrench}      color="red"    />
-                        <SidebarLink href="/chat"            label="Chat"             Icon={MessageSquare} color="sky"  />
+                        <SidebarLink href="/agents"          label="Team"             Icon={Users}  />
+                        <SidebarLink href="/agents/health"   label="Team Health"      Icon={HeartPulse}  />
+                        <SidebarLink href="/agents/compare"  label="Compare"          Icon={BarChart2}  />
+                        <SidebarLink href="/tasks"           label="Tasks"            Icon={ListChecks}  />
+                        <SidebarLink href="/tasks?tab=queue" label="Task Queue"       Icon={Layers} />
+                        <SidebarLink href="/playbooks"       label="Playbooks"        Icon={BookOpen} />
+                        <SidebarLink href="/devops"          label="DevOps Hub"       Icon={Wrench}    />
+                        <SidebarLink href="/chat"            label="Chat"             Icon={MessageSquare}  />
                     </div>
                 </div>
 
                 {/* ── Developer Tools ───────────────────────────────── */}
-                <div style={tint(SECTION_TINT.devtools)}>
+                <div>
                     <SectionLabel>Developer Tools</SectionLabel>
                     <div className="space-y-0.5">
-                        <SidebarLink href="/playground"      label="API Playground"     Icon={Zap}              color="gold"   />
-                        <SidebarLink href="/ci"              label="CI Triage"           Icon={Terminal}         color="slate"  />
-                        <SidebarLink href="/env"             label="Env Reconciler"      Icon={SlidersHorizontal} color="green" />
-                        <SidebarLink href="/snapshots"       label="Bot Snapshots"       Icon={Camera}           color="blue"   />
-                        <SidebarLink href="/handoffs"        label="Handoffs"            Icon={GitBranch}        color="orange" />
-                        <SidebarLink href="/loops"           label="Autonomous Loops"    Icon={RefreshCw}        color="purple" />
-                        <SidebarLink href="/agent-chat"      label="Loop Chat"           Icon={MessageSquare}    color="pink"   />
-                        <SidebarLink href="/orchestration"   label="Orchestration Runs"  Icon={Network}          color="teal"   />
-                        <SidebarLink href="/routine-tasks"   label="Routine Scheduler"   Icon={CalendarDays}     color="sky"    />
-                        <SidebarLink href="/wake-runs"       label="Wake Runs"           Icon={AlarmClock}       color="amber"  />
-                        <SidebarLink href="/ab-tests"        label="A/B Tests"           Icon={Beaker}           color="violet" />
-                        <SidebarLink href="/desktop"         label="Desktop"             Icon={Monitor}          color="cyan"   />
+                        <SidebarLink href="/playground"      label="API Playground"     Icon={Zap}   />
+                        <SidebarLink href="/ci"              label="CI Triage"           Icon={Terminal}  />
+                        <SidebarLink href="/env"             label="Env Reconciler"      Icon={SlidersHorizontal} />
+                        <SidebarLink href="/snapshots"       label="Bot Snapshots"       Icon={Camera}   />
+                        <SidebarLink href="/handoffs"        label="Handoffs"            Icon={GitBranch} />
+                        <SidebarLink href="/loops"           label="Autonomous Loops"    Icon={RefreshCw} />
+                        <SidebarLink href="/agent-chat"      label="Loop Chat"           Icon={MessageSquare}   />
+                        <SidebarLink href="/orchestration"   label="Orchestration Runs"  Icon={Network}   />
+                        <SidebarLink href="/routine-tasks"   label="Routine Scheduler"   Icon={CalendarDays}    />
+                        <SidebarLink href="/wake-runs"       label="Wake Runs"           Icon={AlarmClock}  />
+                        <SidebarLink href="/ab-tests"        label="A/B Tests"           Icon={Beaker} />
+                        <SidebarLink href="/desktop"         label="Desktop"             Icon={Monitor}   />
                     </div>
                 </div>
 
                 {/* ── Analytics ─────────────────────────────────────── */}
-                <div style={tint(SECTION_TINT.analytics)}>
+                <div>
                     <SectionLabel>Analytics</SectionLabel>
                     <div className="space-y-0.5">
-                        <SidebarLink href="/analytics"           label="Overview"           Icon={BarChart2}   color="blue"   />
-                        <SidebarLink href="/roi"                 label="ROI Dashboard"      Icon={Trophy}      color="gold"   />
-                        <SidebarLink href="/cost-dashboard"      label="Cost Dashboard"     Icon={PieChart}    color="green"  />
-                        <SidebarLink href="/observability"       label="LLM Traces"         Icon={Network}     color="blue"   />
-                        <SidebarLink href="/infra-monitoring"    label="Infra Monitoring"   Icon={Activity}    color="orange" />
-                        <SidebarLink href="/historical-metrics"  label="Historical Metrics" Icon={LineChart}   color="violet" />
-                        <SidebarLink href="/deliverables"        label="Deliverables"       Icon={ListChecks}  color="teal"   />
-                        <SidebarLink href="/scheduled-tasks"     label="Scheduled Tasks"    Icon={CalendarDays} color="orange" />
-                        <SidebarLink href="/batch-tasks"         label="Batch Tasks"        Icon={Layers}      color="purple" />
+                        <SidebarLink href="/analytics"           label="Overview"           Icon={BarChart2}   />
+                        <SidebarLink href="/roi"                 label="ROI Dashboard"      Icon={Trophy}   />
+                        <SidebarLink href="/cost-dashboard"      label="Cost Dashboard"     Icon={PieChart}  />
+                        <SidebarLink href="/observability"       label="LLM Traces"         Icon={Network}   />
+                        <SidebarLink href="/infra-monitoring"    label="Infra Monitoring"   Icon={Activity} />
+                        <SidebarLink href="/historical-metrics"  label="Historical Metrics" Icon={LineChart} />
+                        <SidebarLink href="/deliverables"        label="Deliverables"       Icon={ListChecks}   />
+                        <SidebarLink href="/scheduled-tasks"     label="Scheduled Tasks"    Icon={CalendarDays} />
+                        <SidebarLink href="/batch-tasks"         label="Batch Tasks"        Icon={Layers} />
                     </div>
                 </div>
 
                 {/* ── Audit & Compliance ────────────────────────────── */}
-                <div style={tint(SECTION_TINT.audit)}>
+                <div>
                     <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-[color:var(--ink-muted)] flex items-center gap-1.5">
                         Audit &amp; Compliance
                         {!auditUnlocked && <Lock className="w-2.5 h-2.5 text-[color:var(--ink-muted)]" />}
@@ -379,10 +343,10 @@ export function InternalSidebar({
                     <div className="space-y-0.5">
                         {auditUnlocked ? (
                             <>
-                                <SidebarLink href="/audit"                label="Audit Log"       Icon={ScrollText} color="red"    />
-                                <SidebarLink href="/audit/session-replay" label="Session Replay"  Icon={Film}       color="orange" />
-                                <SidebarLink href="/operational-signals"  label="Op. Signals"     Icon={Waves}      color="amber"  />
-                                <SidebarLink href="/circuit-breakers"     label="Circuit Breakers" Icon={Plug}      color="rose"   />
+                                <SidebarLink href="/audit"                label="Audit Log"       Icon={ScrollText}    />
+                                <SidebarLink href="/audit/session-replay" label="Session Replay"  Icon={Film} />
+                                <SidebarLink href="/operational-signals"  label="Op. Signals"     Icon={Waves}  />
+                                <SidebarLink href="/circuit-breakers"     label="Circuit Breakers" Icon={Plug}   />
                             </>
                         ) : (
                             <Link
@@ -405,42 +369,42 @@ export function InternalSidebar({
                 </div>
 
                 {/* ── Platform ──────────────────────────────────────── */}
-                <div style={tint(SECTION_TINT.platform)}>
+                <div>
                     <SectionLabel>Platform</SectionLabel>
                     <div className="space-y-0.5">
-                        <SidebarLink href="/connectors"    label="Connectors"    Icon={Link2}      color="blue"   />
-                        <SidebarLink href="/task-sources"  label="Task Sources"  Icon={ListChecks} color="amber"  />
-                        <SidebarLink href="/platform-mcp"  label="Platform MCP"  Icon={Cpu}        color="cyan"   />
-                        <SidebarLink href="/connector-status" label="Connector Status" Icon={Plug}    color="green"  />
-                        <SidebarLink href="/skills"         label="Skills"        Icon={ShoppingBag} color="purple" />
-                        <SidebarLink href="/memory"         label="Memory"        Icon={Brain}      color="violet" />
-                        <SidebarLink href="/governance"     label="Governance"    Icon={ShieldCheck} color="green" />
-                        <SidebarLink href="/support"        label="Support Agent" Icon={LifeBuoy}   color="orange" />
+                        <SidebarLink href="/connectors"    label="Connectors"    Icon={Link2}   />
+                        <SidebarLink href="/task-sources"  label="Task Sources"  Icon={ListChecks}  />
+                        <SidebarLink href="/platform-mcp"  label="Platform MCP"  Icon={Cpu}   />
+                        <SidebarLink href="/connector-status" label="Connector Status" Icon={Plug}  />
+                        <SidebarLink href="/skills"         label="Skills"        Icon={ShoppingBag} />
+                        <SidebarLink href="/memory"         label="Memory"        Icon={Brain} />
+                        <SidebarLink href="/governance"     label="Governance"    Icon={ShieldCheck} />
+                        <SidebarLink href="/support"        label="Support Agent" Icon={LifeBuoy} />
                     </div>
                 </div>
 
                 {/* ── Business ──────────────────────────────────────── */}
-                <div style={tint(SECTION_TINT.business)}>
+                <div>
                     <SectionLabel>Business</SectionLabel>
                     <div className="space-y-0.5">
-                        <SidebarLink href="/billing" label="Billing" Icon={CreditCard} color="green"   />
-                        <SidebarLink href="/budget"  label="Budget"  Icon={DollarSign} color="emerald" />
+                        <SidebarLink href="/billing" label="Billing" Icon={CreditCard}   />
+                        <SidebarLink href="/budget"  label="Budget"  Icon={DollarSign} />
                     </div>
                 </div>
 
                 {/* ── Team & Settings ───────────────────────────────── */}
-                <div style={tint(SECTION_TINT.settings)}>
+                <div>
                     <SectionLabel>Team &amp; Settings</SectionLabel>
                     <div className="space-y-0.5">
-                        <SidebarLink href="/account"            label="My Account"       Icon={User}         color="blue"   />
-                        <SidebarLink href="/team"               label="Team Members"     Icon={Users}        color="indigo" />
-                        <SidebarLink href="/settings"           label="API Keys"         Icon={Key}          color="slate"  />
-                        <SidebarLink href="/settings/sso"       label="SSO / SAML"       Icon={ShieldCheck}  color="green"  />
-                        <SidebarLink href="/llm-config"         label="LLM Config"       Icon={Zap}          color="purple" />
-                        <SidebarLink href="/quality"            label="Quality Feedback" Icon={Star}         color="gold"   />
-                        <SidebarLink href="/notifications"      label="Notifications"    Icon={Bell}         color="rose"   />
-                        <SidebarLink href="/sla-alerts"         label="SLA Alerts"       Icon={AlarmClock}   color="red"    />
-                        <SidebarLink href="/scheduled-reports"  label="Report Emails"    Icon={CalendarDays} color="sky"    />
+                        <SidebarLink href="/account"            label="My Account"       Icon={User}   />
+                        <SidebarLink href="/team"               label="Team Members"     Icon={Users} />
+                        <SidebarLink href="/settings"           label="API Keys"         Icon={Key}  />
+                        <SidebarLink href="/settings/sso"       label="SSO / SAML"       Icon={ShieldCheck}  />
+                        <SidebarLink href="/llm-config"         label="LLM Config"       Icon={Zap} />
+                        <SidebarLink href="/quality"            label="Quality Feedback" Icon={Star}   />
+                        <SidebarLink href="/notifications"      label="Notifications"    Icon={Bell}   />
+                        <SidebarLink href="/sla-alerts"         label="SLA Alerts"       Icon={AlarmClock}    />
+                        <SidebarLink href="/scheduled-reports"  label="Report Emails"    Icon={CalendarDays}    />
                     </div>
                 </div>
 
