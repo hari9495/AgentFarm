@@ -25,13 +25,13 @@ function AuthShell({ children }: { children: React.ReactNode }) {
     return (
         <div className="relative min-h-screen flex flex-col overflow-hidden" style={{ background: "var(--op-paper-2)", color: "var(--op-ink)" }}>
             <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(45% 40% at 50% 0%, var(--op-indigo-soft), transparent 70%)" }} />
-            <main className="relative flex-1 flex items-center justify-center px-4 py-12">
+            <main className="relative flex-1 flex items-center justify-center px-4 py-4">
                 <div className="op-rise w-full max-w-[400px]">
-                    <div className="flex justify-center mb-7"><BrandMark /></div>
+                    <div className="flex justify-center mb-5"><BrandMark /></div>
                     {children}
                 </div>
             </main>
-            <footer className="relative flex flex-wrap items-center justify-center gap-x-4 gap-y-1 pb-8 text-[12px]" style={{ fontFamily: "var(--font-mono)", color: "var(--op-muted)" }}>
+            <footer className="relative flex flex-wrap items-center justify-center gap-x-4 gap-y-1 pb-3 text-[12px]" style={{ fontFamily: "var(--font-mono)", color: "var(--op-muted)" }}>
                 <span>© {new Date().getFullYear()} AgentFarms</span>
                 <Link href="/privacy" className="hover:text-[color:var(--op-indigo)] transition-colors">Privacy</Link>
                 <Link href="/terms" className="hover:text-[color:var(--op-indigo)] transition-colors">Terms</Link>
@@ -205,10 +205,10 @@ function LoginForm() {
 
     return (
         <AuthShell>
-            <div className="rounded-2xl bg-white p-8" style={CARD_STYLE}>
-                <div className="text-center mb-6">
+            <div className="rounded-2xl bg-white p-6" style={CARD_STYLE}>
+                <div className="text-center mb-5">
                     <h1 className="font-display font-bold" style={{ fontSize: "1.6rem", letterSpacing: "-0.02em", lineHeight: 1.1 }}>Sign in</h1>
-                    <p className="mt-2 text-[14px]" style={{ color: "var(--op-muted)" }}>Access your AgentFarms workspace.</p>
+                    <p className="mt-1.5 text-[14px]" style={{ color: "var(--op-muted)" }}>Access your AgentFarms workspace.</p>
                 </div>
 
                 {/* Enterprise SSO — secondary path */}
@@ -221,7 +221,7 @@ function LoginForm() {
                 </button>
 
                 {/* divider */}
-                <div className="flex items-center gap-3 my-5">
+                <div className="flex items-center gap-3 my-3">
                     <div className="flex-1 h-px" style={{ background: "var(--op-line)" }} />
                     <span className="text-[12px]" style={{ color: "var(--op-muted)" }}>or sign in with password</span>
                     <div className="flex-1 h-px" style={{ background: "var(--op-line)" }} />
@@ -234,7 +234,7 @@ function LoginForm() {
                     </div>
                 )}
 
-                <form onSubmit={onSubmit} noValidate className="space-y-4">
+                <form onSubmit={onSubmit} noValidate className="space-y-3.5">
                     <div>
                         <label htmlFor="lg-email" className={labelCls} style={{ color: "var(--op-ink-soft)" }}>Email</label>
                         <input
@@ -299,12 +299,12 @@ function LoginForm() {
                 </form>
             </div>
 
-            <p className="mt-5 text-center text-[13px]" style={{ color: "var(--op-muted)" }}>
+            <p className="mt-4 text-center text-[13px]" style={{ color: "var(--op-muted)" }}>
                 Don&rsquo;t have an account?{" "}
                 <Link href="/signup" className="font-medium hover:underline" style={{ color: "var(--op-indigo)" }}>Create one free</Link>
             </p>
 
-            <div className="mt-8 flex items-center justify-center gap-x-5 gap-y-2 flex-wrap text-[11px]" style={{ fontFamily: "var(--font-mono)", color: "var(--op-muted)" }}>
+            <div className="mt-5 flex items-center justify-center gap-x-5 gap-y-2 flex-wrap text-[11px]" style={{ fontFamily: "var(--font-mono)", color: "var(--op-muted)" }}>
                 <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" /> SOC 2 Ready</span>
                 <span>256-bit TLS</span>
                 <span>GDPR Compliant</span>
