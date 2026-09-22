@@ -4,6 +4,7 @@ import { rows as compareRows, cols as compareCols } from '@/components/compare/c
 import ComparisonTable from '@/components/shared/ComparisonTable';
 import SharedCTA from '@/components/shared/SharedCTA';
 import SubPageHero from '@/components/shared/SubPageHero';
+import { Reveal } from '@/components/motion';
 
 export const metadata: Metadata = {
   title: 'AgentFarms vs Alternatives — AI Workers vs Copilot',
@@ -41,6 +42,7 @@ export default function ComparePage() {
 
       {/* Full comparison — shared ComparisonTable (21st.dev: kokonutd/pricing-table).
           Click any column header to focus that alternative — matrix (A) + switcher (B) in one. */}
+      <Reveal>
       <section className="op-light" style={{ paddingTop: 72, paddingBottom: 72 }}>
         <div className="op-wrap mb-10 text-center">
           <h2 className="font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight sm:text-4xl" style={{ lineHeight: 1.05, color: 'var(--op-ink)' }}>The full comparison</h2>
@@ -51,8 +53,10 @@ export default function ComparePage() {
           rows={compareRows.map((r) => ({ label: r.feature, cells: [r.AgentFarms, r.copilot, r.contractor, r.hiring] }))}
         />
       </section>
+      </Reveal>
 
       {/* CTA (21st.dev: shadcnblocks/cta11) */}
+      <Reveal>
       <section className="op-soft" style={{ paddingTop: 88, paddingBottom: 88 }}>
         <SharedCTA
           badge="14-day free trial · no card required"
@@ -62,6 +66,7 @@ export default function ComparePage() {
           secondary={{ label: 'View pricing', href: '/pricing' }}
         />
       </section>
+      </Reveal>
     </div>
   );
 }
