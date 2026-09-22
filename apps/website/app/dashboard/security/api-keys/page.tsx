@@ -163,18 +163,16 @@ export default function ApiKeysPage() {
         <div className="min-h-svh bg-[var(--bg-deep)] dark:bg-[var(--bg)]">
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
-                <section className="relative overflow-hidden rounded-xl border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
+                <section className="relative overflow-hidden rounded-xl border border-[color:var(--line)] bg-[var(--card)]">
                     <div className="absolute inset-0 pointer-events-none">
-                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(167,139,250,0.16)_0%,transparent_60%)]" />
-                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(56,189,248,0.12)_0%,transparent_60%)]" />
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
                         <div>
-                            <div className="flex items-center gap-2 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)] w-fit mb-4">
+                            <div className="flex items-center gap-2 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-[color:var(--accent)] w-fit mb-4">
                                 <PremiumIcon icon={KeyRound} tone="violet" containerClassName="w-4 h-4 rounded bg-[var(--accent)]/20 text-[color:var(--accent)]" iconClassName="w-2.5 h-2.5" />
                                 API Keys
                             </div>
-                            <h1 className="text-3xl sm:text-4xl font-extrabold text-[color:var(--ink)] tracking-tight leading-tight">Programmatic access</h1>
+                            <h1 className="text-2xl sm:text-[28px] font-semibold text-[color:var(--ink)] tracking-tight leading-tight">Programmatic access</h1>
                             <p className="mt-2 text-[color:var(--ink-soft)] text-base max-w-lg">
                                 Generate scoped API keys to call AgentFarms from your own scripts and integrations. Keys inherit a role that limits what they can do.
                             </p>

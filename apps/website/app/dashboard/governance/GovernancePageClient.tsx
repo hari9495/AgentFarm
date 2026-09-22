@@ -65,7 +65,7 @@ function KpiSection({ data, loading }: { data: KpiData | null; loading: boolean 
             <div className={`rounded-xl border bg-gradient-to-br ${slaBg} dark:bg-[var(--card)] p-6`}>
                 <div className="flex items-start justify-between">
                     <div>
-                        <p className="text-xs font-bold uppercase tracking-widest text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mb-1">Overall SLA Compliance</p>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mb-1">Overall SLA Compliance</p>
                         <p className={`text-5xl font-black tabular-nums tracking-tight ${slaColor}`}>{sla.toFixed(1)}<span className="text-2xl">%</span></p>
                         <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1">
                             {sla >= 98 ? "✓ Meeting your governance targets" : sla >= 90 ? "⚠ Approaching SLA threshold" : "✗ Below 90% — review escalation rules"}
