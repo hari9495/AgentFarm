@@ -102,7 +102,6 @@ function NavItem({
     onClick: () => void;
 }) {
     const Icon = def.icon;
-    const c = COLOR_MAP[def.color];
     const { collapsed } = useSidebarCollapse();
     const hasBadge = def.key === 'approvals' && pendingCount != null && pendingCount > 0;
     return (
@@ -112,34 +111,29 @@ function NavItem({
             aria-current={active ? 'page' : undefined}
             title={collapsed ? def.label : undefined}
             className={[
-                'w-full flex items-center gap-3 py-2 rounded-sm text-sm font-medium transition-colors text-left',
-                collapsed ? 'justify-center px-0' : 'px-3',
+                'group w-full flex items-center gap-2.5 py-2 rounded-lg text-[13px] font-medium transition-colors text-left',
+                collapsed ? 'justify-center px-0' : 'px-2.5',
                 active
-                    ? 'font-semibold'
+                    ? ''
                     : 'text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink)]',
             ].join(' ')}
-            style={active ? { background: 'color-mix(in srgb, var(--accent) 7%, transparent)', color: 'var(--accent)' } : {}}
+            style={active ? { background: 'color-mix(in srgb, var(--accent) 8%, transparent)', color: 'var(--accent)' } : {}}
         >
-            <span
-                className="relative inline-flex h-7 w-7 items-center justify-center rounded-sm shrink-0"
-                style={active
-                    ? { background: 'rgba(37, 99, 235,0.12)' }
-                    : { background: c.bg }}
-            >
+            <span className="relative flex shrink-0">
                 <Icon
-                    className="w-3.5 h-3.5"
-                    style={{ color: active ? 'var(--accent)' : c.text }}
+                    className="w-[18px] h-[18px] transition-colors"
+                    style={{ color: active ? 'var(--accent)' : 'var(--ink-muted)' }}
                     aria-hidden="true"
                 />
                 {collapsed && hasBadge && (
-                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-[color:var(--card)]" aria-label={`${pendingCount} pending`} />
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-[color:var(--card)]" aria-label={`${pendingCount} pending`} />
                 )}
             </span>
             {!collapsed && <span className="flex-1">{def.label}</span>}
             {!collapsed && hasBadge && (
                 <span
                     aria-label={`${pendingCount} pending`}
-                    className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-rose-500 text-white text-[9px] font-bold shrink-0"
+                    className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[9px] font-semibold shrink-0"
                 >
                     {pendingCount}
                 </span>
@@ -163,20 +157,14 @@ function SidebarLink({
     color: NavColor;
     badge?: string;
 }) {
-    const c = COLOR_MAP[color];
     const { collapsed } = useSidebarCollapse();
     return (
         <Link
             href={href}
             title={collapsed ? label : undefined}
-            className={`flex items-center gap-3 py-2 rounded-sm text-sm font-medium text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink)] transition-colors ${collapsed ? 'justify-center px-0' : 'px-3'}`}
+            className={`group flex items-center gap-2.5 py-2 rounded-lg text-[13px] font-medium text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink)] transition-colors ${collapsed ? 'justify-center px-0' : 'px-2.5'}`}
         >
-            <span
-                className="inline-flex h-7 w-7 items-center justify-center rounded-sm shrink-0"
-                style={{ background: c.bg }}
-            >
-                <Icon className="w-3.5 h-3.5" style={{ color: c.text }} aria-hidden="true" />
-            </span>
+            <Icon className="w-[18px] h-[18px] shrink-0 text-[color:var(--ink-muted)] group-hover:text-[color:var(--ink-soft)] transition-colors" aria-hidden="true" />
             {!collapsed && <span className="flex-1">{label}</span>}
             {!collapsed && badge && (
                 <span style={{
