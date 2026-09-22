@@ -6,6 +6,7 @@ import { organizationSchema, breadcrumbSchema } from '@/lib/seo-schemas';
 import SubPageHero from '@/components/shared/SubPageHero';
 import SharedCTA from '@/components/shared/SharedCTA';
 import TeamCards from '@/components/about/TeamCards';
+import { Reveal } from '@/components/motion';
 import { featureTint } from '@/components/shared/feature-icon-palette';
 
 export const metadata: Metadata = {
@@ -64,6 +65,7 @@ export default function AboutPage() {
       />
 
       {/* Mission — split content */}
+      <Reveal>
       <section className="op-light" style={{ paddingTop: 80, paddingBottom: 80 }}>
         <div className="op-wrap">
           <div className="grid items-center gap-12 lg:grid-cols-2">
@@ -90,8 +92,10 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+      </Reveal>
 
       {/* Values */}
+      <Reveal>
       <section className="op-soft" style={{ paddingTop: 80, paddingBottom: 80 }}>
         <div className="op-wrap">
           <h2 className="font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight sm:text-4xl" style={{ letterSpacing: '-0.025em', color: 'var(--op-ink)' }}>What we believe</h2>
@@ -113,8 +117,10 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+      </Reveal>
 
       {/* Team — pulled TeamCards (21st.dev: ravikatiyar162/team-section-1) */}
+      <Reveal>
       <section className="op-light" style={{ paddingTop: 80, paddingBottom: 80 }}>
         <div className="op-wrap mb-10 text-center">
           <p className="op-eyebrow">The team</p>
@@ -122,8 +128,10 @@ export default function AboutPage() {
         </div>
         <TeamCards members={team.map((m) => ({ name: m.name, role: m.role, bio: m.bio, photo: m.photo, social: { linkedin: '#' } }))} />
       </section>
+      </Reveal>
 
       {/* Backers */}
+      <Reveal>
       <section className="op-soft text-center" style={{ paddingTop: 64, paddingBottom: 64 }}>
         <div className="op-wrap">
           <p className="mb-8 text-[12px] font-semibold uppercase tracking-[0.08em]" style={{ color: 'var(--op-muted)' }}>Backed by builders who care about durable systems</p>
@@ -134,8 +142,10 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+      </Reveal>
 
       {/* CTA — shared SharedCTA (21st.dev: shadcnblocks/cta11) */}
+      <Reveal>
       <section className="op-light" style={{ paddingTop: 88, paddingBottom: 88 }}>
         <SharedCTA
           badge="Now onboarding early teams"
@@ -145,6 +155,7 @@ export default function AboutPage() {
           secondary={{ label: cta.secondary.label, href: cta.secondary.href }}
         />
       </section>
+      </Reveal>
     </div>
   );
 }
