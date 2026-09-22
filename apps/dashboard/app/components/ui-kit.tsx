@@ -57,7 +57,8 @@ export const UK_CSS = `
 .uk-panel__body { padding: 16px; }
 
 /* Tabs */
-.uk-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.uk-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--line); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.uk-tabs::-webkit-scrollbar { display: none; }
 .uk-tab { font-family: var(--font-plex-mono), monospace; text-transform: uppercase; letter-spacing: 0.1em; font-size: 10.5px;
   padding: 12px 14px; background: transparent; border: none; border-bottom: 2px solid transparent; cursor: pointer;
   color: var(--ink-muted); white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; margin-bottom: -1px; }
