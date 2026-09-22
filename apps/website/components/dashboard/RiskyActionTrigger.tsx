@@ -62,10 +62,12 @@ export default function RiskyActionTrigger({ agentSlug, agentName }: Props) {
             <button
                 onClick={() => void submitHighRiskAction()}
                 disabled={loading}
-                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[var(--danger)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--danger)] disabled:opacity-60"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-[var(--danger)] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[color-mix(in_srgb,var(--danger)_88%,#000)] active:scale-[0.98] transition-all disabled:opacity-60"
             >
-                {loading ? <PremiumIcon icon={LoaderCircle} tone="rose" containerClassName="w-6 h-6 rounded-lg bg-[var(--card)] text-white border-[color:var(--line)]" iconClassName="w-3.5 h-3.5 animate-spin" /> : <PremiumIcon icon={ShieldAlert} tone="rose" containerClassName="w-6 h-6 rounded-lg bg-[var(--card)] text-white border-[color:var(--line)]" iconClassName="w-3.5 h-3.5" />}
-                {loading ? "Submitting..." : "Request High-Risk Approval"}
+                {loading
+                    ? <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
+                    : <ShieldAlert className="w-3.5 h-3.5" />}
+                {loading ? "Submitting…" : "Request High-Risk Approval"}
             </button>
 
             {createdId ? (
