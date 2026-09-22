@@ -249,7 +249,7 @@ export function InternalSidebar({
                 line (same row as expanded) so it's easy to find. */}
             <div className={`flex items-center h-14 border-b border-[color:var(--line)] shrink-0 ${collapsed ? 'justify-center px-2' : 'gap-2.5 px-4'}`}>
                 {!collapsed && (
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-sm shadow-sm shrink-0" style={{ background: 'var(--accent)' }}>
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg shadow-sm shrink-0" style={{ background: 'var(--accent)' }}>
                         <Cpu className="w-3.5 h-3.5 text-white" aria-hidden="true" />
                     </span>
                 )}
@@ -260,7 +260,7 @@ export function InternalSidebar({
                     onClick={toggle}
                     title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                     aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                    className="shrink-0 inline-flex items-center justify-center p-1 rounded-sm text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] transition-colors"
+                    className="shrink-0 inline-flex items-center justify-center p-1 rounded-lg text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] transition-colors"
                 >
                     {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
                 </button>
@@ -274,7 +274,7 @@ export function InternalSidebar({
                     type="button"
                     onClick={handleSearchKey}
                     title={collapsed ? 'Search (⌘K)' : undefined}
-                    className={`w-full flex items-center rounded-sm border border-[color:var(--line)] bg-[var(--bg-deep)] text-xs text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink-soft)] transition-colors ${collapsed ? 'justify-center py-2' : 'gap-2 px-3 py-2'}`}
+                    className={`w-full flex items-center rounded-lg border border-[color:var(--line)] bg-[var(--bg-deep)] text-xs text-[color:var(--ink-muted)] shadow-[var(--shadow-sm)] hover:bg-[var(--card)] hover:border-[color:var(--line-strong)] hover:text-[color:var(--ink-soft)] transition-colors ${collapsed ? 'justify-center py-2' : 'gap-2 px-3 py-2'}`}
                 >
                     <Search className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                     {!collapsed && <span className="flex-1 text-left">Search pages…</span>}
@@ -289,7 +289,7 @@ export function InternalSidebar({
                             <select
                                 value={workspaceId}
                                 onChange={(e) => handleWorkspaceChange(e.target.value)}
-                                className="w-full appearance-none bg-[var(--card)] border border-[color:var(--line)] rounded-sm px-3 py-2 pr-8 text-xs font-medium text-[color:var(--ink-soft)] focus:outline-none focus:ring-1 focus:ring-red-400 cursor-pointer"
+                                className="w-full appearance-none bg-[var(--card)] border border-[color:var(--line)] rounded-lg px-3 py-2 pr-8 text-xs font-medium text-[color:var(--ink-soft)] focus:outline-none focus:ring-1 focus:ring-red-400 cursor-pointer"
                             >
                                 {workspaces.map((ws) => (
                                     <option key={ws.workspaceId} value={ws.workspaceId}>
@@ -387,10 +387,10 @@ export function InternalSidebar({
                         ) : (
                             <Link
                                 href="/billing"
-                                className="flex items-center gap-3 px-3 py-2 rounded-sm text-sm font-medium transition-colors"
+                                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
                                 style={{ color: 'var(--ink-muted)' }}
                             >
-                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-sm shrink-0" style={{ background: 'rgba(148,163,184,0.1)' }}>
+                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg shrink-0" style={{ background: 'rgba(148,163,184,0.1)' }}>
                                     <Lock className="w-3.5 h-3.5" style={{ color: 'var(--ink-muted)' }} />
                                 </span>
                                 <span className="flex-1 text-[color:var(--ink-muted)]">Upgrade to unlock</span>
@@ -449,7 +449,7 @@ export function InternalSidebar({
             {/* Footer */}
             <div className={`border-t border-[color:var(--line)] py-3 space-y-0.5 shrink-0 ${collapsed ? 'px-2 flex flex-col items-center' : 'px-3'}`}>
                 {workspaces.length <= 1 && (
-                    <div className={`flex items-center rounded-sm ${collapsed ? 'justify-center py-2' : 'gap-3 px-3 py-2'}`} title={collapsed ? workspaceName : undefined}>
+                    <div className={`flex items-center rounded-lg ${collapsed ? 'justify-center py-2' : 'gap-3 px-3 py-2'}`} title={collapsed ? workspaceName : undefined}>
                         <div className="h-7 w-7 rounded-full bg-red-100 flex items-center justify-center text-[10px] font-bold text-red-600 shrink-0">
                             {workspaceName.slice(0, 2).toUpperCase()}
                         </div>
@@ -471,7 +471,7 @@ export function InternalSidebar({
                         window.location.href = '/login';
                     }}
                     title={collapsed ? 'Sign out' : undefined}
-                    className={`flex items-center rounded-sm text-sm text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink-soft)] transition-colors text-left ${collapsed ? 'justify-center w-9 h-9' : 'gap-3 px-3 py-2 w-full'}`}
+                    className={`flex items-center rounded-lg text-sm text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink-soft)] transition-colors text-left ${collapsed ? 'justify-center w-9 h-9' : 'gap-3 px-3 py-2 w-full'}`}
                 >
                     <LogOut className="w-4 h-4 shrink-0" aria-hidden="true" />
                     {!collapsed && <span>Sign out</span>}
