@@ -116,7 +116,7 @@ export default function HistoricalMetricsPage() {
                 </Link>
                 <div style={{ marginRight: 'auto' }}>
                     <div style={{ fontFamily: 'var(--font-plex-mono), monospace', textTransform: 'uppercase', letterSpacing: '0.16em', fontSize: 9, color: 'var(--accent)', lineHeight: 1 }}>Trends</div>
-                    <h1 style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '1.2rem', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ink)', margin: '3px 0 0', lineHeight: 1, whiteSpace: 'nowrap' }}>
+                    <h1 style={{ fontFamily: 'var(--font-inter), Georgia, serif', fontSize: '1.2rem', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ink)', margin: '3px 0 0', lineHeight: 1, whiteSpace: 'nowrap' }}>
                         Historical Metrics
                     </h1>
                 </div>

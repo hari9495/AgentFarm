@@ -26,7 +26,7 @@ export const WF_CSS = `
     --rule: rgba(255,255,255,0.12); --signal: #2563EB;
 }
 .wf svg { stroke-width: 1.5px; }
-.wf .wf-display { font-family: var(--font-fraunces), Georgia, 'Times New Roman', serif; letter-spacing: -0.015em; font-weight: 600; }
+.wf .wf-display { font-family: var(--font-inter), Georgia, 'Times New Roman', serif; letter-spacing: -0.015em; font-weight: 600; }
 .wf .wf-eyebrow { font-family: var(--font-plex-mono), monospace; text-transform: uppercase; letter-spacing: 0.16em; font-size: 10px; color: var(--ink-muted); }
 .wf .wf-mono { font-family: var(--font-plex-mono), monospace; }
 .wf button, .wf input, .wf select, .wf textarea { border-radius: 2px !important; box-shadow: none !important; }

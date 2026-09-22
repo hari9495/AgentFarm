@@ -38,7 +38,7 @@ export default function DesignSystemGallery() {
                         <div style={{ fontFamily: 'var(--font-plex-mono), monospace', textTransform: 'uppercase', letterSpacing: '0.18em', fontSize: 10, color: 'var(--muted-foreground)' }}>Design System — shadcn / ui × Ink &amp; Petrol</div>
                         <WfThemeToggle />
                     </div>
-                    <h1 style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontWeight: 600, fontSize: 40, letterSpacing: '-0.02em', margin: 0, lineHeight: 1 }}>Component Library</h1>
+                    <h1 style={{ fontFamily: 'var(--font-inter), Georgia, serif', fontWeight: 600, fontSize: 40, letterSpacing: '-0.02em', margin: 0, lineHeight: 1 }}>Component Library</h1>
                     <p style={{ color: 'var(--muted-foreground)', fontSize: 14, marginTop: 8, maxWidth: '62ch', lineHeight: 1.6 }}>
                         Accessible Radix primitives (shadcn/ui), themed on the Ink &amp; Petrol token system. One accent, semantic status colours, sharp editorial corners. Every component below is production-ready and follows light / dark automatically.
                     </p>
@@ -131,7 +131,7 @@ export default function DesignSystemGallery() {
                                     <CardDescription>Last 24h</CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <div style={{ fontFamily: 'var(--font-fraunces), serif', fontSize: 34, fontWeight: 600, color: 'var(--primary)' }}>1.4s</div>
+                                    <div style={{ fontFamily: 'var(--font-inter), serif', fontSize: 34, fontWeight: 600, color: 'var(--primary)' }}>1.4s</div>
                                     <p style={{ fontSize: 12, color: 'var(--muted-foreground)', marginTop: 4 }}>−18% vs. yesterday</p>
                                 </CardContent>
                             </Card>

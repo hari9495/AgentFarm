@@ -18,7 +18,7 @@ export const UK_CSS = `
 .uk, .uk * { box-sizing: border-box; }
 .uk { font-family: var(--font-inter), -apple-system, sans-serif; color: var(--ink); }
 .uk-mono { font-family: var(--font-plex-mono), ui-monospace, monospace; }
-.uk-display { font-family: var(--font-fraunces), Georgia, serif; letter-spacing: -0.015em; font-weight: 600; line-height: 1; }
+.uk-display { font-family: var(--font-inter), Georgia, serif; letter-spacing: -0.015em; font-weight: 600; line-height: 1; }
 .uk-eyebrow { font-family: var(--font-plex-mono), monospace; text-transform: uppercase; letter-spacing: 0.16em; font-size: 10px; color: var(--ink-muted); }
 
 /* Button */
@@ -73,7 +73,7 @@ export const UK_CSS = `
 .uk-ledger .uk-num { font-family: var(--font-plex-mono), monospace; color: var(--ink-muted); white-space: nowrap; }
 
 /* Stat */
-.uk-stat__n { font-family: var(--font-fraunces), Georgia, serif; font-weight: 600; font-size: 26px; line-height: 1; }
+.uk-stat__n { font-family: var(--font-inter), Georgia, serif; font-weight: 600; font-size: 26px; line-height: 1; }
 .uk-stat__k { font-family: var(--font-plex-mono), monospace; text-transform: uppercase; letter-spacing: 0.12em; font-size: 9px; color: var(--ink-muted); margin-top: 5px; }
 `;
 

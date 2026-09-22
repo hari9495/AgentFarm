@@ -431,7 +431,7 @@ export default function PlaybooksClient({
                     </div>
                     <div>
                         <div style={{ fontFamily: 'var(--font-plex-mono), monospace', textTransform: 'uppercase', letterSpacing: '0.16em', fontSize: 9, color: 'var(--accent)', lineHeight: 1, marginBottom: 3 }}>Templates</div>
-                        <h1 style={{ margin: 0, fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: 22, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ink)', lineHeight: 1 }}>Playbooks</h1>
+                        <h1 style={{ margin: 0, fontFamily: 'var(--font-inter), Georgia, serif', fontSize: 22, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ink)', lineHeight: 1 }}>Playbooks</h1>
                         <p style={{ margin: 0, fontSize: 12, color: 'var(--ink-soft)' }}>Pre-built task templates — browse, customise, and dispatch in one click</p>
                     </div>
                 </div>

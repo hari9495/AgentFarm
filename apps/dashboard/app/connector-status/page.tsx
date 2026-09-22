@@ -45,7 +45,7 @@ export default function ConnectorStatusPage() {
             <header className="flex items-start justify-between gap-4">
                 <div>
                     <div style={{ fontFamily: 'var(--font-plex-mono), monospace', textTransform: 'uppercase', letterSpacing: '0.16em', fontSize: 9, color: 'var(--accent)', lineHeight: 1, marginBottom: 5 }}>Integrations</div>
-                    <h1 style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '1.5rem', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ink)', margin: 0, lineHeight: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <h1 style={{ fontFamily: 'var(--font-inter), Georgia, serif', fontSize: '1.5rem', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--ink)', margin: 0, lineHeight: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
                         <Plug className="w-5 h-5" style={{ color: 'var(--accent)' }} /> Connector provisioning status
                     </h1>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">

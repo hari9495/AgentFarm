@@ -71,7 +71,7 @@ export function PageHeader({
                 <h1
                     style={{
                         margin: 0,
-                        fontFamily: 'var(--font-fraunces), Georgia, serif',
+                        fontFamily: 'var(--font-inter), Georgia, serif',
                         fontWeight: 600,
                         letterSpacing: '-0.015em',
                         lineHeight: 1,

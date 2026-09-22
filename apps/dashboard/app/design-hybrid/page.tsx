@@ -55,10 +55,10 @@ export default function DesignHybridPage() {
                 {/* 21st animated stat cards, in the sharp editorial skin */}
                 <Eyebrow style={{ marginBottom: 12 }}>Today — live figures</Eyebrow>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 14, marginBottom: 34 }}>
-                    <StatCard className="!rounded-[3px] !shadow-none" title="Tasks completed" value={1204} change={12} changeDescription="yesterday" suffix="" icon={<ArrowUpRight className="h-4 w-4 text-green-600 dark:text-green-400" />} />
-                    <StatCard className="!rounded-[3px] !shadow-none" title="Approval rate" value={94} change={3} changeDescription="last week" icon={<ArrowUpRight className="h-4 w-4 text-green-600 dark:text-green-400" />} />
-                    <StatCard className="!rounded-[3px] !shadow-none" title="Latency drop" value={18} change={-8} changeDescription="last week" icon={<ArrowDownRight className="h-4 w-4 text-red-600 dark:text-red-400" />} />
-                    <StatCard className="!rounded-[3px] !shadow-none" title="Active agents" value={12} change={2} changeDescription="last month" suffix="" icon={<ArrowUpRight className="h-4 w-4 text-green-600 dark:text-green-400" />} />
+                    <StatCard className="!rounded-lg !shadow-none" title="Tasks completed" value={1204} change={12} changeDescription="yesterday" suffix="" icon={<ArrowUpRight className="h-4 w-4 text-green-600 dark:text-green-400" />} />
+                    <StatCard className="!rounded-lg !shadow-none" title="Approval rate" value={94} change={3} changeDescription="last week" icon={<ArrowUpRight className="h-4 w-4 text-green-600 dark:text-green-400" />} />
+                    <StatCard className="!rounded-lg !shadow-none" title="Latency drop" value={18} change={-8} changeDescription="last week" icon={<ArrowDownRight className="h-4 w-4 text-red-600 dark:text-red-400" />} />
+                    <StatCard className="!rounded-lg !shadow-none" title="Active agents" value={12} change={2} changeDescription="last month" suffix="" icon={<ArrowUpRight className="h-4 w-4 text-green-600 dark:text-green-400" />} />
                 </div>
 
                 {/* Editorial ledger for dense operational data */}

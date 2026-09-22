@@ -113,7 +113,7 @@ function ConfigureDrawer({ connector, onClose }: { connector: ConnectorEntry; on
             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} onClick={onClose} />
             <div className="uk" style={{ position: 'relative', background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 3, padding: 24, width: '100%', maxWidth: 512, margin: '0 16px', display: 'flex', flexDirection: 'column', gap: 18, maxHeight: '80vh', overflowY: 'auto' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <h2 style={{ margin: 0, fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: 18, fontWeight: 600, color: 'var(--ink)' }}>Configure {connector.displayName}</h2>
+                    <h2 style={{ margin: 0, fontFamily: 'var(--font-inter), Georgia, serif', fontSize: 18, fontWeight: 600, color: 'var(--ink)' }}>Configure {connector.displayName}</h2>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--ink-muted)', fontSize: 22, lineHeight: 1, cursor: 'pointer' }}>×</button>
                 </div>
 

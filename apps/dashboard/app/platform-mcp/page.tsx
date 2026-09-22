@@ -412,7 +412,7 @@ export default function PlatformMcpPage() {
                     </div>
                     <div>
                         <div style={{ fontFamily: 'var(--font-plex-mono), monospace', textTransform: 'uppercase', letterSpacing: '0.16em', fontSize: 9, color: 'var(--accent)', lineHeight: 1 }}>Integrations</div>
-                        <span style={{ display: 'block', fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '1.15rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginTop: 3, lineHeight: 1 }}>Platform MCP Configuration</span>
+                        <span style={{ display: 'block', fontFamily: 'var(--font-inter), Georgia, serif', fontSize: '1.15rem', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em', marginTop: 3, lineHeight: 1 }}>Platform MCP Configuration</span>
                     </div>
                 </div>
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
