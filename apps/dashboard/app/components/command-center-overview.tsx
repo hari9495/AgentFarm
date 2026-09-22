@@ -10,6 +10,7 @@
 import Link from 'next/link';
 import { Clock, ExternalLink } from 'lucide-react';
 import { UiKit, Panel, Button, Badge, Eyebrow, Display, Stat } from './ui-kit';
+import { Reveal } from '@/components/motion';
 
 export type CcKpi = { label: string; value: string; trend: string; delta: string; deltaTone: string; status: string; statusTone: string };
 export type CcApproval = { approval_id: string; action_summary: string; risk_level: 'low' | 'medium' | 'high'; requested_at: string; bot_id: string };
@@ -63,6 +64,7 @@ export default function CommandCenterOverview(p: Props) {
     const allHealthy = p.health.workspaces >= 75 && p.health.approvals >= 75 && p.health.connectors >= 75;
     return (
         <UiKit style={{ background: 'var(--bg)' }}>
+            <Reveal>
             <div style={{ display: 'grid', gap: 26 }}>
                 {/* Stat strip */}
                 <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -168,6 +170,7 @@ export default function CommandCenterOverview(p: Props) {
                     </table>
                 </section>
             </div>
+            </Reveal>
         </UiKit>
     );
 }
