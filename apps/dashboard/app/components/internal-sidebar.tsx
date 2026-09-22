@@ -1,7 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { motion, useReducedMotion } from 'motion/react';
+import { spring } from '@/components/motion';
 import { useRouter, useSearchParams } from 'next/navigation';
+
+const MotionButton = motion.button;
+const MotionLink = motion.create(Link);
 import {
     Cpu, Brain, ShoppingBag, LayoutDashboard, ClipboardCheck,
     Activity, FileText, Search, LogOut, HeartPulse,
@@ -102,16 +107,19 @@ function NavItem({
     onClick: () => void;
 }) {
     const Icon = def.icon;
+    const reduce = useReducedMotion();
     const { collapsed } = useSidebarCollapse();
     const hasBadge = def.key === 'approvals' && pendingCount != null && pendingCount > 0;
     return (
-        <button
+        <MotionButton
             type="button"
             onClick={onClick}
             aria-current={active ? 'page' : undefined}
             title={collapsed ? def.label : undefined}
+            whileTap={reduce ? undefined : { scale: 0.975 }}
+            transition={spring.snappy}
             className={[
-                'group w-full flex items-center gap-2.5 py-2 rounded-lg text-[13px] font-medium transition-colors text-left',
+                'group relative w-full flex items-center gap-2.5 py-2 rounded-lg text-[13px] font-medium transition-colors text-left',
                 collapsed ? 'justify-center px-0' : 'px-2.5',
                 active
                     ? ''
@@ -119,6 +127,14 @@ function NavItem({
             ].join(' ')}
             style={active ? { background: 'color-mix(in srgb, var(--accent) 8%, transparent)', color: 'var(--accent)' } : {}}
         >
+            {active && (
+                <motion.span
+                    layoutId="internal-nav-active"
+                    className="absolute left-0 inset-y-1.5 w-[3px] rounded-r-full"
+                    style={{ background: 'var(--accent)' }}
+                    transition={reduce ? { duration: 0 } : spring.smooth}
+                />
+            )}
             <span className="relative flex shrink-0">
                 <Icon
                     className="w-[18px] h-[18px] transition-colors"
@@ -138,7 +154,7 @@ function NavItem({
                     {pendingCount}
                 </span>
             )}
-        </button>
+        </MotionButton>
     );
 }
 
@@ -157,11 +173,14 @@ function SidebarLink({
     color: NavColor;
     badge?: string;
 }) {
+    const reduce = useReducedMotion();
     const { collapsed } = useSidebarCollapse();
     return (
-        <Link
+        <MotionLink
             href={href}
             title={collapsed ? label : undefined}
+            whileTap={reduce ? undefined : { scale: 0.975 }}
+            transition={spring.snappy}
             className={`group flex items-center gap-2.5 py-2 rounded-lg text-[13px] font-medium text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink)] transition-colors ${collapsed ? 'justify-center px-0' : 'px-2.5'}`}
         >
             <Icon className="w-[18px] h-[18px] shrink-0 text-[color:var(--ink-muted)] group-hover:text-[color:var(--ink-soft)] transition-colors" aria-hidden="true" />
@@ -173,7 +192,7 @@ function SidebarLink({
                     border: '1px solid color-mix(in srgb, var(--accent) 20%, transparent)', whiteSpace: 'nowrap',
                 }}>{badge}</span>
             )}
-        </Link>
+        </MotionLink>
     );
 }
 

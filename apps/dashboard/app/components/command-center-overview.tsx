@@ -81,7 +81,7 @@ export default function CommandCenterOverview(p: Props) {
                         {p.kpis.map((k) => (
                             <div key={k.label} className="uk-panel" style={{ padding: 16, borderLeft: `2px solid ${toneVar(k.statusTone)}` }}>
                                 <Eyebrow style={{ marginBottom: 8 }}>{k.label}</Eyebrow>
-                                <Display size={24} style={{ marginBottom: 8, color: valueColor(k.statusTone) }}>{k.value}</Display>
+                                <Display size={24} style={{ marginBottom: 8, color: 'var(--ink)' }}>{k.value}</Display>
                                 <div style={{ fontSize: 11.5, color: 'var(--ink-muted)', marginBottom: 8 }}>{k.trend}</div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                     <span className="uk-mono" style={{ fontSize: 10, color: toneVar(k.deltaTone) }}>{k.delta}</span>

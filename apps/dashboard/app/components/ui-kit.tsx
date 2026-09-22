@@ -136,12 +136,17 @@ export function Tabs<T extends string>({ tabs, active, onChange }: { tabs: { key
 }
 
 export function Stat({ n, k, tone }: { n: ReactNode; k: string; tone?: 'accent' | 'ok' | 'warn' | 'err' | 'muted' }) {
-    const color = tone === 'accent' ? 'var(--accent)' : tone === 'ok' ? 'var(--ok)' : tone === 'warn' ? 'var(--warn)'
-        : tone === 'err' ? 'var(--danger)' : tone === 'muted' ? 'var(--ink-muted)' : 'var(--ink)';
+    // Numbers read as one neutral ink figure (modern SaaS); tone survives as a
+    // small dot on the label so the ok/warn/err signal isn't lost.
+    const dot = tone === 'accent' ? 'var(--accent)' : tone === 'ok' ? 'var(--ok)' : tone === 'warn' ? 'var(--warn)'
+        : tone === 'err' ? 'var(--danger)' : null;
     return (
         <div>
-            <div className="uk-stat__n" style={{ color }}>{n}</div>
-            <div className="uk-stat__k">{k}</div>
+            <div className="uk-stat__n" style={{ color: 'var(--ink)' }}>{n}</div>
+            <div className="uk-stat__k" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                {dot && <span aria-hidden style={{ width: 6, height: 6, borderRadius: 999, background: dot, flexShrink: 0 }} />}
+                {k}
+            </div>
         </div>
     );
 }
