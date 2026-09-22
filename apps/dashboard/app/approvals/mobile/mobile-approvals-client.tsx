@@ -103,7 +103,7 @@ function ApprovalCard({
     return (
         <div style={{
             borderRadius: 16,
-            border: `1px solid ${risk.border}`,
+            border: '1px solid var(--line)',
             background: 'var(--card)',
             overflow: 'hidden',
             boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
@@ -323,7 +323,7 @@ export default function MobileApprovalsClient({ workspaceIds }: { workspaceIds: 
                 position: 'sticky', top: 0, zIndex: 50,
                 background: 'var(--bg)',
                 paddingTop: 'env(safe-area-inset-top, 0px)',
-                boxShadow: '0 1px 8px rgba(0,0,0,0.25)',
+                borderBottom: '1px solid var(--line)',
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 18px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -332,7 +332,7 @@ export default function MobileApprovalsClient({ workspaceIds }: { workspaceIds: 
                         </div>
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--card)' }}>Approvals</span>
+                                <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>Approvals</span>
                                 {metrics.pending_count > 0 && (
                                     <span style={{
                                         fontSize: 11, fontWeight: 700,
@@ -356,7 +356,7 @@ export default function MobileApprovalsClient({ workspaceIds }: { workspaceIds: 
                         aria-label="Refresh"
                         style={{
                             width: 40, height: 40, borderRadius: 10,
-                            background: 'rgba(255,255,255,0.08)', border: 'none',
+                            background: 'var(--bg-deep)', border: '1px solid var(--line)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             cursor: 'pointer', color: 'var(--ink-muted)',
                             WebkitTapHighlightColor: 'transparent',
@@ -370,12 +370,12 @@ export default function MobileApprovalsClient({ workspaceIds }: { workspaceIds: 
                 {pending.length > 0 && (
                     <div style={{ display: 'flex', gap: 6, padding: '0 18px 14px' }}>
                         {highCount > 0 && (
-                            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 9999, background: 'var(--danger)', color: 'var(--danger)' }}>
+                            <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 9999, background: 'var(--danger-bg)', color: 'var(--danger)' }}>
                                 {highCount} high
                             </span>
                         )}
                         {medCount > 0 && (
-                            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 9999, background: 'var(--warn)', color: 'var(--warn)' }}>
+                            <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 9999, background: 'var(--warn-bg)', color: 'var(--warn)' }}>
                                 {medCount} medium
                             </span>
                         )}
