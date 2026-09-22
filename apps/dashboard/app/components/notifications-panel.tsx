@@ -219,7 +219,7 @@ export default function NotificationsPanel() {
                 <button
                     onClick={() => void fetchAll()}
                     disabled={loading}
-                    style={{ fontSize: '0.85rem', padding: '0.3rem 0.75rem', borderRadius: '4px', cursor: 'pointer' }}
+                    style={{ fontSize: '0.85rem', padding: '7px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--line)', background: 'var(--card)', color: 'var(--ink)', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}
                 >
                     {loading ? 'Loading…' : 'Refresh'}
                 </button>
