@@ -4,6 +4,7 @@ import Hero from "@/components/home/HeroSwitch";
 import Problem from "@/components/home/Problem";
 import Solution from "@/components/home/Solution";
 import Features from "@/components/home/FeaturesBento";
+import { Reveal } from "@/components/motion";
 import { siteMarketingMetadata } from "@/lib/marketing-content";
 import { homeFAQSchema, homeSpeakableSchema, aggregateRatingSchema } from "@/lib/seo-schemas";
 
@@ -40,14 +41,16 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(pageSchemas) }}
       />
       <main aria-label="AgentFarms home">
+        {/* Hero/Problem/Solution carry their own motion; the rest were static —
+            wrap in Reveal so each section arrives on scroll instead of popping in. */}
         <Hero />
         <Problem />
         <Solution />
-        <Features />
-        <Testimonials />
-        <PricingSection />
-        <FAQ />
-        <CallToAction />
+        <Reveal><Features /></Reveal>
+        <Reveal><Testimonials /></Reveal>
+        <Reveal><PricingSection /></Reveal>
+        <Reveal><FAQ /></Reveal>
+        <Reveal><CallToAction /></Reveal>
       </main>
     </>
   );
