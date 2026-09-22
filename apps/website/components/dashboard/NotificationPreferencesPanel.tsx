@@ -61,7 +61,7 @@ export default function NotificationPreferencesPanel({ initialPrefs }: Props) {
     };
 
     return (
-        <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] divide-y divide-[color:var(--line)] dark:divide-[color:var(--line)]/70">
+        <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] divide-y divide-[color:var(--line)] dark:divide-[color:var(--line)]/70">
             {error && (
                 <p className="px-5 py-2.5 text-xs font-medium text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30">{error}</p>
             )}

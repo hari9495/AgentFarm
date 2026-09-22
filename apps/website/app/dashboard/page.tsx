@@ -250,13 +250,13 @@ export default async function DashboardPage() {
                 <Reveal delay={0.15} className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
                     {/* Workers table */}
-                    <div className="xl:col-span-2 rounded-[4px] border border-[color:var(--line)] bg-[var(--card)] overflow-hidden shadow-sm">
-                        <div className="px-6 py-4 border-b border-[color:var(--line)] flex items-center justify-between bg-[var(--bg-deep)]/50">
+                    <div className="xl:col-span-2 rounded-xl border border-[color:var(--line)] bg-[var(--card)] overflow-hidden shadow-sm">
+                        <div className="px-6 py-4 border-b border-[color:var(--line)] flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="w-7 h-7 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] flex items-center justify-center">
+                                <div className="w-7 h-7 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] flex items-center justify-center">
                                     <Users className="w-3.5 h-3.5 text-[color:var(--accent)]" />
                                 </div>
-                                <h2 className="text-sm font-bold text-[color:var(--ink)]">Active AI Teammates</h2>
+                                <h2 className="text-sm font-semibold text-[color:var(--ink)]">Active AI Teammates</h2>
                             </div>
                             <span className="flex items-center gap-1.5 text-xs font-semibold text-[color:var(--ok)]">
                                 <StatusPulse color="var(--ok)" />
@@ -286,7 +286,7 @@ export default async function DashboardPage() {
                                             <tr key={w.slug} className="hover:bg-[var(--bg-deep)] transition-colors group cursor-pointer">
                                                 <td className="px-5 py-3.5">
                                                     <Link href={`/dashboard/agents/${w.slug}`} className="flex items-center gap-3">
-                                                        <div className={`w-9 h-9 rounded-[3px] ring-1 ${w.ring} flex items-center justify-center text-xs font-bold shrink-0 ${w.color}`}>
+                                                        <div className={`w-9 h-9 rounded-lg ring-1 ${w.ring} flex items-center justify-center text-xs font-bold shrink-0 ${w.color}`}>
                                                             {w.initials}
                                                         </div>
                                                         <div>
@@ -322,7 +322,7 @@ export default async function DashboardPage() {
                                 </table>
                             </div>
                         )}
-                        <div className="px-6 py-3 border-t border-[color:var(--line)] bg-[var(--bg-deep)]/50">
+                        <div className="px-6 py-3 border-t border-[color:var(--line)]">
                             <ButtonLink href="/dashboard/agents" size="sm" variant="ghost" className="w-full justify-center">
                                 View all agents <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
                             </ButtonLink>
@@ -337,9 +337,9 @@ export default async function DashboardPage() {
                 <Reveal delay={0.2} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                     {/* Weekly task activity */}
-                    <div className="rounded-[4px] border border-[color:var(--line)] bg-[var(--card)] overflow-hidden shadow-sm">
-                        <div className="px-6 py-4 border-b border-[color:var(--line)] bg-[var(--bg-deep)]/50">
-                            <h2 className="text-sm font-bold text-[color:var(--ink)]">Weekly Task Activity</h2>
+                    <div className="rounded-xl border border-[color:var(--line)] bg-[var(--card)] overflow-hidden shadow-sm">
+                        <div className="px-6 py-4 border-b border-[color:var(--line)]">
+                            <h2 className="text-sm font-semibold text-[color:var(--ink)]">Weekly Task Activity</h2>
                             <p className="text-xs text-[color:var(--ink-muted)] mt-0.5">Tasks completed per day — last 7 days</p>
                         </div>
                         <div className="p-5">
@@ -366,11 +366,11 @@ export default async function DashboardPage() {
                                 })}
                             </div>
                             <div className="mt-4 pt-4 border-t border-[color:var(--line)] grid grid-cols-2 gap-3">
-                                <div className="rounded-[3px] bg-[var(--bg-deep)] border border-[color:var(--line)] px-3 py-2.5 text-center">
+                                <div className="rounded-lg bg-[var(--bg-deep)] border border-[color:var(--line)] px-3 py-2.5 text-center">
                                     <p className="text-lg font-extrabold text-[color:var(--ink)] tabular-nums">{thisWeekTasks > 0 ? thisWeekTasks : "—"}</p>
                                     <p className="text-[11px] text-[color:var(--ink-muted)] font-medium">Tasks this week</p>
                                 </div>
-                                <div className="rounded-[3px] bg-[var(--bg-deep)] border border-[color:var(--line)] px-3 py-2.5 text-center">
+                                <div className="rounded-lg bg-[var(--bg-deep)] border border-[color:var(--line)] px-3 py-2.5 text-center">
                                     <p className="text-lg font-extrabold text-[color:var(--ink)] tabular-nums">{usage?.totalTasks ?? "—"}</p>
                                     <p className="text-[11px] text-[color:var(--ink-muted)] font-medium">Total (30 days)</p>
                                 </div>
@@ -379,9 +379,9 @@ export default async function DashboardPage() {
                     </div>
 
                     {/* Execution timeline */}
-                    <div className="rounded-[4px] border border-[color:var(--line)] bg-[var(--card)] overflow-hidden shadow-sm">
-                        <div className="px-6 py-4 border-b border-[color:var(--line)] bg-[var(--bg-deep)]/50">
-                            <h2 className="text-sm font-bold text-[color:var(--ink)]">Agent Messages</h2>
+                    <div className="rounded-xl border border-[color:var(--line)] bg-[var(--card)] overflow-hidden shadow-sm">
+                        <div className="px-6 py-4 border-b border-[color:var(--line)]">
+                            <h2 className="text-sm font-semibold text-[color:var(--ink)]">Agent Messages</h2>
                             <p className="text-xs text-[color:var(--ink-muted)] mt-0.5">
                                 {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                             </p>
@@ -416,14 +416,14 @@ export default async function DashboardPage() {
                     </div>
 
                     {/* Ops Health */}
-                    <div className="rounded-[4px] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] bg-gradient-to-br from-[color-mix(in_srgb,var(--ok)_8%,transparent)] via-[var(--card)] to-[color-mix(in_srgb,var(--accent)_8%,transparent)] overflow-hidden shadow-sm">
-                        <div className="px-6 py-4 border-b border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)]/50">
+                    <div className="rounded-xl border border-[color:var(--line)] bg-[var(--card)] overflow-hidden">
+                        <div className="px-6 py-4 border-b border-[color:var(--line)]">
                             <div className="flex items-center gap-2.5">
-                                <div className="w-7 h-7 rounded-[3px] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] flex items-center justify-center">
+                                <div className="w-7 h-7 rounded-lg bg-[color-mix(in_srgb,var(--ok)_12%,transparent)] flex items-center justify-center">
                                     <ShieldCheck className="w-3.5 h-3.5 text-[color:var(--ok)]" />
                                 </div>
                                 <div>
-                                    <h2 className="text-sm font-bold text-[color:var(--ink)]">Ops Health</h2>
+                                    <h2 className="text-sm font-semibold text-[color:var(--ink)]">Ops Health</h2>
                                     <p className="text-xs text-[color:var(--ok)] font-semibold">
                                         {bots.length === 0 ? "No agents yet" : "Live metrics"}
                                     </p>
@@ -433,9 +433,9 @@ export default async function DashboardPage() {
 
                         <div className="p-4 space-y-2">
                             {healthItems.map(({ label, value, good }) => (
-                                <div key={label} className="flex items-center justify-between rounded-[3px] bg-[var(--card)] border border-[color:var(--line)] px-4 py-2.5 shadow-sm">
+                                <div key={label} className="flex items-center justify-between rounded-lg bg-[var(--bg-deep)] px-4 py-2.5">
                                     <p className="text-xs text-[color:var(--ink-soft)]">{label}</p>
-                                    <span className={`font-bold text-xs flex items-center gap-1.5 ${good ? "text-[color:var(--ok)]" : "text-[color:var(--warn)]"}`}>
+                                    <span className={`font-semibold text-xs flex items-center gap-1.5 ${good ? "text-[color:var(--ok)]" : "text-[color:var(--warn)]"}`}>
                                         {good
                                             ? <CheckCircle2 className="w-3.5 h-3.5 text-[color:var(--ok)]" />
                                             : <AlertTriangle className="w-3.5 h-3.5 text-[color:var(--warn)]" />}

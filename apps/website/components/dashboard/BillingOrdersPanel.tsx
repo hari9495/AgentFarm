@@ -79,7 +79,7 @@ export default function BillingOrdersPanel({ canProvision }: { canProvision: boo
     }, []);
 
     return (
-        <div className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden">
+        <div className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden">
             <div className="px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)] flex items-center justify-between">
                 <h2 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Invoice History</h2>
                 {loadState === "ready" && (
@@ -159,7 +159,7 @@ export default function BillingOrdersPanel({ canProvision }: { canProvision: boo
                                                     <button
                                                         disabled={provisionStates[order.id] === "loading"}
                                                         onClick={() => provisionOrder(order)}
-                                                        className="text-xs font-bold rounded-[3px] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] text-[color:var(--ok)] dark:text-[color:var(--ok)] hover:bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/30 px-3 py-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        className="text-xs font-bold rounded-lg border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] text-[color:var(--ok)] dark:text-[color:var(--ok)] hover:bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/30 px-3 py-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                     >
                                                         {provisionStates[order.id] === "loading" ? "Starting…" : "Provision"}
                                                     </button>

@@ -39,31 +39,31 @@ const statusMeta: Record<BotStatus, { label: string; dot: string; badge: string;
         label: "Active",
         dot: "bg-[var(--ok)] animate-pulse",
         badge: "bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] text-[color:var(--ok)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 dark:text-[color:var(--ok)]",
-        icon: <PremiumIcon icon={CheckCircle2} tone="emerald" containerClassName="w-6 h-6 rounded-[3px] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="w-4 h-4" />,
+        icon: <PremiumIcon icon={CheckCircle2} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="w-4 h-4" />,
     },
     provisioning: {
         label: "Provisioning",
         dot: "bg-[var(--accent)] animate-pulse",
         badge: "bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] text-[color:var(--accent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 dark:text-[color:var(--accent)]",
-        icon: <PremiumIcon icon={Clock} tone="sky" containerClassName="w-6 h-6 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-4 h-4" />,
+        icon: <PremiumIcon icon={Clock} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-4 h-4" />,
     },
     paused: {
         label: "Paused",
         dot: "bg-[var(--warn)]",
         badge: "bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] text-[color:var(--warn)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40 dark:text-[color:var(--warn)]",
-        icon: <PremiumIcon icon={Clock} tone="amber" containerClassName="w-6 h-6 rounded-[3px] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40 text-[color:var(--warn)] dark:text-[color:var(--warn)]" iconClassName="w-4 h-4" />,
+        icon: <PremiumIcon icon={Clock} tone="amber" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40 text-[color:var(--warn)] dark:text-[color:var(--warn)]" iconClassName="w-4 h-4" />,
     },
     error: {
         label: "Error — needs attention",
         dot: "bg-[var(--danger)]",
         badge: "bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] text-[color:var(--danger)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 dark:text-[color:var(--danger)]",
-        icon: <PremiumIcon icon={XCircle} tone="rose" containerClassName="w-6 h-6 rounded-[3px] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 text-[color:var(--danger)] dark:text-[color:var(--danger)]" iconClassName="w-4 h-4" />,
+        icon: <PremiumIcon icon={XCircle} tone="rose" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 text-[color:var(--danger)] dark:text-[color:var(--danger)]" iconClassName="w-4 h-4" />,
     },
     maintenance: {
         label: "Maintenance",
         dot: "bg-[var(--bg-deep)]",
         badge: "bg-[var(--bg-deep)] text-[color:var(--ink-soft)] dark:bg-[var(--card)] dark:text-[color:var(--ink-muted)]",
-        icon: <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-4 h-4" />,
+        icon: <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-4 h-4" />,
     },
 };
 
@@ -130,7 +130,7 @@ export default function DashboardBotsPage() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
                 {/* Dark hero */}
-                <section className="relative overflow-hidden rounded-[4px] border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
+                <section className="relative overflow-hidden rounded-xl border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
                     <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.07)_0%,transparent_60%)]" />
@@ -138,7 +138,7 @@ export default function DashboardBotsPage() {
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center gap-2 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
+                            <div className="flex items-center gap-2 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
                                 <Bot className="w-3.5 h-3.5" />
                                 Bot Status
                             </div>
@@ -158,7 +158,7 @@ export default function DashboardBotsPage() {
                                     <button
                                         onClick={fetchBots}
                                         disabled={loading}
-                                        className="inline-flex items-center gap-1.5 rounded-[3px] border border-[color:var(--line)] bg-[var(--card)] px-3 py-1.5 text-xs font-semibold text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] transition-colors disabled:opacity-50"
+                                        className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--line)] bg-[var(--card)] px-3 py-1.5 text-xs font-semibold text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] transition-colors disabled:opacity-50"
                                     >
                                         <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
                                         Refresh
@@ -197,8 +197,8 @@ export default function DashboardBotsPage() {
                     <>
                         {/* Error alerts */}
                         {errorCount > 0 && (
-                            <div className="rounded-[3px] border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40 bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 px-4 py-3.5 flex items-start gap-3">
-                                <PremiumIcon icon={AlertTriangle} tone="rose" containerClassName="w-6 h-6 mt-0.5 shrink-0 rounded-[3px] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 text-[color:var(--danger)] dark:text-[color:var(--danger)]" iconClassName="w-3.5 h-3.5" />
+                            <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40 bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 px-4 py-3.5 flex items-start gap-3">
+                                <PremiumIcon icon={AlertTriangle} tone="rose" containerClassName="w-6 h-6 mt-0.5 shrink-0 rounded-lg bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 text-[color:var(--danger)] dark:text-[color:var(--danger)]" iconClassName="w-3.5 h-3.5" />
                                 <div>
                                     <p className="text-sm font-semibold text-[color:var(--danger)] dark:text-[color:var(--danger)]">
                                         {errorCount} bot{errorCount > 1 ? "s require" : " requires"} admin attention
@@ -215,7 +215,7 @@ export default function DashboardBotsPage() {
                             {bots.map((bot) => {
                                 const meta = statusMeta[bot.status];
                                 return (
-                                    <article key={bot.slug} className={`rounded-[4px] border bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden transition-shadow hover:shadow-md ${bot.status === "error" ? "border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]" : "border-[color:var(--line)] dark:border-[color:var(--line)]"}`}>
+                                    <article key={bot.slug} className={`rounded-xl border bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden transition-shadow hover:shadow-md ${bot.status === "error" ? "border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]" : "border-[color:var(--line)] dark:border-[color:var(--line)]"}`}>
 
                                         {/* Status bar */}
                                         <div className={`h-1 w-full ${bot.status === "active" ? "bg-[var(--ok)]" : bot.status === "paused" ? "bg-[var(--warn)]" : bot.status === "error" ? "bg-[var(--danger)]" : "bg-[var(--bg-deep)]"}`} />
@@ -242,19 +242,19 @@ export default function DashboardBotsPage() {
 
                                             {/* Metrics */}
                                             <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
-                                                <div className="rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] px-3 py-2.5 flex flex-col gap-0.5 min-w-0">
+                                                <div className="rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)] px-3 py-2.5 flex flex-col gap-0.5 min-w-0">
                                                     <span className="text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] uppercase tracking-wide text-[10px] font-semibold truncate">Tasks</span>
                                                     <span className="font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] flex items-center gap-1 min-w-0">
                                                         <PremiumIcon icon={Activity} tone="slate" containerClassName="w-5 h-5 rounded-[2px] bg-[var(--line)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-3 h-3" /><span className="truncate">{bot.tasksCompleted}</span>
                                                     </span>
                                                 </div>
-                                                <div className="rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] px-3 py-2.5 flex flex-col gap-0.5 min-w-0">
+                                                <div className="rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)] px-3 py-2.5 flex flex-col gap-0.5 min-w-0">
                                                     <span className="text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] uppercase tracking-wide text-[10px] font-semibold truncate">Reliability</span>
                                                     <span className={`font-bold flex items-center gap-1 min-w-0 ${bot.tasksCompleted === 0 ? "text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]" : bot.reliabilityPct >= 99 ? "text-[color:var(--ok)] dark:text-[color:var(--ok)]" : bot.reliabilityPct >= 97 ? "text-[color:var(--warn)] dark:text-[color:var(--warn)]" : "text-[color:var(--danger)] dark:text-[color:var(--danger)]"}`}>
                                                         <PremiumIcon icon={Zap} tone="amber" containerClassName="w-5 h-5 rounded-[2px] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40 text-[color:var(--warn)] dark:text-[color:var(--warn)]" iconClassName="w-3 h-3" /><span className="truncate">{bot.tasksCompleted === 0 ? "—" : `${bot.reliabilityPct}%`}</span>
                                                     </span>
                                                 </div>
-                                                <div className="rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] px-3 py-2.5 flex flex-col gap-0.5 min-w-0">
+                                                <div className="rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)] px-3 py-2.5 flex flex-col gap-0.5 min-w-0">
                                                     <span className="text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] uppercase tracking-wide text-[10px] font-semibold truncate">Last Active</span>
                                                     <span className="font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] flex items-center gap-1 min-w-0">
                                                         <PremiumIcon icon={Clock} tone="slate" containerClassName="w-5 h-5 rounded-[2px] bg-[var(--line)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-3 h-3" /><span className="truncate">{formatTime(bot.lastActivityAt)}</span>
@@ -280,7 +280,7 @@ export default function DashboardBotsPage() {
 
                                             {/* Admin notes */}
                                             {bot.notes && (
-                                                <div className="mt-3 rounded-[3px] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/20 border border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)]/30 px-3 py-2 text-xs text-[color:var(--warn)] dark:text-[color:var(--warn)]">
+                                                <div className="mt-3 rounded-lg bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/20 border border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)]/30 px-3 py-2 text-xs text-[color:var(--warn)] dark:text-[color:var(--warn)]">
                                                     <span className="font-semibold">Note:</span> {bot.notes}
                                                 </div>
                                             )}
@@ -291,7 +291,7 @@ export default function DashboardBotsPage() {
                         </div>
 
                         {/* Legend */}
-                        <div className="rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-4">
+                        <div className="rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-4">
                             <p className="text-xs font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mb-3 uppercase tracking-wide">Status legend</p>
                             <div className="flex flex-wrap gap-4">
                                 {(Object.entries(statusMeta) as [BotStatus, typeof statusMeta[BotStatus]][]).map(([key, val]) => (

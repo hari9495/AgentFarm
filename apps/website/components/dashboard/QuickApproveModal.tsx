@@ -95,7 +95,7 @@ export default function QuickApproveModal({ approval, onClose, onApproved }: Pro
         // Always mounted so the ref is stable; content conditionally rendered inside
         <dialog
             ref={dialogRef}
-            className="m-auto w-full max-w-lg rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-0 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.25)]"
+            className="m-auto w-full max-w-lg rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-0 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.25)]"
             onClick={(e) => { if (e.target === dialogRef.current) dialogRef.current?.close(); }}
         >
             {approval && (
@@ -119,7 +119,7 @@ export default function QuickApproveModal({ approval, onClose, onApproved }: Pro
                         <button
                             onClick={() => dialogRef.current?.close()}
                             aria-label="Close"
-                            className="shrink-0 w-7 h-7 rounded-[3px] flex items-center justify-center text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition-colors"
+                            className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition-colors"
                         >
                             <X className="w-4 h-4" />
                         </button>
@@ -128,7 +128,7 @@ export default function QuickApproveModal({ approval, onClose, onApproved }: Pro
                     {/* ── Body ───────────────────────────────────────── */}
                     <div className="px-6 py-5 space-y-4">
                         {/* Reason / context block */}
-                        <div className="rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)]/60 border border-[color:var(--line)] dark:border-[color:var(--line)]/60 px-4 py-3 space-y-1.5">
+                        <div className="rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)]/60 border border-[color:var(--line)] dark:border-[color:var(--line)]/60 px-4 py-3 space-y-1.5">
                             <p className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                                 What the agent wants to do
                             </p>
@@ -139,13 +139,13 @@ export default function QuickApproveModal({ approval, onClose, onApproved }: Pro
 
                         {/* Agent + Channel meta */}
                         <div className="grid grid-cols-2 gap-3">
-                            <div className="rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)]/60 border border-[color:var(--line)] dark:border-[color:var(--line)]/60 px-4 py-3">
+                            <div className="rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)]/60 border border-[color:var(--line)] dark:border-[color:var(--line)]/60 px-4 py-3">
                                 <p className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mb-1">
                                     Agent
                                 </p>
                                 <p className="text-sm font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{approval.agent}</p>
                             </div>
-                            <div className="rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)]/60 border border-[color:var(--line)] dark:border-[color:var(--line)]/60 px-4 py-3">
+                            <div className="rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)]/60 border border-[color:var(--line)] dark:border-[color:var(--line)]/60 px-4 py-3">
                                 <p className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mb-1">
                                     Channel
                                 </p>
@@ -155,7 +155,7 @@ export default function QuickApproveModal({ approval, onClose, onApproved }: Pro
 
                         {/* Extra caution banner for HIGH risk */}
                         {approval.risk === "high" && (
-                            <div className="rounded-[3px] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/50 px-4 py-3 flex gap-2.5">
+                            <div className="rounded-lg bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/50 px-4 py-3 flex gap-2.5">
                                 <AlertTriangle className="w-4 h-4 text-[color:var(--danger)] shrink-0 mt-0.5" />
                                 <p className="text-xs text-[color:var(--danger)] dark:text-[color:var(--danger)] leading-relaxed">
                                     This is a <strong>high-risk action</strong>. Review the context above carefully.
@@ -166,7 +166,7 @@ export default function QuickApproveModal({ approval, onClose, onApproved }: Pro
 
                         {/* Error */}
                         {error && (
-                            <p className="rounded-[3px] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/50 px-4 py-3 text-xs font-medium text-[color:var(--danger)] dark:text-[color:var(--danger)]">
+                            <p className="rounded-lg bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/50 px-4 py-3 text-xs font-medium text-[color:var(--danger)] dark:text-[color:var(--danger)]">
                                 {error}
                             </p>
                         )}
@@ -177,14 +177,14 @@ export default function QuickApproveModal({ approval, onClose, onApproved }: Pro
                         <button
                             onClick={() => dialogRef.current?.close()}
                             disabled={loading}
-                            className="flex-1 rounded-[3px] border border-[color:var(--line-strong)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] text-sm font-semibold py-2.5 hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] active:scale-[0.97] [transition:background-color_180ms_cubic-bezier(0.22,1,0.36,1),transform_120ms_cubic-bezier(0.22,1,0.36,1)] disabled:opacity-50"
+                            className="flex-1 rounded-lg border border-[color:var(--line-strong)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] text-sm font-semibold py-2.5 hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] active:scale-[0.97] [transition:background-color_180ms_cubic-bezier(0.22,1,0.36,1),transform_120ms_cubic-bezier(0.22,1,0.36,1)] disabled:opacity-50"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={() => void handleApprove()}
                             disabled={loading}
-                            className="flex-1 rounded-[3px] bg-[var(--ok)] hover:bg-[var(--ok)] active:scale-[0.97] text-white text-sm font-bold py-2.5 [transition:background-color_180ms_cubic-bezier(0.22,1,0.36,1),transform_120ms_cubic-bezier(0.22,1,0.36,1)] shadow-sm shadow-emerald-500/20 disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                            className="flex-1 rounded-lg bg-[var(--ok)] hover:bg-[var(--ok)] active:scale-[0.97] text-white text-sm font-bold py-2.5 [transition:background-color_180ms_cubic-bezier(0.22,1,0.36,1),transform_120ms_cubic-bezier(0.22,1,0.36,1)] shadow-sm shadow-emerald-500/20 disabled:opacity-60 inline-flex items-center justify-center gap-2"
                         >
                             {loading ? (
                                 <>

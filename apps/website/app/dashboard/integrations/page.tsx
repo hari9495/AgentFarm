@@ -438,7 +438,7 @@ function AddConnectorModal({
 
     return (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-            <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] shadow-xl w-full max-w-lg border border-[color:var(--line)] dark:border-[color:var(--line)]">
+            <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-xl shadow-xl w-full max-w-lg border border-[color:var(--line)] dark:border-[color:var(--line)]">
                 <div className="flex items-center gap-3 p-5 border-b border-[color:var(--line)] dark:border-[color:var(--line)]">
                     <ConnectorIcon tool={connector.tool} size={36} />
                     <div>
@@ -459,7 +459,7 @@ function AddConnectorModal({
                             type="text"
                             value={displayName}
                             onChange={(e) => { setNameTouched(true); setDisplayName(e.target.value); }}
-                            className="w-full border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] rounded-[3px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]"
+                            className="w-full border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]"
                             placeholder="e.g. Our Jira, Engineering Slack"
                         />
                         <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1">
@@ -470,7 +470,7 @@ function AddConnectorModal({
                     </div>
 
                     {connector.authMethod === "oauth2" && (
-                        <div className="rounded-[3px] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/20 p-4">
+                        <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/20 p-4">
                             <p className="text-sm font-semibold text-[color:var(--accent)] dark:text-[color:var(--accent)] mb-1">OAuth 2.0 Authentication</p>
                             <p className="text-xs text-[color:var(--accent)] dark:text-[color:var(--accent)]">
                                 After clicking Add, you&apos;ll be redirected to {connector.displayName} to authorize access.
@@ -495,7 +495,7 @@ function AddConnectorModal({
                                 <select
                                     value={configValues[field.key] ?? ""}
                                     onChange={(e) => setConfigValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                                    className="w-full border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] rounded-[3px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]"
+                                    className="w-full border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]"
                                     required={field.required}
                                 >
                                     <option value="">Select...</option>
@@ -515,7 +515,7 @@ function AddConnectorModal({
                                             if (derived) setDisplayName(derived);
                                         }
                                     }}
-                                    className="w-full border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] rounded-[3px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]"
+                                    className="w-full border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]"
                                     placeholder={field.placeholder}
                                     required={field.required}
                                 />
@@ -533,18 +533,18 @@ function AddConnectorModal({
                         </div>
                     </div>
 
-                    {error && <p className="text-sm text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 rounded-[3px] px-3 py-2">{error}</p>}
+                    {error && <p className="text-sm text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 rounded-lg px-3 py-2">{error}</p>}
 
                     <div className="flex gap-3 pt-2">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 border border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] rounded-[3px] px-4 py-2 text-sm hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition"
+                            className="flex-1 border border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] rounded-lg px-4 py-2 text-sm hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition"
                         >Cancel</button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="flex-1 bg-[var(--accent)] text-white rounded-[3px] px-4 py-2 text-sm font-medium hover:bg-[var(--accent)] disabled:opacity-50 transition"
+                            className="flex-1 bg-[var(--accent)] text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-[var(--accent)] disabled:opacity-50 transition"
                         >
                             {loading ? "Connecting…" : connector.authMethod === "oauth2" ? "Continue to Auth" : "Add Connector"}
                         </button>
@@ -617,8 +617,8 @@ function ConnectorRow({
     );
 
     return (
-        <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-4 flex items-center gap-4">
-            <div className="h-10 w-10 rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] flex items-center justify-center shrink-0">
+        <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] p-4 flex items-center gap-4">
+            <div className="h-10 w-10 rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)] flex items-center justify-center shrink-0">
                 <ConnectorIcon tool={connector.tool} size={36} />
             </div>
             <div className="flex-1 min-w-0">
@@ -662,20 +662,20 @@ function ConnectorRow({
                 {healthResult !== null && !healthResult.healthy && healthResult.nextStep?.oauthInitUrl && (
                     <button
                         onClick={() => { if (healthResult.nextStep?.oauthInitUrl) window.location.href = healthResult.nextStep.oauthInitUrl; }}
-                        className="text-xs border border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] text-[color:var(--warn)] dark:text-[color:var(--warn)] rounded-[3px] px-3 py-1.5 hover:bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/20 transition"
+                        className="text-xs border border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] text-[color:var(--warn)] dark:text-[color:var(--warn)] rounded-lg px-3 py-1.5 hover:bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/20 transition"
                     >Re-auth</button>
                 )}
                 <button
                     onClick={runHealthCheck}
                     disabled={checking}
-                    className="flex items-center gap-1 text-xs border border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] rounded-[3px] px-3 py-1.5 hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] disabled:opacity-50 transition"
+                    className="flex items-center gap-1 text-xs border border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] rounded-lg px-3 py-1.5 hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] disabled:opacity-50 transition"
                 >
                     <RefreshCw className="w-3 h-3" />
                     {checking ? "Checking…" : "Test"}
                 </button>
                 <button
                     onClick={onRemove}
-                    className="flex items-center gap-1 text-xs border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] text-[color:var(--danger)] dark:text-[color:var(--danger)] rounded-[3px] px-3 py-1.5 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 transition"
+                    className="flex items-center gap-1 text-xs border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] text-[color:var(--danger)] dark:text-[color:var(--danger)] rounded-lg px-3 py-1.5 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 transition"
                 >
                     <Trash2 className="w-3 h-3" />
                     Remove
@@ -696,8 +696,8 @@ function AvailableCard({
     onAdd: () => void;
 }) {
     return (
-        <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-4 flex items-center gap-3 hover:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:hover:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] transition-colors">
-            <div className="h-9 w-9 rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] flex items-center justify-center shrink-0">
+        <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] p-4 flex items-center gap-3 hover:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:hover:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] transition-colors">
+            <div className="h-9 w-9 rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)] flex items-center justify-center shrink-0">
                 <ConnectorIcon tool={connector.tool} size={32} />
             </div>
             <div className="flex-1 min-w-0">
@@ -708,7 +708,7 @@ function AvailableCard({
             </div>
             {connector.connected ? (
                 configuredStatus === "error" || configuredStatus === "pending_auth" ? (
-                    <button onClick={onAdd} className="text-xs bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/30 text-[color:var(--warn)] dark:text-[color:var(--warn)] rounded-[3px] px-3 py-1.5 hover:bg-[color-mix(in_srgb,var(--warn)_16%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/50 transition font-medium">
+                    <button onClick={onAdd} className="text-xs bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/30 text-[color:var(--warn)] dark:text-[color:var(--warn)] rounded-lg px-3 py-1.5 hover:bg-[color-mix(in_srgb,var(--warn)_16%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/50 transition font-medium">
                         Reconnect
                     </button>
                 ) : (
@@ -717,7 +717,7 @@ function AvailableCard({
                     </span>
                 )
             ) : (
-                <button onClick={onAdd} className="flex items-center gap-1 text-xs bg-[var(--accent)] text-white rounded-[3px] px-3 py-1.5 hover:bg-[var(--accent)] transition font-medium">
+                <button onClick={onAdd} className="flex items-center gap-1 text-xs bg-[var(--accent)] text-white rounded-lg px-3 py-1.5 hover:bg-[var(--accent)] transition font-medium">
                     <Plus className="w-3 h-3" />
                     Add
                 </button>
@@ -854,7 +854,7 @@ export default function DashboardIntegrationsPage() {
         <div className="min-h-svh bg-[var(--bg-deep)]">
             {/* Toast */}
             {toast && (
-                <div className={`fixed top-4 right-4 z-50 rounded-[3px] px-4 py-3 text-sm font-medium shadow-lg ${toast.type === "success" ? "bg-[var(--ok)] text-white" : "bg-[var(--danger)] text-white"}`}>
+                <div className={`fixed top-4 right-4 z-50 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${toast.type === "success" ? "bg-[var(--ok)] text-white" : "bg-[var(--danger)] text-white"}`}>
                     {toast.message}
                 </div>
             )}
@@ -873,7 +873,7 @@ export default function DashboardIntegrationsPage() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
                 {/* Dark hero */}
-                <section className="relative overflow-hidden rounded-[4px] border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
+                <section className="relative overflow-hidden rounded-xl border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
                     <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.07)_0%,transparent_60%)]" />
@@ -881,7 +881,7 @@ export default function DashboardIntegrationsPage() {
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center gap-2 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
+                            <div className="flex items-center gap-2 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
                                 <Link2 className="w-3.5 h-3.5" />
                                 Integrations
                             </div>
@@ -906,7 +906,7 @@ export default function DashboardIntegrationsPage() {
 
                 {/* Connector showcase */}
                 {!loading && available.length > 0 && (
-                    <section className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-6">
+                    <section className="bg-[var(--card)] dark:bg-[var(--card)] rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] p-6">
                         <div className="flex items-center justify-between mb-4">
                             <div>
                                 <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Supported tools</h2>
@@ -915,7 +915,7 @@ export default function DashboardIntegrationsPage() {
                         </div>
                         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
                             {available.slice(0, 16).map((c) => (
-                                <div key={c.tool} className="flex flex-col items-center gap-1.5 p-2 rounded-[3px] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition-colors cursor-default">
+                                <div key={c.tool} className="flex flex-col items-center gap-1.5 p-2 rounded-lg hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition-colors cursor-default">
                                     <ConnectorIcon tool={c.tool} size={26} />
                                     <span className="text-[10px] font-medium text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] text-center leading-none">{c.displayName}</span>
                                 </div>
@@ -926,7 +926,7 @@ export default function DashboardIntegrationsPage() {
 
                 {/* Bot scope selector */}
                 {context && context.options.length > 0 && (
-                    <section className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-4">
+                    <section className="bg-[var(--card)] dark:bg-[var(--card)] rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] p-4">
                         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                             <div className="flex items-center gap-2">
                                 <Settings2 className="w-4 h-4 text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] shrink-0" />
@@ -938,7 +938,7 @@ export default function DashboardIntegrationsPage() {
                             <select
                                 value={`${context.selectedWorkspaceId}::${context.selectedBotId}`}
                                 onChange={(e) => handleScopeChange(e.target.value)}
-                                className="rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]"
+                                className="rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]"
                                 aria-label="Select workspace bot"
                             >
                                 {context.options.map((o) => (
@@ -982,7 +982,7 @@ export default function DashboardIntegrationsPage() {
 
                 {/* Empty state */}
                 {!loading && configured.length === 0 && (
-                    <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] border border-dashed border-[color:var(--line-strong)] dark:border-[color:var(--line)] p-10 text-center">
+                    <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-xl border border-dashed border-[color:var(--line-strong)] dark:border-[color:var(--line)] p-10 text-center">
                         <div className="text-4xl mb-3">🔌</div>
                         <p className="font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">No tools connected yet</p>
                         <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1">Add an integration below to let your agent work across your stack.</p>
@@ -1014,8 +1014,8 @@ export default function DashboardIntegrationsPage() {
                     {loading ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                             {Array.from({ length: 6 }).map((_, i) => (
-                                <div key={i} className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-4 animate-pulse flex items-center gap-3">
-                                    <div className="h-9 w-9 rounded-[3px] bg-[var(--line)] dark:bg-[var(--card)] shrink-0" />
+                                <div key={i} className="bg-[var(--card)] dark:bg-[var(--card)] rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] p-4 animate-pulse flex items-center gap-3">
+                                    <div className="h-9 w-9 rounded-lg bg-[var(--line)] dark:bg-[var(--card)] shrink-0" />
                                     <div className="flex-1 space-y-2">
                                         <div className="h-3 bg-[var(--line)] dark:bg-[var(--card)] rounded w-3/4" />
                                         <div className="h-2.5 bg-[var(--bg-deep)] dark:bg-[var(--card)] rounded w-1/2" />
@@ -1049,9 +1049,9 @@ export default function DashboardIntegrationsPage() {
                 </section>
 
                 {/* Custom API callout */}
-                <section className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-5">
+                <section className="bg-[var(--card)] dark:bg-[var(--card)] rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] p-5">
                     <div className="flex items-start gap-4">
-                        <div className="h-10 w-10 rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] flex items-center justify-center shrink-0 text-2xl">🔌</div>
+                        <div className="h-10 w-10 rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)] flex items-center justify-center shrink-0 text-2xl">🔌</div>
                         <div className="flex-1">
                             <p className="font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Using a custom or internal tool?</p>
                             <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1">
@@ -1060,7 +1060,7 @@ export default function DashboardIntegrationsPage() {
                         </div>
                         <button
                             onClick={() => { const g = getPreferredCustomConnector(); if (g) setAddingConnector(g); }}
-                            className="flex items-center gap-1.5 shrink-0 bg-[var(--accent)] dark:bg-[var(--bg-deep)] text-[color:var(--ink)] dark:text-[color:var(--ink)] rounded-[3px] px-4 py-2 text-sm font-medium hover:opacity-90 transition"
+                            className="flex items-center gap-1.5 shrink-0 bg-[var(--accent)] dark:bg-[var(--bg-deep)] text-[color:var(--ink)] dark:text-[color:var(--ink)] rounded-lg px-4 py-2 text-sm font-medium hover:opacity-90 transition"
                         >
                             <Zap className="w-3.5 h-3.5" />
                             Custom API

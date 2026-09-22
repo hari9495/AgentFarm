@@ -261,7 +261,7 @@ export default async function AgentsIndexPage({
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
                 {/* Dark hero */}
-                <section className="relative overflow-hidden rounded-[4px] border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
+                <section className="relative overflow-hidden rounded-xl border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
                     <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.07)_0%,transparent_60%)]" />
@@ -269,7 +269,7 @@ export default async function AgentsIndexPage({
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center gap-2 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
+                            <div className="flex items-center gap-2 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
                                 <Cpu className="w-3.5 h-3.5" />
                                 Agents
                             </div>
@@ -304,12 +304,12 @@ export default async function AgentsIndexPage({
                 </section>
 
                 {/* Period navigator */}
-                <div className="flex items-center gap-2 bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-4 py-3">
+                <div className="flex items-center gap-2 bg-[var(--card)] dark:bg-[var(--card)] rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] px-4 py-3">
                     {/* Prev */}
                     <Link
                         href={isEarliest ? "#" : `?from=${prevFrom}&to=${prevTo}`}
                         aria-disabled={isEarliest}
-                        className={`inline-flex items-center gap-1.5 rounded-[3px] border px-3 py-1.5 text-xs font-medium transition-colors
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors
                             ${isEarliest
                                 ? "border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-soft)] pointer-events-none"
                                 : "border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"
@@ -346,7 +346,7 @@ export default async function AgentsIndexPage({
                     <Link
                         href={isLatest ? "#" : `?from=${nextFrom}&to=${nextTo}`}
                         aria-disabled={isLatest}
-                        className={`inline-flex items-center gap-1.5 rounded-[3px] border px-3 py-1.5 text-xs font-medium transition-colors
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors
                             ${isLatest
                                 ? "border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-soft)] pointer-events-none"
                                 : "border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"
@@ -359,7 +359,7 @@ export default async function AgentsIndexPage({
 
                 {/* Agent cards grid */}
                 {agents.length === 0 ? (
-                    <div className="rounded-[4px] border border-dashed border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-6 py-16 text-center">
+                    <div className="rounded-xl border border-dashed border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-6 py-16 text-center">
                         <Cpu className="mx-auto h-8 w-8 text-[color:var(--ink-muted)] dark:text-[color:var(--ink-soft)]" />
                         <h2 className="mt-3 text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">No agents deployed yet</h2>
                         <p className="mt-1 text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] max-w-sm mx-auto">
@@ -367,7 +367,7 @@ export default async function AgentsIndexPage({
                         </p>
                         <Link
                             href="/dashboard/deployments"
-                            className="mt-4 inline-flex items-center gap-1.5 rounded-[3px] bg-[var(--accent)] px-4 py-2.5 text-xs font-semibold text-[color:var(--ink)] dark:bg-[var(--bg-deep)] dark:text-[color:var(--ink)] hover:bg-[var(--accent)] dark:hover:bg-[var(--card)] transition-colors"
+                            className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-4 py-2.5 text-xs font-semibold text-[color:var(--ink)] dark:bg-[var(--bg-deep)] dark:text-[color:var(--ink)] hover:bg-[var(--accent)] dark:hover:bg-[var(--card)] transition-colors"
                         >
                             Go to Deployments
                             <ArrowRight className="h-3.5 w-3.5" />
@@ -380,7 +380,7 @@ export default async function AgentsIndexPage({
                         return (
                             <article
                                 key={agent.slug}
-                                className="group rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+                                className="group rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
                             >
                                 {/* Role + status */}
                                 <div className="flex items-center justify-between">
@@ -461,8 +461,8 @@ export default async function AgentsIndexPage({
 
                                 {/* Stats */}
                                 <div className="mt-4 grid grid-cols-2 gap-2">
-                                    <div className="rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)]/60 border border-[color:var(--line)] dark:border-[color:var(--line)]/50 px-3 py-2.5 flex items-center gap-2.5">
-                                        <div className="h-7 w-7 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 flex items-center justify-center shrink-0">
+                                    <div className="rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)]/60 border border-[color:var(--line)] dark:border-[color:var(--line)]/50 px-3 py-2.5 flex items-center gap-2.5">
+                                        <div className="h-7 w-7 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 flex items-center justify-center shrink-0">
                                             <ClipboardCheck className="h-3.5 w-3.5 text-[color:var(--accent)] dark:text-[color:var(--accent)]" />
                                         </div>
                                         <div>
@@ -470,8 +470,8 @@ export default async function AgentsIndexPage({
                                             <p className="text-[10px] text-[color:var(--ink-muted)] mt-0.5">tasks done</p>
                                         </div>
                                     </div>
-                                    <div className="rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)]/60 border border-[color:var(--line)] dark:border-[color:var(--line)]/50 px-3 py-2.5 flex items-center gap-2.5">
-                                        <div className="h-7 w-7 rounded-[3px] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 flex items-center justify-center shrink-0">
+                                    <div className="rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)]/60 border border-[color:var(--line)] dark:border-[color:var(--line)]/50 px-3 py-2.5 flex items-center gap-2.5">
+                                        <div className="h-7 w-7 rounded-lg bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 flex items-center justify-center shrink-0">
                                             <Shield className="h-3.5 w-3.5 text-[color:var(--ok)] dark:text-[color:var(--ok)]" />
                                         </div>
                                         <div>
@@ -485,14 +485,14 @@ export default async function AgentsIndexPage({
                                 <div className="mt-4 flex gap-2">
                                     <Link
                                         href={`/dashboard/agents/${agent.slug}`}
-                                        className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-[3px] bg-[var(--accent)] px-3 py-2.5 text-xs font-semibold text-[color:var(--ink)] dark:bg-[var(--bg-deep)] dark:text-[color:var(--ink)] hover:bg-[var(--accent)] dark:hover:bg-[var(--card)] transition-colors"
+                                        className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--accent)] px-3 py-2.5 text-xs font-semibold text-[color:var(--ink)] dark:bg-[var(--bg-deep)] dark:text-[color:var(--ink)] hover:bg-[var(--accent)] dark:hover:bg-[var(--card)] transition-colors"
                                     >
                                         View details
                                         <ArrowRight className="h-3.5 w-3.5" />
                                     </Link>
                                     <Link
                                         href={`/dashboard/agents/${agent.slug}/approvals`}
-                                        className="inline-flex items-center gap-1.5 rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2.5 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition-colors"
+                                        className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2.5 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition-colors"
                                     >
                                         <Timer className="h-3.5 w-3.5" />
                                         Approvals

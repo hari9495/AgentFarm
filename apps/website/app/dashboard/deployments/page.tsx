@@ -27,7 +27,7 @@ export default async function DeploymentsPage() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
                 {/* ── Hero header ─────────────────────────────────────── */}
-                <section className="relative overflow-hidden rounded-[4px] border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
+                <section className="relative overflow-hidden rounded-xl border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
                     <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.07)_0%,transparent_60%)]" />
@@ -37,7 +37,7 @@ export default async function DeploymentsPage() {
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         {/* Breadcrumb */}
                         <div className="flex items-center gap-2 mb-5">
-                            <div className="flex items-center gap-2 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
+                            <div className="flex items-center gap-2 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
                                 <PremiumIcon icon={Rocket} tone="sky" containerClassName="w-4 h-4 rounded bg-[var(--accent)]/20 text-[color:var(--accent)]" iconClassName="w-2.5 h-2.5" />
                                 Deployments
                             </div>
@@ -81,8 +81,8 @@ export default async function DeploymentsPage() {
                 {/* ── Stat cards ──────────────────────────────────────── */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {deploymentStats.map(({ label, value, icon, tone }) => (
-                        <div key={label} className="rounded-[4px] border border-[color:var(--line)] bg-[var(--card)] p-5 flex items-center gap-3 shadow-sm">
-                            <PremiumIcon icon={icon} tone={tone} containerClassName="w-10 h-10 rounded-[3px] shrink-0" iconClassName="w-5 h-5" />
+                        <div key={label} className="rounded-xl border border-[color:var(--line)] bg-[var(--card)] p-5 flex items-center gap-3 shadow-sm">
+                            <PremiumIcon icon={icon} tone={tone} containerClassName="w-10 h-10 rounded-lg shrink-0" iconClassName="w-5 h-5" />
                             <div className="min-w-0">
                                 <p className="text-2xl font-extrabold text-[color:var(--ink)] leading-none">{value}</p>
                                 <p className="text-xs text-[color:var(--ink-muted)] mt-0.5 truncate">{label}</p>

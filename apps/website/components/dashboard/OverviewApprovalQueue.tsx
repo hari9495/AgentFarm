@@ -34,11 +34,11 @@ const riskBadge: Record<Risk, string> = {
 
 function Skeleton() {
     return (
-        <div className="rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)]/80 bg-[var(--bg-deep)] dark:bg-[var(--card)]/50 p-4 animate-pulse space-y-2">
+        <div className="rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)]/80 bg-[var(--bg-deep)] dark:bg-[var(--card)]/50 p-4 animate-pulse space-y-2">
             <div className="h-3 w-16 rounded bg-[var(--line)] dark:bg-[var(--card)]" />
             <div className="h-4 w-3/4 rounded bg-[var(--line)] dark:bg-[var(--card)]" />
             <div className="h-3 w-1/2 rounded bg-[var(--line)] dark:bg-[var(--card)]" />
-            <div className="h-8 rounded-[3px] bg-[var(--line)] dark:bg-[var(--card)] mt-2" />
+            <div className="h-8 rounded-lg bg-[var(--line)] dark:bg-[var(--card)] mt-2" />
         </div>
     );
 }
@@ -86,10 +86,10 @@ export default function OverviewApprovalQueue() {
     return (
         <>
             {/* ── Queue card ───────────────────────────────────────── */}
-            <div className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden shadow-sm">
+            <div className="rounded-xl border border-[color:var(--line)] bg-[var(--card)] overflow-hidden">
                 {/* Header */}
-                <div className="px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)]/50 dark:bg-[var(--card)]/30 flex items-center justify-between">
-                    <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Approval Queue</h2>
+                <div className="px-5 py-4 border-b border-[color:var(--line)] flex items-center justify-between">
+                    <h2 className="text-[15px] font-semibold text-[color:var(--ink)]">Approval Queue</h2>
                     {!loading && items.length > 0 && (
                         <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[var(--danger)] text-white text-xs font-extrabold shadow-sm shadow-rose-500/30">
                             {items.length}
@@ -100,7 +100,7 @@ export default function OverviewApprovalQueue() {
                 <div className="p-4 space-y-3">
                     {/* Success flash */}
                     {flash && (
-                        <div className="rounded-[3px] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/50 px-4 py-2.5 text-xs font-semibold text-[color:var(--ok)] dark:text-[color:var(--ok)]">
+                        <div className="rounded-lg bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/50 px-4 py-2.5 text-xs font-semibold text-[color:var(--ok)] dark:text-[color:var(--ok)]">
                             ✓ {flash}
                         </div>
                     )}
@@ -120,10 +120,10 @@ export default function OverviewApprovalQueue() {
                     {!loading && items.map((item) => (
                         <div
                             key={item.id}
-                            className="rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)]/80 bg-[var(--bg-deep)] dark:bg-[var(--card)]/50 p-4 space-y-3 hover:border-[color:var(--line-strong)] dark:hover:border-[color:var(--line)] transition-colors"
+                            className="rounded-lg border border-[color:var(--line)] bg-[var(--card)] p-4 space-y-3 hover:border-[color:var(--line-strong)] transition-colors"
                         >
                             <div className="flex items-center justify-between gap-2">
-                                <span className={`text-[11px] font-bold rounded-full px-2.5 py-0.5 uppercase tracking-wide ${riskBadge[item.risk]}`}>
+                                <span className={`text-[11px] font-semibold rounded-md px-2 py-0.5 uppercase tracking-wide ${riskBadge[item.risk]}`}>
                                     {item.risk}
                                 </span>
                                 <span className="text-[11px] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
@@ -138,14 +138,14 @@ export default function OverviewApprovalQueue() {
                                 {/* Approve → opens Quick-Approve modal */}
                                 <button
                                     onClick={() => openModal(item)}
-                                    className="flex-1 text-xs font-bold rounded-[3px] bg-[var(--ok)] hover:bg-[var(--ok)] active:scale-[0.97] text-white py-2 transition-all shadow-sm shadow-emerald-500/20"
+                                    className="flex-1 text-xs font-semibold rounded-lg bg-[var(--ok)] hover:bg-[color-mix(in_srgb,var(--ok)_88%,#000)] active:scale-[0.98] text-white py-2 transition-all"
                                 >
                                     Approve
                                 </button>
                                 {/* Review → full approvals page */}
                                 <Link
                                     href="/dashboard/approvals"
-                                    className="flex-1 text-xs font-bold rounded-[3px] border border-[color:var(--line-strong)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]/70 py-2 transition-all text-center"
+                                    className="flex-1 text-xs font-semibold rounded-lg border border-[color:var(--line)] text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:border-[color:var(--line-strong)] py-2 transition-all text-center"
                                 >
                                     Review
                                 </Link>

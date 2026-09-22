@@ -39,7 +39,7 @@ export default async function SecurityPage() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
                 {/* ── Hero header ─────────────────────────────────────── */}
-                <section className="relative overflow-hidden rounded-[4px] border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
+                <section className="relative overflow-hidden rounded-xl border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
                     <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(244,63,94,0.16)_0%,transparent_60%)]" />
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.07)_0%,transparent_60%)]" />
@@ -48,7 +48,7 @@ export default async function SecurityPage() {
 
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-5">
-                            <div className="flex items-center gap-2 rounded-[3px] bg-[var(--danger)]/10 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--danger)]">
+                            <div className="flex items-center gap-2 rounded-lg bg-[var(--danger)]/10 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/20 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--danger)]">
                                 <PremiumIcon icon={Shield} tone="rose" containerClassName="w-4 h-4 rounded bg-[var(--danger)]/20 text-[color:var(--danger)]" iconClassName="w-2.5 h-2.5" />
                                 Security
                             </div>
@@ -90,9 +90,9 @@ export default async function SecurityPage() {
 
                 {/* ── Sign-in method / MFA cards ──────────────────────── */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-5">
+                    <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] p-5">
                         <div className="flex items-center gap-3 mb-4">
-                            <PremiumIcon icon={Mail} tone="sky" containerClassName="h-9 w-9 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 shrink-0 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-5 h-5" />
+                            <PremiumIcon icon={Mail} tone="sky" containerClassName="h-9 w-9 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 shrink-0 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-5 h-5" />
                             <div>
                                 <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Sign-in method</p>
                                 <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">How you access your account</p>
@@ -116,9 +116,9 @@ export default async function SecurityPage() {
                         </p>
                     </div>
 
-                    <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-5">
+                    <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] p-5">
                         <div className="flex items-center gap-3 mb-4">
-                            <PremiumIcon icon={Smartphone} tone="amber" containerClassName="h-9 w-9 rounded-[3px] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40 shrink-0 text-[color:var(--warn)] dark:text-[color:var(--warn)]" iconClassName="w-5 h-5" />
+                            <PremiumIcon icon={Smartphone} tone="amber" containerClassName="h-9 w-9 rounded-lg bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40 shrink-0 text-[color:var(--warn)] dark:text-[color:var(--warn)]" iconClassName="w-5 h-5" />
                             <div>
                                 <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Multi-factor authentication</p>
                                 <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">Extra verification at sign-in</p>
@@ -140,9 +140,9 @@ export default async function SecurityPage() {
                 <ActiveSessionsPanel sessions={sessions} />
 
                 {/* ── Footnote ────────────────────────────────────────── */}
-                <div className="rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
+                <div className="rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
                     <div className="flex items-center gap-2 mb-2">
-                        <PremiumIcon icon={ShieldCheck} tone="rose" containerClassName="w-6 h-6 rounded-[3px] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 text-[color:var(--danger)] dark:text-[color:var(--danger)]" iconClassName="w-3.5 h-3.5" />
+                        <PremiumIcon icon={ShieldCheck} tone="rose" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 text-[color:var(--danger)] dark:text-[color:var(--danger)]" iconClassName="w-3.5 h-3.5" />
                         <h3 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">About account security</h3>
                     </div>
                     <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">

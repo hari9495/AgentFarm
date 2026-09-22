@@ -52,17 +52,17 @@ export default function ActiveSessionsPanel({ sessions: initialSessions }: { ses
     }
 
     return (
-        <div className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden">
+        <div className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden">
             <div className="px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)] flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <PremiumIcon icon={Monitor} tone="slate" containerClassName="w-6 h-6 rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-3.5 h-3.5" />
+                    <PremiumIcon icon={Monitor} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="w-3.5 h-3.5" />
                     <h2 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Active Sessions</h2>
                 </div>
                 <span className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">{sessions.length} active</span>
             </div>
 
             {error && (
-                <div className="mx-5 mt-4 rounded-[3px] border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40 bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 px-3 py-2 text-xs text-[color:var(--danger)] dark:text-[color:var(--danger)]">
+                <div className="mx-5 mt-4 rounded-lg border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40 bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 px-3 py-2 text-xs text-[color:var(--danger)] dark:text-[color:var(--danger)]">
                     {error}
                 </div>
             )}

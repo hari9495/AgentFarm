@@ -177,7 +177,7 @@ export default function KpiCardsV2() {
                     onChange={e => handleAgentChange(e.target.value)}
                     disabled={agentsLoading || agents.length === 0}
                     style={{ WebkitAppearance: "none", MozAppearance: "none", appearance: "none" }}
-                    className="pl-10 pr-8 py-2 text-sm font-semibold text-[color:var(--ink-soft)] bg-[var(--card)] border border-[color:var(--line)] rounded-[3px] shadow-sm hover:border-[color:var(--line-strong)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] cursor-pointer transition-colors disabled:opacity-60"
+                    className="pl-10 pr-8 py-2 text-sm font-semibold text-[color:var(--ink-soft)] bg-[var(--card)] border border-[color:var(--line)] rounded-lg shadow-sm hover:border-[color:var(--line-strong)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] cursor-pointer transition-colors disabled:opacity-60"
                 >
                     {agentsLoading
                         ? <option value="">Loading…</option>
@@ -204,7 +204,7 @@ export default function KpiCardsV2() {
                     value={fromDate}
                     max={toDate}
                     onChange={e => setFromDate(e.target.value)}
-                    className="text-sm text-[color:var(--ink-soft)] font-medium bg-[var(--card)] border border-[color:var(--line)] rounded-[3px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] hover:border-[color:var(--line-strong)] transition-colors cursor-pointer"
+                    className="text-sm text-[color:var(--ink-soft)] font-medium bg-[var(--card)] border border-[color:var(--line)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] hover:border-[color:var(--line-strong)] transition-colors cursor-pointer"
                 />
                 <span className="text-xs text-[color:var(--ink-muted)] font-medium">to</span>
                 <input
@@ -213,7 +213,7 @@ export default function KpiCardsV2() {
                     min={fromDate}
                     max={toDateStr(new Date())}
                     onChange={e => setToDate(e.target.value)}
-                    className="text-sm text-[color:var(--ink-soft)] font-medium bg-[var(--card)] border border-[color:var(--line)] rounded-[3px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] hover:border-[color:var(--line-strong)] transition-colors cursor-pointer"
+                    className="text-sm text-[color:var(--ink-soft)] font-medium bg-[var(--card)] border border-[color:var(--line)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] hover:border-[color:var(--line-strong)] transition-colors cursor-pointer"
                 />
             </div>
 
@@ -221,7 +221,7 @@ export default function KpiCardsV2() {
             <button
                 onClick={handleApply}
                 disabled={!fromDate || !toDate || fromDate > toDate}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-40 disabled:cursor-not-allowed rounded-[3px] shadow-sm transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-40 disabled:cursor-not-allowed rounded-lg shadow-sm transition-colors"
             >
                 Apply
             </button>
@@ -236,7 +236,7 @@ export default function KpiCardsV2() {
             {filterBar}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 {CARDS.map(c => (
-                    <div key={c.key} className="rounded-[4px] border border-[color:var(--line)] bg-[var(--card)] p-5 shadow-sm text-center text-xs text-[color:var(--ink-muted)]">
+                    <div key={c.key} className="rounded-xl border border-[color:var(--line)] bg-[var(--card)] p-5 shadow-sm text-center text-xs text-[color:var(--ink-muted)]">
                         Stats unavailable
                     </div>
                 ))}

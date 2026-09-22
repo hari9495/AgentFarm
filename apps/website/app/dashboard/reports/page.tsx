@@ -151,7 +151,7 @@ export default async function DashboardReportsPage() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
                 {/* Dark hero */}
-                <section className="relative overflow-hidden rounded-[4px] border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
+                <section className="relative overflow-hidden rounded-xl border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
                     <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.07)_0%,transparent_60%)]" />
@@ -159,7 +159,7 @@ export default async function DashboardReportsPage() {
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center gap-2 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
+                            <div className="flex items-center gap-2 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
                                 <BarChart3 className="w-3.5 h-3.5" />
                                 Reports
                             </div>
@@ -178,9 +178,9 @@ export default async function DashboardReportsPage() {
                 {/* Summary KPIs */}
                 <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
                     {summaryCards.map(({ label, value, icon, tone }) => (
-                        <div key={label} className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
+                        <div key={label} className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
                             <div className="flex items-center justify-between mb-3">
-                                <PremiumIcon icon={icon} tone={tone} containerClassName="w-9 h-9 rounded-[3px]" iconClassName="w-4.5 h-4.5" />
+                                <PremiumIcon icon={icon} tone={tone} containerClassName="w-9 h-9 rounded-lg" iconClassName="w-4.5 h-4.5" />
                             </div>
                             <p className="text-2xl font-extrabold text-[color:var(--ink)] dark:text-[color:var(--ink)] tabular-nums">{value}</p>
                             <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-1">{label}</p>
@@ -190,10 +190,10 @@ export default async function DashboardReportsPage() {
 
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                     {/* Agent output table */}
-                    <div className="xl:col-span-2 rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden">
+                    <div className="xl:col-span-2 rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden">
                         <div className="px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)] flex items-center justify-between">
                             <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] flex items-center gap-2">
-                                <PremiumIcon icon={Users} tone="sky" containerClassName="w-6 h-6 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-3.5 h-3.5" />
+                                <PremiumIcon icon={Users} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-3.5 h-3.5" />
                                 Agent Output
                             </h2>
                             <span className="text-[10px] text-[color:var(--ink-muted)] font-mono">Lifetime totals · approvals last 7d</span>
@@ -250,9 +250,9 @@ export default async function DashboardReportsPage() {
                     {/* Risk distribution + approval volume */}
                     <div className="space-y-4">
                         {/* Risk distribution */}
-                        <div className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
+                        <div className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
                             <h3 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-4 flex items-center gap-2">
-                                <PremiumIcon icon={ShieldAlert} tone="amber" containerClassName="w-6 h-6 rounded-[3px] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40 text-[color:var(--warn)] dark:text-[color:var(--warn)]" iconClassName="w-3.5 h-3.5" />
+                                <PremiumIcon icon={ShieldAlert} tone="amber" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40 text-[color:var(--warn)] dark:text-[color:var(--warn)]" iconClassName="w-3.5 h-3.5" />
                                 Risk Distribution
                             </h3>
                             {riskTotal === 0 ? (
@@ -280,9 +280,9 @@ export default async function DashboardReportsPage() {
                         </div>
 
                         {/* Approval volume trend */}
-                        <div className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
+                        <div className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
                             <h3 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-1 flex items-center gap-2">
-                                <PremiumIcon icon={TrendingUp} tone="emerald" containerClassName="w-6 h-6 rounded-[3px] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="w-3.5 h-3.5" />
+                                <PremiumIcon icon={TrendingUp} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="w-3.5 h-3.5" />
                                 Approval Volume
                             </h3>
                             <p className="text-[10px] text-[color:var(--ink-muted)] mb-4">Requests per day, last 7 days</p>
@@ -294,9 +294,9 @@ export default async function DashboardReportsPage() {
                         </div>
 
                         {/* Decision latency */}
-                        <div className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
+                        <div className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
                             <div className="flex items-center gap-2 mb-3">
-                                <PremiumIcon icon={Clock} tone="sky" containerClassName="w-6 h-6 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-3.5 h-3.5" />
+                                <PremiumIcon icon={Clock} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-3.5 h-3.5" />
                                 <h3 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Avg. Decision Latency</h3>
                             </div>
                             <p className="text-3xl font-extrabold text-[color:var(--accent)] dark:text-[color:var(--accent)] tabular-nums">{avgLatencyLabel}</p>

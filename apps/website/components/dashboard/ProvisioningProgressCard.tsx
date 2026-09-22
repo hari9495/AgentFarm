@@ -120,26 +120,26 @@ export function ProvisioningProgressCardContent(props: {
     const alerts = props.payload?.provisioningAlerts ?? [];
 
     return (
-        <div className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
+        <div className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
             <div className="flex items-start justify-between gap-3">
                 <div>
                     <p className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] flex items-center gap-2">
-                        <PremiumIcon icon={Clock3} tone="sky" containerClassName="w-6 h-6 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-3.5 h-3.5" />
+                        <PremiumIcon icon={Clock3} tone="sky" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 text-[color:var(--accent)] dark:text-[color:var(--accent)]" iconClassName="w-3.5 h-3.5" />
                         Provisioning Progress
                     </p>
                     <p className="mt-1 text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">Live runtime bootstrap state for your tenant workspace</p>
                 </div>
                 <button
                     onClick={props.onRefresh}
-                    className="inline-flex items-center gap-1 rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-2.5 py-1.5 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"
+                    className="inline-flex items-center gap-1 rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] px-2.5 py-1.5 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"
                 >
-                    <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="h-3.5 w-3.5" /> Refresh
+                    <PremiumIcon icon={RefreshCw} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="h-3.5 w-3.5" /> Refresh
                 </button>
             </div>
 
             {props.loading && !props.payload ? (
                 <p className="mt-4 text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] inline-flex items-center gap-2">
-                    <PremiumIcon icon={LoaderCircle} tone="slate" containerClassName="w-6 h-6 rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="h-3.5 w-3.5 animate-spin" /> Loading provisioning status...
+                    <PremiumIcon icon={LoaderCircle} tone="slate" containerClassName="w-6 h-6 rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="h-3.5 w-3.5 animate-spin" /> Loading provisioning status...
                 </p>
             ) : props.error ? (
                 <p className="mt-4 text-xs text-[color:var(--danger)] dark:text-[color:var(--danger)]">{props.error}</p>
@@ -155,32 +155,32 @@ export function ProvisioningProgressCardContent(props: {
                     </div>
 
                     <div className="grid gap-2 sm:grid-cols-2 text-xs">
-                        <p className="rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2 text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
+                        <p className="rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2 text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
                             Estimated time remaining: <span className="font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{formatEta(props.payload?.estimatedSecondsRemaining ?? null)}</span>
                         </p>
-                        <p className="rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2 text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
+                        <p className="rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2 text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
                             Last transition: <span className="font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{job.updatedAt ? relative(job.updatedAt) : "Unknown"}</span>
                         </p>
                     </div>
 
                     {slaMetrics ? (
                         <div className="grid gap-2 sm:grid-cols-3 text-xs">
-                            <p className="rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2 text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
+                            <p className="rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2 text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
                                 Elapsed: <span className="font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{formatEta(slaMetrics.elapsedSeconds)}</span>
                             </p>
-                            <p className="rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2 text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
+                            <p className="rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2 text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
                                 SLA target: <span className="font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{formatMinutes(slaMetrics.targetSeconds)}</span>
                             </p>
-                            <p className="rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2 text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
+                            <p className="rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2 text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
                                 SLA status: <span className={`font-semibold ${slaMetrics.breachedTarget ? "text-[color:var(--danger)] dark:text-[color:var(--danger)]" : "text-[color:var(--ok)] dark:text-[color:var(--ok)]"}`}>{slaMetrics.breachedTarget ? "Breached" : "Within target"}</span>
                             </p>
                         </div>
                     ) : null}
 
                     {alerts.length > 0 ? (
-                        <div className="rounded-[3px] border border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)]/40 bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/20 p-3.5">
+                        <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)]/40 bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/20 p-3.5">
                             <p className="text-sm font-semibold text-[color:var(--warn)] dark:text-[color:var(--warn)] inline-flex items-center gap-1.5">
-                                <PremiumIcon icon={AlertTriangle} tone="amber" containerClassName="w-6 h-6 rounded-[3px] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40 text-[color:var(--warn)] dark:text-[color:var(--warn)]" iconClassName="w-3.5 h-3.5" /> Provisioning alert
+                                <PremiumIcon icon={AlertTriangle} tone="amber" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/40 text-[color:var(--warn)] dark:text-[color:var(--warn)]" iconClassName="w-3.5 h-3.5" /> Provisioning alert
                             </p>
                             {alerts.map((alert) => (
                                 <p key={alert.code} className="mt-1 text-xs text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
@@ -190,13 +190,13 @@ export function ProvisioningProgressCardContent(props: {
                         </div>
                     ) : null}
 
-                    <div className="rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)]/50 p-3">
+                    <div className="rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)]/50 p-3">
                         <p className="text-xs font-semibold uppercase tracking-wide text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">Step history</p>
                         <ul className="mt-2 space-y-1.5">
                             {timeline.map((step) => (
                                 <li key={`${step.status}-${step.at}`} className="flex items-center justify-between gap-3 text-xs">
                                     <span className="inline-flex items-center gap-1.5 text-[color:var(--ink-soft)] dark:text-[color:var(--ink)]">
-                                        <PremiumIcon icon={CheckCircle2} tone="emerald" containerClassName="w-6 h-6 rounded-[3px] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="h-3.5 w-3.5" />
+                                        <PremiumIcon icon={CheckCircle2} tone="emerald" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 text-[color:var(--ok)] dark:text-[color:var(--ok)]" iconClassName="h-3.5 w-3.5" />
                                         {toLabel(step.status)}
                                     </span>
                                     <span className="text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">{relative(step.at)}</span>
@@ -206,16 +206,16 @@ export function ProvisioningProgressCardContent(props: {
                     </div>
 
                     {job.status === "failed" ? (
-                        <div className="rounded-[3px] border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40 bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 p-3.5">
+                        <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40 bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 p-3.5">
                             <p className="text-sm font-semibold text-[color:var(--danger)] dark:text-[color:var(--danger)] inline-flex items-center gap-1.5">
-                                <PremiumIcon icon={AlertTriangle} tone="rose" containerClassName="w-6 h-6 rounded-[3px] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 text-[color:var(--danger)] dark:text-[color:var(--danger)]" iconClassName="w-3.5 h-3.5" /> Provisioning failed
+                                <PremiumIcon icon={AlertTriangle} tone="rose" containerClassName="w-6 h-6 rounded-lg bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40 text-[color:var(--danger)] dark:text-[color:var(--danger)]" iconClassName="w-3.5 h-3.5" /> Provisioning failed
                             </p>
                             {job.failureReason ? (
                                 <p className="mt-1 text-xs text-[color:var(--danger)] dark:text-[color:var(--danger)]">Failure reason: {job.failureReason}</p>
                             ) : null}
                             {job.remediationHint ? (
                                 <p className="mt-1 text-xs text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] inline-flex items-start gap-1.5">
-                                    <PremiumIcon icon={Wrench} tone="slate" containerClassName="w-6 h-6 mt-0.5 rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="h-3.5 w-3.5" />
+                                    <PremiumIcon icon={Wrench} tone="slate" containerClassName="w-6 h-6 mt-0.5 rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]" iconClassName="h-3.5 w-3.5" />
                                     Remediation: {job.remediationHint}
                                 </p>
                             ) : null}

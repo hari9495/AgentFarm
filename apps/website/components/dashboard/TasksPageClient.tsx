@@ -298,14 +298,14 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
             <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
                 {/* Header */}
-                <section className="relative overflow-hidden rounded-[4px] border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
+                <section className="relative overflow-hidden rounded-xl border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
                     <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
                         <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle, rgba(37,99,235,1) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
                     </div>
                     <div className="relative px-6 py-6">
                         <div className="flex items-center gap-2 mb-3">
-                            <div className="flex items-center gap-2 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
+                            <div className="flex items-center gap-2 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
                                 <Play className="w-3.5 h-3.5" />
                                 Tasks
                             </div>
@@ -318,7 +318,7 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                 </section>
 
                 {agents.length === 0 ? (
-                    <div className="rounded-[4px] border border-dashed border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-6 py-16 text-center">
+                    <div className="rounded-xl border border-dashed border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-6 py-16 text-center">
                         <Play className="mx-auto h-8 w-8 text-[color:var(--ink-muted)] dark:text-[color:var(--ink-soft)]" />
                         <h2 className="mt-3 text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">No agents deployed</h2>
                         <p className="mt-1 text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">Deploy an agent first before submitting tasks.</p>
@@ -327,7 +327,7 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                     <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
                         {/* Submission form */}
-                        <div className="lg:col-span-2 bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] shadow-sm p-5 space-y-4">
+                        <div className="lg:col-span-2 bg-[var(--card)] dark:bg-[var(--card)] rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] shadow-sm p-5 space-y-4">
                             <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">New Task</h2>
 
                             <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
@@ -340,7 +340,7 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                                         <select
                                             value={selectedBotId}
                                             onChange={(e) => setSelectedBotId(e.target.value)}
-                                            className="w-full appearance-none rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] px-3 py-2.5 pr-8 text-sm text-[color:var(--ink)] dark:text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] focus:border-transparent"
+                                            className="w-full appearance-none rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] px-3 py-2.5 pr-8 text-sm text-[color:var(--ink)] dark:text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] focus:border-transparent"
                                         >
                                             {agents.map((a) => (
                                                 <option key={a.id} value={a.id}>
@@ -367,7 +367,7 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                                         onChange={(e) => setPrompt(e.target.value)}
                                         rows={4}
                                         placeholder="Describe what you want the agent to do…"
-                                        className="w-full rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] px-3 py-2.5 text-sm text-[color:var(--ink)] dark:text-[color:var(--ink)] placeholder:text-[color:var(--ink-muted)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] resize-none"
+                                        className="w-full rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] px-3 py-2.5 text-sm text-[color:var(--ink)] dark:text-[color:var(--ink)] placeholder:text-[color:var(--ink-muted)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] resize-none"
                                     />
                                 </div>
 
@@ -380,7 +380,7 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                                         <select
                                             value={connectorType}
                                             onChange={(e) => handleConnectorChange(e.target.value)}
-                                            className="w-full appearance-none rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] px-3 py-2.5 pr-8 text-sm text-[color:var(--ink)] dark:text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]"
+                                            className="w-full appearance-none rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] px-3 py-2.5 pr-8 text-sm text-[color:var(--ink)] dark:text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]"
                                         >
                                             {CONNECTOR_OPTIONS.map((o) => (
                                                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -400,7 +400,7 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                                             <select
                                                 value={actionType}
                                                 onChange={(e) => setActionType(e.target.value)}
-                                                className="w-full appearance-none rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] px-3 py-2.5 pr-8 text-sm text-[color:var(--ink)] dark:text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]"
+                                                className="w-full appearance-none rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] px-3 py-2.5 pr-8 text-sm text-[color:var(--ink)] dark:text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]"
                                             >
                                                 <option value="">Select action…</option>
                                                 {availableActions.map((a) => (
@@ -423,19 +423,19 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                                             onChange={(e) => setConnectorParams(e.target.value)}
                                             rows={3}
                                             placeholder={'{"owner":"org","repo":"repo-name"}'}
-                                            className="w-full rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] px-3 py-2.5 text-sm font-mono text-[color:var(--ink)] dark:text-[color:var(--ink)] placeholder:text-[color:var(--ink-muted)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] resize-none"
+                                            className="w-full rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] px-3 py-2.5 text-sm font-mono text-[color:var(--ink)] dark:text-[color:var(--ink)] placeholder:text-[color:var(--ink-muted)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] resize-none"
                                         />
                                     </div>
                                 )}
 
                                 {/* Error / success */}
                                 {submitError && (
-                                    <div className="rounded-[3px] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] px-3 py-2.5 text-xs text-[color:var(--danger)] dark:text-[color:var(--danger)]">
+                                    <div className="rounded-lg bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] px-3 py-2.5 text-xs text-[color:var(--danger)] dark:text-[color:var(--danger)]">
                                         {submitError}
                                     </div>
                                 )}
                                 {lastSubmitted && (
-                                    <div className="rounded-[3px] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] px-3 py-2.5 text-xs text-[color:var(--ok)] dark:text-[color:var(--ok)]">
+                                    <div className="rounded-lg bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] px-3 py-2.5 text-xs text-[color:var(--ok)] dark:text-[color:var(--ok)]">
                                         Task queued — ID: <span className="font-mono">{lastSubmitted}</span>
                                     </div>
                                 )}
@@ -443,7 +443,7 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                                 <button
                                     type="submit"
                                     disabled={submitting || (!prompt.trim() && !actionType)}
-                                    className="w-full flex items-center justify-center gap-2 rounded-[3px] bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2.5 text-sm font-semibold text-white transition-colors"
+                                    className="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2.5 text-sm font-semibold text-white transition-colors"
                                 >
                                     {submitting ? (
                                         <><Loader2 className="h-4 w-4 animate-spin" /> Running…</>
@@ -455,13 +455,13 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                         </div>
 
                         {/* Task history */}
-                        <div className="lg:col-span-3 bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] shadow-sm overflow-hidden">
+                        <div className="lg:col-span-3 bg-[var(--card)] dark:bg-[var(--card)] rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] shadow-sm overflow-hidden">
                             <div className="flex items-center justify-between px-5 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)]">
                                 <h2 className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Task History</h2>
                                 <button
                                     onClick={() => void fetchTasks(selectedBotId)}
                                     disabled={loadingTasks}
-                                    className="inline-flex items-center gap-1.5 rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-1.5 text-xs font-medium text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] disabled:opacity-50 transition-colors"
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-1.5 text-xs font-medium text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] disabled:opacity-50 transition-colors"
                                 >
                                     <RefreshCw className={`h-3.5 w-3.5 ${loadingTasks ? "animate-spin" : ""}`} />
                                     Refresh
@@ -538,21 +538,21 @@ export default function TasksPageClient({ agents }: { agents: Agent[] }) {
                                                         {task.taskPrompt && (
                                                             <div>
                                                                 <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--ink-muted)] mb-1">Your Request</p>
-                                                                <p className="text-xs text-[color:var(--ink-soft)] dark:text-[color:var(--ink)] bg-[var(--card)] dark:bg-[var(--card)] rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2 whitespace-pre-wrap">{task.taskPrompt}</p>
+                                                                <p className="text-xs text-[color:var(--ink-soft)] dark:text-[color:var(--ink)] bg-[var(--card)] dark:bg-[var(--card)] rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2 whitespace-pre-wrap">{task.taskPrompt}</p>
                                                             </div>
                                                         )}
                                                         {/* Failure reason — shown prominently so the customer knows WHY it failed */}
                                                         {(task.outcome === "failed" || task.outcome === "error") && task.outputSummary && (
                                                             <div>
                                                                 <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--danger)] mb-1">Why it failed</p>
-                                                                <p className="text-xs text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 rounded-[3px] border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] px-3 py-2 whitespace-pre-wrap max-h-48 overflow-y-auto">{formatAgentOutput(task.outputSummary)}</p>
+                                                                <p className="text-xs text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 rounded-lg border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] px-3 py-2 whitespace-pre-wrap max-h-48 overflow-y-auto">{formatAgentOutput(task.outputSummary)}</p>
                                                             </div>
                                                         )}
                                                         {/* Output (success / other non-failure outcomes) */}
                                                         {task.outcome !== "failed" && task.outcome !== "error" && task.outputSummary && (
                                                             <div>
                                                                 <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--ink-muted)] mb-1">Agent Output</p>
-                                                                <p className="text-xs text-[color:var(--ink-soft)] dark:text-[color:var(--ink)] bg-[var(--card)] dark:bg-[var(--card)] rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2 whitespace-pre-wrap max-h-48 overflow-y-auto">{formatAgentOutput(task.outputSummary)}</p>
+                                                                <p className="text-xs text-[color:var(--ink-soft)] dark:text-[color:var(--ink)] bg-[var(--card)] dark:bg-[var(--card)] rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2 whitespace-pre-wrap max-h-48 overflow-y-auto">{formatAgentOutput(task.outputSummary)}</p>
                                                             </div>
                                                         )}
                                                         {(task.outcome === "failed" || task.outcome === "error") && !task.outputSummary && (

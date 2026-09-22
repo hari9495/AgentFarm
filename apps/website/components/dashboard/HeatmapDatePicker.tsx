@@ -76,7 +76,7 @@ export default function HeatmapDatePicker({ fromValue, toValue, minDate, maxDate
             {/* Trigger */}
             <button
                 onClick={() => setOpen(v => !v)}
-                className={`inline-flex items-center gap-1.5 rounded-[3px] border px-3 py-1.5 text-xs font-medium transition-colors
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors
                     ${open
                         ? "border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/30 text-[color:var(--accent)] dark:text-[color:var(--accent)]"
                         : "border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"
@@ -88,17 +88,17 @@ export default function HeatmapDatePicker({ fromValue, toValue, minDate, maxDate
 
             {/* Popover — wider so side-by-side inputs never truncate */}
             {open && (
-                <div className="absolute right-0 top-full mt-2 z-30 w-[22rem] rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] shadow-xl shadow-slate-200/60 dark:shadow-slate-900/60 p-4">
+                <div className="absolute right-0 top-full mt-2 z-30 w-[22rem] rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] shadow-xl shadow-slate-200/60 dark:shadow-slate-900/60 p-4">
 
                     {/* Header */}
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                            <div className="h-6 w-6 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 flex items-center justify-center shrink-0">
+                            <div className="h-6 w-6 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/40 flex items-center justify-center shrink-0">
                                 <Calendar className="h-3.5 w-3.5 text-[color:var(--accent)] dark:text-[color:var(--accent)]" />
                             </div>
                             <p className="text-xs font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Pick a date range</p>
                         </div>
-                        <button onClick={handleCancel} className="h-6 w-6 rounded-[3px] flex items-center justify-center text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition-colors">
+                        <button onClick={handleCancel} className="h-6 w-6 rounded-lg flex items-center justify-center text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition-colors">
                             <X className="h-3.5 w-3.5" />
                         </button>
                     </div>
@@ -113,7 +113,7 @@ export default function HeatmapDatePicker({ fromValue, toValue, minDate, maxDate
                                 min={minDate}
                                 max={pickedTo || maxDate}
                                 onChange={e => handleFromChange(e.target.value)}
-                                className="w-full rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] px-2.5 py-2 text-xs font-medium text-[color:var(--ink)] dark:text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] transition"
+                                className="w-full rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] px-2.5 py-2 text-xs font-medium text-[color:var(--ink)] dark:text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] transition"
                             />
                         </div>
                         <div className="shrink-0 pb-2.5">
@@ -127,7 +127,7 @@ export default function HeatmapDatePicker({ fromValue, toValue, minDate, maxDate
                                 min={pickedFrom ? addDaysStr(pickedFrom, MIN_DAYS - 1) : minDate}
                                 max={maxDate}
                                 onChange={e => setTo(e.target.value)}
-                                className="w-full rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] px-2.5 py-2 text-xs font-medium text-[color:var(--ink)] dark:text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] transition"
+                                className="w-full rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)] px-2.5 py-2 text-xs font-medium text-[color:var(--ink)] dark:text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] transition"
                             />
                         </div>
                     </div>
@@ -157,10 +157,10 @@ export default function HeatmapDatePicker({ fromValue, toValue, minDate, maxDate
 
                     {/* Actions */}
                     <div className="flex gap-2">
-                        <button onClick={handleCancel} className="flex-1 rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] py-2 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition-colors">
+                        <button onClick={handleCancel} className="flex-1 rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] py-2 text-xs font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition-colors">
                             Cancel
                         </button>
-                        <button onClick={handleApply} disabled={!canApply} className="flex-1 rounded-[3px] bg-[var(--accent)] dark:bg-[var(--bg-deep)] py-2 text-xs font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] hover:bg-[var(--accent)] dark:hover:bg-[var(--card)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                        <button onClick={handleApply} disabled={!canApply} className="flex-1 rounded-lg bg-[var(--accent)] dark:bg-[var(--bg-deep)] py-2 text-xs font-semibold text-[color:var(--ink)] dark:text-[color:var(--ink)] hover:bg-[var(--accent)] dark:hover:bg-[var(--card)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                             Apply
                         </button>
                     </div>

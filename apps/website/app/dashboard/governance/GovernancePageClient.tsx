@@ -50,7 +50,7 @@ function Bar({ value, color }: { value: number; color: string }) {
 function KpiSection({ data, loading }: { data: KpiData | null; loading: boolean }) {
     if (loading) return (
         <div className="space-y-4 pt-2">
-            {[1, 2, 3].map(i => <div key={i} className="h-28 rounded-[4px] bg-[var(--line)] dark:bg-[var(--card)] animate-pulse" />)}
+            {[1, 2, 3].map(i => <div key={i} className="h-28 rounded-xl bg-[var(--line)] dark:bg-[var(--card)] animate-pulse" />)}
         </div>
     );
 
@@ -62,7 +62,7 @@ function KpiSection({ data, loading }: { data: KpiData | null; loading: boolean 
     return (
         <div className="space-y-5">
             {/* SLA hero */}
-            <div className={`rounded-[4px] border bg-gradient-to-br ${slaBg} dark:bg-[var(--card)] p-6`}>
+            <div className={`rounded-xl border bg-gradient-to-br ${slaBg} dark:bg-[var(--card)] p-6`}>
                 <div className="flex items-start justify-between">
                     <div>
                         <p className="text-xs font-bold uppercase tracking-widest text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mb-1">Overall SLA Compliance</p>
@@ -119,7 +119,7 @@ function KpiSection({ data, loading }: { data: KpiData | null; loading: boolean 
                         bg: n(data?.approvals?.sla_breach_count) === 0 ? "from-[color-mix(in_srgb,var(--ok)_14%,transparent)]/10 to-[color-mix(in_srgb,var(--ok)_14%,transparent)]/5 border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/20" : "from-[color-mix(in_srgb,var(--danger)_14%,transparent)]/10 to-[color-mix(in_srgb,var(--danger)_14%,transparent)]/5 border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/20",
                     },
                 ].map(({ icon: Icon, label, why, value, sub, color, bg }) => (
-                    <div key={label} className={`rounded-[4px] border bg-gradient-to-br ${bg} dark:bg-[var(--card)] p-4`}>
+                    <div key={label} className={`rounded-xl border bg-gradient-to-br ${bg} dark:bg-[var(--card)] p-4`}>
                         <div className="flex items-center gap-2 mb-3">
                             <Icon className={`w-3.5 h-3.5 ${color}`} />
                             <span className="text-[11px] font-bold uppercase tracking-widest text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">{label}</span>
@@ -159,10 +159,10 @@ function WorkflowTemplateForm({ onSave, onCancel }: { onSave: (t: Partial<Workfl
         finally { setSaving(false); }
     };
 
-    const inputCls = "w-full rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-3 py-2 text-sm text-[color:var(--ink)] dark:text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/40 focus:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]";
+    const inputCls = "w-full rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-3 py-2 text-sm text-[color:var(--ink)] dark:text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/40 focus:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]";
 
     return (
-        <div className="rounded-[4px] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/30 bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]/50 dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/10 p-6">
+        <div className="rounded-xl border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/30 bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]/50 dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/10 p-6">
             <div className="flex items-center justify-between mb-5">
                 <div>
                     <h3 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">New Approval Workflow</h3>
@@ -188,7 +188,7 @@ function WorkflowTemplateForm({ onSave, onCancel }: { onSave: (t: Partial<Workfl
 
                     <div className="space-y-3">
                         {stages.map((stage, i) => (
-                            <div key={i} className="rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)]/60 p-4">
+                            <div key={i} className="rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)]/60 p-4">
                                 <div className="flex items-center gap-2 mb-3">
                                     <div className="w-6 h-6 rounded-full bg-[var(--accent)] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">{i + 1}</div>
                                     <span className="text-xs font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">Stage {i + 1}</span>
@@ -238,31 +238,31 @@ function WorkflowTemplateForm({ onSave, onCancel }: { onSave: (t: Partial<Workfl
 
                 {/* Flow preview */}
                 {stages.length > 0 && (
-                    <div className="rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)]/50 px-4 py-3">
+                    <div className="rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)]/50 px-4 py-3">
                         <p className="text-[11px] font-bold uppercase tracking-widest text-[color:var(--ink-muted)] mb-2">Flow preview</p>
                         <div className="flex items-center gap-1 flex-wrap">
-                            <span className="text-xs text-[color:var(--ink-muted)] bg-[var(--card)] dark:bg-[var(--card)] rounded-[3px] px-2 py-1 border border-[color:var(--line)] dark:border-[color:var(--line)]">Agent action</span>
+                            <span className="text-xs text-[color:var(--ink-muted)] bg-[var(--card)] dark:bg-[var(--card)] rounded-lg px-2 py-1 border border-[color:var(--line)] dark:border-[color:var(--line)]">Agent action</span>
                             {stages.map((st, i) => (
                                 <>
                                     <ChevronRight key={`arr-${i}`} className="w-3.5 h-3.5 text-[color:var(--ink-muted)] flex-shrink-0" />
-                                    <span key={`st-${i}`} className="text-xs font-semibold text-[color:var(--accent)] dark:text-[color:var(--accent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/30 rounded-[3px] px-2 py-1 border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/50">
+                                    <span key={`st-${i}`} className="text-xs font-semibold text-[color:var(--accent)] dark:text-[color:var(--accent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/30 rounded-lg px-2 py-1 border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/50">
                                         {st.name || `Stage ${i + 1}`} ({st.role}, {Math.round(st.sla_seconds / 60)}m SLA)
                                     </span>
                                 </>
                             ))}
                             <ChevronRight className="w-3.5 h-3.5 text-[color:var(--ink-muted)] flex-shrink-0" />
-                            <span className="text-xs text-[color:var(--ok)] dark:text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/30 rounded-[3px] px-2 py-1 border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/50 font-semibold">✓ Approved</span>
+                            <span className="text-xs text-[color:var(--ok)] dark:text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/30 rounded-lg px-2 py-1 border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/50 font-semibold">✓ Approved</span>
                         </div>
                     </div>
                 )}
 
-                {error && <p className="text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 rounded-[3px] px-4 py-2">{error}</p>}
+                {error && <p className="text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 rounded-lg px-4 py-2">{error}</p>}
 
                 <div className="flex gap-3 pt-1">
-                    <button type="button" onClick={onCancel} className="flex-1 rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] py-2.5 text-sm font-semibold hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition-colors">
+                    <button type="button" onClick={onCancel} className="flex-1 rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] py-2.5 text-sm font-semibold hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition-colors">
                         Cancel
                     </button>
-                    <button type="submit" disabled={saving} className="flex-1 rounded-[3px] bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-50 text-white py-2.5 text-sm font-bold transition-colors">
+                    <button type="submit" disabled={saving} className="flex-1 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-50 text-white py-2.5 text-sm font-bold transition-colors">
                         {saving ? "Saving…" : "Create Workflow"}
                     </button>
                 </div>
@@ -298,7 +298,7 @@ function WorkflowsSection() {
         await load();
     };
 
-    if (loading) return <div className="space-y-3 pt-2">{[1, 2].map(i => <div key={i} className="h-24 rounded-[4px] bg-[var(--line)] dark:bg-[var(--card)] animate-pulse" />)}</div>;
+    if (loading) return <div className="space-y-3 pt-2">{[1, 2].map(i => <div key={i} className="h-24 rounded-xl bg-[var(--line)] dark:bg-[var(--card)] animate-pulse" />)}</div>;
 
     return (
         <div className="space-y-5">
@@ -311,7 +311,7 @@ function WorkflowsSection() {
                     </p>
                 </div>
                 <button onClick={() => setShowForm(true)}
-                    className="flex items-center gap-1.5 rounded-[3px] bg-[var(--accent)] hover:bg-[var(--accent)] text-white px-4 py-2 text-sm font-bold transition-colors flex-shrink-0">
+                    className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent)] text-white px-4 py-2 text-sm font-bold transition-colors flex-shrink-0">
                     <Plus className="w-4 h-4" /> New workflow
                 </button>
             </div>
@@ -319,8 +319,8 @@ function WorkflowsSection() {
             {showForm && <WorkflowTemplateForm onSave={save} onCancel={() => setShowForm(false)} />}
 
             {templates.length === 0 && !showForm ? (
-                <div className="rounded-[4px] border-2 border-dashed border-[color:var(--line)] dark:border-[color:var(--line)] p-12 text-center">
-                    <div className="w-14 h-14 rounded-[4px] bg-[var(--accent)]/10 flex items-center justify-center mx-auto mb-4">
+                <div className="rounded-xl border-2 border-dashed border-[color:var(--line)] dark:border-[color:var(--line)] p-12 text-center">
+                    <div className="w-14 h-14 rounded-xl bg-[var(--accent)]/10 flex items-center justify-center mx-auto mb-4">
                         <GitBranch className="w-7 h-7 text-[color:var(--accent)]" />
                     </div>
                     <h3 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-1">No workflows yet</h3>
@@ -328,17 +328,17 @@ function WorkflowsSection() {
                         Without workflows, all approvals are flat single-person decisions.
                         Create a template to enforce multi-stage reviews for high-stakes actions.
                     </p>
-                    <button onClick={() => setShowForm(true)} className="rounded-[3px] bg-[var(--accent)] hover:bg-[var(--accent)] text-white px-5 py-2.5 text-sm font-bold transition-colors">
+                    <button onClick={() => setShowForm(true)} className="rounded-lg bg-[var(--accent)] hover:bg-[var(--accent)] text-white px-5 py-2.5 text-sm font-bold transition-colors">
                         Create your first workflow
                     </button>
                 </div>
             ) : (
                 <div className="space-y-3">
                     {templates.map((t) => (
-                        <div key={t.id} className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
+                        <div key={t.id} className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
                             <div className="flex items-start justify-between gap-3">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-[3px] bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0">
+                                    <div className="w-10 h-10 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0">
                                         <GitBranch className="w-5 h-5 text-[color:var(--accent)]" />
                                     </div>
                                     <div>
@@ -357,7 +357,7 @@ function WorkflowsSection() {
                                     {t.stages.map((st, i) => (
                                         <>
                                             {i > 0 && <ChevronRight key={`a${i}`} className="w-3.5 h-3.5 text-[color:var(--ink-muted)] dark:text-[color:var(--ink-soft)] flex-shrink-0" />}
-                                            <div key={st.name} className="text-xs rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] border border-[color:var(--line)] dark:border-[color:var(--line)] px-2.5 py-1.5">
+                                            <div key={st.name} className="text-xs rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)] border border-[color:var(--line)] dark:border-[color:var(--line)] px-2.5 py-1.5">
                                                 <span className="font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink)]">{st.name || `Stage ${i + 1}`}</span>
                                                 <span className="text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] ml-1">· {st.role} · {Math.round(st.sla_seconds / 60)}m SLA</span>
                                             </div>
@@ -450,20 +450,20 @@ function PluginsSection() {
             </div>
 
             {result && (
-                <div className={`rounded-[3px] px-4 py-3 text-sm font-medium ${result.ok ? "bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/30 text-[color:var(--ok)] dark:text-[color:var(--ok)] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/40" : "bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 text-[color:var(--danger)] dark:text-[color:var(--danger)] border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40"}`}>
+                <div className={`rounded-lg px-4 py-3 text-sm font-medium ${result.ok ? "bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/30 text-[color:var(--ok)] dark:text-[color:var(--ok)] border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/40" : "bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 text-[color:var(--danger)] dark:text-[color:var(--danger)] border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40"}`}>
                     {result.ok ? "✓ " : "⚠ "}{result.msg}
                 </div>
             )}
 
             {loading ? (
-                <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-20 rounded-[4px] bg-[var(--line)] dark:bg-[var(--card)] animate-pulse" />)}</div>
+                <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-20 rounded-xl bg-[var(--line)] dark:bg-[var(--card)] animate-pulse" />)}</div>
             ) : (
                 <div className="space-y-3">
                     {plugins.map(plugin => (
-                        <div key={plugin.key} className={`rounded-[4px] border ${plugin.enabled ? "border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/30 bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]/30 dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/10" : "border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)]"} p-5 transition-colors`}>
+                        <div key={plugin.key} className={`rounded-xl border ${plugin.enabled ? "border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/30 bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]/30 dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/10" : "border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)]"} p-5 transition-colors`}>
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex items-start gap-3 flex-1 min-w-0">
-                                    <div className={`w-9 h-9 rounded-[3px] flex items-center justify-center flex-shrink-0 ${plugin.enabled ? "bg-[var(--accent)]/15" : "bg-[var(--bg-deep)] dark:bg-[var(--card)]"}`}>
+                                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${plugin.enabled ? "bg-[var(--accent)]/15" : "bg-[var(--bg-deep)] dark:bg-[var(--card)]"}`}>
                                         {plugin.category === "compliance" ? <Shield className={`w-4.5 h-4.5 ${plugin.enabled ? "text-[color:var(--accent)]" : "text-[color:var(--ink-muted)]"}`} /> :
                                          plugin.category === "security" ? <Zap className={`w-4.5 h-4.5 ${plugin.enabled ? "text-[color:var(--accent)]" : "text-[color:var(--ink-muted)]"}`} /> :
                                          <Eye className={`w-4.5 h-4.5 ${plugin.enabled ? "text-[color:var(--accent)]" : "text-[color:var(--ink-muted)]"}`} />}
@@ -602,7 +602,7 @@ function RetentionSection() {
         finally { setDeleting(null); }
     };
 
-    const inputCls = "w-full rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-3 py-2 text-sm text-[color:var(--ink)] dark:text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/40 focus:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]";
+    const inputCls = "w-full rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-3 py-2 text-sm text-[color:var(--ink)] dark:text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/40 focus:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]";
 
     return (
         <div className="space-y-5">
@@ -616,13 +616,13 @@ function RetentionSection() {
                     </p>
                 </div>
                 <button onClick={() => setShowForm(v => !v)}
-                    className="flex items-center gap-1.5 rounded-[3px] bg-[var(--accent)] hover:bg-[var(--accent)] text-white px-4 py-2 text-sm font-bold transition-colors flex-shrink-0">
+                    className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent)] text-white px-4 py-2 text-sm font-bold transition-colors flex-shrink-0">
                     <Plus className="w-4 h-4" /> New policy
                 </button>
             </div>
 
             {/* Info callout */}
-            <div className="rounded-[4px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/20 border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/40 px-5 py-4 flex gap-3">
+            <div className="rounded-xl bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/20 border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/40 px-5 py-4 flex gap-3">
                 <Info className="w-4 h-4 text-[color:var(--accent)] flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-[color:var(--accent)] dark:text-[color:var(--accent)] space-y-1">
                     <p className="font-semibold">Why this matters for your compliance</p>
@@ -637,7 +637,7 @@ function RetentionSection() {
 
             {/* Create form */}
             {showForm && (
-                <div className="rounded-[4px] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/30 bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]/40 dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/10 p-6">
+                <div className="rounded-xl border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/30 bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]/40 dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/10 p-6">
                     <div className="flex items-center justify-between mb-5">
                         <div>
                             <h3 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">New Retention Policy</h3>
@@ -659,7 +659,7 @@ function RetentionSection() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {DATA_TYPES.map(dt => (
                                     <button key={dt.value} type="button" onClick={() => setDataType(dt.value)}
-                                        className={`text-left rounded-[3px] border px-3 py-2.5 transition-colors ${dataType === dt.value ? "border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/30 text-[color:var(--accent)] dark:text-[color:var(--accent)]" : "border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:border-[color:var(--line-strong)]"}`}>
+                                        className={`text-left rounded-lg border px-3 py-2.5 transition-colors ${dataType === dt.value ? "border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/30 text-[color:var(--accent)] dark:text-[color:var(--accent)]" : "border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:border-[color:var(--line-strong)]"}`}>
                                         <p className="text-sm font-semibold">{dt.label}</p>
                                         <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">{dt.desc}</p>
                                     </button>
@@ -672,7 +672,7 @@ function RetentionSection() {
                             <div className="flex gap-2">
                                 {[{ v: "tenant" as const, l: "Entire workspace" }, { v: "workspace" as const, l: "This workspace only" }].map(({ v, l }) => (
                                     <button key={v} type="button" onClick={() => setScope(v)}
-                                        className={`flex-1 rounded-[3px] border py-2.5 text-sm font-semibold transition-colors ${scope === v ? "border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/30 text-[color:var(--accent)] dark:text-[color:var(--accent)]" : "border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:border-[color:var(--line-strong)]"}`}>
+                                        className={`flex-1 rounded-lg border py-2.5 text-sm font-semibold transition-colors ${scope === v ? "border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/30 text-[color:var(--accent)] dark:text-[color:var(--accent)]" : "border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:border-[color:var(--line-strong)]"}`}>
                                         {l}
                                     </button>
                                 ))}
@@ -684,7 +684,7 @@ function RetentionSection() {
                             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                                 {RETENTION_PRESETS.map(p => (
                                     <button key={p.label} type="button" onClick={() => setRetDays(p.days)}
-                                        className={`rounded-[3px] border px-3 py-2.5 text-center transition-colors ${retentionDays === p.days ? "border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/30 text-[color:var(--accent)] dark:text-[color:var(--accent)]" : "border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:border-[color:var(--line-strong)]"}`}>
+                                        className={`rounded-lg border px-3 py-2.5 text-center transition-colors ${retentionDays === p.days ? "border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/30 text-[color:var(--accent)] dark:text-[color:var(--accent)]" : "border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:border-[color:var(--line-strong)]"}`}>
                                         <p className="text-sm font-bold">{p.label}</p>
                                         <p className="text-[10px] text-[color:var(--ink-muted)] mt-0.5">{p.tag}</p>
                                     </button>
@@ -693,7 +693,7 @@ function RetentionSection() {
                         </div>
 
                         {/* Preview */}
-                        <div className="rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)]/50 px-4 py-3 text-sm">
+                        <div className="rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)]/50 px-4 py-3 text-sm">
                             <span className="font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">Preview: </span>
                             <span className="text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
                                 {DATA_TYPES.find(d => d.value === dataType)?.label} records
@@ -702,11 +702,11 @@ function RetentionSection() {
                             </span>
                         </div>
 
-                        {formError && <p className="text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 rounded-[3px] px-4 py-2">{formError}</p>}
+                        {formError && <p className="text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 rounded-lg px-4 py-2">{formError}</p>}
 
                         <div className="flex gap-3">
-                            <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] py-2.5 text-sm font-semibold">Cancel</button>
-                            <button type="submit" disabled={saving} className="flex-1 rounded-[3px] bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-50 text-white py-2.5 text-sm font-bold transition-colors">
+                            <button type="button" onClick={() => setShowForm(false)} className="flex-1 rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] py-2.5 text-sm font-semibold">Cancel</button>
+                            <button type="submit" disabled={saving} className="flex-1 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-50 text-white py-2.5 text-sm font-bold transition-colors">
                                 {saving ? "Saving…" : "Create Policy"}
                             </button>
                         </div>
@@ -714,14 +714,14 @@ function RetentionSection() {
                 </div>
             )}
 
-            {error && <p className="text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 rounded-[3px] px-4 py-2">{error}</p>}
+            {error && <p className="text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 rounded-lg px-4 py-2">{error}</p>}
 
             {/* Policy list */}
             {loading ? (
-                <div className="space-y-3">{[1,2].map(i => <div key={i} className="h-20 rounded-[4px] bg-[var(--line)] dark:bg-[var(--card)] animate-pulse" />)}</div>
+                <div className="space-y-3">{[1,2].map(i => <div key={i} className="h-20 rounded-xl bg-[var(--line)] dark:bg-[var(--card)] animate-pulse" />)}</div>
             ) : policies.length === 0 && !showForm ? (
-                <div className="rounded-[4px] border-2 border-dashed border-[color:var(--line)] dark:border-[color:var(--line)] p-12 text-center">
-                    <div className="w-14 h-14 rounded-[4px] bg-[var(--accent)]/10 flex items-center justify-center mx-auto mb-4">
+                <div className="rounded-xl border-2 border-dashed border-[color:var(--line)] dark:border-[color:var(--line)] p-12 text-center">
+                    <div className="w-14 h-14 rounded-xl bg-[var(--accent)]/10 flex items-center justify-center mx-auto mb-4">
                         <Database className="w-7 h-7 text-[color:var(--accent)]" />
                     </div>
                     <h3 className="text-base font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-1">No retention policies yet</h3>
@@ -729,7 +729,7 @@ function RetentionSection() {
                         Without policies, all data is kept indefinitely. Create your first policy to
                         control costs and meet your compliance requirements.
                     </p>
-                    <button onClick={() => setShowForm(true)} className="rounded-[3px] bg-[var(--accent)] hover:bg-[var(--accent)] text-white px-5 py-2.5 text-sm font-bold transition-colors">
+                    <button onClick={() => setShowForm(true)} className="rounded-lg bg-[var(--accent)] hover:bg-[var(--accent)] text-white px-5 py-2.5 text-sm font-bold transition-colors">
                         Create your first policy
                     </button>
                 </div>
@@ -738,10 +738,10 @@ function RetentionSection() {
                     {policies.map(p => {
                         const dt = DATA_TYPES.find(d => d.value === p.roleKey);
                         return (
-                            <div key={p.id} className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
+                            <div key={p.id} className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex items-start gap-3 flex-1 min-w-0">
-                                        <div className="w-10 h-10 rounded-[3px] bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0">
+                                        <div className="w-10 h-10 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0">
                                             <Database className="w-5 h-5 text-[color:var(--accent)]" />
                                         </div>
                                         <div className="min-w-0">
@@ -763,7 +763,7 @@ function RetentionSection() {
                                         </div>
                                         <span className="text-xs font-semibold text-[color:var(--ok)] dark:text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/40 rounded-full px-2.5 py-1">Active</span>
                                         <button onClick={() => void deletePolicy(p.id)} disabled={deleting === p.id}
-                                            className="rounded-[3px] p-1.5 text-[color:var(--ink-muted)] dark:text-[color:var(--ink-soft)] hover:text-[color:var(--danger)] hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 transition-colors disabled:opacity-40">
+                                            className="rounded-lg p-1.5 text-[color:var(--ink-muted)] dark:text-[color:var(--ink-soft)] hover:text-[color:var(--danger)] hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 transition-colors disabled:opacity-40">
                                             <Trash2 className="w-4 h-4" />
                                         </button>
                                     </div>
@@ -811,9 +811,9 @@ export default function GovernancePageClient() {
     return (
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {/* Tab bar */}
-            <div className="flex gap-1 p-1 rounded-[4px] bg-[var(--bg-deep)] dark:bg-[var(--card)]/60 mb-8 max-w-full overflow-x-auto">
+            <div className="flex gap-1 p-1 rounded-xl bg-[var(--bg-deep)] dark:bg-[var(--card)]/60 mb-8 max-w-full overflow-x-auto">
                 {TABS.map(({ id, label, icon: Icon }) => (
-                    <button key={id} onClick={() => setActiveTab(id)} className={`flex items-center gap-2 px-5 py-2.5 rounded-[3px] text-sm font-semibold whitespace-nowrap shrink-0 transition-all ${activeTab === id ? "bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] shadow-sm" : "text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] dark:hover:text-[color:var(--ink)]"}`}>
+                    <button key={id} onClick={() => setActiveTab(id)} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold whitespace-nowrap shrink-0 transition-all ${activeTab === id ? "bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] shadow-sm" : "text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] dark:hover:text-[color:var(--ink)]"}`}>
                         <Icon className="w-4 h-4" />
                         {label}
                     </button>

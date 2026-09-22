@@ -35,7 +35,7 @@ const EMPTY = {
 };
 
 const inputCls =
-    "mt-1 w-full rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-3 py-2 text-sm text-[color:var(--ink)] dark:text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]";
+    "mt-1 w-full rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-3 py-2 text-sm text-[color:var(--ink)] dark:text-[color:var(--ink)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]";
 
 export default function TaskSourcesPage() {
     const [sources, setSources] = useState<PollSource[]>([]);
@@ -132,13 +132,13 @@ export default function TaskSourcesPage() {
                 <div className="flex gap-2">
                     <button
                         onClick={() => void load()}
-                        className="flex items-center gap-1.5 rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2 text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:border-[color:var(--line)]"
+                        className="flex items-center gap-1.5 rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] px-3 py-2 text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:border-[color:var(--line)]"
                     >
                         <RefreshCw className="w-4 h-4" /> Refresh
                     </button>
                     <button
                         onClick={() => setShowForm((v) => !v)}
-                        className="flex items-center gap-1.5 rounded-[3px] bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white hover:bg-[var(--accent)]"
+                        className="flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-semibold text-white hover:bg-[var(--accent)]"
                     >
                         <Plus className="w-4 h-4" /> Add source
                     </button>
@@ -146,13 +146,13 @@ export default function TaskSourcesPage() {
             </div>
 
             {error && (
-                <div className="my-4 flex items-center gap-2 rounded-[3px] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 px-3 py-2 text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)]">
+                <div className="my-4 flex items-center gap-2 rounded-lg bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 px-3 py-2 text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)]">
                     <AlertCircle className="w-4 h-4" /> {error}
                 </div>
             )}
 
             {showForm && (
-                <div className="my-5 rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)]/40 p-5">
+                <div className="my-5 rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)]/40 p-5">
                     <div className="grid grid-cols-2 gap-4">
                         <label className="text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
                             Tracker
@@ -240,7 +240,7 @@ export default function TaskSourcesPage() {
                     <button
                         onClick={() => void create()}
                         disabled={saving || !form.assignee.trim()}
-                        className="mt-4 rounded-[3px] bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--accent)] disabled:opacity-50"
+                        className="mt-4 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--accent)] disabled:opacity-50"
                     >
                         {saving ? "Adding…" : "Save source"}
                     </button>
@@ -256,7 +256,7 @@ export default function TaskSourcesPage() {
                     sources.map((s) => (
                         <div
                             key={s.id}
-                            className="flex items-center justify-between rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-4 py-3"
+                            className="flex items-center justify-between rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-4 py-3"
                         >
                             <div>
                                 <div className="flex items-center gap-2">

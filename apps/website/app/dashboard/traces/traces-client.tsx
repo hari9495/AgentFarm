@@ -84,7 +84,7 @@ export default function TracesClient() {
 
     return (
         <div className="grid gap-4" style={{ gridTemplateColumns: detail || detailLoading ? '1fr 1fr' : '1fr' }}>
-            <div className="rounded-[3px] border p-4 overflow-x-auto">
+            <div className="rounded-lg border p-4 overflow-x-auto">
                 <div className="flex items-center justify-between mb-2">
                     <strong>Recent tasks</strong>
                     <button type="button" className="text-sm underline" onClick={() => void loadList()} disabled={loading}>
@@ -123,7 +123,7 @@ export default function TracesClient() {
             </div>
 
             {(detail || detailLoading) && (
-                <div className="rounded-[3px] border p-4 overflow-x-auto">
+                <div className="rounded-lg border p-4 overflow-x-auto">
                     <div className="flex items-center justify-between mb-2">
                         <strong className="font-mono text-sm">{selected}</strong>
                         <button type="button" className="text-sm underline" onClick={() => { setSelected(null); setDetail(null); }}>

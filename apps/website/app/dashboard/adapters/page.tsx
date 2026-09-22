@@ -46,7 +46,7 @@ const METHOD_COLORS: Record<HttpMethod, string> = {
     DELETE: "text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/40",
 };
 
-const inp = "w-full border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] rounded-[3px] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] placeholder:text-[color:var(--ink-muted)]";
+const inp = "w-full border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] placeholder:text-[color:var(--ink-muted)]";
 const lbl = "block text-xs font-bold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] uppercase tracking-wider mb-1.5";
 
 // ── Register form ─────────────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ function RegisterForm({ onSave, onCancel }: { onSave: (data: unknown) => Promise
     const STEPS = [{ n: 1, lbl: "Identity" }, { n: 2, lbl: "Connection" }, { n: 3, lbl: "Actions" }];
 
     return (
-        <div className="rounded-[4px] border-2 border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[var(--card)] dark:bg-[var(--card)] shadow-sm overflow-hidden mb-6">
+        <div className="rounded-xl border-2 border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[var(--card)] dark:bg-[var(--card)] shadow-sm overflow-hidden mb-6">
             {/* Header */}
             <div className="px-6 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)] flex items-center justify-between">
                 <div>
@@ -172,7 +172,7 @@ function RegisterForm({ onSave, onCancel }: { onSave: (data: unknown) => Promise
                         <div className="flex items-center justify-between"><div><p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Define what agents can do</p><p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] mt-0.5">Each action is a typed API call. Skip to register without actions now.</p></div><button onClick={addAction} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] text-xs font-semibold hover:border-[color:var(--line)] transition-colors"><Plus className="w-3 h-3" />Add action</button></div>
                         <div className="space-y-3">
                             {actions.map((action, i) => (
-                                <div key={i} className="rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)]/50 p-4">
+                                <div key={i} className="rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--bg-deep)] dark:bg-[var(--card)]/50 p-4">
                                     <div className="flex items-center justify-between mb-3"><span className="text-xs font-bold text-[color:var(--ink-muted)] uppercase tracking-wider">Action {i + 1}</span>{actions.length > 1 && <button onClick={() => removeAction(i)} className="text-[color:var(--ink-muted)] dark:text-[color:var(--ink-soft)] hover:text-[color:var(--danger)] transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>}</div>
                                     <div className="grid grid-cols-3 gap-3">
                                         <div><label className={lbl}>Name</label><input value={action.name} onChange={e => updateAction(i, { name: e.target.value })} className={inp} placeholder="get_stock" /></div>
@@ -183,16 +183,16 @@ function RegisterForm({ onSave, onCancel }: { onSave: (data: unknown) => Promise
                                 </div>
                             ))}
                         </div>
-                        <div className="rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/20 border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/40 px-4 py-3 text-sm text-[color:var(--accent)] dark:text-[color:var(--accent)]">
+                        <div className="rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/20 border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/40 px-4 py-3 text-sm text-[color:var(--accent)] dark:text-[color:var(--accent)]">
                             <strong>{name}</strong> · {endpointUrl} · {authType.replace(/_/g, " ")} · {actions.filter(a => a.name.trim()).length} action{actions.filter(a => a.name.trim()).length !== 1 ? "s" : ""}
                         </div>
-                        {error && <div className="flex items-center gap-2 text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40 rounded-[3px] px-4 py-2"><AlertCircle className="w-4 h-4 shrink-0" />{error}</div>}
-                        {success && <div className="flex items-center gap-2 text-sm text-[color:var(--ok)] dark:text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/40 rounded-[3px] px-4 py-2"><CheckCircle2 className="w-4 h-4 shrink-0" />Adapter registered! Agents can now use it.</div>}
+                        {error && <div className="flex items-center gap-2 text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40 rounded-lg px-4 py-2"><AlertCircle className="w-4 h-4 shrink-0" />{error}</div>}
+                        {success && <div className="flex items-center gap-2 text-sm text-[color:var(--ok)] dark:text-[color:var(--ok)] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/40 rounded-lg px-4 py-2"><CheckCircle2 className="w-4 h-4 shrink-0" />Adapter registered! Agents can now use it.</div>}
                         <div className="flex gap-3 justify-end"><button onClick={() => setStep(2)} className="px-4 py-2 rounded-full border border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] text-sm hover:bg-[var(--bg-deep)] transition-colors">← Back</button><button onClick={submit} disabled={saving || success} className="px-6 py-2 rounded-full bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-50 text-white text-sm font-bold transition-colors">{saving ? "Registering…" : success ? "✓ Done" : "Register Adapter"}</button></div>
                     </>
                 )}
 
-                {error && step < 3 && <div className="flex items-center gap-2 text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40 rounded-[3px] px-4 py-2"><AlertCircle className="w-4 h-4 shrink-0" />{error}</div>}
+                {error && step < 3 && <div className="flex items-center gap-2 text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40 rounded-lg px-4 py-2"><AlertCircle className="w-4 h-4 shrink-0" />{error}</div>}
             </div>
         </div>
     );
@@ -254,7 +254,7 @@ export default function CustomerAdaptersPage() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
                 {/* Dark hero */}
-                <section className="relative overflow-hidden rounded-[4px] border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
+                <section className="relative overflow-hidden rounded-xl border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
                     <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.07)_0%,transparent_60%)]" />
@@ -262,7 +262,7 @@ export default function CustomerAdaptersPage() {
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center gap-2 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
+                            <div className="flex items-center gap-2 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
                                 <Layers className="w-3.5 h-3.5" />
                                 Custom APIs
                             </div>
@@ -290,7 +290,7 @@ export default function CustomerAdaptersPage() {
 
                 {/* What is this */}
                 {!showForm && adapters.length === 0 && !loading && (
-                    <div className="rounded-[4px] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/40 bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]/50 dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/10 p-6">
+                    <div className="rounded-xl border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/40 bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]/50 dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/10 p-6">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {[
                                 { icon: "🏭", title: "Register your API", desc: "Point it at your internal tool's base URL and define how to authenticate." },
@@ -316,9 +316,9 @@ export default function CustomerAdaptersPage() {
                 {showForm && <RegisterForm onSave={save} onCancel={() => { setShowForm(false); void load(); }} />}
 
                 {/* List */}
-                {error && <div className="flex items-center gap-2 text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] rounded-[3px] px-4 py-3"><AlertCircle className="w-4 h-4 shrink-0" />{error}</div>}
+                {error && <div className="flex items-center gap-2 text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] rounded-lg px-4 py-3"><AlertCircle className="w-4 h-4 shrink-0" />{error}</div>}
 
-                {loading && <div className="space-y-3">{[1,2].map(i => <div key={i} className="h-20 rounded-[4px] bg-[var(--line)] dark:bg-[var(--card)] animate-pulse" />)}</div>}
+                {loading && <div className="space-y-3">{[1,2].map(i => <div key={i} className="h-20 rounded-xl bg-[var(--line)] dark:bg-[var(--card)] animate-pulse" />)}</div>}
 
                 {!loading && adapters.length > 0 && (
                     <div>
@@ -333,7 +333,7 @@ export default function CustomerAdaptersPage() {
                                 const pingResult = pingResults[adapter.adapter_id];
                                 const isExp = expanded === adapter.adapter_id;
                                 return (
-                                    <div key={adapter.adapter_id} className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden shadow-sm">
+                                    <div key={adapter.adapter_id} className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden shadow-sm">
                                         <div className="p-4 flex items-start gap-3">
                                             <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${adapter.status === "active" ? "bg-[var(--ok)]" : adapter.status === "error" ? "bg-[var(--danger)]" : "bg-[var(--bg-deep)]"}`} />
                                             <div className="flex-1 min-w-0">
@@ -348,14 +348,14 @@ export default function CustomerAdaptersPage() {
                                             </div>
                                             <div className="flex items-center gap-2 shrink-0">
                                                 {adapter.actions && adapter.actions.length > 0 && (
-                                                    <button onClick={() => setExpanded(isExp ? null : adapter.adapter_id)} className="flex items-center gap-1 text-xs border border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] rounded-[3px] px-2.5 py-1.5 hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition-colors font-medium">
+                                                    <button onClick={() => setExpanded(isExp ? null : adapter.adapter_id)} className="flex items-center gap-1 text-xs border border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] rounded-lg px-2.5 py-1.5 hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] transition-colors font-medium">
                                                         {adapter.actions.length} actions {isExp ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                                                     </button>
                                                 )}
-                                                <button onClick={() => ping(adapter).catch(() => {})} disabled={pinging[adapter.adapter_id]} className="flex items-center gap-1 text-xs border border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] rounded-[3px] px-2.5 py-1.5 hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] disabled:opacity-50 transition-colors font-medium">
+                                                <button onClick={() => ping(adapter).catch(() => {})} disabled={pinging[adapter.adapter_id]} className="flex items-center gap-1 text-xs border border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] rounded-lg px-2.5 py-1.5 hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] disabled:opacity-50 transition-colors font-medium">
                                                     <Zap className="w-3 h-3" />{pinging[adapter.adapter_id] ? "…" : "Ping"}
                                                 </button>
-                                                <button onClick={() => void remove(adapter.adapter_id, adapter.name)} className="flex items-center gap-1 text-xs border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] text-[color:var(--danger)] dark:text-[color:var(--danger)] rounded-[3px] px-2.5 py-1.5 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 transition-colors font-medium">
+                                                <button onClick={() => void remove(adapter.adapter_id, adapter.name)} className="flex items-center gap-1 text-xs border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] text-[color:var(--danger)] dark:text-[color:var(--danger)] rounded-lg px-2.5 py-1.5 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 transition-colors font-medium">
                                                     <Trash2 className="w-3 h-3" />
                                                 </button>
                                             </div>

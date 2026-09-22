@@ -210,7 +210,7 @@ function NavLink({
             whileTap={reduce ? undefined : { scale: 0.975 }}
             transition={spring.snappy}
             className={`
-                group relative flex items-center gap-3 rounded-[3px] py-2.5 text-sm
+                group relative flex items-center gap-3 rounded-lg py-2.5 text-sm
                 font-medium transition-colors duration-150 select-none
                 ${collapsed ? "justify-center px-0" : "px-3"}
                 ${active
@@ -230,7 +230,7 @@ function NavLink({
 
             {/* Icon container */}
             <span className={`
-                relative flex items-center justify-center w-8 h-8 rounded-[3px] shrink-0 transition-all duration-150
+                relative flex items-center justify-center w-8 h-8 rounded-lg shrink-0 transition-all duration-150
                 ${active
                     ? "bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-[color:var(--accent)]"
                     : "text-[color:var(--ink-muted)] group-hover:text-[color:var(--ink-soft)] group-hover:bg-[var(--line)]/70"
@@ -327,7 +327,7 @@ function SidebarContent({
                         onClick={onClose}
                         className="flex items-center gap-3 group min-w-0 flex-1"
                     >
-                        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[3px] bg-[var(--accent)] shadow-md shadow-blue-600/20">
+                        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)] shadow-md shadow-blue-600/20">
                             <svg width="16" height="16" viewBox="0 0 12 12" fill="none" aria-hidden>
                                 <circle cx="6" cy="6" r="5" stroke="white" strokeWidth="1.5" />
                                 <path d="M4 6h4M6 4v4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
@@ -349,7 +349,7 @@ function SidebarContent({
                         onClick={onToggleCollapse}
                         title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-                        className="hidden md:inline-flex shrink-0 p-1.5 rounded-[3px] text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] transition-colors"
+                        className="hidden md:inline-flex shrink-0 p-1.5 rounded-lg text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] transition-colors"
                     >
                         {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
                     </button>
@@ -357,7 +357,7 @@ function SidebarContent({
                 {onClose && (
                     <button
                         onClick={onClose}
-                        className="shrink-0 p-1.5 rounded-[3px] text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] transition-colors md:hidden"
+                        className="shrink-0 p-1.5 rounded-lg text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] transition-colors md:hidden"
                     >
                         <X className="w-4 h-4" />
                     </button>
@@ -369,11 +369,11 @@ function SidebarContent({
                 <button
                     onClick={openSearch}
                     title={collapsed ? "Search (⌘K)" : undefined}
-                    className={`w-full flex items-center rounded-[3px] bg-[var(--bg-deep)] border border-[color:var(--line)] text-[13px] text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink-soft)] hover:border-[color:var(--line-strong)] transition-all group ${collapsed ? "justify-center py-2.5" : "gap-2.5 px-3 py-2.5"}`}
+                    className={`w-full flex items-center rounded-lg bg-[var(--bg-deep)] border border-[color:var(--line)] text-[13px] text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink-soft)] hover:border-[color:var(--line-strong)] transition-all group ${collapsed ? "justify-center py-2.5" : "gap-2.5 px-3 py-2.5"}`}
                 >
                     <Search className="w-4 h-4 shrink-0 group-hover:text-[color:var(--ink-soft)] transition-colors" />
                     {!collapsed && <span className="flex-1 text-left">Search…</span>}
-                    {!collapsed && <kbd className="text-[10px] font-mono bg-[var(--card)] text-[color:var(--ink-muted)] px-1.5 py-0.5 rounded-[3px] border border-[color:var(--line)]">⌘K</kbd>}
+                    {!collapsed && <kbd className="text-[10px] font-mono bg-[var(--card)] text-[color:var(--ink-muted)] px-1.5 py-0.5 rounded-lg border border-[color:var(--line)]">⌘K</kbd>}
                 </button>
             </div>
 
@@ -429,9 +429,9 @@ function SidebarContent({
                                         href="/admin"
                                         onClick={onClose}
                                         title={collapsed ? "Admin Console" : undefined}
-                                        className={`group flex items-center gap-3 rounded-[3px] py-2.5 text-sm font-medium text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink)] transition-all ${collapsed ? "justify-center px-0" : "px-3"}`}
+                                        className={`group flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink)] transition-all ${collapsed ? "justify-center px-0" : "px-3"}`}
                                     >
-                                        <span className="flex items-center justify-center w-8 h-8 rounded-[3px] text-[color:var(--ink-muted)] group-hover:text-[color:var(--ink-soft)] group-hover:bg-[var(--line)]/70 transition-all">
+                                        <span className="flex items-center justify-center w-8 h-8 rounded-lg text-[color:var(--ink-muted)] group-hover:text-[color:var(--ink-soft)] group-hover:bg-[var(--line)]/70 transition-all">
                                             <Shield className="w-[17px] h-[17px]" style={{ color: "var(--nav-tint, var(--ink-muted))" }} />
                                         </span>
                                         {!collapsed && <span className="flex-1 truncate tracking-[-0.01em]">Admin Console</span>}
@@ -441,9 +441,9 @@ function SidebarContent({
                                         href="/admin/bots"
                                         onClick={onClose}
                                         title={collapsed ? "Manage Bots" : undefined}
-                                        className={`group flex items-center gap-3 rounded-[3px] py-2.5 text-sm font-medium text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink)] transition-all ${collapsed ? "justify-center px-0" : "px-3"}`}
+                                        className={`group flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] hover:text-[color:var(--ink)] transition-all ${collapsed ? "justify-center px-0" : "px-3"}`}
                                     >
-                                        <span className="flex items-center justify-center w-8 h-8 rounded-[3px] text-[color:var(--ink-muted)] group-hover:text-[color:var(--ink-soft)] group-hover:bg-[var(--line)]/70 transition-all">
+                                        <span className="flex items-center justify-center w-8 h-8 rounded-lg text-[color:var(--ink-muted)] group-hover:text-[color:var(--ink-soft)] group-hover:bg-[var(--line)]/70 transition-all">
                                             <Bot className="w-[17px] h-[17px]" style={{ color: "var(--nav-tint, var(--ink-muted))" }} />
                                         </span>
                                         {!collapsed && <span className="flex-1 truncate tracking-[-0.01em]">Manage Bots</span>}
@@ -456,9 +456,9 @@ function SidebarContent({
                                     href="/company"
                                     onClick={onClose}
                                     title={collapsed ? "Company Portal" : undefined}
-                                    className={`group flex items-center gap-3 rounded-[3px] py-2.5 text-sm font-medium text-[color:var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] hover:text-[color:var(--accent)] transition-all ${collapsed ? "justify-center px-0" : "px-3"}`}
+                                    className={`group flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium text-[color:var(--accent)] hover:bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] hover:text-[color:var(--accent)] transition-all ${collapsed ? "justify-center px-0" : "px-3"}`}
                                 >
-                                    <span className="flex items-center justify-center w-8 h-8 rounded-[3px] text-[color:var(--accent)] group-hover:bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] transition-all">
+                                    <span className="flex items-center justify-center w-8 h-8 rounded-lg text-[color:var(--accent)] group-hover:bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] transition-all">
                                         <ShieldCheck className="w-[17px] h-[17px]" />
                                     </span>
                                     {!collapsed && <span className="flex-1 truncate tracking-[-0.01em]">Company Portal</span>}
@@ -474,7 +474,7 @@ function SidebarContent({
             <div className={`border-t border-[color:var(--line)] space-y-1 shrink-0 ${collapsed ? "p-2 flex flex-col items-center" : "p-3"}`}>
 
                 {/* User identity row */}
-                <div className={`flex items-center rounded-[3px] hover:bg-[var(--bg-deep)] transition-colors cursor-default ${collapsed ? "justify-center p-1.5" : "gap-3 px-2 py-2 w-full"}`} title={collapsed ? `${userName} · ${tenantId ? tenantId : roleLabel}` : undefined}>
+                <div className={`flex items-center rounded-lg hover:bg-[var(--bg-deep)] transition-colors cursor-default ${collapsed ? "justify-center p-1.5" : "gap-3 px-2 py-2 w-full"}`} title={collapsed ? `${userName} · ${tenantId ? tenantId : roleLabel}` : undefined}>
                     <div className="h-8 w-8 rounded-full bg-[var(--accent)] flex items-center justify-center text-[12px] font-bold text-white shrink-0 shadow-sm shadow-blue-600/20 ring-2 ring-[color:var(--line)]">
                         {initials}
                     </div>
@@ -494,7 +494,7 @@ function SidebarContent({
                             onClick={toggle}
                             aria-label="Toggle theme"
                             title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                            className="shrink-0 w-8 h-8 rounded-[3px] flex items-center justify-center text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] transition-colors"
+                            className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] transition-colors"
                         >
                             {theme === "dark"
                                 ? <Sun className="w-[15px] h-[15px]" />
@@ -509,7 +509,7 @@ function SidebarContent({
                         onClick={toggle}
                         aria-label="Toggle theme"
                         title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                        className="w-8 h-8 rounded-[3px] flex items-center justify-center text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] transition-colors"
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[color:var(--ink-muted)] hover:text-[color:var(--ink-soft)] hover:bg-[var(--bg-deep)] transition-colors"
                     >
                         {theme === "dark" ? <Sun className="w-[15px] h-[15px]" /> : <Moon className="w-[15px] h-[15px]" />}
                     </button>
@@ -519,9 +519,9 @@ function SidebarContent({
                 <button
                     onClick={() => void handleLogout()}
                     title={collapsed ? "Sign out" : undefined}
-                    className={`flex items-center rounded-[3px] text-[13px] font-medium text-[color:var(--ink-muted)] hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] hover:text-[color:var(--danger)] transition-all group ${collapsed ? "justify-center w-8 h-8" : "w-full gap-3 px-3 py-2"}`}
+                    className={`flex items-center rounded-lg text-[13px] font-medium text-[color:var(--ink-muted)] hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] hover:text-[color:var(--danger)] transition-all group ${collapsed ? "justify-center w-8 h-8" : "w-full gap-3 px-3 py-2"}`}
                 >
-                    <span className={`flex items-center justify-center rounded-[3px] group-hover:bg-[color-mix(in_srgb,var(--danger)_16%,transparent)] transition-all ${collapsed ? "w-8 h-8" : "w-8 h-8"}`}>
+                    <span className={`flex items-center justify-center rounded-lg group-hover:bg-[color-mix(in_srgb,var(--danger)_16%,transparent)] transition-all ${collapsed ? "w-8 h-8" : "w-8 h-8"}`}>
                         <LogOut className="w-[15px] h-[15px]" />
                     </span>
                     {!collapsed && <span className="tracking-[-0.01em]">Sign out</span>}
@@ -576,7 +576,7 @@ export default function AppSidebar({
             {/* Mobile toggle button */}
             <button
                 onClick={() => setOpen(true)}
-                className="md:hidden fixed top-3.5 left-3.5 z-40 p-2 bg-[var(--card)] border border-[color:var(--line)] rounded-[3px] shadow-sm"
+                className="md:hidden fixed top-3.5 left-3.5 z-40 p-2 bg-[var(--card)] border border-[color:var(--line)] rounded-lg shadow-sm"
                 aria-label="Open navigation"
             >
                 <Menu className="w-4 h-4 text-[color:var(--ink-muted)]" />

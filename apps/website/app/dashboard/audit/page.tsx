@@ -123,7 +123,7 @@ export default function CustomerAuditPage() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
                 {/* ── Hero header ─────────────────────────────────────── */}
-                <section className="relative overflow-hidden rounded-[4px] border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
+                <section className="relative overflow-hidden rounded-xl border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
                     <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(139,92,246,0.16)_0%,transparent_60%)]" />
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.07)_0%,transparent_60%)]" />
@@ -132,7 +132,7 @@ export default function CustomerAuditPage() {
 
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-5">
-                            <div className="flex items-center gap-2 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
+                            <div className="flex items-center gap-2 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
                                 <PremiumIcon icon={ClipboardList} tone="violet" containerClassName="w-4 h-4 rounded bg-[var(--accent)]/20 text-[color:var(--accent)]" iconClassName="w-2.5 h-2.5" />
                                 Audit Log
                             </div>
@@ -151,14 +151,14 @@ export default function CustomerAuditPage() {
                                 <button
                                     onClick={() => void loadEvents()}
                                     disabled={loading}
-                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[3px] bg-[var(--card)] border border-[color:var(--line)] text-xs font-semibold text-[color:var(--ink)] hover:bg-[var(--card)] hover:border-[color:var(--line)] transition-colors disabled:opacity-50"
+                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--card)] border border-[color:var(--line)] text-xs font-semibold text-[color:var(--ink)] hover:bg-[var(--card)] hover:border-[color:var(--line)] transition-colors disabled:opacity-50"
                                 >
                                     <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
                                 </button>
                                 <button
                                     onClick={() => clientDownloadCsv(filtered)}
                                     disabled={loading || filtered.length === 0}
-                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-[3px] bg-[var(--card)] border border-[color:var(--line)] text-xs font-semibold text-[color:var(--ink)] hover:bg-[var(--card)] hover:border-[color:var(--line)] transition-colors disabled:opacity-50"
+                                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--card)] border border-[color:var(--line)] text-xs font-semibold text-[color:var(--ink)] hover:bg-[var(--card)] hover:border-[color:var(--line)] transition-colors disabled:opacity-50"
                                 >
                                     <Download className="w-3.5 h-3.5" /> Export CSV
                                 </button>
@@ -175,20 +175,20 @@ export default function CustomerAuditPage() {
                 </section>
 
                 {/* ── Filters ─────────────────────────────────────────── */}
-                <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-4 space-y-3">
+                <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] p-4 space-y-3">
                     <input
                         type="search"
                         placeholder="Search by actor, action, target, or reason…"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full max-w-sm rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-3 py-1.5 text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink)] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]"
+                        className="w-full max-w-sm rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-3 py-1.5 text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink)] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]"
                     />
                     <div className="flex gap-1 flex-wrap">
                         {CATEGORIES.map((cat) => (
                             <button
                                 key={cat}
                                 onClick={() => setCategory(cat)}
-                                className={`px-3 py-1.5 rounded-[3px] text-xs font-medium transition-colors ${category === cat
+                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${category === cat
                                         ? "bg-[var(--accent)] dark:bg-[var(--bg-deep)] text-[color:var(--ink)] dark:text-[color:var(--ink)]"
                                         : "text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]"
                                     }`}
@@ -200,26 +200,26 @@ export default function CustomerAuditPage() {
                 </div>
 
                 {/* ── Timeline ────────────────────────────────────────── */}
-                <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-2 sm:p-4">
+                <div className="bg-[var(--card)] dark:bg-[var(--card)] rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] p-2 sm:p-4">
                     {loading ? (
                         <div className="space-y-3 animate-pulse p-3">
                             {[1, 2, 3, 4, 5].map((i) => (
-                                <div key={i} className="h-16 rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)]" />
+                                <div key={i} className="h-16 rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)]" />
                             ))}
                         </div>
                     ) : error ? (
-                        <div className="m-3 rounded-[3px] border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40 bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 px-4 py-4 text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)]">
+                        <div className="m-3 rounded-lg border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40 bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 px-4 py-4 text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)]">
                             <strong>Error:</strong> {error}
                             <button onClick={() => void loadEvents()} className="ml-3 underline text-[color:var(--danger)] dark:text-[color:var(--danger)]">
                                 Retry
                             </button>
                         </div>
                     ) : filtered.length === 0 ? (
-                        <div className="rounded-[4px] border border-dashed border-[color:var(--line-strong)] dark:border-[color:var(--line)] p-12 text-center">
+                        <div className="rounded-xl border border-dashed border-[color:var(--line-strong)] dark:border-[color:var(--line)] p-12 text-center">
                             <PremiumIcon
                                 icon={ClipboardList}
                                 tone="slate"
-                                containerClassName="mx-auto mb-3 w-10 h-10 rounded-[3px] bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]"
+                                containerClassName="mx-auto mb-3 w-10 h-10 rounded-lg bg-[var(--bg-deep)] dark:bg-[var(--card)] text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]"
                                 iconClassName="w-5 h-5"
                             />
                             <p className="text-sm font-semibold text-[color:var(--ink-soft)] dark:text-[color:var(--ink)]">No audit events found</p>
@@ -243,7 +243,7 @@ export default function CustomerAuditPage() {
                                     return (
                                         <div
                                             key={evt.id}
-                                            className="relative flex gap-4 pl-14 pr-4 py-4 rounded-[3px] hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]/40 transition-colors"
+                                            className="relative flex gap-4 pl-14 pr-4 py-4 rounded-lg hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]/40 transition-colors"
                                         >
                                             <div className="absolute left-3 top-3.5">
                                                 <PremiumIcon

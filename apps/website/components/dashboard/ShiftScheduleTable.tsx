@@ -76,14 +76,14 @@ function EditRow({ agent, onCancel, onSaved }: { agent: ShiftScheduleAgent; onCa
                             type="time"
                             value={start}
                             onChange={(e) => setStart(e.target.value)}
-                            className="text-xs font-mono rounded-[3px] border border-[color:var(--line-strong)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-2 py-1.5 text-[color:var(--ink-soft)] dark:text-[color:var(--ink)]"
+                            className="text-xs font-mono rounded-lg border border-[color:var(--line-strong)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-2 py-1.5 text-[color:var(--ink-soft)] dark:text-[color:var(--ink)]"
                         />
                         <label className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">End</label>
                         <input
                             type="time"
                             value={end}
                             onChange={(e) => setEnd(e.target.value)}
-                            className="text-xs font-mono rounded-[3px] border border-[color:var(--line-strong)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-2 py-1.5 text-[color:var(--ink-soft)] dark:text-[color:var(--ink)]"
+                            className="text-xs font-mono rounded-lg border border-[color:var(--line-strong)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] px-2 py-1.5 text-[color:var(--ink-soft)] dark:text-[color:var(--ink)]"
                         />
                     </div>
                     <div className="flex gap-1">
@@ -115,7 +115,7 @@ function EditRow({ agent, onCancel, onSaved }: { agent: ShiftScheduleAgent; onCa
                             type="button"
                             onClick={save}
                             disabled={saving}
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-60 rounded-[3px] px-3 py-1.5 transition-colors"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-[var(--accent)] hover:bg-[var(--accent)] disabled:opacity-60 rounded-lg px-3 py-1.5 transition-colors"
                         >
                             {saving && <LoaderCircle className="w-3 h-3 animate-spin" />}
                             Save
@@ -173,7 +173,7 @@ export default function ShiftScheduleTable({ agents }: { agents: ShiftScheduleAg
                             <tr key={agent.slug} className="hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)]/40 transition-colors">
                                 <td className="px-5 py-3">
                                     <div className="flex items-center gap-2">
-                                        <div className={`h-7 w-7 rounded-[3px] ${accent.bg} flex items-center justify-center text-[10px] font-bold ${accent.text} shrink-0`}>
+                                        <div className={`h-7 w-7 rounded-lg ${accent.bg} flex items-center justify-center text-[10px] font-bold ${accent.text} shrink-0`}>
                                             {initialsFromName(agent.name)}
                                         </div>
                                         <span className="font-medium text-[color:var(--ink)] dark:text-[color:var(--ink)] text-xs">{agent.name}</span>

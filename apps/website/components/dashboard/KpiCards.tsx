@@ -48,7 +48,7 @@ function DailyBars({ values, barBg }: { values: number[]; barBg: string }) {
                 return (
                     <div key={i} className="flex-1 flex flex-col items-center gap-[3px]">
                         <div
-                            className={`w-full rounded-[3px] transition-all duration-300 ${barBg} ${isToday ? "opacity-100" : "opacity-50"}`}
+                            className={`w-full rounded-lg transition-all duration-300 ${barBg} ${isToday ? "opacity-100" : "opacity-50"}`}
                             style={{ height: `${heightPct}%` }}
                             title={`${DAY_LABELS[i]}: ${v}`}
                         />
@@ -66,9 +66,9 @@ function DailyBars({ values, barBg }: { values: number[]; barBg: string }) {
 
 function SkeletonCard() {
     return (
-        <div className="relative rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5 flex flex-col gap-4 shadow-sm overflow-hidden animate-pulse">
+        <div className="relative rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] p-5 flex flex-col gap-4 shadow-sm overflow-hidden animate-pulse">
             <div className="flex items-start justify-between gap-3">
-                <div className="w-10 h-10 rounded-[3px] bg-[var(--line)] dark:bg-[var(--card)]" />
+                <div className="w-10 h-10 rounded-lg bg-[var(--line)] dark:bg-[var(--card)]" />
                 <div className="h-6 w-16 rounded-full bg-[var(--line)] dark:bg-[var(--card)]" />
             </div>
             <div className="space-y-2">
@@ -160,7 +160,7 @@ export default function KpiCards() {
         return (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 {cardConfig.map((c) => (
-                    <div key={c.key} className="rounded-[4px] border border-[color:var(--line)] bg-[var(--card)] p-5 shadow-sm text-center text-xs text-[color:var(--ink-muted)]">
+                    <div key={c.key} className="rounded-xl border border-[color:var(--line)] bg-[var(--card)] p-5 shadow-sm text-center text-xs text-[color:var(--ink-muted)]">
                         Stats unavailable
                     </div>
                 ))}
@@ -188,11 +188,11 @@ export default function KpiCards() {
                     <div
                         key={cfg.key}
                         style={{ animationDelay: `${idx * 60}ms` }}
-                        className={`choreo-rise relative rounded-[4px] border ${cfg.border} ${cfg.headerBg} p-5 flex flex-col gap-3 shadow-sm hover:shadow-md hover:-translate-y-0.5 [transition:transform_220ms_cubic-bezier(0.22,1,0.36,1),box-shadow_220ms_cubic-bezier(0.22,1,0.36,1)]`}
+                        className={`choreo-rise relative rounded-xl border ${cfg.border} ${cfg.headerBg} p-5 flex flex-col gap-3 shadow-sm hover:shadow-md hover:-translate-y-0.5 [transition:transform_220ms_cubic-bezier(0.22,1,0.36,1),box-shadow_220ms_cubic-bezier(0.22,1,0.36,1)]`}
                     >
                         {/* Top row — icon + delta */}
                         <div className="flex items-start justify-between gap-3">
-                            <div className={`w-10 h-10 rounded-[3px] ${cfg.iconBg} flex items-center justify-center shrink-0`}>
+                            <div className={`w-10 h-10 rounded-lg ${cfg.iconBg} flex items-center justify-center shrink-0`}>
                                 <Icon className={`w-5 h-5 ${cfg.iconColor}`} />
                             </div>
                             {stat.delta !== null ? (

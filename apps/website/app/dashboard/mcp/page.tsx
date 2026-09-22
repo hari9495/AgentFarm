@@ -21,7 +21,7 @@ type PingState = { loading: boolean; ok?: boolean; latencyMs?: number };
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
-const inp = "w-full border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] rounded-[3px] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] placeholder:text-[color:var(--ink-muted)] dark:placeholder:text-[color:var(--ink-muted)]";
+const inp = "w-full border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] text-[color:var(--ink)] dark:text-[color:var(--ink)] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] placeholder:text-[color:var(--ink-muted)] dark:placeholder:text-[color:var(--ink-muted)]";
 const lbl = "block text-xs font-bold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] uppercase tracking-wider mb-1.5";
 
 // ── What MCP does — use-case cards ────────────────────────────────────────────
@@ -103,7 +103,7 @@ export default function CustomerMcpPage() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 space-y-6">
 
                 {/* Dark hero */}
-                <section className="relative overflow-hidden rounded-[4px] border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
+                <section className="relative overflow-hidden rounded-xl border border-[color:var(--line)] bg-gradient-to-br from-[color-mix(in_srgb,var(--accent)_8%,transparent)] via-[var(--card)] to-[var(--card)]">
                     <div className="absolute inset-0 pointer-events-none">
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_0%,rgba(37,99,235,0.10)_0%,transparent_60%)]" />
                         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_100%_100%,rgba(16,185,129,0.07)_0%,transparent_60%)]" />
@@ -111,7 +111,7 @@ export default function CustomerMcpPage() {
                     </div>
                     <div className="relative px-6 sm:px-8 py-6 sm:py-8">
                         <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center gap-2 rounded-[3px] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
+                            <div className="flex items-center gap-2 rounded-lg bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[color:var(--accent)]">
                                 <Cpu className="w-3.5 h-3.5" />
                                 MCP Servers
                             </div>
@@ -146,7 +146,7 @@ export default function CustomerMcpPage() {
 
                 {/* ── What is MCP — shown only when no servers yet ── */}
                 {!loading && servers.length === 0 && !showForm && (
-                    <div className="rounded-[4px] border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/40 bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]/50 dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/10 p-6">
+                    <div className="rounded-xl border border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)]/40 bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]/50 dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/10 p-6">
                         <div className="flex items-start gap-3 mb-5">
                             <Cpu className="w-5 h-5 text-[color:var(--accent)] dark:text-[color:var(--accent)] shrink-0 mt-0.5" />
                             <div>
@@ -162,14 +162,14 @@ export default function CustomerMcpPage() {
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                             {USE_CASES.map(({ icon, title, desc }) => (
-                                <div key={title} className="rounded-[3px] bg-[var(--card)] dark:bg-[var(--card)] border border-[color:var(--line)] dark:border-[color:var(--line)] p-4">
+                                <div key={title} className="rounded-lg bg-[var(--card)] dark:bg-[var(--card)] border border-[color:var(--line)] dark:border-[color:var(--line)] p-4">
                                     <div className="text-2xl mb-2">{icon}</div>
                                     <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)] mb-1">{title}</p>
                                     <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] leading-relaxed">{desc}</p>
                                 </div>
                             ))}
                         </div>
-                        <div className="mt-5 p-4 rounded-[3px] bg-[var(--card)] dark:bg-[var(--card)] border border-[color:var(--line)] dark:border-[color:var(--line)]">
+                        <div className="mt-5 p-4 rounded-lg bg-[var(--card)] dark:bg-[var(--card)] border border-[color:var(--line)] dark:border-[color:var(--line)]">
                             <p className="text-xs font-semibold text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)] uppercase tracking-wider mb-2">How to connect your tool in 3 steps</p>
                             <ol className="space-y-1.5 text-sm text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)]">
                                 <li className="flex items-start gap-2">
@@ -197,7 +197,7 @@ export default function CustomerMcpPage() {
 
                 {/* ── Add form ────────────────────────────────────────── */}
                 {showForm && (
-                    <div className="rounded-[4px] border-2 border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden shadow-sm">
+                    <div className="rounded-xl border-2 border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden shadow-sm">
                         <div className="px-6 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)] bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]/40 dark:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]/10">
                             <p className="text-xs font-bold text-[color:var(--accent)] dark:text-[color:var(--accent)] uppercase tracking-widest mb-0.5">Register MCP Server</p>
                             <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
@@ -229,7 +229,7 @@ export default function CustomerMcpPage() {
                             </div>
 
                             {/* Security note */}
-                            <div className="rounded-[3px] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/20 border border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)]/40 px-4 py-3">
+                            <div className="rounded-lg bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--warn)_22%,transparent)]/20 border border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--warn)_40%,transparent)]/40 px-4 py-3">
                                 <p className="text-xs text-[color:var(--warn)] dark:text-[color:var(--warn)] leading-relaxed">
                                     <strong>Security note:</strong> Your MCP server should only be reachable from AgentFarm's agent runtime IPs.
                                     Do not expose it publicly. Use your firewall or a private network to restrict access.
@@ -237,7 +237,7 @@ export default function CustomerMcpPage() {
                             </div>
 
                             {addError && (
-                                <div className="flex items-center gap-2 text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40 rounded-[3px] px-4 py-2.5">
+                                <div className="flex items-center gap-2 text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40 rounded-lg px-4 py-2.5">
                                     <AlertCircle className="w-4 h-4 shrink-0" /> {addError}
                                 </div>
                             )}
@@ -256,7 +256,7 @@ export default function CustomerMcpPage() {
 
                 {/* ── Error ───────────────────────────────────────────── */}
                 {error && (
-                    <div className="flex items-center gap-2 text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40 rounded-[3px] px-4 py-3">
+                    <div className="flex items-center gap-2 text-sm text-[color:var(--danger)] dark:text-[color:var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/30 border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)]/40 rounded-lg px-4 py-3">
                         <AlertCircle className="w-4 h-4 shrink-0" /> {error}
                     </div>
                 )}
@@ -265,7 +265,7 @@ export default function CustomerMcpPage() {
                 {loading && (
                     <div className="space-y-3">
                         {[1, 2].map(i => (
-                            <div key={i} className="h-24 rounded-[4px] bg-[var(--line)] dark:bg-[var(--card)] animate-pulse" />
+                            <div key={i} className="h-24 rounded-xl bg-[var(--line)] dark:bg-[var(--card)] animate-pulse" />
                         ))}
                     </div>
                 )}
@@ -287,7 +287,7 @@ export default function CustomerMcpPage() {
                             {servers.map(server => {
                                 const ps = pingStates[server.id];
                                 return (
-                                    <div key={server.id} className={`rounded-[4px] border bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden shadow-sm transition-colors ${server.isActive ? "border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/50" : "border-[color:var(--line)] dark:border-[color:var(--line)]"}`}>
+                                    <div key={server.id} className={`rounded-xl border bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden shadow-sm transition-colors ${server.isActive ? "border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)]/50" : "border-[color:var(--line)] dark:border-[color:var(--line)]"}`}>
                                         <div className="p-5 flex items-start gap-3">
                                             {/* Status dot */}
                                             <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${server.isActive ? "bg-[var(--ok)]" : "bg-[var(--bg-deep)] dark:bg-[var(--bg-deep)]"}`} />
@@ -324,14 +324,14 @@ export default function CustomerMcpPage() {
                                                 <button
                                                     onClick={() => void ping(server)}
                                                     disabled={ps?.loading}
-                                                    className="flex items-center gap-1.5 text-xs font-semibold border border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] rounded-[3px] px-3 py-1.5 hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] disabled:opacity-50 transition-colors"
+                                                    className="flex items-center gap-1.5 text-xs font-semibold border border-[color:var(--line)] dark:border-[color:var(--line)] text-[color:var(--ink-soft)] dark:text-[color:var(--ink-muted)] rounded-lg px-3 py-1.5 hover:bg-[var(--bg-deep)] dark:hover:bg-[var(--card)] disabled:opacity-50 transition-colors"
                                                 >
                                                     <Radio className="w-3 h-3" />
                                                     {ps?.loading ? "Pinging…" : "Ping"}
                                                 </button>
                                                 <button
                                                     onClick={() => void remove(server)}
-                                                    className="flex items-center gap-1.5 text-xs font-semibold border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] text-[color:var(--danger)] dark:text-[color:var(--danger)] rounded-[3px] px-3 py-1.5 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 transition-colors"
+                                                    className="flex items-center gap-1.5 text-xs font-semibold border border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--danger)_40%,transparent)] text-[color:var(--danger)] dark:text-[color:var(--danger)] rounded-lg px-3 py-1.5 hover:bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--danger)_22%,transparent)]/20 transition-colors"
                                                 >
                                                     <Trash2 className="w-3 h-3" /> Remove
                                                 </button>
@@ -422,7 +422,7 @@ function ConnectToolCatalog({ onActivated }: { onActivated: () => void | Promise
     if (catalog.length === 0) return null;
 
     return (
-        <section className="rounded-[4px] border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden shadow-sm">
+        <section className="rounded-xl border border-[color:var(--line)] dark:border-[color:var(--line)] bg-[var(--card)] dark:bg-[var(--card)] overflow-hidden shadow-sm">
             <div className="px-6 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)]">
                 <p className="text-xs font-bold text-[color:var(--ok)] dark:text-[color:var(--ok)] uppercase tracking-widest mb-0.5">Connect a tool</p>
                 <p className="text-sm text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">
@@ -431,14 +431,14 @@ function ConnectToolCatalog({ onActivated }: { onActivated: () => void | Promise
             </div>
 
             {activated && (
-                <div className="mx-6 mt-4 flex items-center gap-2 rounded-[3px] bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/20 border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] px-4 py-2.5 text-sm text-[color:var(--ok)] dark:text-[color:var(--ok)]">
+                <div className="mx-6 mt-4 flex items-center gap-2 rounded-lg bg-[color-mix(in_srgb,var(--ok)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--ok)_22%,transparent)]/20 border border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] dark:border-[color:color-mix(in_srgb,var(--ok)_40%,transparent)] px-4 py-2.5 text-sm text-[color:var(--ok)] dark:text-[color:var(--ok)]">
                     <CheckCircle2 className="w-4 h-4" /> <strong>{activated}</strong> connected — your agents can use it now.
                 </div>
             )}
 
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {catalog.map((c) => (
-                    <div key={c.id} className="rounded-[3px] border border-[color:var(--line)] dark:border-[color:var(--line)] p-4 flex flex-col">
+                    <div key={c.id} className="rounded-lg border border-[color:var(--line)] dark:border-[color:var(--line)] p-4 flex flex-col">
                         <div className="flex items-start justify-between mb-2">
                             <div>
                                 <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">{c.displayName}</p>
@@ -463,7 +463,7 @@ function ConnectToolCatalog({ onActivated }: { onActivated: () => void | Promise
 
             {configuring && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setConfiguring(null)}>
-                    <div className="w-full max-w-md rounded-[4px] bg-[var(--card)] dark:bg-[var(--card)] border border-[color:var(--line)] dark:border-[color:var(--line)] shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+                    <div className="w-full max-w-md rounded-xl bg-[var(--card)] dark:bg-[var(--card)] border border-[color:var(--line)] dark:border-[color:var(--line)] shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
                         <div className="px-6 py-4 border-b border-[color:var(--line)] dark:border-[color:var(--line)]">
                             <p className="text-sm font-bold text-[color:var(--ink)] dark:text-[color:var(--ink)]">Connect {configuring.displayName}</p>
                             <p className="text-xs text-[color:var(--ink-muted)] dark:text-[color:var(--ink-muted)]">Enter your {configuring.displayName} credentials. Stored encrypted — never shown again.</p>
