@@ -55,7 +55,12 @@
     /* Borders — hairline */
     --line: #E4E7EC;
     --line-strong: #CBD1D8;
-
+}
+/* Horizontal tab bars: scroll on x, never spawn a stray vertical scrollbar
+   (overflow-x:auto alone makes overflow-y compute to auto), and hide the bar. */
+.tab-scroll { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.tab-scroll::-webkit-scrollbar { display: none; }
+:root {
     /* Status — semantic only */
     --ok: #15803D;
     --ok-bg: rgba(21, 128, 61, 0.08);

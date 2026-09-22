@@ -237,7 +237,7 @@ export default function SkillsHubClient({
             </header>
 
             {/* ── Tab bar ──────────────────────────────────────────────── */}
-            <div style={{ background: 'var(--card)', borderBottom: '1px solid var(--line)', padding: '0 20px', display: 'flex', gap: 0, overflowX: 'auto' }}>
+            <div className="tab-scroll" style={{ background: 'var(--card)', borderBottom: '1px solid var(--line)', padding: '0 20px', display: 'flex', gap: 0 }}>
                 {TABS.map(({ key, label, icon: Icon }) => {
                     const active = activeTab === key;
                     return (

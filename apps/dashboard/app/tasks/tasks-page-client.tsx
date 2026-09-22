@@ -133,7 +133,7 @@ export default function TasksPageClient({
             </header>
 
             {/* ── Tab bar — Swiss index ───────────────────────────────────── */}
-            <div style={{ background: 'var(--paper)', borderBottom: '1px solid var(--rule)', padding: '0 28px', display: 'flex', gap: 0, overflowX: 'auto' }}>
+            <div className="tab-scroll" style={{ background: 'var(--paper)', borderBottom: '1px solid var(--rule)', padding: '0 28px', display: 'flex', gap: 0 }}>
                 {TABS.map(({ key, label, icon: Icon, needsBot }) => {
                     const active = activeTab === key;
                     const needsBotUnset = needsBot && !botId.trim();
